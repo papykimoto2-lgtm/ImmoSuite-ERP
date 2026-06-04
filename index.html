@@ -4271,6 +4271,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </select>
           <button class="btn btn-secondary btn-sm" onclick="exportRapportCSV()">⬇ Export CSV</button>
           <button class="btn btn-secondary btn-sm" onclick="printRapportCommercial()">🖨️ Imprimer</button>
+          <button class="btn btn-primary btn-sm" onclick="openTracabilite()">🔍 Traçabilité compte</button>
         </div>
 
         <!-- Onglets -->
@@ -21372,10 +21373,292 @@ refreshDashboard = function() {
   setTimeout(animateProgressBars, 350);
 };
 
+/* ══════════════════════════════════════════════════════
+   TRAÇABILITÉ DE COMPTE (ADMIN) — Suivi terrain & effectivité tournées
+══════════════════════════════════════════════════════ */
+var _traceLastReport = null;
+
+function openTracabilite() {
+  if (typeof hasRole === 'function' && !hasRole('admin')) {
+    toast('Accès réservé à l\'administrateur.', 'error');
+    return;
+  }
+  var sel = document.getElementById('trace-user');
+  if (sel) {
+    var cur = sel.value;
+    // Commerciaux en tête (cible principale), puis autres comptes
+    var users = (DATA.users || []).slice();
+    var commLogins = {};
+    (DATA.employes || []).forEach(function(e){
+      if ((e.dept==='commercial'||e.poste==='commercial'||e.poste==='Commercial'))
+        commLogins[((e.prenoms?e.prenoms+' ':'')+e.nom).trim().toLowerCase()] = true;
+    });
+    users.sort(function(a,b){
+      var ac = commLogins[(a.nom||'').toLowerCase()] ? 0 : 1;
+      var bc = commLogins[(b.nom||'').toLowerCase()] ? 0 : 1;
+      return ac - bc;
+    });
+    sel.innerHTML = '<option value="">— Choisir un compte —</option>' + users.map(function(u){
+      var tag = commLogins[(u.nom||'').toLowerCase()] ? ' · Commercial' : (u.role ? ' · ' + u.role : '');
+      return '<option value="'+u.id+'">'+escHtml((u.nom||u.login||'?'))+tag+'</option>';
+    }).join('');
+    if (cur) sel.value = cur;
+  }
+  openModal('modal-tracabilite');
+  renderTracabilite();
+}
+
+function _traceEtapeRealisee(e, crByEtape) {
+  if (crByEtape[e.id]) return true;
+  var s = (e.statut || '').toLowerCase();
+  return s.indexOf('faite') !== -1 || s.indexOf('realis') !== -1 || s === 'fait' || s === 'done' || s === 'effectue' || s === 'effectuee';
+}
+
+async function renderTracabilite() {
+  var box = document.getElementById('trace-body'); if (!box) return;
+  var uid_ = document.getElementById('trace-user') ? document.getElementById('trace-user').value : '';
+  var jours = parseInt((document.getElementById('trace-periode')||{}).value || '30', 10);
+  if (!uid_) {
+    box.innerHTML = '<div style="text-align:center;padding:32px;color:#94A3B8;"><div style="font-size:36px;margin-bottom:10px;">🔍</div>Sélectionnez un compte.</div>';
+    return;
+  }
+  var user = (DATA.users||[]).find(function(u){ return String(u.id) === String(uid_); });
+  if (!user) { box.innerHTML = '<div style="padding:24px;color:#EF4444;">Compte introuvable.</div>'; return; }
+
+  var nom = user.nom || user.login || '';
+  var emp = (DATA.employes||[]).find(function(e){ return ((e.prenoms?e.prenoms+' ':'')+e.nom).trim() === nom || (e.nom===nom); });
+  var empId = emp ? emp.id : null;
+
+  var dateMinISO = jours > 0 ? new Date(Date.now() - jours*86400000).toISOString() : '';
+  var dateMin = dateMinISO.slice(0,10);
+
+  box.innerHTML = '<div style="text-align:center;padding:24px;color:#94A3B8;">Chargement…</div>';
+
+  // Données journalisées
+  var logs = [], hist = [];
+  try { logs = await dbGetAll('logs_connexion'); } catch(e) {}
+  try { hist = await dbGetAll('historique_actions'); } catch(e) {}
+
+  // ── Activité du compte (connexions) ──
+  var myLogs = (logs||[]).filter(function(l){
+    return l.login === user.login && (!dateMinISO || (l.date||'') >= dateMinISO);
+  });
+  var okLogs = myLogs.filter(function(l){ return l.success; });
+  var koLogs = myLogs.filter(function(l){ return !l.success; });
+  var derniere = myLogs.map(function(l){return l.date;}).sort().slice(-1)[0] || null;
+  var appareils = {};
+  myLogs.forEach(function(l){ if (l.userAgent) appareils[l.userAgent] = 1; });
+  var nbAppareils = Object.keys(appareils).length;
+
+  // ── Tournées / visites terrain ──
+  var crs = (DATA.cr_visites||[]);
+  var crByEtape = {};
+  crs.forEach(function(c){ crByEtape[c.etape_id] = c; });
+  var etapes = (DATA.etapes_itineraire||[]).filter(function(e){
+    var mine = (e.commercial_nom===nom) || (empId && e.commercial_id===empId) || (e.commercial_id===user.id);
+    return mine && (!dateMin || (e.date||'') >= dateMin);
+  });
+  var realisees = etapes.filter(function(e){ return _traceEtapeRealisee(e, crByEtape); });
+  var aujourd = today();
+  var manquees = etapes.filter(function(e){ return !_traceEtapeRealisee(e, crByEtape) && (e.date||'') < aujourd; });
+  var planifiees = etapes.filter(function(e){ return !_traceEtapeRealisee(e, crByEtape) && (e.date||'') >= aujourd; });
+  var tauxReal = etapes.length ? Math.round(realisees.length/etapes.length*100) : 0;
+  var joursActifs = {};
+  realisees.forEach(function(e){ if (e.date) joursActifs[e.date] = 1; });
+  var nbJoursActifs = Object.keys(joursActifs).length;
+  var visParJour = nbJoursActifs ? (realisees.length/nbJoursActifs).toFixed(1) : '0';
+  var derniereVisite = realisees.map(function(e){return e.date;}).sort().slice(-1)[0] || null;
+
+  // ── Résultats commerciaux sur la période ──
+  var mesClients = (DATA.clients||[]).filter(function(c){
+    return (c.commercial===nom || (empId && c.commercial_id===empId)) && (!dateMin || (c.created_at||'') >= dateMin);
+  });
+  var mesVersements = (DATA.versements||[]).filter(function(v){
+    var c = (DATA.clients||[]).find(function(x){return x.id===v.client_id;});
+    return c && (c.commercial===nom || (empId && c.commercial_id===empId)) && (!dateMin || (v.date||'') >= dateMin);
+  });
+  var collecte = mesVersements.reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+
+  // ── Actions système ──
+  var mesActions = (hist||[]).filter(function(h){
+    return h.utilisateur === nom && (!dateMinISO || (h.date||'') >= dateMinISO);
+  }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+
+  // Statut compte effectif
+  var inactif = !derniere || (Date.now() - new Date(derniere).getTime()) > 7*86400000;
+  var perfLabel = tauxReal>=80?'#10B981':tauxReal>=50?'#B87333':'#EF4444';
+
+  _traceLastReport = { nom:nom, role:user.role, jours:jours, derniere:derniere, okLogs:okLogs.length, koLogs:koLogs.length,
+    nbAppareils:nbAppareils, etapes:etapes.length, realisees:realisees.length, manquees:manquees.length,
+    planifiees:planifiees.length, tauxReal:tauxReal, nbJoursActifs:nbJoursActifs, visParJour:visParJour,
+    derniereVisite:derniereVisite, nbClients:mesClients.length, collecte:collecte, nbActions:mesActions.length };
+
+  function kpi(l,v,c){ return '<div style="background:#fff;border:1px solid #E0E0EA;border-top:3px solid '+c+';border-radius:8px;padding:10px;text-align:center;">'
+    +'<div style="font-size:18px;font-weight:700;color:'+c+';">'+v+'</div>'
+    +'<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+l+'</div></div>'; }
+
+  var periodeLabel = jours>0 ? (jours+' derniers jours') : 'Tout l\'historique';
+
+  var html =
+    '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:#F8FAFC;border-radius:10px;margin-bottom:14px;">'
+    +'<div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#3B82F6,#1D4ED8);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:700;flex-shrink:0;">'+escHtml(nom.charAt(0).toUpperCase())+'</div>'
+    +'<div style="flex:1;"><div style="font-size:16px;font-weight:700;color:#1C1C2E;">'+escHtml(nom)+'</div>'
+    +'<div style="font-size:12px;color:#6B6B9A;">Login : '+escHtml(user.login||'—')+' · Rôle : '+escHtml(user.role||'—')+' · '+periodeLabel+'</div></div>'
+    +'<div style="text-align:right;"><span style="background:'+(inactif?'#FEF2F2':'#ECFDF5')+';color:'+(inactif?'#EF4444':'#10B981')+';padding:4px 12px;border-radius:12px;font-size:11px;font-weight:700;">'+(inactif?'⚠️ Compte inactif':'● Actif')+'</span>'
+    +'<div style="font-size:11px;color:#94A3B8;margin-top:4px;">Dernière connexion : '+(derniere?dateShort(derniere):'jamais')+'</div></div>'
+    +'</div>'
+
+    // Effectivité terrain
+    +'<div style="font-size:12px;font-weight:700;color:#1C1C2E;margin:6px 0 8px;">🚶 Effectivité des déplacements (tournées)</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;">'
+    +kpi('Visites planifiées', etapes.length, '#6B6B9A')
+    +kpi('Réalisées', realisees.length, '#10B981')
+    +kpi('Manquées', manquees.length, manquees.length?'#EF4444':'#10B981')
+    +kpi('Taux réalisation', tauxReal+'%', perfLabel)
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">'
+    +kpi('Jours actifs terrain', nbJoursActifs, '#3B82F6')
+    +kpi('Visites / jour', visParJour, '#3B82F6')
+    +kpi('Dernière visite', derniereVisite?dateShort(derniereVisite):'—', '#B87333')
+    +kpi('À venir', planifiees.length, '#8B5CF6')
+    +'</div>'
+
+    // Résultats
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+    +kpi('Connexions OK', okLogs.length, '#10B981')
+    +kpi('Échecs connexion', koLogs.length, koLogs.length?'#EF4444':'#10B981')
+    +kpi('Clients (période)', mesClients.length, '#3B82F6')
+    +kpi('Collecté (période)', fmtF(collecte)+' F', '#B87333')
+    +'</div>';
+
+  // Chronologie terrain
+  html += '<div style="font-size:12px;font-weight:700;color:#1C1C2E;margin:4px 0 8px;">🗺️ Chronologie des visites ('+etapes.length+')</div>';
+  if (!etapes.length) {
+    html += '<div style="color:#94A3B8;padding:10px 0;">Aucune visite enregistrée sur la période.</div>';
+  } else {
+    var etTri = etapes.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); }).slice(0,40);
+    html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Lieu / Objet</th><th>Statut</th><th>Compte-rendu</th></tr></thead><tbody>'
+      + etTri.map(function(e){
+          var real = _traceEtapeRealisee(e, crByEtape);
+          var past = (e.date||'') < aujourd;
+          var badge = real ? '<span style="color:#10B981;font-weight:600;">✅ Réalisée</span>'
+            : (past ? '<span style="color:#EF4444;font-weight:600;">❌ Manquée</span>'
+                    : '<span style="color:#8B5CF6;">⏳ Planifiée</span>');
+          var cr = crByEtape[e.id];
+          var crTxt = cr ? escHtml((cr.resultat||cr.compte_rendu||cr.notes||'CR enregistré').toString().slice(0,60)) : '—';
+          return '<tr><td style="white-space:nowrap;">'+(e.date?dateShort(e.date):'—')+'</td>'
+            +'<td style="font-size:12px;">'+escHtml((e.adresse||e.lieu||e.objet||e.type_visite||'—').toString())+'</td>'
+            +'<td>'+badge+'</td>'
+            +'<td style="font-size:11px;color:#64748B;">'+crTxt+'</td></tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+
+  // Connexions récentes
+  html += '<div style="font-size:12px;font-weight:700;color:#1C1C2E;margin:16px 0 8px;">🔐 Connexions récentes ('+myLogs.length+')</div>';
+  if (!myLogs.length) {
+    html += '<div style="color:#94A3B8;padding:10px 0;">Aucune connexion journalisée.</div>';
+  } else {
+    var logsTri = myLogs.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).slice(0,15);
+    html += '<div class="table-wrap"><table><thead><tr><th>Date / heure</th><th>Résultat</th><th>Appareil</th></tr></thead><tbody>'
+      + logsTri.map(function(l){
+          var dt = l.date ? new Date(l.date).toLocaleString('fr-FR') : '—';
+          return '<tr><td style="white-space:nowrap;font-size:12px;">'+dt+'</td>'
+            +'<td>'+(l.success?'<span style="color:#10B981;">✅ Réussie</span>':'<span style="color:#EF4444;">❌ Échec</span>')+'</td>'
+            +'<td style="font-size:10px;color:#94A3B8;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml((l.userAgent||'—').slice(0,80))+'</td></tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+
+  // Actions système
+  html += '<div style="font-size:12px;font-weight:700;color:#1C1C2E;margin:16px 0 8px;">📝 Actions système ('+mesActions.length+')</div>';
+  if (!mesActions.length) {
+    html += '<div style="color:#94A3B8;padding:10px 0;">Aucune action journalisée pour ce compte.</div>';
+  } else {
+    html += '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Type</th><th>Détail</th></tr></thead><tbody>'
+      + mesActions.slice(0,15).map(function(h){
+          var dt = h.date ? new Date(h.date).toLocaleString('fr-FR') : '—';
+          return '<tr><td style="white-space:nowrap;font-size:12px;">'+dt+'</td>'
+            +'<td style="font-size:12px;">'+escHtml(h.action||'—')+'</td>'
+            +'<td style="font-size:11px;color:#64748B;">'+escHtml(h.entity_type||'—')+'</td>'
+            +'<td style="font-size:11px;color:#94A3B8;">'+escHtml((h.commentaire||'').slice(0,50))+'</td></tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+
+  box.innerHTML = html;
+}
+
+function imprimerTracabilite() {
+  if (!_traceLastReport) { toast('Sélectionnez d\'abord un compte.', 'error'); return; }
+  var r = _traceLastReport;
+  var params = DATA.params || {};
+  var now = new Date().toLocaleString('fr-FR');
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Traçabilité — '+escHtml(r.nom)+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#1C1C2E;}h1{color:#1D4ED8;border-bottom:2px solid #1D4ED8;padding-bottom:8px;}'
+    +'table{border-collapse:collapse;width:100%;margin:10px 0;}td,th{border:1px solid #ccc;padding:7px 12px;text-align:left;}th{background:#EFF6FF;}</style></head><body>'
+    +'<h1>Rapport de traçabilité — '+escHtml(r.nom)+'</h1>'
+    +'<p>'+escHtml(params.societe||'ImmoSuite ERP')+' · Rôle : '+escHtml(r.role||'—')+' · Période : '+(r.jours>0?r.jours+' jours':'tout')+' · Édité le '+now+'</p>'
+    +'<h3>Activité du compte</h3><table>'
+    +'<tr><th>Dernière connexion</th><td>'+(r.derniere?new Date(r.derniere).toLocaleString('fr-FR'):'jamais')+'</td></tr>'
+    +'<tr><th>Connexions réussies / échecs</th><td>'+r.okLogs+' / '+r.koLogs+'</td></tr>'
+    +'<tr><th>Appareils distincts</th><td>'+r.nbAppareils+'</td></tr></table>'
+    +'<h3>Effectivité terrain</h3><table>'
+    +'<tr><th>Visites planifiées</th><td>'+r.etapes+'</td></tr>'
+    +'<tr><th>Réalisées</th><td>'+r.realisees+'</td></tr>'
+    +'<tr><th>Manquées</th><td>'+r.manquees+'</td></tr>'
+    +'<tr><th>Taux de réalisation</th><td>'+r.tauxReal+'%</td></tr>'
+    +'<tr><th>Jours actifs sur le terrain</th><td>'+r.nbJoursActifs+'</td></tr>'
+    +'<tr><th>Visites / jour</th><td>'+r.visParJour+'</td></tr>'
+    +'<tr><th>Dernière visite</th><td>'+(r.derniereVisite?dateShort(r.derniereVisite):'—')+'</td></tr></table>'
+    +'<h3>Résultats sur la période</h3><table>'
+    +'<tr><th>Nouveaux clients</th><td>'+r.nbClients+'</td></tr>'
+    +'<tr><th>Montant collecté</th><td>'+fmtF(r.collecte)+' FCFA</td></tr>'
+    +'<tr><th>Actions système</th><td>'+r.nbActions+'</td></tr></table>'
+    +'</body></html>');
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 400);
+}
+
 /* Lancer au démarrage */
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(initAnimations, 600);
 });
+
 </script>
+<!-- ── MODAL TRAÇABILITÉ COMPTE (ADMIN) ──────────────────────────────── -->
+<div class="modal-overlay" id="modal-tracabilite">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <h3>🔍 Traçabilité de compte — Suivi terrain</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-tracabilite')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="filters-bar" style="margin-bottom:14px;">
+        <select class="filter-select" id="trace-user" onchange="renderTracabilite()">
+          <option value="">— Choisir un compte —</option>
+        </select>
+        <select class="filter-select" id="trace-periode" onchange="renderTracabilite()">
+          <option value="7">7 derniers jours</option>
+          <option value="30" selected>30 derniers jours</option>
+          <option value="90">90 derniers jours</option>
+          <option value="0">Tout l'historique</option>
+        </select>
+      </div>
+      <div id="trace-body">
+        <div style="text-align:center;padding:32px;color:#94A3B8;">
+          <div style="font-size:36px;margin-bottom:10px;">🔍</div>
+          Sélectionnez un compte pour afficher sa traçabilité.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-tracabilite')">Fermer</button>
+      <button class="btn btn-secondary" onclick="imprimerTracabilite()">🖨️ Imprimer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
