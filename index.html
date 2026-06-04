@@ -7526,7 +7526,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 99; /* Version haute fixe — jamais modifier */
+var DB_VERSION = 100; /* Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -7544,57 +7544,54 @@ var ALL_STORES = [
   'logs_connexion',
   'custom_roles',
   'commissions',
-  'apporteurs'
+  'apporteurs',
+  'nomenclatures','prix_unitaire','devis_fournisseurs'
 ];
 
 function initDB() {
   return new Promise(function(resolve, reject) {
-    var req = indexedDB.open(DB_NAME, DB_VERSION);
-
-    req.onupgradeneeded = function(e) {
-      var d = e.target.result;
-      ALL_STORES.forEach(function(store) {
-        if (!d.objectStoreNames.contains(store)) {
-          d.createObjectStore(store, { keyPath: 'id' });
-        }
-      });
-    };
-
-    req.onsuccess = function(e) {
-      db = e.target.result;
-      /* Auto-guérison : vérifier les stores manquants et recréer si besoin */
-      var missing = ALL_STORES.filter(function(s) {
-        return !db.objectStoreNames.contains(s);
-      });
-      if (missing.length > 0) {
-        console.warn('Stores manquants détectés:', missing, '— Recréation BDD...');
-        db.close();
-        db = null;
-        /* Supprimer et recréer */
-        var delReq = indexedDB.deleteDatabase(DB_NAME);
-        delReq.onsuccess = function() {
-          var req2 = indexedDB.open(DB_NAME, DB_VERSION);
-          req2.onupgradeneeded = function(e2) {
-            var d2 = e2.target.result;
-            ALL_STORES.forEach(function(store) {
-              d2.createObjectStore(store, { keyPath: 'id' });
-            });
-          };
-          req2.onsuccess = function(e2) { db = e2.target.result; resolve(); };
-          req2.onerror = function() { reject(req2.error); };
-        };
-        delReq.onerror = function() { reject(new Error('Impossible de recréer la BDD')); };
-      } else {
-        resolve();
-      }
-    };
-
-    req.onerror = function() { reject(req.error); };
-    req.onblocked = function() {
-      /* Fermer les autres onglets si besoin */
-      console.warn('IndexedDB bloquée — fermer les autres onglets du fichier');
-    };
+    _openDB(DB_VERSION, false, resolve, reject);
   });
+}
+
+/* Ouverture + migration NON DESTRUCTIVE : crée les stores manquants sans jamais effacer la base */
+function _openDB(version, isRetry, resolve, reject) {
+  var req = indexedDB.open(DB_NAME, version);
+
+  req.onupgradeneeded = function(e) {
+    var d = e.target.result;
+    ALL_STORES.forEach(function(store) {
+      if (!d.objectStoreNames.contains(store)) {
+        d.createObjectStore(store, { keyPath: 'id' });
+      }
+    });
+  };
+
+  req.onsuccess = function(e) {
+    db = e.target.result;
+    var missing = ALL_STORES.filter(function(s) {
+      return !db.objectStoreNames.contains(s);
+    });
+    if (missing.length > 0 && !isRetry) {
+      /* Stores manquants : on rouvre à une version supérieure pour les créer.
+         AUCUNE suppression de données — migration additive uniquement. */
+      console.warn('Stores manquants:', missing, '— migration additive (v' + (db.version + 1) + ')');
+      var nextV = db.version + 1;
+      db.close();
+      db = null;
+      _openDB(nextV, true, resolve, reject);
+      return;
+    }
+    if (missing.length > 0) {
+      console.error('Stores toujours absents après migration:', missing);
+    }
+    resolve();
+  };
+
+  req.onerror = function() { reject(req.error); };
+  req.onblocked = function() {
+    console.warn('IndexedDB bloquée — fermer les autres onglets du fichier');
+  };
 }
 
 /* dbGetAll — silencieux si store absent */
@@ -7722,17 +7719,85 @@ async function sbFetch(path, method, body) {
   } catch(e) { return null; }
 }
 
+/* ── File d'attente de synchronisation (résilience hors ligne) ──────────────
+   Les écritures qui échouent (hors ligne, erreur réseau) sont mises en file
+   dans localStorage et rejouées automatiquement à la reconnexion. */
+var _SYNC_OUTBOX_KEY = 'pici_sync_outbox';
+var _syncFlushing = false;
+
+function _outboxRead() {
+  try { return JSON.parse(localStorage.getItem(_SYNC_OUTBOX_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function _outboxWrite(q) {
+  try { localStorage.setItem(_SYNC_OUTBOX_KEY, JSON.stringify(q)); } catch(e) {}
+}
+function _outboxEnqueue(entry) {
+  var q = _outboxRead();
+  // Dédoublonnage : une seule opération en attente par (table,id)
+  q = q.filter(function(e){ return !(e.table === entry.table && e.id === entry.id); });
+  entry.ts = Date.now();
+  q.push(entry);
+  _outboxWrite(q);
+}
+
 async function syncToSupabase(table, obj) {
   if (!SB.url || !SB.key) return;
+  if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return; }
   try {
     await sbFetch(table + '?id=eq.' + obj.id, 'DELETE');
-    await sbFetch(table, 'POST', obj);
-  } catch(e) {}
+    var res = await sbFetch(table, 'POST', obj);
+    if (res === null) _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj });
+  } catch(e) {
+    _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj });
+  }
 }
 
 async function deleteFromSupabase(table, id) {
   if (!SB.url || !SB.key) return;
-  try { await sbFetch(table + '?id=eq.' + id, 'DELETE'); } catch(e) {}
+  if (!navigator.onLine) { _outboxEnqueue({ op:'delete', table:table, id:id }); return; }
+  try {
+    var res = await sbFetch(table + '?id=eq.' + id, 'DELETE');
+    if (res === null) _outboxEnqueue({ op:'delete', table:table, id:id });
+  } catch(e) {
+    _outboxEnqueue({ op:'delete', table:table, id:id });
+  }
+}
+
+/* Rejoue la file en respectant l'ordre. S'arrête au premier échec (réseau). */
+async function flushSyncOutbox() {
+  if (_syncFlushing) return;
+  if (!SB.url || !SB.key) return;
+  if (!navigator.onLine) return;
+  _syncFlushing = true;
+  try {
+    var q = _outboxRead();
+    while (q.length) {
+      var e = q[0];
+      var ok = false;
+      try {
+        if (e.op === 'delete') {
+          ok = (await sbFetch(e.table + '?id=eq.' + e.id, 'DELETE')) !== null;
+        } else {
+          await sbFetch(e.table + '?id=eq.' + e.id, 'DELETE');
+          ok = (await sbFetch(e.table, 'POST', e.obj)) !== null;
+        }
+      } catch(err) { ok = false; }
+      if (!ok) break;            // réseau toujours indisponible → on garde la file
+      q.shift();
+      _outboxWrite(q);
+    }
+    var rest = _outboxRead().length;
+    if (rest === 0 && typeof toast === 'function') {/* silencieux si rien à signaler */}
+  } finally {
+    _syncFlushing = false;
+  }
+}
+
+/* Déclencheurs : reconnexion, démarrage, et filet périodique (60 s) */
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', function(){ flushSyncOutbox(); });
+  setInterval(function(){ if (navigator.onLine) flushSyncOutbox(); }, 60000);
 }
 
 async function testConnection() {
@@ -7994,7 +8059,7 @@ function goTo(page) {
   if (page === 'conventions') { renderConventions(); populateConventionSelects(); }
   if (page === 'avancement') { renderChantiersDashboard(); }
   if (page === 'leads') { renderPipeline(); }
-  if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else renderCarteGeo(); }, 80); }
+  if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else { renderCarteGeo(); _refreshGeoMap(false); } }, 80); }
   if (page === 'crm-itineraires') { loadPageItineraires(); }
   if (page === 'crm-rapports')   { buildRapportsCommerciaux(); }
   if (page === 'crm-apporteurs') { renderApporteurs(); buildKPIsApporteurs(); }
@@ -12835,7 +12900,8 @@ function _buildMap() {
     center: [5.360, -4.008],
     zoom: 12,
     zoomControl: true,
-    attributionControl: true
+    attributionControl: true,
+    preferCanvas: true
   });
 
   // Tuiles OpenStreetMap (gratuit, sans clé)
@@ -12866,9 +12932,31 @@ function _buildMap() {
   });
 
   renderCarteGeo();
+  // Corrige le rendu fragmenté : recalcul de taille une fois le conteneur visible
+  _refreshGeoMap(true);
 }
 
-// Rafraîchir les markers selon filtres
+var _geoAllPoints = [];
+var _geoFitted = false;
+
+/* Recalcule la taille de la carte (corrige les tuiles coupées) et, si demandé,
+   cadre automatiquement sur l'ensemble des points. À appeler à chaque affichage. */
+function _refreshGeoMap(fit) {
+  if (!_geoMap) return;
+  // invalidateSize répété : le conteneur peut n'avoir sa taille qu'après le layout
+  [60, 200, 450].forEach(function(d) {
+    setTimeout(function() {
+      if (!_geoMap) return;
+      _geoMap.invalidateSize(false);
+      if (fit && !_geoFitted && _geoAllPoints.length) {
+        try {
+          _geoMap.fitBounds(L.latLngBounds(_geoAllPoints).pad(0.15));
+          _geoFitted = true;
+        } catch(e) {}
+      }
+    }, d);
+  });
+}
 function renderCarteGeo() {
   // Si map pas initialisée, init d'abord
   if (!_geoMap) { initLeafletMap(); return; }
@@ -12889,6 +12977,7 @@ function renderCarteGeo() {
   var nbP = 0, nbC = 0, nbComm = 0;
   var totalCA = 0, totalEnc = 0;
   var geoListe = [];
+  _geoAllPoints = [];
 
   // Peupler filtre commercial
   var gcSel = document.getElementById('geo-filter-commercial');
@@ -12905,6 +12994,7 @@ function renderCarteGeo() {
       if (search && !(c.nom+' '+c.prenoms+' '+c.tel+' '+(c.adresse||'')).toLowerCase().includes(search)) return;
       var coords = getCoordsFromAdresse(c.adresse || c.commune || 'Abidjan');
       if (!coords) return;
+      _geoAllPoints.push(coords);
       var verse = DATA.versements.filter(function(v){return v.client_id===c.id;}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
       totalCA += parseFloat(c.montant_total)||0;
       totalEnc += verse;
@@ -12929,6 +13019,7 @@ function renderCarteGeo() {
       if (search && !(l.nom+' '+(l.tel||'')+' '+(l.commune||'')).toLowerCase().includes(search)) return;
       var coords = getCoordsFromAdresse(l.commune || l.notes || 'Abidjan');
       if (!coords) coords = [5.360+(Math.random()-0.5)*0.04, -4.008+(Math.random()-0.5)*0.04];
+      _geoAllPoints.push(coords);
       nbP++;
       L.marker(coords, { icon: createMarkerIcon('#B87333','🎯') })
         .bindPopup(buildPopupContent('prospect', {
@@ -12951,6 +13042,7 @@ function renderCarteGeo() {
       if (filterComm && !(e.nom+' '+e.prenoms).includes(filterComm)) return;
       var coords = getCoordsFromAdresse(e.commune || e.adresse || 'Cocody');
       if (!coords) coords = [5.360+(Math.random()-0.5)*0.05, -4.008+(Math.random()-0.5)*0.05];
+      _geoAllPoints.push(coords);
       nbComm++;
       L.marker(coords, { icon: createMarkerIcon('#3B82F6','💼') })
         .bindPopup(buildPopupContent('commercial', {
@@ -12961,7 +13053,6 @@ function renderCarteGeo() {
           montant: ''
         }), { maxWidth: 220 })
         .addTo(_geoLayerCommerciaux);
-      nbComm++;
       geoListe.push({ color:'#3B82F6', emoji:'💼', nom:e.prenoms+' '+e.nom, detail:'Commercial', adresse:e.commune||'' });
     });
   }
@@ -12971,6 +13062,7 @@ function renderCarteGeo() {
     DATA.programmes.forEach(function(p) {
       var coords = getCoordsFromAdresse(p.localisation || p.commune || '');
       if (!coords) return;
+      _geoAllPoints.push(coords);
       var vendus = DATA.lots.filter(function(l){ return l.programme_id===p.id && l.statut==='vendu'; }).length;
       var total  = DATA.lots.filter(function(l){ return l.programme_id===p.id; }).length;
       L.marker(coords, { icon: createMarkerIcon('#8B5CF6','🏗️', 36) })
@@ -19397,6 +19489,9 @@ async function startApp() {
   mergePreload();
   await savePreloadToDB();
   await loadAllData();
+
+  // Rejouer les écritures de sync en attente (reprise après hors ligne)
+  if (typeof flushSyncOutbox === 'function') setTimeout(flushSyncOutbox, 1500);
 
   // Statut online
   function checkOnline() {
