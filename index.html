@@ -60,16 +60,16 @@ body { background: var(--bg); color: var(--blanc); }
 .sync-badge { background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.3); }
 .user-avatar { background: linear-gradient(135deg,#fff,#E0E8FF); color: #2563EB; }
 #user-name { color: #fff; }
-.sidebar { background: #1A4A8A; border-right: 1px solid #153D75; }
+.sidebar { background: #0D2354; border-right: 1px solid #0A1C46; }
 .sidebar-logo-text { color: #FFFFFF; font-size:14px; font-weight:700; letter-spacing:0.3px; }
-.sidebar-logo-sub { color: rgba(255,255,255,0.75); }
-.nav-item { color: rgba(255,255,255,0.90); }
-.nav-item:hover { background: rgba(255,255,255,0.15); color: #FFFFFF; }
-.nav-item.active { background: rgba(255,255,255,0.20); color: #FFFFFF; border-left-color: #FFD700; font-weight:700; }
-.nav-section { color: rgba(255,255,255,0.60); letter-spacing:1.5px; }
-.bottom-nav { background: #1A4A8A; border-top: 1px solid #153D75; }
+.sidebar-logo-sub { color: #4A8FD4; }
+.nav-item { color: #93C5FD; }
+.nav-item:hover { background: rgba(147,197,253,0.10); color: #FFFFFF; }
+.nav-item.active { background: rgba(147,197,253,0.15); color: #60A5FA; border-left-color: #3B82F6; font-weight:700; }
+.nav-section { color: #4A8FD4; letter-spacing:1.5px; }
+.bottom-nav { background: #0D2354; border-top: 1px solid #0A1C46; }
 .bn-item { color: rgba(255,255,255,0.70); }
-.bn-item.active { color: #FFFFFF; font-weight:600; }
+.bn-item.active { color: #60A5FA; font-weight:600; }
 .main-content { background: var(--bg); }
 .card { background: var(--card); border-color: var(--bord); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
 .kpi-card { background: var(--card); border-color: var(--bord); }
@@ -197,7 +197,7 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
 /* ── Sidebar desktop ────────────────────────────────── */
 .sidebar {
   width:256px; flex-shrink:0;
-  background:#1A4A8A !important; border-right:1px solid #153D75 !important;
+  background:#0D2354 !important; border-right:1px solid #0A1C46 !important;
   overflow-y:auto; padding:8px 0 16px;
   transition:transform var(--tr);
   z-index:200;
@@ -212,24 +212,24 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
 }
 .sidebar-logo-icon { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--or),var(--or-dark)); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
 .sidebar-logo-text { font-family:var(--fh); font-size:13px; color:#FFFFFF !important; font-weight:bold; line-height:1.2; }
-.sidebar-logo-sub { font-size:10px; color:rgba(255,255,255,0.90) !important; font-family:var(--fb); }
+.sidebar-logo-sub { font-size:10px; color:#4A8FD4 !important; font-family:var(--fb); }
 
 .nav-section {
-  padding:14px 16px 5px; font-size:9px; color:rgba(255,255,255,0.75);
+  padding:14px 16px 5px; font-size:9px; color:#4A8FD4;
   letter-spacing:2px; text-transform:uppercase; font-weight:700;
   display:flex; align-items:center; gap:8px;
 }
-.nav-section::after { content:''; flex:1; height:1px; background:rgba(255,255,255,0.20); }
-.nav-step { width:16px; height:16px; border-radius:50%; background:rgba(255,255,255,0.20); display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#FFFFFF; flex-shrink:0; }
+.nav-section::after { content:''; flex:1; height:1px; background:rgba(147,197,253,0.20); }
+.nav-step { width:16px; height:16px; border-radius:50%; background:rgba(147,197,253,0.20); display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#93C5FD; flex-shrink:0; }
 
 .nav-item {
   display:flex; align-items:center; gap:10px;
   padding:10px 14px; cursor:pointer; font-size:13px;
-  color:#FFFFFF !important; transition:all var(--tr);
+  color:#93C5FD !important; transition:all var(--tr);
   border-left:3px solid transparent; margin:1px 6px; border-radius:var(--r);
 }
-.nav-item:hover, .nav-item:active { background:rgba(255,255,255,0.12) !important; color:#FFFFFF !important; }
-.nav-item.active { background:rgba(255,255,255,0.20) !important; color:#FFFFFF !important; border-left-color:#FFD700 !important; font-weight:700; }
+.nav-item:hover, .nav-item:active { background:rgba(147,197,253,0.10) !important; color:#FFFFFF !important; }
+.nav-item.active { background:rgba(147,197,253,0.15) !important; color:#60A5FA !important; border-left-color:#3B82F6 !important; font-weight:700; }
 .nav-icon { font-size:15px; width:20px; text-align:center; flex-shrink:0; }
 .nav-badge { margin-left:auto; background:var(--rouge); color:#fff; font-size:9px; font-weight:700; padding:2px 6px; border-radius:10px; min-width:18px; text-align:center; }
 
@@ -251,7 +251,7 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
   display:none;
   position:fixed; bottom:0; left:0; right:0;
   height:calc(var(--bottomnav-h) + var(--safe-bottom));
-  background:#1A4A8A !important; border-top:1px solid #153D75 !important;
+  background:#0D2354 !important; border-top:1px solid #0A1C46 !important;
   z-index:300; padding-bottom:var(--safe-bottom);
 }
 .bottom-nav-inner {
@@ -6230,7 +6230,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 <!-- ══ Modal Connexion Souscripteur ══════════════════ -->
 <div class="modal-overlay" id="modal-login-souscripteur">
   <div class="modal" style="max-width:500px;">
-    <div class="modal-header" style="background:linear-gradient(135deg,#1A4A8A,#2563EB);border-radius:14px 14px 0 0;">
+    <div class="modal-header" style="background:linear-gradient(135deg,#0D2354,#1A4A8A);border-radius:14px 14px 0 0;">
       <div>
         <h3 style="color:#fff;">🔑 Espace Souscripteur</h3>
         <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;">ImmoSuite ERP — Portail client sécurisé</div>
