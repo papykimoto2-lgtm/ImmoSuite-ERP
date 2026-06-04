@@ -13399,12 +13399,39 @@ function _buildTableauComparatif(commList) {
 function _buildFicheSelect(commList) {
   var sel = document.getElementById('rapport-select-commercial'); if (!sel) return;
   var current = sel.value;
-  sel.innerHTML = '<option value="">— Choisir —</option>'
-    + commList.map(function(c){
-        var empMatch = c.emp_id ? DATA.employes.find(function(e){return e.id===c.emp_id;}) : null;
-        var label = empMatch ? ((empMatch.prenoms||'')+' '+empMatch.nom).trim() : c.nom;
-        return '<option value="'+escHtml(c.nom)+'"'+(c.nom===current?' selected':'')+'>'+escHtml(label)+' ('+fmtF(c.enc)+' F)</option>';
+
+  // Source 1 : tous les commerciaux actifs du module RH
+  var rhCommerciaux = DATA.employes.filter(function(e) {
+    return (e.dept==='commercial'||e.poste==='commercial'||e.poste==='Commercial') && e.statut==='actif';
+  });
+
+  // Source 2 : commerciaux ayant des données dans commList (avec stats)
+  var commMap = {};
+  commList.forEach(function(c){ commMap[c.nom] = c; });
+
+  // Fusion : RH en priorité, complété par commList si non déjà dans RH
+  var options = [];
+  rhCommerciaux.forEach(function(e) {
+    var fullName = ((e.prenoms||'')+' '+e.nom).trim();
+    var stats = commMap[fullName] || { enc:0, clients:[], etapes:[] };
+    options.push({ id: e.id, nom: fullName, enc: stats.enc, fromRH: true });
+    delete commMap[fullName]; // marquer comme traité
+  });
+  // Ajouter les commerciaux legacy (texte) non trouvés dans RH
+  Object.values(commMap).forEach(function(c) {
+    options.push({ id: null, nom: c.nom, enc: c.enc, fromRH: false });
+  });
+
+  options.sort(function(a,b){ return b.enc - a.enc; });
+
+  sel.innerHTML = '<option value="">— Choisir un commercial —</option>'
+    + options.map(function(o){
+        var tag = o.fromRH ? '' : ' [legacy]';
+        var encStr = o.enc > 0 ? ' · '+fmtF(o.enc)+' F' : '';
+        return '<option value="'+escHtml(o.nom)+'"'+(o.nom===current?' selected':'')+'>'+escHtml(o.nom)+encStr+tag+'</option>';
       }).join('');
+
+  if (current) sel.value = current;
 }
 
 // ── Fiche individuelle enrichie ───────────────────────────────────────────────
@@ -19215,7 +19242,11 @@ function populateCommerciauxPartout() {
   buildOptions(document.getElementById('geo-filter-commercial'));
 
   // ── Rapport sélecteur (rapport-select-commercial) ─────────────────────────
-  // Peuplé par buildRapportsCommerciaux — on laisse sa logique propre
+  // Peuplement initial depuis RH (sans stats) pour afficher dès le 1er clic
+  var rapSel = document.getElementById('rapport-select-commercial');
+  if (rapSel && rapSel.options.length <= 1) {
+    buildOptions(rapSel);
+  }
 
 }
 
