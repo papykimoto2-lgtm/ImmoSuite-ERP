@@ -5202,6 +5202,24 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
       <div class="tab-pane" id="tab-modal-client-souscription">
         <div class="form-grid">
+
+          <!-- ── Rattachement commercial / apporteur (obligatoire) ── -->
+          <div class="form-group">
+            <label>💼 Commercial assigné *</label>
+            <select class="form-control" id="c-commercial" onchange="validateCommApporteur()">
+              <option value="">— Choisir dans le module RH —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>🤝 Apporteur d'affaire</label>
+            <select class="form-control" id="c-apporteur" onchange="validateCommApporteur()">
+              <option value="">— Aucun apporteur —</option>
+            </select>
+          </div>
+          <div id="comm-ap-alert" style="display:none;grid-column:span 2;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;font-size:12px;color:#DC2626;">
+            ⚠️ <strong>Obligatoire :</strong> Sélectionnez au moins un commercial <em>ou</em> un apporteur pour calculer les commissions.
+          </div>
+
           <div class="form-group">
             <label>Programme *</label>
             <select class="form-control" id="c-programme" onchange="updateLotsByProgramme()">
@@ -8712,7 +8730,8 @@ function openClientModal(id) {
 
 function clearClientForm() {
   ['c-nom','c-prenoms','c-ddn','c-nationalite','c-profession','c-tel','c-email','c-adresse',
-   'c-piece-num','c-montant-total','c-apport','c-duree','c-date-debut','c-mensualite','c-type-logement'].forEach(function(id) {
+   'c-piece-num','c-montant-total','c-apport','c-duree','c-date-debut','c-mensualite','c-type-logement',
+   'c-commercial','c-apporteur'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = el.id === 'c-nationalite' ? 'Ivoirienne' : el.id === 'c-duree' ? '60' : el.id === 'c-apport' ? '0' : '';
   });
@@ -13382,7 +13401,9 @@ function _buildFicheSelect(commList) {
   var current = sel.value;
   sel.innerHTML = '<option value="">— Choisir —</option>'
     + commList.map(function(c){
-        return '<option value="'+escHtml(c.nom)+'"'+(c.nom===current?' selected':'')+'>'+escHtml(c.nom)+' ('+fmtF(c.enc)+' F)</option>';
+        var empMatch = c.emp_id ? DATA.employes.find(function(e){return e.id===c.emp_id;}) : null;
+        var label = empMatch ? ((empMatch.prenoms||'')+' '+empMatch.nom).trim() : c.nom;
+        return '<option value="'+escHtml(c.nom)+'"'+(c.nom===current?' selected':'')+'>'+escHtml(label)+' ('+fmtF(c.enc)+' F)</option>';
       }).join('');
 }
 
@@ -19196,8 +19217,6 @@ function populateCommerciauxPartout() {
   // ── Rapport sélecteur (rapport-select-commercial) ─────────────────────────
   // Peuplé par buildRapportsCommerciaux — on laisse sa logique propre
 
-  // ── CR Visites (cr-commercial si présent) ────────────────────────────────
-  buildOptions(document.getElementById('cr-commercial'));
 }
 
 /**
