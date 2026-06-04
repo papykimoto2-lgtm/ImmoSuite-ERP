@@ -9683,17 +9683,171 @@ function userCanAccess(module) {
   return !!(allRoles[role].permissions && allRoles[role].permissions[module]);
 }
 
+
+// ══ SOUS-ONGLETS PANNEAU UTILISATEURS ═══════════════════════════════════════
+function switchUTab(tab) {
+  ['users','roles','log'].forEach(function(t) {
+    var pane = document.getElementById('upane-' + t);
+    var btn  = document.getElementById('utab-' + t);
+    if (pane) pane.style.display = (t === tab) ? '' : 'none';
+    if (btn)  { btn.classList.toggle('active', t === tab); }
+  });
+  if (tab === 'roles') loadCustomRoles().then(function(){ rebuildRoleMatrix(); renderRolesList(); renderRolesMatrix(); });
+  if (tab === 'log')   loadConnexionLog();
+}
+
+// ══ LISTE DES RÔLES ═══════════════════════════════════════════════════════════
+function renderRolesList() {
+  var el = document.getElementById('roles-list');
+  if (!el) return;
+  var allRoles = getAllRoles();
+  el.innerHTML = Object.keys(allRoles).map(function(rid) {
+    var r = allRoles[rid];
+    var nbAcces = ALL_MODULES.filter(function(m){ return r.permissions && r.permissions[m]; }).length;
+    var isSystem = r.system;
+    var badge = isSystem
+      ? '<span style="background:#F1F5F9;color:#94A3B8;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;margin-left:6px;">Systeme</span>'
+      : '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;margin-left:6px;">Personnalise</span>';
+    var btnEdit = !isSystem ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="openRoleModal(\'' + rid + '\')" title="Modifier">✏️</button> ' : '';
+    var btnDel  = !isSystem ? '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteCustomRole(\'' + rid + '\')" title="Supprimer">🗑️</button>' : '';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;'
+      + 'padding:12px 14px;background:#F8FAFC;border:1px solid #E2E8F0;'
+      + 'border-left:4px solid #0D2354;border-radius:8px;margin-bottom:8px;">'
+      + '<div><span style="font-size:18px;margin-right:8px;">' + (r.icon||'👤') + '</span>'
+      + '<strong style="color:#0F172A;font-size:13px;">' + r.label + '</strong>' + badge
+      + '<div style="font-size:11px;color:#64748B;margin-top:2px;margin-left:28px;">'
+      + nbAcces + ' module(s) · Niveau ' + (r.level||1) + '</div></div>'
+      + '<div style="display:flex;gap:6px;">' + btnEdit + btnDel + '</div></div>';
+  }).join('');
+}
+
+// ══ MODAL RÔLE : OUVRIR ═══════════════════════════════════════════════════════
+function openRoleModal(roleId) {
+  if (!hasRole('admin')) { toast('Reserve aux administrateurs.', 'error'); return; }
+  var editEl = document.getElementById('role-edit-id');
+  if (editEl) editEl.textContent = roleId || '';
+  var isEdit = !!(roleId && CUSTOM_ROLES[roleId]);
+  var r = isEdit ? CUSTOM_ROLES[roleId] : null;
+  var title = document.getElementById('role-editor-title');
+  if (title) title.textContent = isEdit ? 'Modifier : ' + r.label : 'Nouveau role personnalise';
+  if (document.getElementById('role-nom'))   document.getElementById('role-nom').value   = isEdit ? r.label   : '';
+  if (document.getElementById('role-icon'))  document.getElementById('role-icon').value  = isEdit ? (r.icon||'') : '';
+  if (document.getElementById('role-level')) document.getElementById('role-level').value = isEdit ? (r.level||2) : '2';
+  if (document.getElementById('role-preset')) document.getElementById('role-preset').value = '';
+  buildModulesGrid(isEdit ? r.permissions : {});
+  document.getElementById('modal-role-editor').classList.add('open');
+}
+
+// ══ GRILLE MODULES ════════════════════════════════════════════════════════════
+function buildModulesGrid(permissions) {
+  var grid = document.getElementById('role-modules-grid');
+  if (!grid) return;
+  permissions = permissions || {};
+  grid.innerHTML = ALL_MODULES.map(function(mod) {
+    var chkd = permissions[mod] ? 'checked' : '';
+    var iid  = 'mod_' + mod.replace(/[^a-zA-Z0-9]/g,'_');
+    return '<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;'
+      + 'background:#fff;border:1px solid #E2E8F0;border-radius:6px;cursor:pointer;font-size:13px;color:#1E293B;">'
+      + '<input type="checkbox" id="' + iid + '" value="' + mod + '" ' + chkd
+      + ' style="width:16px;height:16px;accent-color:#0D2354;flex-shrink:0;">'
+      + mod + '</label>';
+  }).join('');
+}
+
+function applyRolePreset() {
+  var preset = (document.getElementById('role-preset')||{}).value;
+  if (!preset || !SYSTEM_ROLES[preset]) return;
+  buildModulesGrid(SYSTEM_ROLES[preset].permissions);
+}
+
+function toggleAllModules(val) {
+  ALL_MODULES.forEach(function(mod) {
+    var el = document.getElementById('mod_' + mod.replace(/[^a-zA-Z0-9]/g,'_'));
+    if (el) el.checked = val;
+  });
+}
+
+// ══ SAUVEGARDER UN RÔLE ═══════════════════════════════════════════════════════
+async function saveRoleFromModal() {
+  var nom   = (document.getElementById('role-nom')||{}).value.trim();
+  var icon  = (document.getElementById('role-icon')||{}).value.trim();
+  var level = parseInt((document.getElementById('role-level')||{}).value||'2');
+  var editId= (document.getElementById('role-edit-id')||{}).textContent.trim();
+  if (!nom) { toast('Nom du role obligatoire.', 'error'); return; }
+  var rid = editId || nom.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/__+/g,'_');
+  if (!editId && (SYSTEM_ROLES[rid] || CUSTOM_ROLES[rid])) rid = rid + '_' + Date.now().toString(36);
+  var permissions = {};
+  ALL_MODULES.forEach(function(mod) {
+    var el = document.getElementById('mod_' + mod.replace(/[^a-zA-Z0-9]/g,'_'));
+    permissions[mod] = el ? el.checked : false;
+  });
+  var nb = Object.values(permissions).filter(Boolean).length;
+  if (nb === 0 && !confirm('Ce role n\'a aucun acces. Continuer ?')) return;
+  var roleObj = { id:rid, label:nom, icon:icon||'👤', level:level, system:false, permissions:permissions };
+  CUSTOM_ROLES[rid] = roleObj;
+  await dbPut('custom_roles', roleObj);
+  rebuildRoleMatrix();
+  closeModal('modal-role-editor');
+  renderRolesList();
+  renderRolesMatrix();
+  refreshRoleSelectInModal();
+  toast('Role ' + nom + ' enregistre (' + nb + ' modules).', 'success');
+}
+
+// ══ SUPPRIMER UN RÔLE ════════════════════════════════════════════════════════
+async function deleteCustomRole(rid) {
+  if (SYSTEM_ROLES[rid]) { toast('Les roles systeme sont proteges.', 'error'); return; }
+  var r = CUSTOM_ROLES[rid]; if (!r) return;
+  var concerned = DATA.users.filter(function(u){ return u.role === rid; });
+  var msg = 'Supprimer le role ' + r.label + ' ?';
+  if (concerned.length) msg += '\n\n' + concerned.length + ' utilisateur(s) seront passes en commercial.';
+  if (!confirm(msg)) return;
+  for (var i = 0; i < concerned.length; i++) { concerned[i].role = 'commercial'; await dbPut('users', concerned[i]); }
+  DATA.users.forEach(function(u){ if (u.role === rid) u.role = 'commercial'; });
+  delete CUSTOM_ROLES[rid];
+  await dbDelete('custom_roles', rid);
+  rebuildRoleMatrix(); renderRolesList(); renderRolesMatrix(); refreshRoleSelectInModal();
+  toast('Role supprime.', 'success');
+}
+
+// ══ RAFRAÎCHIR LE SELECT RÔLE ════════════════════════════════════════════════
+function refreshRoleSelectInModal() {
+  var sel = document.getElementById('new-user-role'); if (!sel) return;
+  var current = sel.value;
+  var allRoles = getAllRoles();
+  sel.innerHTML = Object.keys(allRoles).map(function(rid) {
+    var r = allRoles[rid];
+    return '<option value="' + rid + '">' + (r.icon||'') + ' ' + r.label + '</option>';
+  }).join('');
+  if (current && allRoles[current]) sel.value = current;
+}
+
 function renderRolesMatrix() {
-  var tbody = document.getElementById('roles-matrix-body');
+  rebuildRoleMatrix();
+  var header = document.getElementById('roles-matrix-header');
+  var tbody  = document.getElementById('roles-matrix-body');
   if (!tbody) return;
-  var chk = function(v) { return v ? '<span style="color:#16a34a;font-weight:700;font-size:15px;">✓</span>' : '<span style="color:#dc2626;font-size:13px;">—</span>'; };
-  tbody.innerHTML = Object.keys(ROLE_MATRIX).map(function(mod) {
-    var r = ROLE_MATRIX[mod];
-    return '<tr><td style="padding:7px 10px;font-size:12px;color:#1A2030;border-bottom:1px solid #E8EBF0;">' + mod + '</td>'
-      + '<td style="text-align:center;border-bottom:1px solid #E8EBF0;">' + chk(r.admin) + '</td>'
-      + '<td style="text-align:center;border-bottom:1px solid #E8EBF0;">' + chk(r.manager) + '</td>'
-      + '<td style="text-align:center;border-bottom:1px solid #E8EBF0;">' + chk(r.comptable) + '</td>'
-      + '<td style="text-align:center;border-bottom:1px solid #E8EBF0;">' + chk(r.commercial) + '</td></tr>';
+  var allRoles = getAllRoles();
+  var rids = Object.keys(allRoles);
+  var chk = function(v) { return v
+    ? '<span style="color:#059669;font-weight:700;font-size:14px;">✓</span>'
+    : '<span style="color:#CBD5E1;font-size:13px;">—</span>'; };
+  if (header) {
+    header.innerHTML = '<th style="padding:8px 12px;text-align:left;background:#F1F5F9;color:#64748B;font-size:10px;text-transform:uppercase;width:160px;">Module</th>'
+      + rids.map(function(rid) {
+          var r = allRoles[rid];
+          return '<th style="text-align:center;background:#F1F5F9;color:#0D2354;font-size:11px;padding:8px 10px;white-space:nowrap;">'
+            + (r.icon||'') + ' ' + r.label + '</th>';
+        }).join('');
+  }
+  tbody.innerHTML = ALL_MODULES.map(function(mod) {
+    return '<tr>'
+      + '<td style="padding:8px 12px;font-size:12px;color:#1E293B;border-bottom:1px solid #E2E8F0;white-space:nowrap;">' + mod + '</td>'
+      + rids.map(function(rid) {
+          return '<td style="text-align:center;border-bottom:1px solid #E2E8F0;">'
+            + chk(ROLE_MATRIX[mod] && ROLE_MATRIX[mod][rid]) + '</td>';
+        }).join('')
+      + '</tr>';
   }).join('');
 }
 
@@ -9701,19 +9855,22 @@ function updateRolePreview() {
   var role = (document.getElementById('new-user-role')||{}).value || 'commercial';
   var preview = document.getElementById('role-preview-content');
   if (!preview) return;
-  var accesses = Object.keys(ROLE_MATRIX).filter(function(m){ return ROLE_MATRIX[m][role]; });
+  var allRoles = getAllRoles();
+  var r = allRoles[role];
+  if (!r) return;
+  var accesses = ALL_MODULES.filter(function(m){ return r.permissions && r.permissions[m]; });
   preview.innerHTML = accesses.map(function(m){
-    return '<span style="background:#E0E8FF;color:#1D4ED8;padding:3px 8px;border-radius:12px;font-size:11px;">' + m + '</span>';
-  }).join('');
+    return '<span style="background:#EFF6FF;color:#1D4ED8;padding:3px 8px;border-radius:12px;font-size:11px;">' + m + '</span>';
+  }).join('') || '<span style="color:#94A3B8;font-size:12px;">Aucun acces configure</span>';
 }
 
 function openUserModal() {
-  if (!hasRole('admin')) { toast('⛔ Réservé aux administrateurs.', 'error'); return; }
+  if (!hasRole('admin')) { toast('Reserve aux administrateurs.', 'error'); return; }
   var f = function(id){ var e=document.getElementById(id); if(e) e.value=''; };
   f('new-user-nom'); f('new-user-login'); f('new-user-pwd'); f('new-user-pwd2');
+  refreshRoleSelectInModal();
   var r = document.getElementById('new-user-role'); if(r) r.value='commercial';
   updateRolePreview();
-  renderRolesMatrix();
   document.getElementById('modal-user-create').classList.add('open');
 }
 
