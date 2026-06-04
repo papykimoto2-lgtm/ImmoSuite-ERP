@@ -2169,41 +2169,119 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <!-- Utilisateurs -->
         <div class="tab-pane" id="tab-params-users">
 
-          <!-- Carte matrice des rôles -->
-          <div class="card" style="margin-bottom:12px;">
-            <div class="form-section-title">🛡️ Matrice des accès par rôle</div>
-            <div style="overflow-x:auto;margin-top:8px;">
-              <table style="min-width:500px;font-size:12px;">
-                <thead>
-                  <tr>
-                    <th style="width:160px;">Module</th>
-                    <th style="text-align:center;">👑 Admin</th>
-                    <th style="text-align:center;">📊 Manager</th>
-                    <th style="text-align:center;">💼 Comptable</th>
-                    <th style="text-align:center;">🎯 Commercial</th>
-                  </tr>
-                </thead>
-                <tbody id="roles-matrix-body"></tbody>
-              </table>
+          <!-- Sous-onglets Utilisateurs / Rôles / Journal -->
+          <div class="tab-nav" style="margin-bottom:16px;">
+            <button class="tab-btn active" id="utab-users" onclick="switchUTab('users')">👤 Utilisateurs</button>
+            <button class="tab-btn" id="utab-roles" onclick="switchUTab('roles')">🛡️ Rôles & Accès</button>
+            <button class="tab-btn" id="utab-log"   onclick="switchUTab('log')">📋 Journal connexions</button>
+          </div>
+
+          <!-- Panneau Utilisateurs -->
+          <div id="upane-users">
+            <div class="card">
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>👤 Utilisateurs du système</span>
+                <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Nouvel utilisateur</button>
+              </div>
+              <div id="users-list" style="margin-top:12px;"></div>
             </div>
           </div>
 
-          <!-- Liste utilisateurs -->
-          <div class="card">
-            <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>👤 Utilisateurs du système</span>
-              <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Nouvel utilisateur</button>
+          <!-- Panneau Rôles & Accès -->
+          <div id="upane-roles" style="display:none;">
+
+            <!-- Liste des rôles -->
+            <div class="card" style="margin-bottom:12px;">
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🛡️ Rôles définis</span>
+                <button class="btn btn-primary btn-sm" onclick="openRoleModal()">+ Nouveau rôle</button>
+              </div>
+              <div id="roles-list" style="margin-top:10px;"></div>
             </div>
-            <div id="users-list" style="margin-top:12px;"></div>
+
+            <!-- Matrice des accès (lecture seule, toutes colonnes) -->
+            <div class="card">
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>📊 Matrice des accès — tous les rôles</span>
+                <button class="btn btn-secondary btn-sm" onclick="renderRolesMatrix()">🔄</button>
+              </div>
+              <div style="overflow-x:auto;margin-top:8px;">
+                <table style="min-width:400px;font-size:12px;">
+                  <thead><tr id="roles-matrix-header"></tr></thead>
+                  <tbody id="roles-matrix-body"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <!-- Journal des connexions -->
-          <div class="card" style="margin-top:12px;">
-            <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📋 Journal des connexions</span>
-              <button class="btn btn-secondary btn-sm" onclick="loadConnexionLog()">🔄 Actualiser</button>
+          <!-- Panneau Journal -->
+          <div id="upane-log" style="display:none;">
+            <div class="card">
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>📋 Journal des connexions</span>
+                <button class="btn btn-secondary btn-sm" onclick="loadConnexionLog()">🔄 Actualiser</button>
+              </div>
+              <div id="connexion-log-list" style="margin-top:10px;font-size:12px;"></div>
             </div>
-            <div id="connexion-log-list" style="margin-top:10px;font-size:12px;max-height:260px;overflow-y:auto;"></div>
+          </div>
+
+        </div>
+
+        <!-- ═══ MODAL CRÉATION/ÉDITION RÔLE ════════════════════════════════ -->
+        <div class="modal-overlay" id="modal-role-editor">
+          <div class="modal" style="max-width:640px;">
+            <div class="modal-header">
+              <div class="modal-handle"></div>
+              <h3 id="role-editor-title">🛡️ Nouveau rôle</h3>
+              <button class="btn btn-secondary btn-sm btn-icon" onclick="closeModal('modal-role-editor')">✕</button>
+            </div>
+            <div class="modal-body">
+
+              <!-- Infos rôle -->
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                  <label>Nom du rôle *</label>
+                  <input type="text" id="role-nom" class="form-control" placeholder="Ex: Juriste, Superviseur...">
+                </div>
+                <div class="form-group">
+                  <label>Icône (emoji)</label>
+                  <input type="text" id="role-icon" class="form-control" placeholder="Ex: ⚖️ 🔍 📋" maxlength="4">
+                </div>
+                <div class="form-group">
+                  <label>Niveau d'accès</label>
+                  <select id="role-level" class="form-control">
+                    <option value="1">1 — Consultation</option>
+                    <option value="2" selected>2 — Opérationnel</option>
+                    <option value="3">3 — Supervision</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Basé sur (préréglage)</label>
+                  <select id="role-preset" class="form-control" onchange="applyRolePreset()">
+                    <option value="">— Partir de zéro —</option>
+                    <option value="commercial">🎯 Commercial</option>
+                    <option value="comptable">💼 Comptable</option>
+                    <option value="manager">📊 Manager</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Matrice accès interactive -->
+              <div style="font-size:11px;font-weight:700;color:#0D2354;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+                Modules accessibles
+                <span style="float:right;">
+                  <button onclick="toggleAllModules(true)"  style="font-size:11px;cursor:pointer;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:4px;padding:2px 8px;">Tout cocher</button>
+                  <button onclick="toggleAllModules(false)" style="font-size:11px;cursor:pointer;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:4px;padding:2px 8px;margin-left:4px;">Tout décocher</button>
+                </span>
+              </div>
+              <div id="role-modules-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:300px;overflow-y:auto;padding:4px 0;"></div>
+              <div id="role-edit-id" style="display:none;"></div>
+
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="closeModal('modal-role-editor')">Annuler</button>
+              <button class="btn btn-primary" onclick="saveRoleFromModal()">💾 Enregistrer le rôle</button>
+            </div>
           </div>
         </div>
 
@@ -6747,7 +6825,8 @@ var ALL_STORES = [
   'documents','signatures',
   'historique_actions','workflow_configs',
   'evenements_calendrier','messages','conversations',
-  'logs_connexion'
+  'logs_connexion',
+  'custom_roles'
 ];
 
 function initDB() {
@@ -9425,6 +9504,8 @@ function loadParamFields() {
   sv('param-sb-url',localStorage.getItem('sb_url'));
   sv('param-sb-key',localStorage.getItem('sb_key'));
   setTimeout(updateSBStatusBadge, 50);
+  // Charger rôles custom et reconstruire la matrice
+  loadCustomRoles().then(function(){ rebuildRoleMatrix(); renderRolesList(); renderRolesMatrix(); });
   buildDBStats();
 }
 
@@ -9532,32 +9613,75 @@ function updateSBStatusBadge() {
 }
 
 // ── Matrice des accès par rôle ─────────────────────────────────
-var ROLE_MATRIX = {
-  'Tableau de bord':       { admin:true,  manager:true,  comptable:true,  commercial:true  },
-  'Foncier':               { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Dossiers Juridiques':   { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Programmes':            { admin:true,  manager:true,  comptable:false, commercial:true  },
-  'Plans & Conception':    { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Constructeurs':         { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Conventions':           { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Suivi Chantiers':       { admin:true,  manager:true,  comptable:false, commercial:false },
-  'DQE & Coût de revient': { admin:true,  manager:true,  comptable:true,  commercial:false },
-  'Pipeline Leads':        { admin:true,  manager:true,  comptable:false, commercial:true  },
-  'Plan Action Commercial':{ admin:true,  manager:true,  comptable:false, commercial:true  },
-  'Carte & Géoloc':        { admin:true,  manager:true,  comptable:false, commercial:true  },
-  'Lots & Réservations':   { admin:true,  manager:true,  comptable:false, commercial:true  },
-  'Souscripteurs':         { admin:true,  manager:true,  comptable:true,  commercial:true  },
-  'Paiements':             { admin:true,  manager:true,  comptable:true,  commercial:false },
-  'Relances':              { admin:true,  manager:true,  comptable:true,  commercial:true  },
-  'Comptabilité':          { admin:true,  manager:false, comptable:true,  commercial:false },
-  'Trésorerie':            { admin:true,  manager:true,  comptable:true,  commercial:false },
-  'RH Employés':           { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Pointage':              { admin:true,  manager:true,  comptable:false, commercial:false },
-  'Paie':                  { admin:true,  manager:false, comptable:true,  commercial:false },
-  'Rapports Commerciaux':  { admin:true,  manager:true,  comptable:false, commercial:true  },
-  'Messagerie':            { admin:true,  manager:true,  comptable:true,  commercial:true  },
-  'Paramètres':            { admin:true,  manager:false, comptable:false, commercial:false },
+// ── Liste de tous les modules disponibles ────────────────────────────────────
+var ALL_MODULES = [
+  'Tableau de bord','Foncier','Dossiers Juridiques','Programmes',
+  'Plans & Conception','Constructeurs','Conventions','Suivi Chantiers',
+  'DQE & Cout de revient','Pipeline Leads','Plan Action Commercial',
+  'Carte & Geoloc','Lots & Reservations','Souscripteurs','Paiements',
+  'Relances','Comptabilite','Tresorerie','RH Employes','Pointage','Paie',
+  'Rapports Commerciaux','Messagerie','Parametres'
+];
+
+// ── Rôles système (non modifiables, non supprimables) ────────────────────────
+var SYSTEM_ROLES = {
+  admin:      { id:'admin',      label:'Administrateur', icon:'👑', level:4, system:true,
+    permissions: Object.fromEntries(ALL_MODULES.map(function(m){ return [m,true]; })) },
+  manager:    { id:'manager',    label:'Manager',        icon:'📊', level:3, system:true,
+    permissions: Object.fromEntries(ALL_MODULES.map(function(m){
+      return [m, !['Comptabilite','Paie','Parametres'].includes(m)]; })) },
+  comptable:  { id:'comptable',  label:'Comptable',      icon:'💼', level:2, system:true,
+    permissions: Object.fromEntries(ALL_MODULES.map(function(m){
+      return [m, ['Tableau de bord','DQE & Cout de revient','Souscripteurs','Paiements',
+                  'Relances','Comptabilite','Tresorerie','Paie','Messagerie'].includes(m)]; })) },
+  commercial: { id:'commercial', label:'Commercial',     icon:'🎯', level:1, system:true,
+    permissions: Object.fromEntries(ALL_MODULES.map(function(m){
+      return [m, ['Tableau de bord','Programmes','Pipeline Leads','Plan Action Commercial',
+                  'Carte & Geoloc','Lots & Reservations','Souscripteurs','Relances',
+                  'Rapports Commerciaux','Messagerie'].includes(m)]; })) },
 };
+
+// ── Rôles personnalisés (chargés depuis IndexedDB) ───────────────────────────
+var CUSTOM_ROLES = {};  // rempli par loadCustomRoles()
+
+// ── Obtenir tous les rôles (système + custom) ────────────────────────────────
+function getAllRoles() {
+  var roles = {};
+  Object.keys(SYSTEM_ROLES).forEach(function(k){ roles[k] = SYSTEM_ROLES[k]; });
+  Object.keys(CUSTOM_ROLES).forEach(function(k){ roles[k] = CUSTOM_ROLES[k]; });
+  return roles;
+}
+
+// ── Charger les rôles custom depuis IndexedDB ─────────────────────────────────
+async function loadCustomRoles() {
+  try {
+    var rows = await dbGetAll('custom_roles');
+    CUSTOM_ROLES = {};
+    rows.forEach(function(r){ CUSTOM_ROLES[r.id] = r; });
+  } catch(e) { CUSTOM_ROLES = {}; }
+}
+
+// ── ROLE_MATRIX dynamique (pour compatibilité) ───────────────────────────────
+var ROLE_MATRIX = {};
+function rebuildRoleMatrix() {
+  ROLE_MATRIX = {};
+  ALL_MODULES.forEach(function(mod) {
+    ROLE_MATRIX[mod] = {};
+    var allRoles = getAllRoles();
+    Object.keys(allRoles).forEach(function(rid) {
+      ROLE_MATRIX[mod][rid] = !!(allRoles[rid].permissions && allRoles[rid].permissions[mod]);
+    });
+  });
+}
+
+// ── Vérifier si un utilisateur a accès à un module ───────────────────────────
+function userCanAccess(module) {
+  if (!APP.currentUser) return false;
+  var role = APP.currentUser.role;
+  var allRoles = getAllRoles();
+  if (!allRoles[role]) return hasRole('admin');
+  return !!(allRoles[role].permissions && allRoles[role].permissions[module]);
+}
 
 function renderRolesMatrix() {
   var tbody = document.getElementById('roles-matrix-body');
@@ -9608,7 +9732,9 @@ async function createUserFromModal() {
   if (pwd !== pwd2) { toast('⚠️ Les mots de passe ne correspondent pas.', 'error'); return; }
   var pErr = validatePasswordPolicy(pwd);
   if (pErr) { toast('⚠️ ' + pErr, 'error'); return; }
-  if (!['admin','manager','commercial','comptable'].includes(role)) role = 'commercial';
+  // Accepter tous les rôles (système + custom)
+  var allRoles = getAllRoles();
+  if (!allRoles[role]) role = 'commercial';
   var salt = generateSalt();
   var hash = await hashPassword(pwd, salt);
   var user = { id: uid(), nom: nom.trim(), login: login.trim(), password_hash: hash, salt: salt, role: role };
