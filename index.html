@@ -697,6 +697,31 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   #dash-stepper { flex-direction: row; overflow-x: auto; }
   #dash-stepper > div { min-width: 80px; }
 }
+
+/* ══ ONGLETS TABLEAU DE BORD ════════════════════════════════════════════════ */
+.dash-tab {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748B;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  font-family: var(--fb, -apple-system, sans-serif);
+}
+.dash-tab:hover {
+  background: rgba(255,255,255,0.8);
+  color: #0F172A;
+}
+.dash-tab.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+}
 </style>
 <!-- EmailJS SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -931,7 +956,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <!-- ── DASHBOARD ─────────────────────────────── -->
       <!-- ●  TABLEAU DE BORD DIRECTION ──────────────── -->
       <div class="page active" id="page-dashboard">
-        <div class="page-header" style="flex-wrap:wrap;gap:10px;">
+
+        <!-- HEADER -->
+        <div class="page-header" style="flex-wrap:wrap;gap:10px;margin-bottom:0;">
           <div>
             <div class="page-title">Tableau de bord</div>
             <div class="page-subtitle" id="dash-date">Direction Générale — Vue temps réel</div>
@@ -949,72 +976,129 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
         </div>
 
-        <!-- Workflow stepper marche en avant -->
-        <div id="dash-stepper" style="display:flex;gap:0;margin-bottom:20px;overflow-x:auto;"></div>
+        <!-- ONGLETS DASHBOARD — style pill moderne -->
+        <div id="dash-tab-bar" style="
+          display:flex; gap:6px; flex-wrap:wrap;
+          margin:16px 0 20px; padding:6px;
+          background:#F1F5F9; border-radius:12px;
+        ">
+          <button id="dtab-vue"          onclick="switchDashTab('vue')"          class="dash-tab active">📊 Vue générale</button>
+          <button id="dtab-finance"       onclick="switchDashTab('finance')"       class="dash-tab">💰 Finance</button>
+          <button id="dtab-commercial"    onclick="switchDashTab('commercial')"    class="dash-tab">🎯 Commercial</button>
+          <button id="dtab-travaux"       onclick="switchDashTab('travaux')"       class="dash-tab">🏗️ Travaux</button>
+          <button id="dtab-alertes"       onclick="switchDashTab('alertes')"       class="dash-tab">⚠️ Alertes <span id="alertes-count" style="background:#EF4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:2px;"></span></button>
+        </div>
 
-        <!-- KPIs Niveau 1 — Finance -->
-        <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--or);text-transform:uppercase;margin-bottom:8px;opacity:.7;">💰 FINANCE & RECOUVREMENT</div>
-        <div class="kpi-grid" id="kpi-grid" style="margin-bottom:20px;"></div>
+        <!-- ══ TAB : VUE GÉNÉRALE ══════════════════════════════════════════ -->
+        <div id="dpane-vue">
+          <!-- Stepper workflow -->
+          <div id="dash-stepper" style="display:flex;gap:0;margin-bottom:20px;overflow-x:auto;"></div>
 
-        <!-- KPIs Niveau 2 — Production & Travaux -->
-        <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:var(--bleu);text-transform:uppercase;margin-bottom:8px;opacity:.7;">🏗️ PRODUCTION & TRAVAUX</div>
-        <div class="kpi-grid" id="kpi-grid2" style="margin-bottom:20px;"></div>
+          <!-- KPI Finance -->
+          <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#C5A880;text-transform:uppercase;margin-bottom:8px;">💰 FINANCE & RECOUVREMENT</div>
+          <div class="kpi-grid" id="kpi-grid" style="margin-bottom:24px;"></div>
 
-        <!-- Graphiques Row 1 -->
-        <div class="chart-row" style="margin-bottom:16px;">
-          <div class="chart-box">
-            <h4>📊 Encaissements mensuels (FCFA)</h4>
-            <div style="position:relative;">
-              <div class="mini-bar-chart" id="chart-encaissements" style="height:120px;"></div>
-              <div id="chart-tooltip" style="display:none;position:absolute;background:var(--card2);border:1px solid var(--bord);border-radius:6px;padding:6px 10px;font-size:12px;pointer-events:none;z-index:10;white-space:nowrap;"></div>
+          <!-- KPI Travaux -->
+          <div style="font-size:9px;font-weight:700;letter-spacing:2px;color:#3B82F6;text-transform:uppercase;margin-bottom:8px;">🏗️ PRODUCTION & TRAVAUX</div>
+          <div class="kpi-grid" id="kpi-grid2" style="margin-bottom:24px;"></div>
+
+          <!-- Synthese 2 colonnes -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card">
+              <div class="card-title" style="display:flex;justify-content:space-between;">
+                <span>⚠️ Alertes critiques</span>
+              </div>
+              <div class="alert-list" id="dash-alertes-mini"></div>
             </div>
-            <div style="display:flex;gap:6px;margin-top:6px;justify-content:space-between;" id="chart-labels"></div>
-          </div>
-          <div class="chart-box">
-            <h4>🏠 Répartition par type de logement</h4>
-            <div class="donut-wrap"><svg id="donut-svg" width="110" height="110" viewBox="0 0 110 110"></svg></div>
-            <div class="legend-list" id="donut-legend" style="max-height:100px;overflow-y:auto;"></div>
-          </div>
-        </div>
-
-        <!-- Graphiques Row 2 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div class="chart-box">
-            <h4>📈 Avancement des chantiers</h4>
-            <div id="dash-chantiers-barre" style="display:flex;flex-direction:column;gap:8px;margin-top:6px;"></div>
-          </div>
-          <div class="chart-box">
-            <h4>🎯 Objectifs commerciaux</h4>
-            <div id="dash-objectifs" style="display:flex;flex-direction:column;gap:8px;margin-top:6px;"></div>
-          </div>
-        </div>
-
-        <!-- Alertes & Activité -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div class="card">
-            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>⚠️ Alertes critiques</span>
-              <span id="alertes-count" style="background:var(--rouge);color:#fff;font-size:10px;padding:2px 8px;border-radius:20px;"></span>
+            <div class="card">
+              <div class="card-title">📅 Échéances à venir (30 j)</div>
+              <div id="dash-echeances-mini"></div>
             </div>
-            <div class="alert-list" id="dash-alertes"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">📋 Derniers versements reçus</div>
-            <div id="dash-recent-payments"></div>
           </div>
         </div>
 
-        <!-- Ligne bas : agenda échéances + activité récente -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-          <div class="card">
-            <div class="card-title">📅 Échéances à venir (30 jours)</div>
-            <div id="dash-echeances"></div>
+        <!-- ══ TAB : FINANCE ═══════════════════════════════════════════════ -->
+        <div id="dpane-finance" style="display:none;">
+          <div class="kpi-grid" id="kpi-grid-finance" style="margin-bottom:24px;"></div>
+          <div class="chart-row" style="margin-bottom:16px;">
+            <div class="chart-box" style="flex:2;">
+              <h4>📊 Encaissements mensuels (FCFA)</h4>
+              <div style="position:relative;">
+                <div class="mini-bar-chart" id="chart-encaissements" style="height:140px;"></div>
+                <div id="chart-tooltip" style="display:none;position:absolute;background:#fff;border:1px solid #E2E8F0;border-radius:6px;padding:6px 10px;font-size:12px;pointer-events:none;z-index:10;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.1);"></div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:8px;justify-content:space-between;" id="chart-labels"></div>
+            </div>
+            <div class="chart-box" style="flex:1;">
+              <h4>🏠 Répartition lots</h4>
+              <div class="donut-wrap"><svg id="donut-svg" width="110" height="110" viewBox="0 0 110 110"></svg></div>
+              <div class="legend-list" id="donut-legend" style="max-height:120px;overflow-y:auto;"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card">
+              <div class="card-title">📋 Derniers versements</div>
+              <div id="dash-recent-payments"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">📅 Échéances à venir</div>
+              <div id="dash-echeances"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ TAB : COMMERCIAL ════════════════════════════════════════════ -->
+        <div id="dpane-commercial" style="display:none;">
+          <div class="kpi-grid" id="kpi-grid-commercial" style="margin-bottom:24px;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div class="chart-box">
+              <h4>🎯 Objectifs commerciaux</h4>
+              <div id="dash-objectifs" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+            </div>
+            <div class="chart-box">
+              <h4>🏠 Répartition par programme</h4>
+              <div id="dash-prog-repartition" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">🔔 Activité récente</div>
             <div id="dash-activite"></div>
           </div>
         </div>
+
+        <!-- ══ TAB : TRAVAUX ═══════════════════════════════════════════════ -->
+        <div id="dpane-travaux" style="display:none;">
+          <div class="kpi-grid" id="kpi-grid-travaux" style="margin-bottom:24px;"></div>
+          <div class="chart-box" style="margin-bottom:16px;">
+            <h4>📈 Avancement des chantiers</h4>
+            <div id="dash-chantiers-barre" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">📋 Conventions & Situations récentes</div>
+            <div id="dash-conventions-recap"></div>
+          </div>
+        </div>
+
+        <!-- ══ TAB : ALERTES ═══════════════════════════════════════════════ -->
+        <div id="dpane-alertes" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div class="card">
+              <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>⚠️ Alertes critiques</span>
+              </div>
+              <div class="alert-list" id="dash-alertes"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">📅 Échéances à venir (30 jours)</div>
+              <div id="dash-echeances-full"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔴 Clients en retard de paiement</div>
+            <div id="dash-retardataires"></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── SOUSCRIPTEURS ──────────────────────────── -->
@@ -7365,6 +7449,146 @@ function closeModal(id) {
 /* ──────────────────────────────────────────────────────
    DASHBOARD
 ────────────────────────────────────────────────────── */
+
+// ══ ONGLETS TABLEAU DE BORD ═══════════════════════════════════════════════════
+var _currentDashTab = 'vue';
+
+function switchDashTab(tab) {
+  _currentDashTab = tab;
+  var tabs  = ['vue','finance','commercial','travaux','alertes'];
+  tabs.forEach(function(t) {
+    var btn  = document.getElementById('dtab-' + t);
+    var pane = document.getElementById('dpane-' + t);
+    if (btn)  btn.classList.toggle('active', t === tab);
+    if (pane) pane.style.display = (t === tab) ? '' : 'none';
+  });
+  refreshDashboard();
+}
+
+function buildDashTabFinance() {
+  var totalVerse = DATA.versements.reduce(function(a,v){return a+(parseFloat(v.montant)||0);},0);
+  var totalDu    = DATA.clients.reduce(function(a,c){return a+(parseFloat(c.montant_total)||0);},0);
+  var encours    = Math.max(0, totalDu-totalVerse);
+  var tauxRecouv = totalDu>0 ? Math.round((totalVerse/totalDu)*100) : 0;
+  var retard     = getRetardataires().length;
+  var now        = new Date();
+  var moisCourant = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var caM = DATA.versements.filter(function(v){return (v.date||'').startsWith(moisCourant);})
+                           .reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+  var el = document.getElementById('kpi-grid-finance');
+  if (!el) return;
+  el.innerHTML = [
+    {l:'CA Encaissé total',        v:fmtF(totalVerse)+' FCFA', i:'💰', c:'kpi-green', d:'Cumul depuis le début'},
+    {l:'CA Mois en cours',         v:fmtF(caM)+' FCFA',        i:'📆', c:'',         d:'Encaissements du mois'},
+    {l:'Encours clients (411)',     v:fmtF(encours)+' FCFA',    i:'⏳', c:encours>100000000?'kpi-red':'', d:DATA.clients.length+' souscripteurs'},
+    {l:'Taux de recouvrement',      v:tauxRecouv+'%',           i:'📈', c:tauxRecouv>=50?'kpi-green':'kpi-red', d:fmtF(totalVerse)+' / '+fmtF(totalDu)},
+    {l:'Clients en retard',         v:retard,                   i:'⚠️', c:retard>0?'kpi-red':'kpi-green', d:retard+' dossiers à relancer'},
+    {l:'Lots vendus',              v:DATA.lots.filter(function(l){return l.statut==='vendu';}).length+' / '+DATA.lots.length, i:'🏠', c:'', d:DATA.lots.filter(function(l){return l.statut==='disponible';}).length+' disponibles'},
+  ].map(function(k){
+    return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div>'
+      +'<div class="kpi-value or" style="font-size:17px;">'+k.v+'</div>'
+      +'<div class="kpi-delta '+(k.c==='kpi-red'?'negative':k.c==='kpi-green'?'positive':'')+'">'+k.d+'</div></div>';
+  }).join('');
+}
+
+function buildDashTabCommercial() {
+  var progs = DATA.programmes.filter(function(p){ return p.statut !== 'termine'; });
+  var totalLots = DATA.lots.length;
+  var vendus    = DATA.lots.filter(function(l){ return l.statut === 'vendu'; }).length;
+  var leads     = (DATA.leads||[]).length;
+  var el = document.getElementById('kpi-grid-commercial');
+  if (el) el.innerHTML = [
+    {l:'Programmes actifs',  v:progs.length,             i:'🏗️', c:'',         d:DATA.programmes.length+' total'},
+    {l:'Lots vendus',        v:vendus+'/'+totalLots,     i:'🏠', c:'kpi-green', d:Math.round(vendus/Math.max(totalLots,1)*100)+'% de taux de vente'},
+    {l:'Lots disponibles',   v:totalLots-vendus,         i:'📋', c:'',          d:'à commercialiser'},
+    {l:'Leads pipeline',     v:leads,                    i:'🎯', c:'',          d:'prospects en cours'},
+  ].map(function(k){
+    return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div>'
+      +'<div class="kpi-value or" style="font-size:17px;">'+k.v+'</div>'
+      +'<div class="kpi-delta '+(k.c==='kpi-red'?'negative':k.c==='kpi-green'?'positive':'')+'">'+k.d+'</div></div>';
+  }).join('');
+
+  // Répartition par programme
+  var rEl = document.getElementById('dash-prog-repartition');
+  if (rEl) rEl.innerHTML = DATA.programmes.slice(0,6).map(function(p) {
+    var lotsP  = DATA.lots.filter(function(l){ return l.programme_id === p.id; }).length;
+    var vendusP = DATA.lots.filter(function(l){ return l.programme_id === p.id && l.statut === 'vendu'; }).length;
+    var pct = lotsP > 0 ? Math.round(vendusP/lotsP*100) : 0;
+    return '<div style="margin-bottom:6px;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:#1E293B;margin-bottom:3px;">'
+      + '<span>'+escHtml(p.nom)+'</span><span style="font-weight:700;color:#0F172A;">'+vendusP+'/'+lotsP+' ('+pct+'%)</span></div>'
+      + '<div style="background:#E2E8F0;border-radius:4px;height:6px;">'
+      + '<div style="background:'+( pct>=80?'#10B981':pct>=50?'#C5A880':'#3B82F6')+';height:100%;width:'+pct+'%;border-radius:4px;transition:width .4s;"></div>'
+      + '</div></div>';
+  }).join('') || '<div style="color:#94A3B8;font-size:13px;padding:12px 0;">Aucun programme.</div>';
+}
+
+function buildDashTabTravaux() {
+  var convs     = DATA.conventions||[];
+  var chantiers = DATA.situations||[];
+  var el = document.getElementById('kpi-grid-travaux');
+  if (el) el.innerHTML = [
+    {l:'Chantiers actifs',    v:convs.filter(function(c){return c.statut!=='termine';}).length, i:'🏗️', c:'',         d:convs.length+' conventions total'},
+    {l:'Situations payées',   v:chantiers.filter(function(s){return s.statut==='paye';}).length, i:'✅', c:'kpi-green', d:chantiers.length+' situations total'},
+    {l:'Marchés travaux',     v:fmtF(convs.reduce(function(a,c){return a+(parseFloat(c.montant_marche)||0);},0))+' FCFA', i:'📋', c:'', d:'Montant total des marchés'},
+    {l:'Avancement moyen',    v:Math.round(convs.reduce(function(a,c){return a+(parseFloat(c.avancement)||0);},0)/Math.max(convs.length,1))+'%', i:'📈', c:'', d:'sur l\'ensemble des chantiers'},
+  ].map(function(k){
+    return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div>'
+      +'<div class="kpi-value or" style="font-size:17px;">'+k.v+'</div>'
+      +'<div class="kpi-delta '+(k.c==='kpi-red'?'negative':k.c==='kpi-green'?'positive':'')+'">'+k.d+'</div></div>';
+  }).join('');
+
+  // Conventions recap
+  var rEl = document.getElementById('dash-conventions-recap');
+  if (rEl) rEl.innerHTML = convs.slice(0,6).map(function(c) {
+    var av = parseFloat(c.avancement)||0;
+    var col = av>=80?'#10B981':av>=50?'#C5A880':'#3B82F6';
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #E2E8F0;">'
+      + '<div style="flex:1;">'
+      + '<div style="font-size:13px;font-weight:600;color:#0F172A;">'+escHtml(c.nom||c.id)+'</div>'
+      + '<div style="font-size:11px;color:#64748B;">'+escHtml(c.constructeur||'')+'</div></div>'
+      + '<div style="text-align:right;min-width:90px;">'
+      + '<div style="font-size:13px;font-weight:700;color:'+col+';">'+av+'%</div>'
+      + '<div style="background:#E2E8F0;border-radius:3px;height:5px;margin-top:3px;">'
+      + '<div style="background:'+col+';height:100%;width:'+av+'%;border-radius:3px;"></div></div></div></div>';
+  }).join('') || '<div style="color:#94A3B8;padding:12px 0;">Aucune convention.</div>';
+}
+
+function buildDashTabAlertes() {
+  var retardataires = getRetardataires();
+  var el = document.getElementById('dash-retardataires');
+  if (el) el.innerHTML = retardataires.slice(0,10).map(function(c) {
+    var verse = DATA.versements.filter(function(v){return v.client_id===c.id;}).reduce(function(a,v){return a+(parseFloat(v.montant)||0);},0);
+    var reste = Math.max(0,(parseFloat(c.montant_total)||0)-verse);
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;'
+      + 'background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;margin-bottom:6px;">'
+      + '<div><div style="font-size:13px;font-weight:600;color:#0F172A;">'+escHtml(c.prenoms+' '+c.nom)+'</div>'
+      + '<div style="font-size:11px;color:#DC2626;">'+escHtml(c.dossier||c.id)+'</div></div>'
+      + '<div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#DC2626;">'+fmtF(reste)+' FCFA</div>'
+      + '<div style="font-size:10px;color:#64748B;">restant dû</div></div></div>';
+  }).join('') || '<div style="color:#10B981;padding:16px 0;text-align:center;font-size:13px;font-weight:600;">✅ Aucun client en retard</div>';
+
+  // Copier alertes et echeances
+  buildAlertes();
+  buildDashEcheances();
+  var ecFull = document.getElementById('dash-echeances-full');
+  var ecMini = document.getElementById('dash-echeances');
+  if (ecFull && ecMini) ecFull.innerHTML = ecMini.innerHTML;
+}
+
+function buildDashTabVue() {
+  // Mini alertes
+  buildAlertes();
+  var src = document.getElementById('dash-alertes');
+  var dst = document.getElementById('dash-alertes-mini');
+  if (src && dst) dst.innerHTML = src.innerHTML;
+  // Mini echéances
+  buildDashEcheances();
+  var eSrc = document.getElementById('dash-echeances');
+  var eDst = document.getElementById('dash-echeances-mini');
+  if (eSrc && eDst) eDst.innerHTML = eSrc.innerHTML;
+}
+
 function refreshDashboard() {
   document.getElementById('dash-date').textContent =
     new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -7426,6 +7650,13 @@ function refreshDashboard() {
   buildDashActivite();
   buildDashStepper();
   buildDashKPI2();
+  // Builder spécifique à l'onglet actif
+  var _tab = _currentDashTab || 'vue';
+  if (_tab === 'vue')        buildDashTabVue();
+  if (_tab === 'finance')    { buildDashTabFinance(); buildBarChart(); buildDonut(); buildRecentPayments(); }
+  if (_tab === 'commercial') buildDashTabCommercial();
+  if (_tab === 'travaux')    buildDashTabTravaux();
+  if (_tab === 'alertes')    buildDashTabAlertes();
 }
 
 /* ══════════════════════════════════════════════════════
