@@ -7806,6 +7806,31 @@ function goTo(page) {
 }
 
 function switchTab(context, tab) {
+
+  // ── Traitement dédié : Rapports Commerciaux ─────────────────────────────
+  // Implémentation ciblée pour éviter toute interférence avec les autres
+  // tab-nav de la page (solution proposée par l'utilisateur)
+  if (context === 'rapports') {
+    var prefix = 'tab-rapports-';
+    // Masquer tous les panneaux de rapports
+    document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(el) {
+      el.classList.remove('active');
+    });
+    // Afficher le panneau cible
+    var activePane = document.getElementById(prefix + tab);
+    if (activePane) activePane.classList.add('active');
+    // Mettre à jour la classe active sur les boutons — ciblage précis
+    document.querySelectorAll('#page-crm-rapports .tab-nav .tab-btn').forEach(function(btn) {
+      btn.classList.remove('active');
+      var oc = btn.getAttribute('onclick') || '';
+      if (oc.indexOf("switchTab('rapports','" + tab + "')") !== -1) {
+        btn.classList.add('active');
+      }
+    });
+    return;
+  }
+
+  // ── Traitement générique pour tous les autres contextes ──────────────────
   var prefix = '';
   if      (context === 'paiements')       prefix = 'tab-paiements-';
   else if (context === 'lots')            prefix = 'tab-lots-';
@@ -7822,16 +7847,14 @@ function switchTab(context, tab) {
   else if (context === 'modal-constr')    prefix = 'tab-modal-constr-';
   else if (context === 'modal-conv')      prefix = 'tab-modal-conv-';
   else if (context === 'pointage')        prefix = 'tab-pointage-';
-  /* ── Contextes ajoutés ── */
   else if (context === 'pac')             prefix = 'tab-pac-';
   else if (context === 'chantiers')       prefix = 'tab-chantiers-';
   else if (context === 'params')          prefix = 'tab-params-';
-  else if (context === 'rapprochement')   prefix = 'tab-rapproch-'; /* fallback */
+  else if (context === 'rapprochement')   prefix = 'tab-rapproch-';
   else if (context === 'modal-camp')      prefix = 'tab-modal-camp-';
   else if (context === 'modal-conc')      prefix = 'tab-modal-conc-';
   else if (context === 'modal-rapport')   prefix = 'tab-modal-rapport-';
-  else if (context === 'rapports')         prefix = 'tab-rapports-';
-  else if (context === 'users')            prefix = 'tab-params-users-';
+  else if (context === 'users')           prefix = 'tab-params-users-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
