@@ -2378,6 +2378,22 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                   <input type="number" id="param-commission" class="form-control" value="3" min="0" max="10">
                 </div>
                 <div class="form-group">
+                  <label>🏦 Comm. commercial — Souscription (%)</label>
+                  <input type="number" id="param-comm-souscription" class="form-control" value="10" min="0" max="30" step="0.5">
+                </div>
+                <div class="form-group">
+                  <label>🏦 Comm. commercial — Régulier (%)</label>
+                  <input type="number" id="param-comm-regulier" class="form-control" value="5" min="0" max="20" step="0.5">
+                </div>
+                <div class="form-group">
+                  <label>🤝 Comm. apporteur — Souscription (%)</label>
+                  <input type="number" id="param-comm-apporteur-souscription" class="form-control" value="10" min="0" max="30" step="0.5">
+                </div>
+                <div class="form-group">
+                  <label>🤝 Comm. apporteur — Régulier (%)</label>
+                  <input type="number" id="param-comm-apporteur-regulier" class="form-control" value="5" min="0" max="20" step="0.5">
+                </div>
+                <div class="form-group">
                   <label>Pénalités retard (%/semaine)</label>
                   <input type="number" id="param-penalites" class="form-control" value="0.5" step="0.1">
                 </div>
@@ -4181,7 +4197,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="page-header">
           <div>
             <div class="page-title">Rapports Commerciaux</div>
-            <div class="page-subtitle">Performance individuelle · Objectifs · Commissions · Classement</div>
+            <div class="page-subtitle">Performance · Objectifs · Commissions · Analyses · Impression</div>
           </div>
           <div class="spacer"></div>
           <select class="filter-select" id="rapport-periode" onchange="buildRapportsCommerciaux()">
@@ -4190,48 +4206,236 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <option value="annee">Cette année</option>
             <option value="tout">Tout historique</option>
           </select>
-          <button class="btn btn-secondary btn-sm" onclick="exportRapportCSV()">⬇ Export</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportRapportCSV()">⬇ Export CSV</button>
+          <button class="btn btn-secondary btn-sm" onclick="printRapportCommercial()">🖨️ Imprimer</button>
         </div>
 
-        <!-- KPIs globaux -->
-        <div class="kpi-grid" id="rapport-kpi-global" style="margin-bottom:20px;"></div>
+        <!-- Onglets -->
+        <div class="tab-nav" style="margin-bottom:18px;">
+          <button class="tab-btn active" onclick="switchTab('rapports','global')">📊 Vue globale</button>
+          <button class="tab-btn" onclick="switchTab('rapports','fiche')">👤 Fiche individuelle</button>
+          <button class="tab-btn" onclick="switchTab('rapports','objectifs')">🎯 Objectifs</button>
+          <button class="tab-btn" onclick="switchTab('rapports','commissions');renderCommissions();renderCommissionsBenef();">💰 Commissions</button>
+          <button class="tab-btn" onclick="switchTab('rapports','analyse')">📈 Analyses</button>
+        </div>
 
-        <!-- Classement commerciaux -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-          <div class="card">
-            <div class="form-section-title">🏆 Classement des commerciaux</div>
-            <div id="classement-commerciaux" style="display:flex;flex-direction:column;gap:10px;margin-top:12px;"></div>
+        <!-- ── ONGLET VUE GLOBALE ── -->
+        <div class="tab-pane active" id="tab-rapports-global">
+          <!-- KPIs -->
+          <div class="kpi-grid" id="rapport-kpi-global" style="margin-bottom:20px;"></div>
+
+          <!-- Classement + Programmes -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div class="card">
+              <div class="form-section-title">🏆 Classement encaissements</div>
+              <div id="classement-commerciaux" style="display:flex;flex-direction:column;gap:8px;margin-top:10px;"></div>
+            </div>
+            <div class="card">
+              <div class="form-section-title">📦 Performance par programme</div>
+              <div id="perf-programmes" style="margin-top:10px;"></div>
+            </div>
           </div>
+
+          <!-- Tableau comparatif -->
           <div class="card">
-            <div class="form-section-title">📈 Performance par programme</div>
-            <div id="perf-programmes" style="margin-top:12px;"></div>
+            <div class="form-section-title">📋 Tableau comparatif complet</div>
+            <div class="table-wrap" style="margin-top:10px;overflow-x:auto;">
+              <table>
+                <thead><tr>
+                  <th>Commercial</th><th>Prospects</th><th>Souscr.</th>
+                  <th>Conv. %</th><th>CA portefeuille</th><th>Encaissé</th>
+                  <th>Taux recouv.</th><th>Visites</th><th>CR rédigés</th>
+                  <th>Commission</th><th>Objectif %</th>
+                </tr></thead>
+                <tbody id="tbody-rapport-commerciaux"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <!-- Détail par commercial -->
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-            <div class="form-section-title" style="margin-bottom:0;">Détail individuel</div>
-            <select class="filter-select" id="rapport-select-commercial" onchange="buildFicheCommercial()">
-              <option value="">— Sélectionner un commercial —</option>
-            </select>
+        <!-- ── ONGLET FICHE INDIVIDUELLE ── -->
+        <div class="tab-pane" id="tab-rapports-fiche">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div class="form-section-title" style="margin-bottom:0;">Sélectionner un commercial</div>
+              <select class="filter-select" id="rapport-select-commercial" onchange="buildFicheCommercial()" style="min-width:220px;">
+                <option value="">— Choisir —</option>
+              </select>
+            </div>
           </div>
           <div id="fiche-commercial-detail">
-            <div style="color:var(--blanc-dim);font-size:13px;">Sélectionnez un commercial pour voir sa fiche de performance.</div>
+            <div style="text-align:center;padding:40px;color:#94A3B8;">
+              <div style="font-size:40px;margin-bottom:12px;">👤</div>
+              <div>Sélectionnez un commercial pour afficher sa fiche complète.</div>
+            </div>
           </div>
         </div>
 
-        <!-- Tableau récapitulatif -->
-        <div class="card" style="margin-top:16px;">
-          <div class="form-section-title">📋 Tableau comparatif — tous commerciaux</div>
-          <div class="table-wrap" style="margin-top:12px;">
-            <table>
-              <thead><tr>
-                <th>Commercial</th><th>Nb prospects</th><th>Nb souscriptions</th><th>Taux conversion</th>
-                <th>CA généré</th><th>CA encaissé</th><th>Nb visites</th><th>Commission estimée</th><th>Objectif</th><th>Réalisation</th>
-              </tr></thead>
-              <tbody id="tbody-rapport-commerciaux"></tbody>
-            </table>
+        <!-- ── ONGLET OBJECTIFS & COMMISSIONS ── -->
+        <div class="tab-pane" id="tab-rapports-objectifs">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <!-- Paramétrage objectifs -->
+            <div class="card">
+              <div class="form-section-title">⚙️ Paramétrage objectifs (par période)</div>
+              <div class="form-grid" style="margin-top:12px;">
+                <div class="form-group span-2">
+                  <label>Objectif CA mensuel (FCFA)</label>
+                  <input type="number" id="obj-ca-mensuel" class="form-control" value="30000000" step="1000000">
+                </div>
+                <div class="form-group">
+                  <label>Objectif conversions / mois</label>
+                  <input type="number" id="obj-conversions" class="form-control" value="3">
+                </div>
+                <div class="form-group">
+                  <label>Objectif visites / mois</label>
+                  <input type="number" id="obj-visites" class="form-control" value="20">
+                </div>
+                <div class="form-group">
+                  <label>Objectif CR rédigés / mois</label>
+                  <input type="number" id="obj-cr" class="form-control" value="15">
+                </div>
+                <div class="form-group">
+                  <label>Taux commission standard (%)</label>
+                  <input type="number" id="obj-taux-comm" class="form-control" value="3" step="0.5" min="0" max="10">
+                </div>
+              </div>
+              <div style="margin-top:12px;padding:12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;font-size:12px;">
+                <strong style="color:#B87333;">Paliers de commission :</strong>
+                <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;">
+                  <div>• &lt; 50% objectif → <strong>0%</strong> de commission</div>
+                  <div>• 50–80% → <strong id="palier-comm-1">3%</strong> (taux standard)</div>
+                  <div>• 80–100% → <strong id="palier-comm-2">4.5%</strong> (×1.5)</div>
+                  <div>• &gt; 100% → <strong id="palier-comm-3">6%</strong> (×2 — dépassement)</div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="buildObjectifsCommissions()">Calculer</button>
+            </div>
+            <!-- Thermomètre équipe -->
+            <div class="card">
+              <div class="form-section-title">🌡️ Thermomètre — Équipe</div>
+              <div id="thermometre-equipe" style="margin-top:12px;"></div>
+            </div>
+          </div>
+          <!-- Tableau commissions calculées -->
+          <div class="card">
+            <div class="form-section-title">💰 Commissions calculées par commercial</div>
+            <div class="table-wrap" style="margin-top:10px;">
+              <table>
+                <thead><tr>
+                  <th>Commercial</th><th>CA réalisé</th><th>Objectif</th>
+                  <th>Réalisation %</th><th>Palier</th>
+                  <th>Taux comm.</th><th>Commission brute</th><th>Statut</th>
+                </tr></thead>
+                <tbody id="tbody-commissions"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ONGLET COMMISSIONS ── -->
+        <div class="tab-pane" id="tab-rapports-commissions">
+
+          <!-- KPIs commissions -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;" id="comm-kpis"></div>
+
+          <!-- 2 colonnes : résumé bénéficiaires + actions -->
+          <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;margin-bottom:16px;">
+            <div class="card">
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>👥 Par bénéficiaire</span>
+              </div>
+              <div id="comm-benef-liste" style="margin-top:10px;"></div>
+            </div>
+            <div class="card">
+              <div class="form-section-title">⚙️ Taux en vigueur</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px;text-align:center;">
+                  <div style="font-size:24px;font-weight:700;color:#B87333;" id="disp-comm-souscription">10%</div>
+                  <div style="font-size:11px;color:#92400E;margin-top:3px;">Commercial — Souscription</div>
+                </div>
+                <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;">
+                  <div style="font-size:24px;font-weight:700;color:#3B82F6;" id="disp-comm-regulier">5%</div>
+                  <div style="font-size:11px;color:#1E40AF;margin-top:3px;">Commercial — Régulier</div>
+                </div>
+                <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:12px;text-align:center;">
+                  <div style="font-size:24px;font-weight:700;color:#B87333;" id="disp-comm-ap-souscription">10%</div>
+                  <div style="font-size:11px;color:#92400E;margin-top:3px;">Apporteur — Souscription</div>
+                </div>
+                <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;text-align:center;">
+                  <div style="font-size:24px;font-weight:700;color:#3B82F6;" id="disp-comm-ap-regulier">5%</div>
+                  <div style="font-size:11px;color:#1E40AF;margin-top:3px;">Apporteur — Régulier</div>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="goTo('params');switchTab('params','societe')">⚙️ Modifier les taux</button>
+                <button class="btn btn-secondary btn-sm" onclick="exportCommissionsCSV()">⬇ Export CSV</button>
+                <button class="btn btn-danger btn-sm" onclick="regenererToutesCommissions()">🔄 Régénérer tout</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtres -->
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <input type="text" class="search-input" id="comm-filter-benef" placeholder="🔍 Nom bénéficiaire..." oninput="renderCommissions()" style="min-width:180px;">
+            <select class="filter-select" id="comm-filter-type" onchange="renderCommissions()">
+              <option value="">Tous types</option>
+              <option value="commercial">💼 Commercial</option>
+              <option value="apporteur">🤝 Apporteur</option>
+            </select>
+            <select class="filter-select" id="comm-filter-statut" onchange="renderCommissions()">
+              <option value="">Tous statuts</option>
+              <option value="a_payer">À payer</option>
+              <option value="payee">Payée</option>
+              <option value="annulee">Annulée</option>
+            </select>
+            <input type="month" class="filter-select" id="comm-filter-periode" onchange="renderCommissions()">
+          </div>
+
+          <!-- Tableau commissions -->
+          <div class="card">
+            <div class="form-section-title">📋 Détail des commissions générées</div>
+            <div class="table-wrap" style="margin-top:10px;overflow-x:auto;">
+              <table>
+                <thead><tr>
+                  <th>Date versement</th><th>Bénéficiaire</th><th>Type</th>
+                  <th>Client</th><th>Versement</th><th>Taux</th>
+                  <th>Base</th><th>Commission</th><th>Statut</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="tbody-commissions-detail"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ONGLET ANALYSES & TENDANCES ── -->
+        <div class="tab-pane" id="tab-rapports-analyse">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <!-- Graphique encaissements par commercial -->
+            <div class="card">
+              <div class="form-section-title">📊 Encaissements par commercial</div>
+              <div style="position:relative;height:220px;margin-top:10px;">
+                <canvas id="chart-comm-bar" role="img" aria-label="Encaissements par commercial"></canvas>
+              </div>
+            </div>
+            <!-- Graphique taux de conversion -->
+            <div class="card">
+              <div class="form-section-title">🎯 Taux de conversion par commercial</div>
+              <div style="position:relative;height:220px;margin-top:10px;">
+                <canvas id="chart-comm-conv" role="img" aria-label="Taux de conversion"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- Tendance mensuelle -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="form-section-title">📈 Tendance encaissements — 12 derniers mois</div>
+            <div style="position:relative;height:200px;margin-top:10px;">
+              <canvas id="chart-tendance-comm" role="img" aria-label="Tendance mensuelle encaissements"></canvas>
+            </div>
+          </div>
+          <!-- Comparatif N vs N-1 -->
+          <div class="card">
+            <div class="form-section-title">↔️ Comparatif mois en cours vs mois précédent</div>
+            <div id="comparatif-mois" style="margin-top:12px;"></div>
           </div>
         </div>
       </div>
@@ -7132,7 +7336,8 @@ var ALL_STORES = [
   'historique_actions','workflow_configs',
   'evenements_calendrier','messages','conversations',
   'logs_connexion',
-  'custom_roles'
+  'custom_roles',
+  'commissions'
 ];
 
 function initDB() {
@@ -8570,6 +8775,272 @@ function updateClientSolde() {
   text.textContent = 'Déjà versé : ' + fcfa(verse) + ' | Reste dû : ' + fcfa(reste);
 }
 
+
+// ══ MOTEUR COMMISSIONS ════════════════════════════════════════════════════════
+
+/** Récupère les taux depuis DATA.params */
+function getTauxCommissions() {
+  var p = DATA.params || {};
+  return {
+    commercial_souscription: parseFloat(p.comm_souscription_pct) || 10,
+    commercial_regulier:     parseFloat(p.comm_regulier_pct)     || 5,
+    apporteur_souscription:  parseFloat(p.comm_apporteur_souscription_pct) || 10,
+    apporteur_regulier:      parseFloat(p.comm_apporteur_regulier_pct)     || 5,
+  };
+}
+
+/** Détermine si un versement est le 1er (souscription) ou régulier */
+function isVersementSouscription(versement) {
+  if (versement.type === 'apport') return true;
+  // Si c'est le 1er versement du client
+  var autresVersements = DATA.versements.filter(function(v) {
+    return v.client_id === versement.client_id && v.id !== versement.id;
+  });
+  return autresVersements.length === 0;
+}
+
+/** Génère les commissions pour un versement enregistré */
+async function genererCommissionsVersement(versement) {
+  var client = DATA.clients.find(function(c){ return c.id === versement.client_id; });
+  if (!client) return;
+
+  var taux = getTauxCommissions();
+  var isSouscription = isVersementSouscription(versement);
+  var montant = parseFloat(versement.montant) || 0;
+  var nouvelles = [];
+
+  // ── Commission commerciale ──────────────────────────────────────────────────
+  if (client.commercial) {
+    var tauxComm = isSouscription ? taux.commercial_souscription : taux.commercial_regulier;
+    var montantComm = Math.round(montant * tauxComm / 100);
+    if (montantComm > 0) {
+      var comm = {
+        id:             uid(),
+        versement_id:   versement.id,
+        client_id:      client.id,
+        client_nom:     client.prenoms + ' ' + client.nom,
+        beneficiaire:   client.commercial,
+        type_beneficiaire: 'commercial',
+        type_versement: isSouscription ? 'souscription' : 'regulier',
+        taux:           tauxComm,
+        montant_base:   montant,
+        montant_comm:   montantComm,
+        date_versement: versement.date,
+        date_generation:today(),
+        statut:         'a_payer',
+        programme_id:   client.programme_id || '',
+        notes:          ''
+      };
+      nouvelles.push(comm);
+      if (!DATA.commissions) DATA.commissions = [];
+      DATA.commissions.push(comm);
+      await dbPut('commissions', comm);
+    }
+  }
+
+  // ── Commission apporteur d'affaire ─────────────────────────────────────────
+  if (client.apporteur) {
+    var tauxAp = isSouscription ? taux.apporteur_souscription : taux.apporteur_regulier;
+    var montantAp = Math.round(montant * tauxAp / 100);
+    if (montantAp > 0) {
+      var commAp = {
+        id:             uid(),
+        versement_id:   versement.id,
+        client_id:      client.id,
+        client_nom:     client.prenoms + ' ' + client.nom,
+        beneficiaire:   client.apporteur,
+        beneficiaire_tel: client.apporteur_tel || '',
+        type_beneficiaire: 'apporteur',
+        type_versement: isSouscription ? 'souscription' : 'regulier',
+        taux:           tauxAp,
+        montant_base:   montant,
+        montant_comm:   montantAp,
+        date_versement: versement.date,
+        date_generation:today(),
+        statut:         'a_payer',
+        programme_id:   client.programme_id || '',
+        notes:          ''
+      };
+      nouvelles.push(commAp);
+      if (!DATA.commissions) DATA.commissions = [];
+      DATA.commissions.push(commAp);
+      await dbPut('commissions', commAp);
+    }
+  }
+
+  if (nouvelles.length > 0) {
+    var total = nouvelles.reduce(function(s,c){ return s+c.montant_comm; }, 0);
+    toast('Commission(s) générée(s) : ' + fmtF(total) + ' FCFA', 'success');
+  }
+}
+
+/** Charger les commissions depuis IndexedDB au démarrage */
+async function loadCommissions() {
+  try {
+    var rows = await dbGetAll('commissions');
+    DATA.commissions = rows || [];
+  } catch(e) { DATA.commissions = []; }
+}
+
+/** Marquer une commission comme payée */
+async function payerCommission(id) {
+  var comm = (DATA.commissions||[]).find(function(c){ return c.id===id; });
+  if (!comm) return;
+  var ref = prompt('Référence de paiement (optionnel) :', '');
+  if (ref === null) return;
+  comm.statut = 'payee';
+  comm.date_paiement = today();
+  comm.ref_paiement = ref;
+  await dbPut('commissions', comm);
+  toast('Commission marquée comme payée.', 'success');
+  renderCommissions();
+}
+
+/** Annuler une commission */
+async function annulerCommission(id) {
+  var comm = (DATA.commissions||[]).find(function(c){ return c.id===id; });
+  if (!comm) return;
+  if (!confirm('Annuler cette commission ?')) return;
+  comm.statut = 'annulee';
+  await dbPut('commissions', comm);
+  toast('Commission annulée.', 'info');
+  renderCommissions();
+}
+
+/** Régénérer les commissions pour tous les versements existants */
+async function regenererToutesCommissions() {
+  if (!confirm('Régénérer TOUTES les commissions depuis les versements existants ?\nLes commissions non payées seront recalculées.')) return;
+  // Supprimer les commissions non payées
+  var aConserver = (DATA.commissions||[]).filter(function(c){ return c.statut==='payee'; });
+  var aSupprimer = (DATA.commissions||[]).filter(function(c){ return c.statut!=='payee'; });
+  for (var i=0; i<aSupprimer.length; i++) {
+    try { await dbDelete('commissions', aSupprimer[i].id); } catch(e){}
+  }
+  DATA.commissions = aConserver;
+  // Regénérer depuis versements
+  for (var j=0; j<DATA.versements.length; j++) {
+    await genererCommissionsVersement(DATA.versements[j]);
+  }
+  toast('Commissions régénérées : ' + DATA.commissions.length + ' entrées.', 'success');
+  renderCommissions();
+}
+
+/** Rendu du tableau commissions */
+function renderCommissions() {
+  var el = document.getElementById('tbody-commissions-detail');
+  if (!el) return;
+
+  var filterBenef  = (document.getElementById('comm-filter-benef')||{}).value||'';
+  var filterType   = (document.getElementById('comm-filter-type')||{}).value||'';
+  var filterStatut = (document.getElementById('comm-filter-statut')||{}).value||'';
+  var filterPeriode= (document.getElementById('comm-filter-periode')||{}).value||'';
+
+  var comms = (DATA.commissions||[]).filter(function(c) {
+    if (filterBenef  && !c.beneficiaire.toLowerCase().includes(filterBenef.toLowerCase())) return false;
+    if (filterType   && c.type_beneficiaire !== filterType) return false;
+    if (filterStatut && c.statut !== filterStatut) return false;
+    if (filterPeriode&& !(c.date_versement||'').startsWith(filterPeriode)) return false;
+    return true;
+  }).sort(function(a,b){ return (b.date_versement||'').localeCompare(a.date_versement||''); });
+
+  // Totaux
+  var totalAPayer = comms.filter(function(c){return c.statut==='a_payer';}).reduce(function(s,c){return s+c.montant_comm;},0);
+  var totalPaye   = comms.filter(function(c){return c.statut==='payee';}).reduce(function(s,c){return s+c.montant_comm;},0);
+  var kpiEl = document.getElementById('comm-kpis');
+  if (kpiEl) {
+    kpiEl.innerHTML = [
+      {l:'Total à payer',  v:fmtF(totalAPayer)+' F', c:'#EF4444'},
+      {l:'Total payé',     v:fmtF(totalPaye)+' F',   c:'#10B981'},
+      {l:'Nb commissions', v:comms.length,            c:'#B87333'},
+      {l:'Bénéficiaires',  v:[...new Set(comms.map(function(c){return c.beneficiaire;}))].length, c:'#3B82F6'},
+    ].map(function(k){
+      return '<div style="background:#F8FAFC;border:1px solid #E0E0EA;border-top:3px solid '+k.c+';border-radius:8px;padding:12px;text-align:center;">'
+        +'<div style="font-size:18px;font-weight:700;color:'+k.c+';">'+k.v+'</div>'
+        +'<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;margin-top:3px;">'+k.l+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  var statutMeta = {
+    a_payer: { lbl:'À payer',  col:'#EF4444', bg:'#FEF2F2' },
+    payee:   { lbl:'Payée',    col:'#10B981', bg:'#ECFDF5' },
+    annulee: { lbl:'Annulée',  col:'#94A3B8', bg:'#F1F5F9' },
+  };
+  var typeMeta = {
+    commercial: { lbl:'Commercial', emoji:'💼' },
+    apporteur:  { lbl:'Apporteur',  emoji:'🤝' },
+  };
+  var versTypeMeta = {
+    souscription: { lbl:'Souscription', col:'#B87333' },
+    regulier:     { lbl:'Régulier',     col:'#3B82F6' },
+  };
+
+  if (!comms.length) {
+    el.innerHTML='<tr><td colspan="9" style="text-align:center;padding:28px;color:#94A3B8;">Aucune commission trouvée.</td></tr>';
+    return;
+  }
+
+  el.innerHTML = comms.map(function(c) {
+    var sm = statutMeta[c.statut]||statutMeta.a_payer;
+    var tm = typeMeta[c.type_beneficiaire]||{lbl:c.type_beneficiaire,emoji:'👤'};
+    var vm = versTypeMeta[c.type_versement]||{lbl:c.type_versement,col:'#64748B'};
+    var btnPayer   = c.statut==='a_payer' ? '<button onclick="payerCommission(\'' + c.id + '\')" style="font-size:11px;padding:3px 8px;background:#10B981;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-right:4px;">✓ Payer</button>' : '';
+    var btnAnnuler = c.statut==='a_payer' ? '<button onclick="annulerCommission(\'' + c.id + '\')" style="font-size:11px;padding:3px 8px;background:#EF4444;color:#fff;border:none;border-radius:6px;cursor:pointer;">✗</button>' : '';
+    return '<tr>'
+      +'<td style="white-space:nowrap;">'+dateShort(c.date_versement)+'</td>'
+      +'<td><strong>'+escHtml(c.beneficiaire)+'</strong>'+(c.beneficiaire_tel?'<br><span style="font-size:10px;color:#94A3B8;">'+c.beneficiaire_tel+'</span>':'')+'</td>'
+      +'<td><span style="background:#F1F5F9;padding:2px 8px;border-radius:10px;font-size:11px;">'+tm.emoji+' '+tm.lbl+'</span></td>'
+      +'<td style="font-size:12px;color:#64748B;">'+escHtml(c.client_nom)+'</td>'
+      +'<td><span style="color:'+vm.col+';font-size:11px;font-weight:600;">'+vm.lbl+'</span></td>'
+      +'<td style="text-align:center;font-size:12px;color:#94A3B8;">'+c.taux+'%</td>'
+      +'<td>'+fmtF(c.montant_base)+' F</td>'
+      +'<td style="font-weight:700;color:'+sm.col+';">'+fmtF(c.montant_comm)+' F</td>'
+      +'<td><span style="background:'+sm.bg+';color:'+sm.col+';padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">'+sm.lbl+'</span></td>'
+      +'<td style="white-space:nowrap;">'+btnPayer+btnAnnuler+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+/** Résumé par bénéficiaire */
+function renderCommissionsBenef() {
+  var el = document.getElementById('comm-benef-liste'); if (!el) return;
+  var comms = DATA.commissions||[];
+  var benefs = {};
+  comms.forEach(function(c) {
+    if (!benefs[c.beneficiaire]) benefs[c.beneficiaire] = { nom:c.beneficiaire, type:c.type_beneficiaire, aPayer:0, paye:0, nb:0 };
+    if (c.statut==='a_payer') benefs[c.beneficiaire].aPayer += c.montant_comm;
+    if (c.statut==='payee')   benefs[c.beneficiaire].paye   += c.montant_comm;
+    benefs[c.beneficiaire].nb++;
+  });
+  var list = Object.values(benefs).sort(function(a,b){ return b.aPayer-a.aPayer; });
+  if (!list.length) { el.innerHTML='<div style="color:#94A3B8;padding:16px;">Aucun bénéficiaire.</div>'; return; }
+  el.innerHTML = list.map(function(b) {
+    var col = b.type==='apporteur'?'#B87333':'#3B82F6';
+    var emoji = b.type==='apporteur'?'🤝':'💼';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#F8FAFC;border:1px solid #E0E0EA;border-left:4px solid '+col+';border-radius:8px;margin-bottom:8px;">'
+      +'<div><div style="font-size:13px;font-weight:600;color:#1C1C2E;">'+emoji+' '+escHtml(b.nom)+'</div>'
+      +'<div style="font-size:11px;color:#94A3B8;">'+b.nb+' commission(s)</div></div>'
+      +'<div style="text-align:right;">'
+      +'<div style="font-size:14px;font-weight:700;color:#EF4444;">'+fmtF(b.aPayer)+' F à payer</div>'
+      +'<div style="font-size:11px;color:#10B981;">'+fmtF(b.paye)+' F déjà payé</div>'
+      +'</div></div>';
+  }).join('');
+}
+
+function exportCommissionsCSV() {
+  var comms = DATA.commissions||[];
+  var rows  = ['﻿Date versement,Bénéficiaire,Type,Client,Type versement,Taux %,Montant base,Commission,Statut,Date paiement'];
+  comms.forEach(function(c) {
+    rows.push([c.date_versement,c.beneficiaire,c.type_beneficiaire,c.client_nom,c.type_versement,c.taux,c.montant_base,c.montant_comm,c.statut,c.date_paiement||''].join(','));
+  });
+  var blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'commissions_'+today()+'.csv';
+  a.click();
+  toast('Commissions exportées.','success');
+}
+
 async function savePaiement() {
   var cid = document.getElementById('v-client').value;
   var montant = parseFloat(document.getElementById('v-montant').value);
@@ -8594,6 +9065,9 @@ async function savePaiement() {
   DATA.versements.push(versement);
   await dbPut('versements', versement);
   syncToSupabase('pi_versements', versement);
+
+  // ── Génération automatique des commissions ─────────────────────────────────
+  await genererCommissionsVersement(versement);
 
   closeModal('modal-paiement');
   toast('Versement enregistré.', 'success');
@@ -10002,7 +10476,11 @@ async function saveParams() {
     tva:         parseFloat(gv('param-tva'))||18,
     retenue_pct: parseFloat(gv('param-retenue'))||10,
     avance_pct:  parseFloat(gv('param-avance'))||20,
-    commission_pct: parseFloat(gv('param-commission'))||3,
+    commission_pct:               parseFloat(gv('param-commission'))||3,
+    comm_souscription_pct:        parseFloat(gv('param-comm-souscription'))||10,
+    comm_regulier_pct:            parseFloat(gv('param-comm-regulier'))||5,
+    comm_apporteur_souscription_pct: parseFloat(gv('param-comm-apporteur-souscription'))||10,
+    comm_apporteur_regulier_pct:  parseFloat(gv('param-comm-apporteur-regulier'))||5,
     penalites_pct: parseFloat(gv('param-penalites'))||0.5,
     banque:      gv('param-banque'),
     exercice:    gv('param-exercice'),
@@ -10059,7 +10537,11 @@ function loadParamFields() {
   sv('param-email',p.email); sv('param-tel',p.tel); sv('param-site',p.site);
   sv('param-whatsapp',p.whatsapp); sv('param-tva',p.tva||18);
   sv('param-retenue',p.retenue_pct||10); sv('param-avance',p.avance_pct||20);
-  sv('param-commission',p.commission_pct||3); sv('param-penalites',p.penalites_pct||0.5);
+  sv('param-commission',p.commission_pct||3);
+  sv('param-comm-souscription', p.comm_souscription_pct||10);
+  sv('param-comm-regulier', p.comm_regulier_pct||5);
+  sv('param-comm-apporteur-souscription', p.comm_apporteur_souscription_pct||10);
+  sv('param-comm-apporteur-regulier', p.comm_apporteur_regulier_pct||5); sv('param-penalites',p.penalites_pct||0.5);
   sv('param-banque',p.banque); sv('param-exercice',p.exercice||'2025');
   sv('param-obj-ca',p.objectif_ca_mensuel||20000000);
   sv('param-obj-ventes',p.objectif_ventes_mensuel||5);
@@ -11976,178 +12458,592 @@ function capturerGeoloc(fieldId) {
 }
 
 /* ─── RAPPORTS COMMERCIAUX ──────────────────────────── */
-function buildRapportsCommerciaux() {
-  populateItiSelects();
-  var periode=document.getElementById('rapport-periode') ? document.getElementById('rapport-periode').value : 'mois';
-  var now=new Date();
-  var dateMin='';
-  if (periode==='mois') dateMin=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
-  else if (periode==='trim') {
-    var qStart=Math.floor(now.getMonth()/3)*3;
-    dateMin=now.getFullYear()+'-'+String(qStart+1).padStart(2,'0')+'-01';
-  } else if (periode==='annee') dateMin=now.getFullYear()+'-01-01';
+// ══ RAPPORTS COMMERCIAUX — Version enrichie ══════════════════════════════════
 
-  // Collect commercial names from both employees and client.commercial field
-  var comms={};
+var _chartCommBar = null;
+var _chartCommConv = null;
+var _chartTendance = null;
+
+// ── Calcul de la période filtrée ─────────────────────────────────────────────
+function getRapportDateMin() {
+  var periode = document.getElementById('rapport-periode') ? document.getElementById('rapport-periode').value : 'mois';
+  var now = new Date();
+  if (periode === 'mois') return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
+  if (periode === 'trim') { var q = Math.floor(now.getMonth()/3)*3; return now.getFullYear() + '-' + String(q+1).padStart(2,'0') + '-01'; }
+  if (periode === 'annee') return now.getFullYear() + '-01-01';
+  return '';
+}
+
+// ── Construire la liste des commerciaux avec métriques ───────────────────────
+function buildCommsList(dateMin) {
+  var comms = {};
+
   DATA.clients.forEach(function(c) {
-    var comm=c.commercial||'';
-    if (!comm) return;
-    if (!comms[comm]) comms[comm]={nom:comm,clients:[],versements:[],leads:[],etapes:[]};
-    comms[comm].clients.push(c);
+    var nom = c.commercial || ''; if (!nom) return;
+    if (!comms[nom]) comms[nom] = { nom:nom, clients:[], versements:[], leads:[], etapes:[], crs:[] };
+    comms[nom].clients.push(c);
+  });
+  DATA.leads.forEach(function(l) {
+    var nom = l.commercial_id ? ((DATA.employes.find(function(e){return e.id===l.commercial_id;})||{nom:l.commercial_id,prenoms:''}).nom + ' ' + ((DATA.employes.find(function(e){return e.id===l.commercial_id;})||{prenoms:''}).prenoms)).trim() : '';
+    if (!nom) return;
+    if (!comms[nom]) comms[nom] = { nom:nom, clients:[], versements:[], leads:[], etapes:[], crs:[] };
+    comms[nom].leads.push(l);
   });
   DATA.versements.forEach(function(v) {
     if (dateMin && v.date < dateMin) return;
-    var client=DATA.clients.find(function(c){return c.id===v.client_id;});
-    if (!client||!client.commercial) return;
-    var comm=client.commercial;
-    if (!comms[comm]) comms[comm]={nom:comm,clients:[],versements:[],leads:[],etapes:[]};
-    comms[comm].versements.push(v);
-  });
-  DATA.leads.forEach(function(l) {
-    var comm=l.commercial_id||'';
-    if (!comm) return;
-    var emp=DATA.employes.find(function(e){return e.id===comm;})||{nom:comm,prenoms:''};
-    var nomComm=emp.nom+' '+emp.prenoms;
-    if (!comms[nomComm]) comms[nomComm]={nom:nomComm,clients:[],versements:[],leads:[],etapes:[]};
-    comms[nomComm].leads.push(l);
+    var c = DATA.clients.find(function(x){return x.id===v.client_id;});
+    if (!c || !c.commercial) return;
+    var nom = c.commercial;
+    if (!comms[nom]) comms[nom] = { nom:nom, clients:[], versements:[], leads:[], etapes:[], crs:[] };
+    comms[nom].versements.push(v);
   });
   DATA.etapes_itineraire.forEach(function(e) {
-    var comm=e.commercial_nom||'';
-    if (!comms[comm]) comms[comm]={nom:comm,clients:[],versements:[],leads:[],etapes:[]};
-    comms[comm].etapes.push(e);
+    var nom = e.commercial_nom || ''; if (!nom) return;
+    if (!comms[nom]) comms[nom] = { nom:nom, clients:[], versements:[], leads:[], etapes:[], crs:[] };
+    comms[nom].etapes.push(e);
+  });
+  DATA.cr_visites.forEach(function(cr) {
+    var etape = DATA.etapes_itineraire.find(function(e){return e.id===cr.etape_id;});
+    if (!etape) return;
+    var nom = etape.commercial_nom || '';
+    if (comms[nom]) comms[nom].crs.push(cr);
   });
 
-  var commList=Object.values(comms);
-
-  // Global KPIs
-  var totalClients=DATA.clients.length;
-  var totalVerse=DATA.versements.filter(function(v){return !dateMin||v.date>=dateMin;}).reduce(function(s,v){return s+v.montant;},0);
-  var totalCA=DATA.clients.reduce(function(s,c){return s+(c.montant_total||0);},0);
-  var totalEtapes=DATA.etapes_itineraire.filter(function(e){return !dateMin||e.date>=dateMin;}).length;
-  var totalCR=DATA.cr_visites.filter(function(c){return !dateMin||c.created_at>=dateMin;}).length;
-
-  var kpiEl=document.getElementById('rapport-kpi-global');
-  if (kpiEl) kpiEl.innerHTML=[
-    ['💰','CA total',fmtF(totalCA)+' FCFA'],
-    ['✅','Encaissé',fmtF(totalVerse)+' FCFA'],
-    ['👥','Souscripteurs',totalClients],
-    ['🗺️','Visites terrain',totalEtapes],
-    ['📝','CR rédigés',totalCR],
-    ['📊','Taux encaissement',(totalCA>0?(totalVerse/totalCA*100).toFixed(1):0)+'%'],
-  ].map(function(k) {
-    return '<div class="kpi-card" data-icon="">'
-      +'<div class="kpi-label">'+k[0]+' '+k[1]+'</div>'
-      +'<div class="kpi-value or">'+k[2]+'</div></div>';
-  }).join('');
-
-  // Classement
-  var classEl=document.getElementById('classement-commerciaux');
-  if (!classEl) return;
-  var ranked=commList.map(function(c) {
-    var ca=c.clients.reduce(function(s,x){return s+(x.montant_total||0);},0);
-    var enc=c.versements.reduce(function(s,v){return s+v.montant;},0);
-    var visites=c.etapes.length;
-    var score=Math.round((enc/Math.max(ca,1))*100+visites*2);
-    return Object.assign({},c,{ca:ca,enc:enc,visites:visites,score:score});
+  return Object.values(comms).map(function(c) {
+    var ca  = c.clients.reduce(function(s,x){return s+(parseFloat(x.montant_total)||0);},0);
+    var enc = c.versements.reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+    var nbSouscr = c.clients.filter(function(x){return (x.montant_total||0)>0;}).length;
+    var nbAll = c.clients.length + c.leads.length;
+    var txConv = nbAll > 0 ? Math.round(nbSouscr/nbAll*100) : 0;
+    var txRecouv = ca > 0 ? Math.round(enc/ca*100) : 0;
+    return Object.assign({},c,{ca:ca,enc:enc,nbSouscr:nbSouscr,nbAll:nbAll,txConv:txConv,txRecouv:txRecouv});
   }).sort(function(a,b){return b.enc-a.enc;});
-
-  classEl.innerHTML=ranked.slice(0,8).map(function(c,i) {
-    var medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-    var pct=c.ca>0?Math.min(100,c.enc/c.ca*100):0;
-    return '<div class="rapport-card">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-      +'<div><strong>'+(i+1)+' '+medal+' '+c.nom+'</strong><div style="font-size:11px;color:var(--blanc-dim);">'+c.clients.length+' clients · '+c.visites+' visites</div></div>'
-      +'<div style="text-align:right;">'
-      +'<div style="font-size:18px;font-weight:700;color:var(--or);">'+fmtF(c.enc)+' FCFA</div>'
-      +'<div style="font-size:11px;color:var(--blanc-dim);">encaissé</div></div></div>'
-      +'<div class="perf-bar"><div class="perf-fill" style="width:'+pct.toFixed(0)+'%;background:linear-gradient(90deg,var(--or),var(--vert));"></div></div>'
-      +'<div style="font-size:11px;color:var(--blanc-dim);margin-top:4px;">CA: '+fmtF(c.ca)+' FCFA — Taux: '+pct.toFixed(1)+'%</div>'
-      +'</div>';
-  }).join('');
-
-  // Tableau
-  var tbody=document.getElementById('tbody-rapport-commerciaux');
-  if (tbody) {
-    tbody.innerHTML=ranked.map(function(c) {
-      var nbSouscr=c.clients.filter(function(x){return x.montant_total>0;}).length;
-      var nbAll=c.clients.length+c.leads.length;
-      var taux=nbAll>0?(nbSouscr/nbAll*100).toFixed(0):0;
-      var commission=Math.round(c.enc*0.03); // 3% standard
-      var objectif=10000000; // 10M FCFA par période
-      var realisation=Math.min(100,(c.enc/objectif*100)).toFixed(0);
-      return '<tr>'
-        +'<td style="font-weight:700;">'+c.nom+'</td>'
-        +'<td style="text-align:center;">'+(c.clients.length+c.leads.length)+'</td>'
-        +'<td style="text-align:center;color:var(--vert);">'+nbSouscr+'</td>'
-        +'<td style="text-align:center;">'+(taux)+'%</td>'
-        +'<td style="color:var(--or);">'+fmtF(c.ca)+' FCFA</td>'
-        +'<td style="color:var(--vert);font-weight:700;">'+fmtF(c.enc)+' FCFA</td>'
-        +'<td style="text-align:center;">'+c.visites+'</td>'
-        +'<td style="color:var(--violet);">'+fmtF(commission)+' FCFA</td>'
-        +'<td style="color:var(--blanc-dim);">'+fmtF(objectif)+' FCFA</td>'
-        +'<td><div class="perf-bar"><div class="perf-fill" style="width:'+realisation+'%;background:linear-gradient(90deg,var(--bleu),var(--vert));"></div></div><div style="font-size:10px;text-align:center;">'+realisation+'%</div></td>'
-        +'</tr>';
-    }).join('');
-  }
-
-  buildFicheCommercial();
 }
 
+// ── Entrée principale ─────────────────────────────────────────────────────────
+function buildRapportsCommerciaux() {
+  populateItiSelects();
+  var dateMin = getRapportDateMin();
+  var commList = buildCommsList(dateMin);
+  _buildGlobalKPIs(commList, dateMin);
+  _buildClassement(commList);
+  _buildPerfProgrammes();
+  _buildTableauComparatif(commList);
+  _buildFicheSelect(commList);
+  buildFicheCommercial();
+  buildObjectifsCommissions();
+  _buildAnalyses(commList, dateMin);
+  _buildComparatifMois();
+  // Mettre à jour l'affichage des taux en vigueur
+  var p = DATA.params||{};
+  var upd = function(id, val) { var e=document.getElementById(id); if(e) e.textContent=val+'%'; };
+  upd('disp-comm-souscription',    parseFloat(p.comm_souscription_pct)||10);
+  upd('disp-comm-regulier',         parseFloat(p.comm_regulier_pct)||5);
+  upd('disp-comm-ap-souscription',  parseFloat(p.comm_apporteur_souscription_pct)||10);
+  upd('disp-comm-ap-regulier',      parseFloat(p.comm_apporteur_regulier_pct)||5);
+}
+
+// ── KPIs globaux ──────────────────────────────────────────────────────────────
+function _buildGlobalKPIs(commList, dateMin) {
+  var totalCA   = DATA.clients.reduce(function(s,c){return s+(parseFloat(c.montant_total)||0);},0);
+  var totalEnc  = DATA.versements.filter(function(v){return !dateMin||v.date>=dateMin;}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+  var totalVis  = DATA.etapes_itineraire.filter(function(e){return !dateMin||e.date>=dateMin;}).length;
+  var totalCR   = DATA.cr_visites.filter(function(c){return !dateMin||c.created_at>=dateMin;}).length;
+  var nbComms   = commList.length;
+  var tauxMoyen = commList.length > 0 ? Math.round(commList.reduce(function(s,c){return s+c.txConv;},0)/commList.length) : 0;
+
+  // Comparaison mois précédent
+  var now = new Date();
+  var moisPrec = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  var moisPrecKey = moisPrec.getFullYear()+'-'+String(moisPrec.getMonth()+1).padStart(2,'0');
+  var moisCurrKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var encCurr = DATA.versements.filter(function(v){return (v.date||'').startsWith(moisCurrKey);}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+  var encPrec = DATA.versements.filter(function(v){return (v.date||'').startsWith(moisPrecKey);}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+  var deltaEnc = encPrec > 0 ? Math.round((encCurr-encPrec)/encPrec*100) : 0;
+  var deltaStr = (deltaEnc >= 0 ? '▲ +' : '▼ ') + Math.abs(deltaEnc) + '% vs mois préc.';
+  var deltaCls = deltaEnc >= 0 ? 'positive' : 'negative';
+
+  var el = document.getElementById('rapport-kpi-global');
+  if (!el) return;
+  el.innerHTML = [
+    {l:'CA portefeuille',  v:fmtF(totalCA)+' F',  i:'💰', c:'',         d:nbComms+' commercial(s)'},
+    {l:'Encaissé (période)',v:fmtF(totalEnc)+' F', i:'✅', c:'kpi-green', d:'<span class="kpi-delta '+deltaCls+'">'+deltaStr+'</span>'},
+    {l:'Taux conversion moy.',v:tauxMoyen+'%',     i:'🎯', c:'',         d:'moyenne équipe'},
+    {l:'Visites terrain',  v:totalVis,             i:'🗺️', c:'',         d:totalCR+' CR rédigés'},
+  ].map(function(k){
+    return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'">'
+      +'<div class="kpi-label">'+k.l+'</div>'
+      +'<div class="kpi-value or" style="font-size:19px;">'+k.v+'</div>'
+      +'<div class="kpi-delta">'+k.d+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Classement ────────────────────────────────────────────────────────────────
+function _buildClassement(commList) {
+  var el = document.getElementById('classement-commerciaux'); if (!el) return;
+  if (!commList.length) { el.innerHTML='<div style="color:#94A3B8;padding:16px;">Aucune donnée commerciale.</div>'; return; }
+  var medals = ['🥇','🥈','🥉'];
+  var colors = ['#B87333','#94A3B8','#CD7F32'];
+  el.innerHTML = commList.slice(0,6).map(function(c,i) {
+    var pct = c.ca > 0 ? Math.min(100,Math.round(c.enc/c.ca*100)) : 0;
+    var col = i < 3 ? colors[i] : '#64748B';
+    return '<div style="padding:10px 12px;background:#F8FAFC;border:1px solid #E0E0EA;border-left:4px solid '+col+';border-radius:8px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      +'<div>'
+      +'<span style="font-size:16px;margin-right:6px;">'+(medals[i]||'#'+(i+1))+'</span>'
+      +'<strong style="font-size:13px;color:#1C1C2E;">'+escHtml(c.nom)+'</strong>'
+      +'<div style="font-size:10px;color:#94A3B8;margin-top:1px;">'+c.clients.length+' clients · '+c.etapes.length+' visites · '+c.txConv+'% conv.</div>'
+      +'</div>'
+      +'<div style="text-align:right;">'
+      +'<div style="font-size:16px;font-weight:700;color:'+col+';">'+fmtF(c.enc)+' F</div>'
+      +'<div style="font-size:10px;color:#94A3B8;">'+pct+'% recouv.</div>'
+      +'</div></div>'
+      +'<div style="background:#E2E8F0;border-radius:3px;height:5px;">'
+      +'<div style="background:linear-gradient(90deg,'+col+','+col+'88);height:100%;width:'+pct+'%;border-radius:3px;transition:width 0.7s;"></div>'
+      +'</div></div>';
+  }).join('');
+}
+
+// ── Performance par programme ─────────────────────────────────────────────────
+function _buildPerfProgrammes() {
+  var el = document.getElementById('perf-programmes'); if (!el) return;
+  el.innerHTML = DATA.programmes.map(function(p) {
+    var lots      = DATA.lots.filter(function(l){return l.programme_id===p.id;});
+    var vendus    = lots.filter(function(l){return l.statut==='vendu';}).length;
+    var total     = lots.length || 1;
+    var clients   = DATA.clients.filter(function(c){return c.programme_id===p.id;});
+    var caP       = clients.reduce(function(s,c){return s+(parseFloat(c.montant_total)||0);},0);
+    var encP      = DATA.versements.filter(function(v){return clients.find(function(c){return c.id===v.client_id;});}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+    var pct       = Math.round(vendus/total*100);
+    var col       = pct>=80?'#10B981':pct>=50?'#B87333':'#3B82F6';
+    return '<div style="margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">'
+      +'<strong style="color:#1C1C2E;">'+escHtml(p.nom)+'</strong>'
+      +'<span style="color:'+col+';font-weight:700;">'+vendus+'/'+total+' lots ('+pct+'%)</span>'
+      +'</div>'
+      +'<div style="background:#E2E8F0;border-radius:3px;height:7px;margin-bottom:3px;">'
+      +'<div style="background:'+col+';height:100%;width:'+pct+'%;border-radius:3px;"></div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:#94A3B8;">CA: '+fmtF(caP)+' F · Encaissé: '+fmtF(encP)+' F</div>'
+      +'</div>';
+  }).join('') || '<div style="color:#94A3B8;font-size:13px;">Aucun programme.</div>';
+}
+
+// ── Tableau comparatif ────────────────────────────────────────────────────────
+function _buildTableauComparatif(commList) {
+  var objCA = parseFloat((document.getElementById('obj-ca-mensuel')||{value:'30000000'}).value)||30000000;
+  var tbody = document.getElementById('tbody-rapport-commerciaux'); if (!tbody) return;
+  var tauxComm = parseFloat((document.getElementById('obj-taux-comm')||{value:'3'}).value)||3;
+  tbody.innerHTML = commList.map(function(c) {
+    var real = objCA > 0 ? Math.round(c.enc/objCA*100) : 0;
+    var tCommPct = real<50?0:real<80?tauxComm:real<100?tauxComm*1.5:tauxComm*2;
+    var commission = Math.round(c.enc * tCommPct/100);
+    var statusCol = real>=100?'#10B981':real>=80?'#B87333':real>=50?'#3B82F6':'#EF4444';
+    var statusLbl = real>=100?'✅ Atteint':real>=80?'🔶 Proche':real>=50?'🔵 En cours':'❌ Insuffisant';
+    return '<tr>'
+      +'<td><strong>'+escHtml(c.nom)+'</strong></td>'
+      +'<td style="text-align:center;">'+c.leads.length+'</td>'
+      +'<td style="text-align:center;color:#10B981;font-weight:600;">'+c.nbSouscr+'</td>'
+      +'<td style="text-align:center;">'+c.txConv+'%</td>'
+      +'<td>'+fmtF(c.ca)+' F</td>'
+      +'<td style="color:#10B981;font-weight:600;">'+fmtF(c.enc)+' F</td>'
+      +'<td style="text-align:center;">'+c.txRecouv+'%</td>'
+      +'<td style="text-align:center;">'+c.etapes.length+'</td>'
+      +'<td style="text-align:center;">'+c.crs.length+'</td>'
+      +'<td style="color:#8B5CF6;font-weight:600;">'+fmtF(commission)+' F</td>'
+      +'<td>'
+        +'<div style="display:flex;align-items:center;gap:6px;">'
+        +'<div style="flex:1;background:#E2E8F0;border-radius:3px;height:6px;">'
+        +'<div style="background:'+statusCol+';height:100%;width:'+Math.min(100,real)+'%;border-radius:3px;"></div></div>'
+        +'<span style="font-size:11px;color:'+statusCol+';white-space:nowrap;">'+real+'%</span>'
+        +'</div>'
+        +'<div style="font-size:10px;color:'+statusCol+';margin-top:2px;">'+statusLbl+'</div>'
+      +'</td>'
+      +'</tr>';
+  }).join('') || '<tr><td colspan="11" style="text-align:center;color:#94A3B8;padding:20px;">Aucune donnée commerciale.</td></tr>';
+}
+
+// ── Sélecteur fiche ───────────────────────────────────────────────────────────
+function _buildFicheSelect(commList) {
+  var sel = document.getElementById('rapport-select-commercial'); if (!sel) return;
+  var current = sel.value;
+  sel.innerHTML = '<option value="">— Choisir —</option>'
+    + commList.map(function(c){
+        return '<option value="'+escHtml(c.nom)+'"'+(c.nom===current?' selected':'')+'>'+escHtml(c.nom)+' ('+fmtF(c.enc)+' F)</option>';
+      }).join('');
+}
+
+// ── Fiche individuelle enrichie ───────────────────────────────────────────────
 function buildFicheCommercial() {
-  var commNom=document.getElementById('rapport-select-commercial') ? document.getElementById('rapport-select-commercial').value : '';
-  var box=document.getElementById('fiche-commercial-detail');
-  if (!box) return;
-  if (!commNom) { box.innerHTML='<div style="color:var(--blanc-dim);font-size:13px;">Sélectionnez un commercial.</div>'; return; }
+  var commNom = document.getElementById('rapport-select-commercial') ? document.getElementById('rapport-select-commercial').value : '';
+  var box = document.getElementById('fiche-commercial-detail'); if (!box) return;
+  if (!commNom) { box.innerHTML='<div style="text-align:center;padding:32px;color:#94A3B8;"><div style="font-size:36px;margin-bottom:10px;">👤</div>Sélectionnez un commercial.</div>'; return; }
 
-  var clients=DATA.clients.filter(function(c){return c.commercial===commNom;});
-  var versements=DATA.versements.filter(function(v){
-    var c=DATA.clients.find(function(x){return x.id===v.client_id;});
-    return c&&c.commercial===commNom;
+  var clients    = DATA.clients.filter(function(c){return c.commercial===commNom;});
+  var versements = DATA.versements.filter(function(v){ var c=DATA.clients.find(function(x){return x.id===v.client_id;}); return c&&c.commercial===commNom; });
+  var etapes     = DATA.etapes_itineraire.filter(function(e){return e.commercial_nom===commNom||e.commercial_id===commNom;});
+  var crs        = DATA.cr_visites.filter(function(cr){return etapes.find(function(e){return e.id===cr.etape_id;});});
+  var leads      = DATA.leads.filter(function(l){
+    var emp = l.commercial_id ? DATA.employes.find(function(e){return e.id===l.commercial_id;}) : null;
+    return emp && (emp.nom+' '+emp.prenoms).trim()===commNom;
   });
-  var etapes=DATA.etapes_itineraire.filter(function(e){return e.commercial_nom===commNom||e.commercial_id===commNom;});
-  var crs=DATA.cr_visites.filter(function(c){return etapes.find(function(e){return e.id===c.etape_id;});});
 
-  var totalCA=clients.reduce(function(s,c){return s+(c.montant_total||0);},0);
-  var totalEnc=versements.reduce(function(s,v){return s+v.montant;},0);
-  var txConv=clients.length>0?(clients.filter(function(c){return c.montant_total>0;}).length/clients.length*100).toFixed(0):0;
+  var totalCA  = clients.reduce(function(s,c){return s+(parseFloat(c.montant_total)||0);},0);
+  var totalEnc = versements.reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+  var txConv   = (clients.length+leads.length)>0 ? Math.round(clients.filter(function(c){return c.montant_total>0;}).length/(clients.length+leads.length)*100) : 0;
+  var txRecouv = totalCA>0 ? Math.round(totalEnc/totalCA*100) : 0;
 
-  box.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">'
+  // Évolution mensuelle encaissements (6 mois)
+  var now = new Date();
+  var moisLabels = [], moisVals = [];
+  for (var i=5; i>=0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    moisLabels.push(d.toLocaleDateString('fr-FR',{month:'short'}));
+    moisVals.push(versements.filter(function(v){return (v.date||'').startsWith(key);}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0));
+  }
+  var maxVal = Math.max.apply(null,moisVals)||1;
+
+  box.innerHTML =
+    // Identité
+    '<div style="display:flex;align-items:center;gap:14px;padding:14px;background:#F8FAFC;border-radius:10px;margin-bottom:16px;">'
+    +'<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#B87333,#8B5520);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;font-weight:700;flex-shrink:0;">'
+    +commNom.charAt(0).toUpperCase()+'</div>'
+    +'<div><div style="font-size:16px;font-weight:700;color:#1C1C2E;">'+escHtml(commNom)+'</div>'
+    +'<div style="font-size:12px;color:#6B6B9A;">Commercial ImmoSuite ERP · '+clients.length+' souscripteurs</div></div>'
+    +'</div>'
+    // 4 KPIs
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
     +[
-      ['CA portefeuille',fmtF(totalCA)+' FCFA','var(--or)'],
-      ['Encaissé',fmtF(totalEnc)+' FCFA','var(--vert)'],
-      ['Taux conversion',txConv+'%','var(--bleu)'],
-      ['Visites réalisées',crs.length+'/'+etapes.length,'var(--violet)'],
+      {l:'CA portefeuille',v:fmtF(totalCA)+' F',c:'#B87333'},
+      {l:'Encaissé',       v:fmtF(totalEnc)+' F',c:'#10B981'},
+      {l:'Taux conversion',v:txConv+'%',          c:'#3B82F6'},
+      {l:'Taux recouvr.',  v:txRecouv+'%',         c:txRecouv>=50?'#10B981':'#EF4444'},
     ].map(function(k){
-      return '<div class="kpi-commercial"><div class="val" style="color:'+k[2]+';">'+k[1]+'</div><div class="lbl">'+k[0]+'</div></div>';
+      return '<div style="background:#fff;border:1px solid #E0E0EA;border-top:3px solid '+k.c+';border-radius:8px;padding:10px;text-align:center;">'
+        +'<div style="font-size:18px;font-weight:700;color:'+k.c+';">'+k.v+'</div>'
+        +'<div style="font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">'+k.l+'</div>'
+        +'</div>';
     }).join('')
     +'</div>'
-    +'<div style="font-size:13px;font-weight:600;color:var(--or);margin-bottom:10px;">Portefeuille clients ('+clients.length+')</div>'
-    +'<div class="table-wrap"><table><thead><tr><th>Client</th><th>Dossier</th><th>CA</th><th>Versé</th><th>Taux</th><th>Programme</th></tr></thead><tbody>'
-    +clients.slice(0,15).map(function(c) {
-      var enc=DATA.versements.filter(function(v){return v.client_id===c.id;}).reduce(function(s,v){return s+v.montant;},0);
-      var prog=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:'—'};
-      var taux=c.montant_total>0?(enc/c.montant_total*100).toFixed(0):0;
+    // Graphique mini barres mensuel
+    +'<div style="margin-bottom:16px;padding:14px;background:#fff;border:1px solid #E0E0EA;border-radius:10px;">'
+    +'<div style="font-size:11px;font-weight:700;color:#6B6B9A;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Encaissements 6 derniers mois</div>'
+    +'<div style="display:flex;align-items:flex-end;gap:6px;height:80px;">'
+    +moisVals.map(function(v,i){
+      var h = Math.max(4, Math.round(v/maxVal*80));
+      var col = i===moisVals.length-1?'#B87333':'#D4956A';
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">'
+        +'<div style="font-size:9px;color:#94A3B8;">'+fmtF(v/1000000,1)+'M</div>'
+        +'<div style="width:100%;height:'+h+'px;background:'+col+';border-radius:3px 3px 0 0;"></div>'
+        +'<div style="font-size:9px;color:#94A3B8;">'+moisLabels[i]+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div></div>'
+    // Portefeuille clients
+    +'<div style="font-size:12px;font-weight:700;color:#1C1C2E;margin-bottom:8px;">Portefeuille clients ('+clients.length+')</div>'
+    +'<div class="table-wrap"><table><thead><tr>'
+    +'<th>Client</th><th>Dossier</th><th>Programme</th><th>CA</th><th>Versé</th><th>Recouvr.</th>'
+    +'</tr></thead><tbody>'
+    +clients.slice(0,12).map(function(c) {
+      var enc = DATA.versements.filter(function(v){return v.client_id===c.id;}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+      var prog = DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:'—'};
+      var tx = c.montant_total>0 ? Math.round(enc/c.montant_total*100) : 0;
+      var col = tx>=80?'#10B981':tx>=50?'#B87333':'#EF4444';
       return '<tr>'
-        +'<td>'+c.nom+' '+c.prenoms+'</td>'
-        +'<td style="font-family:monospace;font-size:11px;color:var(--or);">'+c.dossier+'</td>'
-        +'<td>'+fmtF(c.montant_total||0)+' FCFA</td>'
-        +'<td style="color:var(--vert);">'+fmtF(enc)+' FCFA</td>'
-        +'<td><div class="perf-bar"><div class="perf-fill" style="width:'+Math.min(100,parseInt(taux))+'%;background:var(--vert);"></div></div><span style="font-size:10px;">'+taux+'%</span></td>'
-        +'<td style="font-size:11px;">'+prog.nom+'</td>'
+        +'<td><strong>'+escHtml(c.prenoms+' '+c.nom)+'</strong></td>'
+        +'<td style="font-family:monospace;font-size:11px;color:#B87333;">'+escHtml(c.dossier||'—')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(prog.nom)+'</td>'
+        +'<td>'+fmtF(c.montant_total||0)+' F</td>'
+        +'<td style="color:#10B981;font-weight:600;">'+fmtF(enc)+' F</td>'
+        +'<td><div style="display:flex;align-items:center;gap:6px;">'
+        +'<div style="flex:1;background:#E2E8F0;border-radius:2px;height:5px;">'
+        +'<div style="background:'+col+';height:100%;width:'+Math.min(100,tx)+'%;border-radius:2px;"></div></div>'
+        +'<span style="font-size:11px;color:'+col+';">'+tx+'%</span></div></td>'
         +'</tr>';
     }).join('')
     +'</tbody></table></div>';
 }
 
+// ── Objectifs & Commissions ───────────────────────────────────────────────────
+function buildObjectifsCommissions() {
+  var objCA      = parseFloat((document.getElementById('obj-ca-mensuel')||{value:30000000}).value)||30000000;
+  var tauxComm   = parseFloat((document.getElementById('obj-taux-comm')||{value:3}).value)||3;
+  var dateMin    = getRapportDateMin();
+  var commList   = buildCommsList(dateMin);
+
+  // Mettre à jour les paliers affichés
+  if (document.getElementById('palier-comm-1')) document.getElementById('palier-comm-1').textContent = tauxComm + '%';
+  if (document.getElementById('palier-comm-2')) document.getElementById('palier-comm-2').textContent = (tauxComm*1.5).toFixed(1) + '%';
+  if (document.getElementById('palier-comm-3')) document.getElementById('palier-comm-3').textContent = (tauxComm*2).toFixed(1) + '%';
+
+  // Thermomètre équipe
+  var thermo = document.getElementById('thermometre-equipe');
+  if (thermo) {
+    var totalEnc = commList.reduce(function(s,c){return s+c.enc;},0);
+    var totalObj  = objCA * commList.length;
+    var pctEquipe = totalObj > 0 ? Math.min(100, Math.round(totalEnc/totalObj*100)) : 0;
+    var col = pctEquipe>=100?'#10B981':pctEquipe>=70?'#B87333':'#EF4444';
+    thermo.innerHTML = '<div style="text-align:center;margin-bottom:12px;">'
+      +'<div style="font-size:36px;font-weight:700;color:'+col+';">'+pctEquipe+'%</div>'
+      +'<div style="font-size:13px;color:#6B6B9A;">de l\'objectif équipe atteint</div>'
+      +'</div>'
+      +'<div style="background:#E2E8F0;border-radius:8px;height:20px;overflow:hidden;margin-bottom:8px;">'
+      +'<div style="background:linear-gradient(90deg,'+col+'88,'+col+');height:100%;width:'+pctEquipe+'%;border-radius:8px;transition:width 0.8s;"></div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;">'
+      +'<span>'+fmtF(totalEnc)+' F encaissé</span>'
+      +'<span>Obj: '+fmtF(totalObj)+' F</span>'
+      +'</div>'
+      +'<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+      +commList.map(function(c) {
+        var pct = Math.min(100, objCA>0?Math.round(c.enc/objCA*100):0);
+        var col2 = pct>=100?'#10B981':pct>=80?'#B87333':pct>=50?'#3B82F6':'#EF4444';
+        return '<div style="padding:8px;background:#F8FAFC;border:1px solid #E0E0EA;border-radius:8px;">'
+          +'<div style="font-size:11px;font-weight:600;color:#1C1C2E;margin-bottom:4px;">'+escHtml(c.nom.split(' ')[0])+'</div>'
+          +'<div style="background:#E2E8F0;border-radius:3px;height:6px;margin-bottom:3px;">'
+          +'<div style="background:'+col2+';height:100%;width:'+pct+'%;border-radius:3px;"></div></div>'
+          +'<div style="font-size:10px;color:'+col2+';font-weight:600;">'+pct+'%</div>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }
+
+  // Tableau commissions
+  var tbody = document.getElementById('tbody-commissions'); if (!tbody) return;
+  tbody.innerHTML = commList.map(function(c) {
+    var pct   = objCA > 0 ? Math.round(c.enc/objCA*100) : 0;
+    var tPct  = pct<50?0:pct<80?tauxComm:pct<100?tauxComm*1.5:tauxComm*2;
+    var comm  = Math.round(c.enc * tPct/100);
+    var palier= pct<50?'❌ < 50%':pct<80?'🔵 50–80%':pct<100?'🔶 80–100%':'🟢 > 100%';
+    var col   = pct>=100?'#10B981':pct>=80?'#B87333':pct>=50?'#3B82F6':'#EF4444';
+    return '<tr>'
+      +'<td><strong>'+escHtml(c.nom)+'</strong></td>'
+      +'<td style="color:#B87333;font-weight:600;">'+fmtF(c.enc)+' F</td>'
+      +'<td>'+fmtF(objCA)+' F</td>'
+      +'<td>'
+        +'<div style="display:flex;align-items:center;gap:6px;">'
+        +'<div style="flex:1;background:#E2E8F0;border-radius:3px;height:6px;">'
+        +'<div style="background:'+col+';height:100%;width:'+Math.min(100,pct)+'%;border-radius:3px;"></div></div>'
+        +'<strong style="color:'+col+';font-size:12px;min-width:32px;">'+pct+'%</strong>'
+        +'</div>'
+      +'</td>'
+      +'<td>'+palier+'</td>'
+      +'<td style="text-align:center;font-weight:600;">'+tPct.toFixed(1)+'%</td>'
+      +'<td style="color:#8B5CF6;font-weight:700;">'+fmtF(comm)+' F</td>'
+      +'<td><span style="background:'+(pct>=100?'#ECFDF5':pct>=50?'#EFF6FF':'#FEF2F2')+';color:'+col+';padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">'
+        +(pct>=100?'✅ Objectif atteint':pct>=50?'⏳ En cours':'❌ Insuffisant')
+        +'</span></td>'
+      +'</tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;color:#94A3B8;padding:20px;">Aucune donnée.</td></tr>';
+}
+
+// ── Analyses & Graphiques ─────────────────────────────────────────────────────
+function _buildAnalyses(commList, dateMin) {
+  if (typeof Chart === 'undefined') {
+    // Charger Chart.js dynamiquement
+    if (!document.getElementById('chartjs-script')) {
+      var s = document.createElement('script');
+      s.id = 'chartjs-script';
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+      s.onload = function() { _drawCharts(commList, dateMin); };
+      document.head.appendChild(s);
+    }
+    return;
+  }
+  _drawCharts(commList, dateMin);
+}
+
+function _drawCharts(commList, dateMin) {
+  if (typeof Chart === 'undefined') return;
+  var labels = commList.map(function(c){return c.nom.split(' ')[0];});
+  var encs   = commList.map(function(c){return Math.round(c.enc/1000000);});
+  var convs  = commList.map(function(c){return c.txConv;});
+  var cols   = ['#B87333','#10B981','#3B82F6','#8B5CF6','#EF4444','#F59E0B','#14B8A6'];
+
+  // Graphique 1 — barres encaissements
+  var ctx1 = document.getElementById('chart-comm-bar');
+  if (ctx1) {
+    if (_chartCommBar) _chartCommBar.destroy();
+    _chartCommBar = new Chart(ctx1, {
+      type:'bar',
+      data:{labels:labels,datasets:[{label:'Encaissé (M FCFA)',data:encs,backgroundColor:cols.slice(0,labels.length),borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+'M';}},grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+    });
+  }
+
+  // Graphique 2 — taux de conversion
+  var ctx2 = document.getElementById('chart-comm-conv');
+  if (ctx2) {
+    if (_chartCommConv) _chartCommConv.destroy();
+    _chartCommConv = new Chart(ctx2, {
+      type:'bar',
+      data:{labels:labels,datasets:[{label:'Taux conv. (%)',data:convs,backgroundColor:convs.map(function(v){return v>=50?'#10B981':v>=25?'#B87333':'#EF4444';}),borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%';}},grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+    });
+  }
+
+  // Graphique 3 — tendance 12 mois
+  var ctx3 = document.getElementById('chart-tendance-comm');
+  if (ctx3) {
+    var now = new Date();
+    var mLabels = [], mData = [];
+    for (var i=11; i>=0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+      var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      mLabels.push(d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}));
+      mData.push(Math.round(DATA.versements.filter(function(v){return (v.date||'').startsWith(key);}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0)/1000000));
+    }
+    if (_chartTendance) _chartTendance.destroy();
+    _chartTendance = new Chart(ctx3, {
+      type:'line',
+      data:{labels:mLabels,datasets:[{label:'Encaissements (M FCFA)',data:mData,borderColor:'#B87333',backgroundColor:'rgba(184,115,51,0.1)',tension:0.4,fill:true,pointBackgroundColor:'#B87333',pointRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,ticks:{callback:function(v){return v+'M';}},grid:{color:'rgba(0,0,0,0.05)'}},x:{grid:{display:false}}}}
+    });
+  }
+}
+
+// ── Comparatif mois N vs N-1 ─────────────────────────────────────────────────
+function _buildComparatifMois() {
+  var el = document.getElementById('comparatif-mois'); if (!el) return;
+  var now = new Date();
+  var moisN  = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var prev   = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  var moisN1 = prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
+  var lblN   = now.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  var lblN1  = prev.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+
+  var metrics = [
+    { l:'Encaissements',
+      n:  DATA.versements.filter(function(v){return (v.date||'').startsWith(moisN); }).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0),
+      n1: DATA.versements.filter(function(v){return (v.date||'').startsWith(moisN1);}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0),
+      fmt:function(v){return fmtF(v)+' F';}
+    },
+    { l:'Nouvelles souscriptions',
+      n:  DATA.clients.filter(function(c){return (c.created_at||'').startsWith(moisN); }).length,
+      n1: DATA.clients.filter(function(c){return (c.created_at||'').startsWith(moisN1);}).length,
+      fmt:function(v){return v;}
+    },
+    { l:'Visites terrain',
+      n:  DATA.etapes_itineraire.filter(function(e){return (e.date||'').startsWith(moisN); }).length,
+      n1: DATA.etapes_itineraire.filter(function(e){return (e.date||'').startsWith(moisN1);}).length,
+      fmt:function(v){return v;}
+    },
+    { l:'CR rédigés',
+      n:  DATA.cr_visites.filter(function(c){return (c.created_at||'').startsWith(moisN); }).length,
+      n1: DATA.cr_visites.filter(function(c){return (c.created_at||'').startsWith(moisN1);}).length,
+      fmt:function(v){return v;}
+    },
+  ];
+
+  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">'
+    + metrics.map(function(m) {
+      var delta = m.n1>0 ? Math.round((m.n-m.n1)/m.n1*100) : (m.n>0?100:0);
+      var col   = delta>=0?'#10B981':'#EF4444';
+      var arrow = delta>=0?'▲':'▼';
+      return '<div style="background:#F8FAFC;border:1px solid #E0E0EA;border-radius:10px;padding:14px;text-align:center;">'
+        +'<div style="font-size:11px;color:#6B6B9A;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">'+m.l+'</div>'
+        +'<div style="display:flex;justify-content:space-around;align-items:flex-end;gap:8px;margin-bottom:8px;">'
+        +'<div><div style="font-size:10px;color:#94A3B8;margin-bottom:3px;">'+lblN1+'</div><div style="font-size:14px;color:#6B6B9A;">'+m.fmt(m.n1)+'</div></div>'
+        +'<div style="font-size:16px;color:'+col+';">→</div>'
+        +'<div><div style="font-size:10px;color:#94A3B8;margin-bottom:3px;">'+lblN+'</div><div style="font-size:16px;font-weight:700;color:#1C1C2E;">'+m.fmt(m.n)+'</div></div>'
+        +'</div>'
+        +'<div style="font-size:13px;font-weight:700;color:'+col+';">'+arrow+' '+Math.abs(delta)+'%</div>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+
+// ── Impression rapport ────────────────────────────────────────────────────────
+function printRapportCommercial() {
+  var dateMin  = getRapportDateMin();
+  var commList = buildCommsList(dateMin);
+  var params   = DATA.params||{};
+  var logo     = getLogoForPrint ? getLogoForPrint() : '';
+  var now      = new Date().toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'});
+  var periode  = (document.getElementById('rapport-periode')||{}).value||'mois';
+  var pLabels  = {mois:'Ce mois',trim:'Ce trimestre',annee:'Cette année',tout:'Tout historique'};
+
+  var rows = commList.map(function(c,i) {
+    var objCA = parseFloat((document.getElementById('obj-ca-mensuel')||{value:30000000}).value)||30000000;
+    var taux  = parseFloat((document.getElementById('obj-taux-comm')||{value:3}).value)||3;
+    var pct   = objCA>0 ? Math.round(c.enc/objCA*100) : 0;
+    var tPct  = pct<50?0:pct<80?taux:pct<100?taux*1.5:taux*2;
+    var comm  = Math.round(c.enc*tPct/100);
+    return '<tr style="background:'+(i%2===0?'#fff':'#F8FAFC')+'">'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;font-weight:600;">'+(i+1)+'. '+escHtml(c.nom)+'</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;text-align:center;">'+c.clients.length+'</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;text-align:center;color:#10B981;">'+c.nbSouscr+'</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;text-align:center;">'+c.txConv+'%</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;">'+fmtF(c.ca)+' F</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;color:#10B981;font-weight:700;">'+fmtF(c.enc)+' F</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;text-align:center;">'+c.etapes.length+'</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;color:#8B5CF6;font-weight:600;">'+fmtF(comm)+' F ('+tPct.toFixed(1)+'%)</td>'
+      +'<td style="padding:8px 10px;border:1px solid #E0E0EA;text-align:center;font-weight:700;color:'+(pct>=100?'#10B981':pct>=50?'#B87333':'#EF4444')+';">'+pct+'%</td>'
+      +'</tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Rapport Commercial — '+params.societe+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#1C1C2E;}'
+    +'table{border-collapse:collapse;width:100%;font-size:11px;}'
+    +'th{background:#1C1C2E;color:#fff;padding:9px 10px;text-align:left;}'
+    +'h1{color:#1C1C2E;font-size:18px;margin:0;}h3{color:#B87333;margin:4px 0;}'
+    +'.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #B87333;padding-bottom:14px;margin-bottom:20px;}'
+    +'.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}'
+    +'.kpi{background:#F8FAFC;border:1px solid #E0E0EA;border-top:3px solid #B87333;border-radius:6px;padding:10px;text-align:center;}'
+    +'.kpi-v{font-size:16px;font-weight:700;color:#B87333;}.kpi-l{font-size:9px;color:#6B6B9A;text-transform:uppercase;}'
+    +'@media print{body{padding:12px;}}</style></head><body>'
+    +'<div class="header">'
+    +(logo?'<img src="'+logo+'" style="height:44px;object-fit:contain;margin-right:12px;">':'')
+    +'<div><h1>'+escHtml(params.societe||'ImmoSuite ERP')+'</h1><h3>RAPPORT COMMERCIAL — '+pLabels[periode]+'</h3>'
+    +'<div style="font-size:11px;color:#6B6B9A;">Généré le '+now+'</div></div>'
+    +'<div style="text-align:right;font-size:11px;color:#6B6B9A;">'+(params.tel||'')+'<br>'+(params.email||'')+'</div>'
+    +'</div>'
+    +'<div class="kpi-row">'
+    +[
+      ['CA portefeuille', fmtF(DATA.clients.reduce(function(s,c){return s+(parseFloat(c.montant_total)||0);},0))+' F'],
+      ['Encaissé total',  fmtF(commList.reduce(function(s,c){return s+c.enc;},0))+' F'],
+      ['Commerciaux',     commList.length],
+      ['Souscripteurs',   DATA.clients.length],
+    ].map(function(k){return '<div class="kpi"><div class="kpi-v">'+k[1]+'</div><div class="kpi-l">'+k[0]+'</div></div>';}).join('')
+    +'</div>'
+    +'<table><thead><tr><th>Commercial</th><th>Clients</th><th>Souscr.</th><th>Conv.%</th>'
+    +'<th>CA portefeuille</th><th>Encaissé</th><th>Visites</th><th>Commission</th><th>Objectif %</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +'<div style="margin-top:30px;font-size:10px;color:#94A3B8;border-top:1px solid #E0E0EA;padding-top:10px;">'
+    +'Document confidentiel — '+escHtml(params.societe||'ImmoSuite ERP')+' · ImmoSuite ERP · '+now
+    +'</div></body></html>';
+
+  var win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){win.print();},400);
+}
+
+// ── Export CSV ────────────────────────────────────────────────────────────────
 function exportRapportCSV() {
-  var rows=['Commercial,Clients,Souscriptions,CA,Encaissé,Visites,Commission'];
-  var comms={};
-  DATA.clients.forEach(function(c){ var comm=c.commercial||''; if(comm&&!comms[comm])comms[comm]={nom:comm,ca:0,enc:0,n:0,vis:0}; if(comm){comms[comm].ca+=c.montant_total||0;comms[comm].n++;} });
-  DATA.versements.forEach(function(v){ var c=DATA.clients.find(function(x){return x.id===v.client_id;}); if(c&&c.commercial&&comms[c.commercial])comms[c.commercial].enc+=v.montant; });
-  Object.values(comms).forEach(function(c){ rows.push([c.nom,c.n,c.n,c.ca,c.enc,c.vis,Math.round(c.enc*0.03)].join(',')); });
-  var blob=new Blob([rows.join('\n')],{type:'text/csv'}); var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='rapport_commerciaux.csv'; a.click();
-  toast('Rapport exporté.','success');
+  var dateMin  = getRapportDateMin();
+  var commList = buildCommsList(dateMin);
+  var objCA    = parseFloat((document.getElementById('obj-ca-mensuel')||{value:30000000}).value)||30000000;
+  var taux     = parseFloat((document.getElementById('obj-taux-comm')||{value:3}).value)||3;
+  var rows     = ['Commercial,Prospects,Souscriptions,Tx conv %,CA portefeuille,Encaissé,Taux recouv %,Visites,CR,Commission,Objectif %'];
+  commList.forEach(function(c) {
+    var pct  = objCA>0?Math.round(c.enc/objCA*100):0;
+    var tPct = pct<50?0:pct<80?taux:pct<100?taux*1.5:taux*2;
+    var comm = Math.round(c.enc*tPct/100);
+    rows.push([c.nom,c.leads.length,c.nbSouscr,c.txConv,c.ca,c.enc,c.txRecouv,c.etapes.length,c.crs.length,comm,pct].join(','));
+  });
+  var blob = new Blob(['\uFEFF'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rapport_commercial_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('Rapport CSV exporté.','success');
 }
 
 /* ══════════════════════════════════════════════════════
