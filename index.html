@@ -1314,6 +1314,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <select class="filter-select" id="filter-programme" onchange="filterClients()">
             <option value="">Tous les programmes</option>
           </select>
+          <select class="filter-select" id="filter-commercial-client" onchange="filterClients()">
+            <option value="">Tous commerciaux / apporteurs</option>
+          </select>
           <select class="filter-select" id="filter-statut-client" onchange="filterClients()">
             <option value="">Tous les statuts</option>
             <option value="actif">Actif</option>
@@ -1336,6 +1339,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <tr>
                   <th onclick="sortTable('clients','nom')">Nom complet ↕</th>
                   <th>Contact</th>
+                  <th>Commercial / Apporteur</th>
                   <th onclick="sortTable('clients','programme')">Programme ↕</th>
                   <th>Lot</th>
                   <th onclick="sortTable('clients','montant_total')">Montant ↕</th>
@@ -6326,6 +6330,126 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 </div>
 
 <!-- Modal Itinéraire nouveau -->
+
+<!-- ══ MODAL APPORTEUR D'AFFAIRE ════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-apporteur">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <h3 id="modal-apporteur-title">Nouvel apporteur d'affaire</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-apporteur')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('modal-apporteur','infos')">👤 Identité</button>
+        <button class="tab-btn" onclick="switchTab('modal-apporteur','commissions')">💰 Commissions</button>
+        <button class="tab-btn" onclick="switchTab('modal-apporteur','contrat')">📄 Contrat & banque</button>
+        <button class="tab-btn" onclick="switchTab('modal-apporteur','programmes')">🏗️ Programmes</button>
+      </div>
+
+      <!-- Onglet Identité -->
+      <div class="tab-pane active" id="tab-modal-apporteur-infos">
+        <div class="form-grid">
+          <div class="form-group"><label>Nom *</label><input type="text" id="ap-nom" class="form-control"></div>
+          <div class="form-group"><label>Prénoms</label><input type="text" id="ap-prenoms" class="form-control"></div>
+          <div class="form-group"><label>Société / Structure</label><input type="text" id="ap-societe" class="form-control"></div>
+          <div class="form-group"><label>Profession</label><input type="text" id="ap-profession" class="form-control"></div>
+          <div class="form-group"><label>Téléphone *</label><input type="text" id="ap-tel" class="form-control"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="ap-email" class="form-control"></div>
+          <div class="form-group span-2"><label>Adresse</label><input type="text" id="ap-adresse" class="form-control"></div>
+          <div class="form-group"><label>Pièce d'identité</label>
+            <select id="ap-piece-type" class="form-control">
+              <option value="CNI">CNI</option>
+              <option value="Passeport">Passeport</option>
+              <option value="Carte sejour">Carte de séjour</option>
+            </select>
+          </div>
+          <div class="form-group"><label>N° Pièce</label><input type="text" id="ap-piece-num" class="form-control"></div>
+          <div class="form-group"><label>Statut</label>
+            <select id="ap-statut" class="form-control">
+              <option value="actif">Actif</option>
+              <option value="suspendu">Suspendu</option>
+              <option value="resilie">Résilié</option>
+            </select>
+          </div>
+          <div class="form-group span-2"><label>Notes / Observations</label>
+            <textarea id="ap-notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglet Commissions -->
+      <div class="tab-pane" id="tab-modal-apporteur-commissions">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Taux sur souscription (%)</label>
+            <input type="number" id="ap-taux-souscription" class="form-control" value="10" step="0.5" min="0" max="30">
+          </div>
+          <div class="form-group">
+            <label>Taux sur versements réguliers (%)</label>
+            <input type="number" id="ap-taux-regulier" class="form-control" value="5" step="0.5" min="0" max="20">
+          </div>
+          <div class="form-group span-2">
+            <div class="alert alert-info" style="font-size:12px;">
+              Ces taux sont propres à cet apporteur et priment sur les taux globaux définis dans Paramètres.
+              <br>• Souscription = premier versement / apport initial
+              <br>• Régulier = mensualités suivantes
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglet Contrat & bancaire -->
+      <div class="tab-pane" id="tab-modal-apporteur-contrat">
+        <div class="form-grid">
+          <div class="form-group"><label>Date du contrat</label><input type="date" id="ap-date-contrat" class="form-control" onchange="calcDateExpirationAp()"></div>
+          <div class="form-group"><label>Durée (mois)</label><input type="number" id="ap-duree-contrat" class="form-control" value="12" oninput="calcDateExpirationAp()"></div>
+          <div class="form-group"><label>Date expiration (auto)</label><input type="date" id="ap-date-expiration" class="form-control" readonly style="color:#B87333;"></div>
+          <div class="form-group"><label>Clause de non-contournement</label>
+            <select id="ap-non-contournement" class="form-control">
+              <option value="signe">✅ Signée</option>
+              <option value="en_attente">⏳ En attente</option>
+              <option value="non_signe">❌ Non signée</option>
+            </select>
+          </div>
+          <div class="form-group span-2"><label>Clauses particulières</label><textarea id="ap-clauses" class="form-control" rows="2" placeholder="Territoire exclusif, conditions particulières..."></textarea></div>
+          <div class="form-group"><label>Banque</label><input type="text" id="ap-banque" class="form-control" placeholder="SGCI, NSIA, BNI..."></div>
+          <div class="form-group"><label>Agence</label><input type="text" id="ap-agence" class="form-control"></div>
+          <div class="form-group span-2"><label>IBAN / RIB</label><input type="text" id="ap-iban" class="form-control" placeholder="CI XX XXXX XXXX XXXX XXXX XXXX XXX"></div>
+          <div class="form-group"><label>N° compte</label><input type="text" id="ap-compte" class="form-control"></div>
+          <div class="form-group"><label>Mode de paiement</label>
+            <select id="ap-mode-paiement" class="form-control">
+              <option value="virement">Virement bancaire</option>
+              <option value="cheque">Chèque</option>
+              <option value="especes">Espèces</option>
+              <option value="mobile_money">Mobile Money</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Mobile Money / Wallet</label><input type="text" id="ap-mobile-money" class="form-control" placeholder="+225 XX XX XX XX"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <button class="btn btn-secondary btn-sm" onclick="imprimerContratApporteur(APP.editingId)">🖨️ Contrat apporteur</button>
+          <button class="btn btn-secondary btn-sm" onclick="imprimerNonContournement(APP.editingId)">🔒 Non-contournement</button>
+        </div>
+      </div>
+
+      <!-- Onglet Programmes -->
+      <div class="tab-pane" id="tab-modal-apporteur-programmes">
+        <div class="form-section-title">🏗️ Programmes autorisés pour cet apporteur</div>
+        <select id="ap-programmes" multiple class="form-control" style="min-height:140px;margin-top:10px;"></select>
+        <div class="alert alert-info" style="margin-top:10px;font-size:12px;">
+          Maintenez <kbd>Ctrl</kbd> (ou <kbd>Cmd</kbd> sur Mac) pour sélectionner plusieurs programmes.<br>
+          Laissez vide = accès à tous les programmes.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-apporteur')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveApporteur()">💾 Enregistrer l'apporteur</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-itineraire">
   <div class="modal">
     <div class="modal-header">
@@ -8553,6 +8677,16 @@ function buildDashKPI2() {
 /* ──────────────────────────────────────────────────────
    CLIENTS / SOUSCRIPTEURS
 ────────────────────────────────────────────────────── */
+
+// ── Validation temps réel commercial/apporteur dans formulaire client ─────────
+function validateCommApporteur() {
+  var commId = (document.getElementById('c-commercial')||{}).value||'';
+  var apId   = (document.getElementById('c-apporteur') ||{}).value||'';
+  var alert  = document.getElementById('comm-ap-alert');
+  if (!alert) return;
+  alert.style.display = (!commId && !apId) ? 'block' : 'none';
+}
+
 function openClientModal(id) {
   APP.editingId = id || null;
   clearClientForm();
@@ -8627,6 +8761,19 @@ async function saveClient() {
   var nom = document.getElementById('c-nom').value.trim();
   var tel = document.getElementById('c-tel').value.trim();
   if (!nom || !tel) { toast('Nom et téléphone obligatoires.', 'error'); return; }
+
+  // ── Validation : commercial OU apporteur obligatoire ──────────────────────
+  var commId = document.getElementById('c-commercial') ? document.getElementById('c-commercial').value : '';
+  var apId   = document.getElementById('c-apporteur')  ? document.getElementById('c-apporteur').value  : '';
+  if (!commId && !apId) {
+    toast('⚠️ Assignez un commercial OU un apporteur d\'affaire avant d\'enregistrer.', 'error');
+    // Mettre en évidence les deux champs
+    var eComm = document.getElementById('c-commercial');
+    var eAp   = document.getElementById('c-apporteur');
+    if (eComm) { eComm.style.borderColor='#EF4444'; eComm.style.boxShadow='0 0 0 3px rgba(239,68,68,0.15)'; setTimeout(function(){ eComm.style.borderColor=''; eComm.style.boxShadow=''; },3000); }
+    if (eAp)   { eAp.style.borderColor='#EF4444';   eAp.style.boxShadow='0 0 0 3px rgba(239,68,68,0.15)';   setTimeout(function(){ eAp.style.borderColor=''; eAp.style.boxShadow=''; },3000); }
+    return;
+  }
 
   var id = APP.editingId || uid();
   var client = {
@@ -8705,7 +8852,7 @@ function renderClients() {
 
   var tbody = document.getElementById('tbody-clients');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucun souscripteur trouvé</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:#94A3B8;padding:24px;">Aucun souscripteur trouvé</td></tr>';
     return;
   }
 
@@ -8723,10 +8870,25 @@ function renderClients() {
     var prog = DATA.programmes.find(function(p) { return p.id === c.programme_id; });
     var lot = DATA.lots.find(function(l) { return l.id === c.lot_id; });
 
-    return '<tr>'
-      + '<td><strong>' + c.nom + ' ' + c.prenoms + '</strong><br><span style="font-size:11px;color:var(--blanc-dim);">' + (c.piece_type || '') + ' ' + (c.piece_num || '') + '</span></td>'
-      + '<td>' + c.tel + '<br><span style="font-size:11px;color:var(--blanc-dim);">' + (c.email || '') + '</span></td>'
-      + '<td>' + (prog ? prog.nom : '—') + '</td>'
+    // Résoudre le nom du commercial depuis RH
+    var commEmp = c.commercial_id ? DATA.employes.find(function(e){return e.id===c.commercial_id;}) : null;
+    var commNomAff = commEmp ? (commEmp.prenoms||'')+' '+commEmp.nom : (c.commercial||'');
+    // Résoudre l'apporteur
+    var apObj = c.apporteur_id ? DATA.apporteurs.find(function(a){return a.id===c.apporteur_id;}) : null;
+    var apNomAff = apObj ? ((apObj.prenoms||'')+' '+apObj.nom).trim() : (c.apporteur||'');
+    // Badge d'alerte si ni commercial ni apporteur
+    var missingBadge = (!c.commercial_id && !c.apporteur_id)
+      ? '<br><span style="color:#EF4444;font-size:10px;font-weight:600;">⚠️ Non assigné</span>' : '';
+    var commCell = '';
+    if (commNomAff) commCell += '<div style="font-size:12px;display:flex;align-items:center;gap:4px;"><span title="Commercial">💼</span><span style="color:#1C1C2E;font-weight:500;">'+escHtml(commNomAff)+'</span></div>';
+    if (apNomAff)   commCell += '<div style="font-size:12px;display:flex;align-items:center;gap:4px;"><span title="Apporteur">🤝</span><span style="color:#B87333;font-weight:500;">'+escHtml(apNomAff)+'</span></div>';
+    if (!commCell)  commCell  = '<span style="color:#EF4444;font-size:11px;font-weight:600;">⚠️ Non assigné</span>';
+
+    return '<tr' + ((!c.commercial_id && !c.apporteur_id) ? ' style="background:#FEF2F2;"' : '') + '>'
+      + '<td><strong>' + escHtml(c.nom + ' ' + c.prenoms) + '</strong>' + missingBadge + '<br><span style="font-size:11px;color:var(--blanc-dim);">' + escHtml((c.piece_type || '') + ' ' + (c.piece_num || '')) + '</span></td>'
+      + '<td>' + escHtml(c.tel) + '<br><span style="font-size:11px;color:var(--blanc-dim);">' + escHtml(c.email || '') + '</span></td>'
+      + '<td>' + commCell + '</td>'
+      + '<td>' + (prog ? escHtml(prog.nom) : '—') + '</td>'
       + '<td>' + (lot ? 'Lot ' + lot.numero : '—') + '</td>'
       + '<td>' + fcfa(c.montant_total) + '</td>'
       + '<td style="color:var(--vert);">' + fcfa(verse) + '</td>'
@@ -9025,7 +9187,9 @@ async function genererCommissionsVersement(versement) {
   var nouvelles = [];
 
   // ── Commission commerciale ──────────────────────────────────────────────────
-  if (client.commercial) {
+  var commEmpC = client.commercial_id ? DATA.employes.find(function(e){return e.id===client.commercial_id;}) : null;
+  var commNomC = commEmpC ? ((commEmpC.prenoms||'')+' '+commEmpC.nom).trim() : (client.commercial||'');
+  if (commNomC || client.commercial_id) {
     var tauxComm = isSouscription ? taux.commercial_souscription : taux.commercial_regulier;
     var montantComm = Math.round(montant * tauxComm / 100);
     if (montantComm > 0) {
@@ -9034,7 +9198,8 @@ async function genererCommissionsVersement(versement) {
         versement_id:   versement.id,
         client_id:      client.id,
         client_nom:     client.prenoms + ' ' + client.nom,
-        beneficiaire:   client.commercial,
+        beneficiaire:   commNomC,
+        beneficiaire_id:client.commercial_id || '',
         type_beneficiaire: 'commercial',
         type_versement: isSouscription ? 'souscription' : 'regulier',
         taux:           tauxComm,
@@ -11640,6 +11805,10 @@ async function saveEmploye() {
     DATA.employes.push(emp);
   }
   await dbPut('employes', emp);
+  // Rafraîchir tous les sélecteurs commerciaux si dept=commercial
+  if (emp.dept === 'commercial' || emp.poste === 'commercial' || emp.poste === 'Commercial') {
+    populateCommerciauxPartout();
+  }
   closeModal('modal-employe');
   renderEmployes();
   updateRHKPIs();
@@ -12777,6 +12946,18 @@ function renderApporteurs() {
   }).join('');
 }
 
+
+function calcDateExpirationAp() {
+  var dateC  = (document.getElementById('ap-date-contrat')||{}).value;
+  var dureeC = parseInt((document.getElementById('ap-duree-contrat')||{}).value)||12;
+  var expEl  = document.getElementById('ap-date-expiration');
+  if (dateC && expEl) {
+    var d = new Date(dateC);
+    d.setMonth(d.getMonth() + dureeC);
+    expEl.value = d.toISOString().slice(0,10);
+  }
+}
+
 function openApporteurModal(id) {
   APP.editingId = id || null;
   var ap = id ? DATA.apporteurs.find(function(a){return a.id===id;}) : null;
@@ -12820,14 +13001,13 @@ function openApporteurModal(id) {
   });
 
   // Peupler programmes
-  var progSel = document.getElementById('ap-programmes');
-  if (progSel) {
-    progSel.innerHTML = DATA.programmes.map(function(p){
+  var progSel2 = document.getElementById('ap-programmes');
+  if (progSel2) {
+    progSel2.innerHTML = DATA.programmes.map(function(p){
       var sel = ap && ap.programmes && ap.programmes.includes(p.id) ? ' selected' : '';
       return '<option value="'+p.id+'"'+sel+'>'+escHtml(p.nom)+'</option>';
     }).join('');
   }
-
   openModal('modal-apporteur');
   switchTab('modal-apporteur','infos');
 }
@@ -13008,8 +13188,11 @@ function buildCommsList(dateMin) {
   var comms = {};
 
   DATA.clients.forEach(function(c) {
-    var nom = c.commercial || ''; if (!nom) return;
-    if (!comms[nom]) comms[nom] = { nom:nom, clients:[], versements:[], leads:[], etapes:[], crs:[] };
+    // Résoudre le nom depuis RH en priorité
+    var empC = c.commercial_id ? DATA.employes.find(function(e){return e.id===c.commercial_id;}) : null;
+    var nom = empC ? ((empC.prenoms||'')+' '+empC.nom).trim() : (c.commercial||'');
+    if (!nom) return;
+    if (!comms[nom]) comms[nom] = { nom:nom, emp_id:c.commercial_id||'', clients:[], versements:[], leads:[], etapes:[], crs:[] };
     comms[nom].clients.push(c);
   });
   DATA.leads.forEach(function(l) {
