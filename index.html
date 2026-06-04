@@ -22233,6 +22233,143 @@ async function deleteEtapeItineraire(id) {
   toast('Étape supprimée.', 'info');
 }
 
+/* ══════════════════════════════════════════════════════
+   GABARIT COMMUN DES ÉTATS PDF (A4)
+   Identité société centralisée · en-tête/pied répétés
+   Usage : genererEtatPDF({ titre, sousTitre, reference, contenu, orientation, couleur, mentionPied })
+══════════════════════════════════════════════════════ */
+
+function _identiteSociete() {
+  var p = DATA.params || {};
+  return {
+    nom:       p.societe || 'Société',
+    forme:     p.forme_juridique || '',
+    activite:  p.activite || '',
+    rccm:      p.rccm || '',
+    cc:        p.cnps_num || p.ncc || '',
+    agrement:  (p.agrement_num && p.agrement_num !== 'À compléter') ? p.agrement_num : '',
+    tel:       p.tel || '',
+    email:     p.email || '',
+    adresse:   [p.adresse, p.quartier, p.commune].filter(Boolean).join(' · '),
+    logo:      p.logo || ''
+  };
+}
+
+function _enteteEtatHTML(opts, s) {
+  var logo = s.logo
+    ? '<img src="' + s.logo + '" alt="logo" style="max-height:60px;max-width:150px;object-fit:contain;">'
+    : '<div class="logo-fallback">' + escHtml((s.nom || 'S').charAt(0).toUpperCase()) + '</div>';
+  var sub = [];
+  if (s.forme || s.activite) sub.push(escHtml([s.forme, s.activite].filter(Boolean).join(' · ')));
+  if (s.adresse) sub.push(escHtml(s.adresse));
+  var contact = [s.tel ? 'Tél : ' + s.tel : '', s.email].filter(Boolean).join(' · ');
+  if (contact) sub.push(escHtml(contact));
+  var legal = [s.rccm ? 'RCCM : ' + s.rccm : '', s.cc ? 'CC : ' + s.cc : '', s.agrement ? 'Agrément : ' + s.agrement : ''].filter(Boolean).join(' · ');
+  return '<div class="etat-entete">'
+    +   '<div class="etat-societe">' + logo
+    +     '<div class="etat-soc-txt"><div class="etat-soc-nom">' + escHtml(s.nom) + '</div>'
+    +       (sub.length ? '<div class="etat-soc-sub">' + sub.join('<br>') + '</div>' : '')
+    +     '</div>'
+    +   '</div>'
+    +   (legal ? '<div class="etat-legal">' + legal + '</div>' : '')
+    + '</div>';
+}
+
+function genererEtatPDF(opts) {
+  opts = opts || {};
+  var s        = _identiteSociete();
+  var couleur  = opts.couleur || '#1D4ED8';
+  var orient   = (opts.orientation === 'paysage' || opts.orientation === 'landscape') ? 'landscape' : 'portrait';
+  var titre    = opts.titre || 'État';
+  var sousTitre= opts.sousTitre || '';
+  var ref      = opts.reference || '';
+  var dateStr  = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+  var mention  = opts.mentionPied || ([s.nom, s.rccm ? 'RCCM ' + s.rccm : '', s.agrement ? 'Agrément ' + s.agrement : ''].filter(Boolean).join(' · '));
+
+  var css =
+    '<style>'
+    + '@page{size:A4 ' + orient + ';margin:12mm;}'
+    + '*{box-sizing:border-box;}'
+    + 'body{font-family:"Segoe UI",Arial,sans-serif;font-size:12px;color:#1f2937;margin:0;}'
+    + '.page-table{width:100%;border-collapse:collapse;}'
+    + '.page-table thead td,.page-table tfoot td{border:none;padding:0;}'
+    + '.etat-entete{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;'
+    +   'border-bottom:3px solid ' + couleur + ';padding-bottom:10px;margin-bottom:6px;}'
+    + '.etat-societe{display:flex;gap:12px;align-items:center;}'
+    + '.logo-fallback{width:54px;height:54px;border-radius:10px;background:' + couleur + ';color:#fff;'
+    +   'display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;}'
+    + '.etat-soc-nom{font-size:17px;font-weight:700;color:' + couleur + ';line-height:1.2;}'
+    + '.etat-soc-sub{font-size:10px;color:#555;margin-top:3px;line-height:1.5;}'
+    + '.etat-legal{font-size:9px;color:#666;text-align:right;max-width:230px;line-height:1.6;}'
+    + '.etat-titre-band{margin:14px 0 16px;}'
+    + '.etat-titre{font-size:18px;font-weight:700;color:#111;text-transform:uppercase;letter-spacing:.5px;}'
+    + '.etat-soustitre{font-size:12px;color:#555;margin-top:3px;}'
+    + '.etat-ref{font-size:11px;color:#888;margin-top:2px;}'
+    + '.etat-pied{border-top:1px solid #ddd;margin-top:8px;padding-top:6px;'
+    +   'display:flex;justify-content:space-between;font-size:9px;color:#888;}'
+    + '.etat-content table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11px;}'
+    + '.etat-content th,.etat-content td{border:1px solid #d1d5db;padding:6px 8px;text-align:left;}'
+    + '.etat-content thead th{background:' + couleur + '14;color:#111;font-weight:600;}'
+    + '.etat-content .num{text-align:right;font-variant-numeric:tabular-nums;}'
+    + '.etat-content .total td{font-weight:700;background:#f8f8f4;}'
+    + '.etat-content h3{font-size:13px;color:' + couleur + ';margin:16px 0 6px;border-left:3px solid ' + couleur + ';padding-left:8px;}'
+    + '.etat-signatures{display:flex;justify-content:space-between;margin-top:42px;font-size:11px;}'
+    + '.etat-signatures>div{width:45%;}'
+    + '.etat-sign-line{border-top:1px solid #999;margin-top:48px;padding-top:4px;text-align:center;color:#555;}'
+    + '.no-print{margin:14px 0;text-align:center;}'
+    + '.no-print button{background:' + couleur + ';color:#fff;border:none;padding:9px 22px;border-radius:6px;font-size:13px;cursor:pointer;margin:0 4px;}'
+    + '.no-print button.sec{background:#6b7280;}'
+    + '@media print{.no-print{display:none!important;}}'
+    + (opts.cssExtra || '')
+    + '</style>';
+
+  var bande = '<div class="etat-titre-band"><div class="etat-titre">' + escHtml(titre) + '</div>'
+    + (sousTitre ? '<div class="etat-soustitre">' + escHtml(sousTitre) + '</div>' : '')
+    + (ref ? '<div class="etat-ref">Réf. ' + escHtml(ref) + ' — Édité le ' + dateStr + '</div>'
+           : '<div class="etat-ref">Édité le ' + dateStr + '</div>')
+    + '</div>';
+
+  var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    + '<title>' + escHtml(titre + (ref ? ' ' + ref : '')) + '</title>' + css + '</head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>'
+    +   '<button class="sec" onclick="window.close()">Fermer</button></div>'
+    + '<table class="page-table">'
+    +   '<thead><tr><td>' + _enteteEtatHTML(opts, s) + '</td></tr></thead>'
+    +   '<tfoot><tr><td><div class="etat-pied"><span>' + escHtml(mention) + '</span><span>' + dateStr + '</span></div></td></tr></tfoot>'
+    +   '<tbody><tr><td><div class="etat-content">' + bande + (opts.contenu || '') + '</div></td></tr></tbody>'
+    + '</table>'
+    + '<script>window.onload=function(){setTimeout(function(){try{window.print();}catch(e){}},' + (s.logo ? 350 : 150) + ');};<\/script>'
+    + '</body></html>';
+
+  var win = window.open('', '_blank');
+  if (!win) { toast('Pop-up bloqué : autorisez les fenêtres pour générer le PDF.', 'error'); return null; }
+  win.document.open(); win.document.write(html); win.document.close();
+  return win;
+}
+
+/* Construit un tableau HTML standard pour les états.
+   cols: [{l:'Libellé', k:'cle', num:true}]  ·  rows: [objets]  ·  totaux: {cle:valeur} */
+function etatTableauHTML(cols, rows, totaux) {
+  var th = cols.map(function(c){ return '<th class="' + (c.num ? 'num' : '') + '">' + escHtml(c.l) + '</th>'; }).join('');
+  var body = (rows || []).map(function(r){
+    return '<tr>' + cols.map(function(c){
+      var v = r[c.k]; if (v === undefined || v === null) v = '';
+      if (c.fmt) v = c.fmt(r[c.k], r);
+      else if (c.num && typeof r[c.k] === 'number') v = fmtF(r[c.k]);
+      return '<td class="' + (c.num ? 'num' : '') + '">' + (c.html ? v : escHtml(String(v))) + '</td>';
+    }).join('') + '</tr>';
+  }).join('');
+  var foot = '';
+  if (totaux) {
+    foot = '<tr class="total">' + cols.map(function(c, i){
+      if (i === 0) return '<td>TOTAL</td>';
+      var v = totaux[c.k];
+      return '<td class="' + (c.num ? 'num' : '') + '">' + (v != null ? fmtF(v) : '') + '</td>';
+    }).join('') + '</tr>';
+  }
+  return '<table><thead><tr>' + th + '</tr></thead><tbody>' + body + foot + '</tbody></table>';
+}
+
 /* Lancer au démarrage */
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(initAnimations, 600);
