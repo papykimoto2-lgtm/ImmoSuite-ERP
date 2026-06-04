@@ -2393,6 +2393,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                   <label>🤝 Comm. apporteur — Régulier (%)</label>
                   <input type="number" id="param-comm-apporteur-regulier" class="form-control" value="5" min="0" max="20" step="0.5">
                 </div>
+                <div class="form-group span-2" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;">
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                    <input type="checkbox" id="param-auto-compta-comm" checked style="width:18px;height:18px;accent-color:#1D4ED8;">
+                    <span>
+                      <strong style="color:#1D4ED8;">📒 Comptabilisation automatique</strong><br>
+                      <span style="font-size:11px;color:#6B6B9A;">Génère les écritures SYSCOHADA (622/629/467/468) à chaque versement</span>
+                    </span>
+                  </label>
+                </div>
                 <div class="form-group">
                   <label>Pénalités retard (%/semaine)</label>
                   <input type="number" id="param-penalites" class="form-control" value="0.5" step="0.1">
@@ -4368,6 +4377,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               </div>
               <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn btn-secondary btn-sm" onclick="goTo('params');switchTab('params','societe')">⚙️ Modifier les taux</button>
+                <button class="btn btn-primary btn-sm" onclick="comptabiliserToutesCommissions()">📒 Tout comptabiliser</button>
                 <button class="btn btn-secondary btn-sm" onclick="exportCommissionsCSV()">⬇ Export CSV</button>
                 <button class="btn btn-danger btn-sm" onclick="regenererToutesCommissions()">🔄 Régénérer tout</button>
               </div>
@@ -4399,7 +4409,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <thead><tr>
                   <th>Date versement</th><th>Bénéficiaire</th><th>Type</th>
                   <th>Client</th><th>Versement</th><th>Taux</th>
-                  <th>Base</th><th>Commission</th><th>Statut</th><th>Actions</th>
+                  <th>Base</th><th>Commission</th><th>Statut</th><th>Comptabilité</th><th>Actions</th>
                 </tr></thead>
                 <tbody id="tbody-commissions-detail"></tbody>
               </table>
@@ -7176,7 +7186,9 @@ var APP = {
     { code:'448', label:'État — Autres impôts et taxes', classe:'4', nature:'passif' },
     { code:'451', label:'Groupe et associés', classe:'4', nature:'variable' },
     { code:'461', label:'Débiteurs divers', classe:'4', nature:'actif' },
-    { code:'462', label:'Créditeurs divers', classe:'4', nature:'passif' },
+    { code:'462', label:'Crediteurs divers', classe:'4', nature:'passif' },
+    { code:'467', label:'Commissions commerciaux a payer', classe:'4', nature:'passif' },
+    { code:'468', label:'Commissions apporteurs a payer', classe:'4', nature:'passif' },
     { code:'471', label:'Comptes d\'attente débiteur', classe:'4', nature:'actif' },
     { code:'472', label:'Comptes d\'attente créditeur', classe:'4', nature:'passif' },
     // CLASSE 5 — COMPTES DE TRÉSORERIE
@@ -7217,6 +7229,7 @@ var APP = {
     { code:'626', label:'Frais postaux et de télécommunications', classe:'6', nature:'charge' },
     { code:'627', label:'Services bancaires et assimilés', classe:'6', nature:'charge' },
     { code:'628', label:'Divers (frais d\'actes, contentieux)', classe:'6', nature:'charge' },
+    { code:'629', label:'Commissions sur ventes — Apporteurs d\'affaire', classe:'6', nature:'charge' },
     { code:'631', label:'Impôts, taxes sur rémunérations', classe:'6', nature:'charge' },
     { code:'632', label:'Taxes foncières et de mutation', classe:'6', nature:'charge' },
     { code:'633', label:'Taxe professionnelle / patente', classe:'6', nature:'charge' },
@@ -7817,6 +7830,8 @@ function switchTab(context, tab) {
   else if (context === 'modal-camp')      prefix = 'tab-modal-camp-';
   else if (context === 'modal-conc')      prefix = 'tab-modal-conc-';
   else if (context === 'modal-rapport')   prefix = 'tab-modal-rapport-';
+  else if (context === 'rapports')         prefix = 'tab-rapports-';
+  else if (context === 'users')            prefix = 'tab-params-users-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
@@ -8800,6 +8815,168 @@ function isVersementSouscription(versement) {
 }
 
 /** Génère les commissions pour un versement enregistré */
+
+// ══ SYNCHRONISATION COMMISSIONS → COMPTABILITÉ ════════════════════════════════
+
+/**
+ * Schéma SYSCOHADA commissions immobilières :
+ * ── Commission commerciale ──────────────────────────────────────────────────
+ *   Débit  622 (Commissions intermédiaires)       Montant commission
+ *   Crédit 467 (Commissions commerciaux à payer)  Montant commission
+ *
+ * ── Paiement commission commerciale ────────────────────────────────────────
+ *   Débit  467 (Commissions commerciaux à payer)  Montant commission
+ *   Crédit 521 (Banque) ou 571 (Caisse)           Montant commission
+ *
+ * ── Commission apporteur d'affaire ──────────────────────────────────────────
+ *   Débit  629 (Commissions apporteurs)           Montant commission
+ *   Crédit 468 (Commissions apporteurs à payer)   Montant commission
+ *
+ * ── Paiement commission apporteur ───────────────────────────────────────────
+ *   Débit  468 (Commissions apporteurs à payer)   Montant commission
+ *   Crédit 521 (Banque) ou 571 (Caisse)           Montant commission
+ */
+
+function getCompteCommission(typeB, sens) {
+  // sens: 'charge' | 'provision' | 'paiement_debit' | 'paiement_credit'
+  if (typeB === 'commercial') {
+    if (sens === 'charge')          return '622';
+    if (sens === 'provision')       return '467';
+    if (sens === 'paiement_debit')  return '467';
+  } else { // apporteur
+    if (sens === 'charge')          return '629';
+    if (sens === 'provision')       return '468';
+    if (sens === 'paiement_debit')  return '468';
+  }
+  return '521'; // credit par défaut = banque
+}
+
+/** Génère les 2 écritures SYSCOHADA pour une commission (charge + provision) */
+async function comptabiliserCommission(comm, silencieux) {
+  if (!comm) return;
+  if (comm.ecriture_id) {
+    if (!silencieux) toast('Déjà comptabilisée (réf. ' + comm.ecriture_id + ').', 'info');
+    return;
+  }
+
+  var client = DATA.clients.find(function(c){ return c.id===comm.client_id; }) || {};
+  var prog   = DATA.programmes.find(function(p){ return p.id===client.programme_id; }) || {};
+  var typeV  = comm.type_versement === 'souscription' ? 'Souscription' : 'Régulier';
+  var typeB  = comm.type_beneficiaire === 'commercial' ? 'Commercial' : 'Apporteur';
+  var libelle= typeB + ' — Commission ' + typeV.toLowerCase()
+    + ' — ' + (comm.beneficiaire||'') + ' / ' + (comm.client_nom||'');
+
+  var compteCharge   = getCompteCommission(comm.type_beneficiaire, 'charge');
+  var compteProvision= getCompteCommission(comm.type_beneficiaire, 'provision');
+
+  var numEcr = DATA.ecritures.length + 1;
+  var an     = (comm.date_versement||today()).slice(0,4);
+  var ref    = 'COMM-' + an + '-' + String(numEcr).padStart(4,'0');
+
+  var ecriture = {
+    id:            uid(),
+    ref:           ref,
+    date:          comm.date_versement || today(),
+    piece:         'COMM-' + (comm.versement_id||'').slice(-6).toUpperCase(),
+    type:          'charge',
+    libelle:       libelle,
+    compte:        compteCharge,
+    compte_debit:  compteCharge,
+    compte_credit: compteProvision,
+    montant:       comm.montant_comm,
+    mode:          'commission',
+    programme_id:  client.programme_id || '',
+    notes:         'Taux ' + comm.taux + '% sur ' + fmtF(comm.montant_base) + ' FCFA — Auto-généré',
+    source:        'commission',
+    commission_id: comm.id,
+    created_at:    today()
+  };
+
+  DATA.ecritures.push(ecriture);
+  await dbPut('ecritures', ecriture);
+
+  // Lier l'écriture à la commission
+  comm.ecriture_id   = ecriture.id;
+  comm.ecriture_ref  = ref;
+  await dbPut('commissions', comm);
+
+  // Rafraîchir comptabilité
+  buildBalance();
+  buildCompteResultat();
+  if (!silencieux) toast('Écriture comptable créée : ' + ref, 'success');
+  return ecriture;
+}
+
+/** Comptabilise le paiement d'une commission (solde la provision) */
+async function comptabiliserPaiementCommission(comm, modePaiement) {
+  if (!comm || comm.statut !== 'payee') return;
+  if (comm.ecriture_paiement_id) return; // déjà comptabilisé
+
+  var compteProvision = getCompteCommission(comm.type_beneficiaire, 'paiement_debit');
+  var comptePaiement  = modePaiement === 'especes' ? '571' : '521';
+  var typeB = comm.type_beneficiaire === 'commercial' ? 'Commercial' : 'Apporteur';
+
+  var numEcr = DATA.ecritures.length + 1;
+  var an     = (comm.date_paiement||today()).slice(0,4);
+  var ref    = 'REGL-COMM-' + an + '-' + String(numEcr).padStart(4,'0');
+
+  var libelle = 'Règlement commission ' + typeB.toLowerCase()
+    + ' — ' + (comm.beneficiaire||'') + ' (réf. ' + (comm.ecriture_ref||'') + ')';
+
+  var ecriture = {
+    id:            uid(),
+    ref:           ref,
+    date:          comm.date_paiement || today(),
+    piece:         comm.ref_paiement || ref,
+    type:          'passif',
+    libelle:       libelle,
+    compte:        compteProvision,
+    compte_debit:  compteProvision,
+    compte_credit: comptePaiement,
+    montant:       comm.montant_comm,
+    mode:          modePaiement || 'virement',
+    programme_id:  '',
+    notes:         'Règlement commission — Auto-généré',
+    source:        'paiement_commission',
+    commission_id: comm.id,
+    created_at:    today()
+  };
+
+  DATA.ecritures.push(ecriture);
+  await dbPut('ecritures', ecriture);
+
+  comm.ecriture_paiement_id  = ecriture.id;
+  comm.ecriture_paiement_ref = ref;
+  await dbPut('commissions', comm);
+
+  buildBalance();
+  buildCompteResultat();
+  return ecriture;
+}
+
+/** Comptabiliser TOUTES les commissions non encore comptabilisées */
+async function comptabiliserToutesCommissions() {
+  var nonComptab = (DATA.commissions||[]).filter(function(c){ return !c.ecriture_id; });
+  if (!nonComptab.length) { toast('Toutes les commissions sont déjà comptabilisées.', 'info'); return; }
+  if (!confirm('Générer les écritures comptables pour ' + nonComptab.length + ' commission(s) non comptabilisée(s) ?')) return;
+  var nb = 0;
+  for (var i=0; i<nonComptab.length; i++) {
+    await comptabiliserCommission(nonComptab[i], true);
+    nb++;
+  }
+  filterEcritures();
+  renderCommissions();
+  toast(nb + ' écriture(s) comptable(s) créée(s).', 'success');
+}
+
+/** Badge comptabilité sur une commission */
+function badgeComptaComm(comm) {
+  if (comm.ecriture_id) {
+    return '<span style="background:#ECFDF5;color:#059669;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600;" title="Écriture : '+escHtml(comm.ecriture_ref||'')+'">✓ Comptabilisée</span>';
+  }
+  return '<button onclick="comptabiliserCommission(DATA.commissions.find(function(c){return c.id===\''+comm.id+'\'}),false).then(function(){renderCommissions();filterEcritures();})" style="font-size:10px;padding:2px 8px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;border-radius:8px;cursor:pointer;">📒 Comptabiliser</button>';
+}
+
 async function genererCommissionsVersement(versement) {
   var client = DATA.clients.find(function(c){ return c.id === versement.client_id; });
   if (!client) return;
@@ -8870,7 +9047,15 @@ async function genererCommissionsVersement(versement) {
 
   if (nouvelles.length > 0) {
     var total = nouvelles.reduce(function(s,c){ return s+c.montant_comm; }, 0);
-    toast('Commission(s) générée(s) : ' + fmtF(total) + ' FCFA', 'success');
+    // Comptabiliser automatiquement si option activée
+    var autoCompta = (DATA.params && DATA.params.auto_compta_commissions) !== false;
+    if (autoCompta) {
+      for (var k=0; k<nouvelles.length; k++) {
+        await comptabiliserCommission(nouvelles[k], true);
+      }
+      filterEcritures();
+    }
+    toast('Commission(s) générée(s) : ' + fmtF(total) + ' FCFA' + (autoCompta ? ' — Comptabilisées' : ''), 'success');
   }
 }
 
@@ -8886,14 +9071,30 @@ async function loadCommissions() {
 async function payerCommission(id) {
   var comm = (DATA.commissions||[]).find(function(c){ return c.id===id; });
   if (!comm) return;
-  var ref = prompt('Référence de paiement (optionnel) :', '');
+  var ref = prompt('Référence de paiement (ex: virement SGCI) :', '');
   if (ref === null) return;
+
+  // Choisir le mode de paiement pour la comptabilisation
+  var modes = ['virement','especes','cheque','mobile_money'];
+  var modeLabels = 'Mode de paiement :\n1. Virement bancaire\n2. Espèces\n3. Chèque\n4. Mobile Money';
+  var choix = prompt(modeLabels + '\n\nEntrez 1, 2, 3 ou 4 :', '1');
+  var mode = modes[parseInt(choix)-1] || 'virement';
+
   comm.statut = 'payee';
   comm.date_paiement = today();
   comm.ref_paiement = ref;
   await dbPut('commissions', comm);
-  toast('Commission marquée comme payée.', 'success');
+
+  // Comptabiliser la charge si pas encore fait
+  if (!comm.ecriture_id) {
+    await comptabiliserCommission(comm, true);
+  }
+  // Comptabiliser le règlement
+  await comptabiliserPaiementCommission(comm, mode);
+
+  filterEcritures();
   renderCommissions();
+  toast('Commission payée et écritures comptables générées.', 'success');
 }
 
 /** Annuler une commission */
@@ -10481,6 +10682,7 @@ async function saveParams() {
     comm_regulier_pct:            parseFloat(gv('param-comm-regulier'))||5,
     comm_apporteur_souscription_pct: parseFloat(gv('param-comm-apporteur-souscription'))||10,
     comm_apporteur_regulier_pct:  parseFloat(gv('param-comm-apporteur-regulier'))||5,
+    auto_compta_commissions: document.getElementById('param-auto-compta-comm') ? document.getElementById('param-auto-compta-comm').checked : true,
     penalites_pct: parseFloat(gv('param-penalites'))||0.5,
     banque:      gv('param-banque'),
     exercice:    gv('param-exercice'),
@@ -10541,7 +10743,9 @@ function loadParamFields() {
   sv('param-comm-souscription', p.comm_souscription_pct||10);
   sv('param-comm-regulier', p.comm_regulier_pct||5);
   sv('param-comm-apporteur-souscription', p.comm_apporteur_souscription_pct||10);
-  sv('param-comm-apporteur-regulier', p.comm_apporteur_regulier_pct||5); sv('param-penalites',p.penalites_pct||0.5);
+  sv('param-comm-apporteur-regulier', p.comm_apporteur_regulier_pct||5);
+  var autoComptaEl = document.getElementById('param-auto-compta-comm');
+  if (autoComptaEl) autoComptaEl.checked = p.auto_compta_commissions !== false; sv('param-penalites',p.penalites_pct||0.5);
   sv('param-banque',p.banque); sv('param-exercice',p.exercice||'2025');
   sv('param-obj-ca',p.objectif_ca_mensuel||20000000);
   sv('param-obj-ventes',p.objectif_ventes_mensuel||5);
