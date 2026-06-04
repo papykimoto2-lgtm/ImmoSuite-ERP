@@ -1070,6 +1070,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('crm-rapports')" data-page="crm-rapports">
         <span class="nav-icon">📊</span><span>Rapports Commerciaux</span>
       </div>
+      <div class="nav-item" onclick="goTo('crm-apporteurs')" data-page="crm-apporteurs">
+        <span class="nav-icon">🤝</span><span>Apporteurs d'affaire</span>
+      </div>
 
       <!-- ÉTAPE 5 : VENTES — réserver, signer, formaliser -->
       <div class="nav-section"><span class="nav-step">5</span><span>Ventes & Contrats</span></div>
@@ -7298,6 +7301,7 @@ var DATA = {
   lots: [],
   terrains: [],
   ecritures: [],
+  apporteurs: [],
   relances: [],
   users: [{ id: 1, login: 'admin', password: 'admin123', role: 'admin', nom: 'Administrateur' }],
   params: { societe: 'ImmoSuite ERP', email: '', tel: '', rccm: '' },
@@ -7350,7 +7354,8 @@ var ALL_STORES = [
   'evenements_calendrier','messages','conversations',
   'logs_connexion',
   'custom_roles',
-  'commissions'
+  'commissions',
+  'apporteurs'
 ];
 
 function initDB() {
@@ -7463,7 +7468,8 @@ async function loadAllData() {
     'campagnes','actions_marketing','segments_marketing',
   'documents','signatures',
   'historique_actions','workflow_configs',
-  'evenements_calendrier','messages','conversations'
+  'evenements_calendrier','messages','conversations',
+  'apporteurs','commissions'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -7801,7 +7807,8 @@ function goTo(page) {
   if (page === 'leads') { renderPipeline(); }
   if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else renderCarteGeo(); }, 80); }
   if (page === 'crm-itineraires') { loadPageItineraires(); }
-  if (page === 'crm-rapports') { buildRapportsCommerciaux(); }
+  if (page === 'crm-rapports')   { buildRapportsCommerciaux(); }
+  if (page === 'crm-apporteurs') { renderApporteurs(); buildKPIsApporteurs(); }
   if (page === 'tresorerie-page') { buildTresorerieDetaille(); }
 }
 
@@ -7855,6 +7862,7 @@ function switchTab(context, tab) {
   else if (context === 'modal-conc')      prefix = 'tab-modal-conc-';
   else if (context === 'modal-rapport')   prefix = 'tab-modal-rapport-';
   else if (context === 'users')           prefix = 'tab-params-users-';
+  else if (context === 'modal-apporteur')  prefix = 'tab-modal-apporteur-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
@@ -8591,6 +8599,8 @@ function fillClientForm(c) {
   setSelectValue('c-matrimonial', c.matrimonial);
   setSelectValue('c-standing', c.standing);
   setSelectValue('c-programme', c.programme_id);
+  setSelectValue('c-commercial', c.commercial_id || '');
+  setSelectValue('c-apporteur', c.apporteur_id || '');
   if (c.programme_id) {
     updateLotsByProgramme();
     setTimeout(function() { setSelectValue('c-lot', c.lot_id); }, 50);
@@ -8641,6 +8651,11 @@ async function saveClient() {
     duree: parseInt(document.getElementById('c-duree').value) || 60,
     date_debut: document.getElementById('c-date-debut').value,
     statut: 'actif',
+    commercial_id: document.getElementById('c-commercial') ? document.getElementById('c-commercial').value : '',
+    commercial:    (function(){ var e=document.getElementById('c-commercial'); if(!e||!e.value) return ''; var opt=e.options[e.selectedIndex]; return opt?opt.textContent.trim():''; })(),
+    apporteur_id:  document.getElementById('c-apporteur') ? document.getElementById('c-apporteur').value : '',
+    apporteur:     (function(){ var e=document.getElementById('c-apporteur'); if(!e||!e.value) return ''; var ap=DATA.apporteurs.find(function(a){return a.id===e.value;}); return ap?(ap.prenoms+' '+ap.nom).trim():''; })(),
+    apporteur_tel: (function(){ var e=document.getElementById('c-apporteur'); if(!e||!e.value) return ''; var ap=DATA.apporteurs.find(function(a){return a.id===e.value;}); return ap?(ap.tel||''):''; })(),
     created_at: APP.editingId ? undefined : today()
   };
   if (APP.editingId) {
@@ -9039,8 +9054,12 @@ async function genererCommissionsVersement(versement) {
   }
 
   // ── Commission apporteur d'affaire ─────────────────────────────────────────
-  if (client.apporteur) {
-    var tauxAp = isSouscription ? taux.apporteur_souscription : taux.apporteur_regulier;
+  if (client.apporteur || client.apporteur_id) {
+    // Taux spécifique à l'apporteur > taux global
+    var apObj = client.apporteur_id ? DATA.apporteurs.find(function(a){return a.id===client.apporteur_id;}) : null;
+    var tauxAp = apObj
+      ? (isSouscription ? (apObj.taux_souscription||taux.apporteur_souscription) : (apObj.taux_regulier||taux.apporteur_regulier))
+      : (isSouscription ? taux.apporteur_souscription : taux.apporteur_regulier);
     var montantAp = Math.round(montant * tauxAp / 100);
     if (montantAp > 0) {
       var commAp = {
@@ -10791,6 +10810,8 @@ function loadParamFields() {
   setTimeout(updateSBStatusBadge, 50);
   // Charger rôles custom et reconstruire la matrice
   loadCustomRoles().then(function(){ rebuildRoleMatrix(); renderRolesList(); renderRolesMatrix(); });
+  // Peupler tous les sélecteurs commerciaux et apporteurs
+  setTimeout(function(){ populateCommerciauxPartout(); populateApporteursPartout(); }, 100);
   // Restaurer l'aperçu du logo dans les paramètres
   var _logo = localStorage.getItem('company_logo') || (DATA.params && DATA.params.logo);
   if (_logo) showLogoPreview(_logo, '');
@@ -12685,6 +12706,287 @@ function capturerGeoloc(fieldId) {
 }
 
 /* ─── RAPPORTS COMMERCIAUX ──────────────────────────── */
+
+// ══ APPORTEURS D'AFFAIRE ══════════════════════════════════════════════════════
+
+function buildKPIsApporteurs() {
+  var el = document.getElementById('kpi-apporteurs'); if (!el) return;
+  var total    = DATA.apporteurs.length;
+  var actifs   = DATA.apporteurs.filter(function(a){return a.statut==='actif';}).length;
+  var comms    = (DATA.commissions||[]).filter(function(c){return c.type_beneficiaire==='apporteur';});
+  var totalDu  = comms.filter(function(c){return c.statut==='a_payer';}).reduce(function(s,c){return s+c.montant_comm;},0);
+  var totalPay = comms.filter(function(c){return c.statut==='payee';}).reduce(function(s,c){return s+c.montant_comm;},0);
+  var clients  = DATA.clients.filter(function(c){return c.apporteur_id;}).length;
+  el.innerHTML = [
+    {l:'Apporteurs actifs', v:actifs+'/'+total, i:'🤝', c:'kpi-green'},
+    {l:'Clients apportés',  v:clients,           i:'👥', c:''},
+    {l:'Commissions dues',  v:fmtF(totalDu)+' F',i:'💰', c:totalDu>0?'kpi-red':'kpi-green'},
+    {l:'Commissions payées',v:fmtF(totalPay)+' F',i:'✅', c:'kpi-green'},
+  ].map(function(k){
+    return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'">'
+      +'<div class="kpi-label">'+k.l+'</div>'
+      +'<div class="kpi-value or" style="font-size:18px;">'+k.v+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function renderApporteurs() {
+  var tbody = document.getElementById('tbody-apporteurs'); if (!tbody) return;
+  var search  = ((document.getElementById('search-apporteurs')||{}).value||'').toLowerCase();
+  var statut  = (document.getElementById('filter-statut-apporteur')||{}).value||'';
+
+  var list = DATA.apporteurs.filter(function(a) {
+    if (search && !(a.nom+' '+(a.prenoms||'')+' '+(a.societe||'')+' '+(a.tel||'')).toLowerCase().includes(search)) return false;
+    if (statut && a.statut !== statut) return false;
+    return true;
+  });
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#94A3B8;">Aucun apporteur enregistré.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(function(a) {
+    var clients = DATA.clients.filter(function(c){return c.apporteur_id===a.id;}).length;
+    var commsAp = (DATA.commissions||[]).filter(function(c){
+      return c.type_beneficiaire==='apporteur' && DATA.clients.some(function(cl){return cl.id===c.client_id && cl.apporteur_id===a.id;});
+    });
+    var due = commsAp.filter(function(c){return c.statut==='a_payer';}).reduce(function(s,c){return s+c.montant_comm;},0);
+    var sm = {actif:'#10B981',suspendu:'#F59E0B',resilie:'#EF4444'}[a.statut]||'#64748B';
+    var nc = a.non_contournement === 'signe' ? '<span style="color:#10B981;font-weight:600;">✅ Signé</span>'
+           : a.non_contournement === 'en_attente' ? '<span style="color:#F59E0B;">⏳ Attente</span>'
+           : '<span style="color:#EF4444;">❌ Non signé</span>';
+    var contrat = a.date_contrat ? '<span style="color:#10B981;font-size:11px;">✅ '+dateShort(a.date_contrat)+'</span>' : '<span style="color:#EF4444;font-size:11px;">❌ Absent</span>';
+    return '<tr>'
+      +'<td><strong>'+escHtml((a.prenoms||'')+' '+a.nom)+'</strong></td>'
+      +'<td style="font-size:12px;color:#64748B;">'+escHtml(a.societe||'—')+'</td>'
+      +'<td>'+escHtml(a.tel||'—')+'</td>'
+      +'<td style="font-size:12px;">'+escHtml(a.email||'—')+'</td>'
+      +'<td>'+contrat+'</td>'
+      +'<td>'+nc+'</td>'
+      +'<td style="text-align:center;font-weight:600;color:#3B82F6;">'+clients+'</td>'
+      +'<td style="font-weight:600;color:'+(due>0?'#EF4444':'#10B981')+';">'+fmtF(due)+' F</td>'
+      +'<td><span style="background:'+(a.statut==='actif'?'#ECFDF5':'#FEF2F2')+';color:'+sm+';padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">'+a.statut+'</span></td>'
+      +'<td style="white-space:nowrap;">'
+        +'<button onclick="openApporteurModal(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Modifier">✏️</button> '
+        +'<button onclick="imprimerContratApporteur(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Contrat">📄</button> '
+        +'<button onclick="imprimerNonContournement(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Non-contournement">🔒</button> '
+        +'<button onclick="deleteApporteur(\''+a.id+'\')" class="btn btn-danger btn-sm btn-icon" title="Supprimer">🗑️</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function openApporteurModal(id) {
+  APP.editingId = id || null;
+  var ap = id ? DATA.apporteurs.find(function(a){return a.id===id;}) : null;
+  document.getElementById('modal-apporteur-title').textContent = ap ? 'Modifier apporteur : '+(ap.prenoms||'')+' '+ap.nom : 'Nouvel apporteur d\'affaire';
+  var sv = function(elId, val) { var e=document.getElementById(elId); if(e) e.value=val||''; };
+  sv('ap-nom',                ap?ap.nom:'');
+  sv('ap-prenoms',            ap?ap.prenoms:'');
+  sv('ap-societe',            ap?ap.societe:'');
+  sv('ap-profession',         ap?ap.profession:'');
+  sv('ap-tel',                ap?ap.tel:'');
+  sv('ap-email',              ap?ap.email:'');
+  sv('ap-adresse',            ap?ap.adresse:'');
+  sv('ap-piece-type',         ap?ap.piece_type:'CNI');
+  sv('ap-piece-num',          ap?ap.piece_num:'');
+  sv('ap-statut',             ap?ap.statut:'actif');
+  sv('ap-taux-souscription',  ap?ap.taux_souscription:10);
+  sv('ap-taux-regulier',      ap?ap.taux_regulier:5);
+  sv('ap-notes',              ap?ap.notes:'');
+  sv('ap-banque',             ap?ap.banque:'');
+  sv('ap-agence',             ap?ap.agence:'');
+  sv('ap-iban',               ap?ap.iban:'');
+  sv('ap-compte',             ap?ap.compte:'');
+  sv('ap-mode-paiement',      ap?ap.mode_paiement:'virement');
+  sv('ap-mobile-money',       ap?ap.mobile_money:'');
+  sv('ap-date-contrat',       ap?ap.date_contrat:'');
+  sv('ap-duree-contrat',      ap?ap.duree_contrat:12);
+  sv('ap-date-expiration',    ap?ap.date_expiration:'');
+  sv('ap-non-contournement',  ap?(ap.non_contournement||'en_attente'):'en_attente');
+  sv('ap-clauses',            ap?ap.clauses:'');
+
+  // Calculer date expiration
+  var dateC = document.getElementById('ap-date-contrat');
+  var dureeC = document.getElementById('ap-duree-contrat');
+  var dateExp = document.getElementById('ap-date-expiration');
+  if (dateC) dateC.addEventListener('input', function() {
+    if (dateC.value && dureeC.value) {
+      var d = new Date(dateC.value);
+      d.setMonth(d.getMonth() + parseInt(dureeC.value));
+      if (dateExp) dateExp.value = d.toISOString().slice(0,10);
+    }
+  });
+
+  // Peupler programmes
+  var progSel = document.getElementById('ap-programmes');
+  if (progSel) {
+    progSel.innerHTML = DATA.programmes.map(function(p){
+      var sel = ap && ap.programmes && ap.programmes.includes(p.id) ? ' selected' : '';
+      return '<option value="'+p.id+'"'+sel+'>'+escHtml(p.nom)+'</option>';
+    }).join('');
+  }
+
+  openModal('modal-apporteur');
+  switchTab('modal-apporteur','infos');
+}
+
+async function saveApporteur() {
+  var nom = (document.getElementById('ap-nom')||{}).value.trim();
+  var tel = (document.getElementById('ap-tel')||{}).value.trim();
+  if (!nom || !tel) { toast('Nom et téléphone obligatoires.', 'error'); return; }
+
+  var gv = function(id){ var e=document.getElementById(id); return e?e.value.trim():''; };
+  var id = APP.editingId || uid();
+
+  // Récupérer programmes sélectionnés
+  var progSel = document.getElementById('ap-programmes');
+  var programmes = progSel ? Array.from(progSel.selectedOptions).map(function(o){return o.value;}) : [];
+
+  var dureeC = parseInt(gv('ap-duree-contrat'))||12;
+  var dateC  = gv('ap-date-contrat');
+  var dateExp = gv('ap-date-expiration') || (dateC ? (function(){ var d=new Date(dateC); d.setMonth(d.getMonth()+dureeC); return d.toISOString().slice(0,10); })() : '');
+
+  var ap = {
+    id: id, nom: nom, prenoms: gv('ap-prenoms'), societe: gv('ap-societe'),
+    profession: gv('ap-profession'), tel: tel, email: gv('ap-email'),
+    adresse: gv('ap-adresse'), piece_type: gv('ap-piece-type'), piece_num: gv('ap-piece-num'),
+    statut: gv('ap-statut'),
+    taux_souscription: parseFloat(gv('ap-taux-souscription'))||10,
+    taux_regulier:     parseFloat(gv('ap-taux-regulier'))||5,
+    notes: gv('ap-notes'),
+    banque: gv('ap-banque'), agence: gv('ap-agence'), iban: gv('ap-iban'),
+    compte: gv('ap-compte'), mode_paiement: gv('ap-mode-paiement'),
+    mobile_money: gv('ap-mobile-money'),
+    date_contrat: dateC, duree_contrat: dureeC, date_expiration: dateExp,
+    non_contournement: gv('ap-non-contournement'),
+    programmes: programmes, clauses: gv('ap-clauses'),
+    created_at: APP.editingId ? undefined : today()
+  };
+
+  if (APP.editingId) {
+    var idx = DATA.apporteurs.findIndex(function(a){return a.id===id;});
+    if (idx>=0) DATA.apporteurs[idx] = ap; else DATA.apporteurs.push(ap);
+  } else {
+    DATA.apporteurs.push(ap);
+  }
+  await dbPut('apporteurs', ap);
+  populateApporteursPartout();
+  closeModal('modal-apporteur');
+  renderApporteurs();
+  buildKPIsApporteurs();
+  toast('Apporteur enregistré.', 'success');
+}
+
+async function deleteApporteur(id) {
+  var ap = DATA.apporteurs.find(function(a){return a.id===id;});
+  if (!ap) return;
+  if (!confirm('Supprimer l\'apporteur '+ap.prenoms+' '+ap.nom+' ?')) return;
+  DATA.apporteurs = DATA.apporteurs.filter(function(a){return a.id!==id;});
+  await dbDelete('apporteurs', id);
+  populateApporteursPartout();
+  renderApporteurs();
+  buildKPIsApporteurs();
+  toast('Apporteur supprimé.', 'success');
+}
+
+// ── Impression contrat apporteur d'affaire ────────────────────────────────────
+function imprimerContratApporteur(id) {
+  var ap = id ? DATA.apporteurs.find(function(a){return a.id===id;})
+    : (function(){ var e=document.getElementById('ap-nom'); return e?{nom:e.value,prenoms:(document.getElementById('ap-prenoms')||{}).value||'',tel:(document.getElementById('ap-tel')||{}).value||'',email:(document.getElementById('ap-email')||{}).value||'',date_contrat:(document.getElementById('ap-date-contrat')||{}).value||today(),taux_souscription:10,taux_regulier:5}:null; })();
+  if (!ap) { toast('Enregistrez l\'apporteur d\'abord.', 'error'); return; }
+  var params = DATA.params||{};
+  var logo   = getLogoForPrint ? getLogoForPrint() : '';
+  var now    = new Date().toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'});
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Contrat Apporteur — '+escHtml(ap.prenoms+' '+ap.nom)+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;font-size:12px;padding:32px;color:#1C1C2E;line-height:1.6;}'
+    +'h1{color:#1C1C2E;font-size:18px;text-align:center;margin-bottom:4px;}'
+    +'h2{color:#B87333;font-size:14px;margin-top:24px;border-bottom:1px solid #E0E0EA;padding-bottom:6px;}'
+    +'p{margin:8px 0;} .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #B87333;padding-bottom:16px;margin-bottom:24px;}'
+    +'.sign{margin-top:60px;display:grid;grid-template-columns:1fr 1fr;gap:40px;}'
+    +'.sign-box{border-top:1px solid #1C1C2E;padding-top:8px;font-size:11px;} @media print{body{padding:16px;}}</style>'
+    +'</head><body>'
+    +'<div class="header">'+(logo?'<img src="'+logo+'" style="height:48px;object-fit:contain;">':'')
+    +'<div style="text-align:center;flex:1;"><h1>CONTRAT D\'APPORTEUR D\'AFFAIRE</h1>'
+    +'<div style="font-size:11px;color:#6B6B9A;">Réf. : CONT-AP-'+id.slice(-6).toUpperCase()+' · Fait le '+now+'</div></div>'
+    +'<div style="text-align:right;font-size:11px;color:#6B6B9A;">'+escHtml(params.societe||'ImmoSuite ERP')+'<br>'+(params.tel||'')+'</div></div>'
+    +'<h2>ENTRE LES SOUSSIGNÉS</h2>'
+    +'<p><strong>LA SOCIÉTÉ :</strong> '+escHtml(params.societe||'__________________')+', promoteur immobilier, immatriculée sous le N° '+escHtml(params.rccm||'__________________')+', ayant son siège social à '+escHtml(params.adresse||'__________________')+'.</p>'
+    +'<p><strong>ET :</strong> '+escHtml((ap.prenoms||'')+' '+ap.nom)+', '+escHtml(ap.profession||'Apporteur d\'affaire')+', demeurant à '+escHtml(ap.adresse||'__________________')+', tél. '+escHtml(ap.tel||'')+'.'
+    +(ap.societe ? ' Agissant au nom et pour le compte de la société '+escHtml(ap.societe)+'.':'')+' Ci-après dénommé <strong>"L\'APPORTEUR"</strong>.</p>'
+    +'<h2>ARTICLE 1 — OBJET</h2>'
+    +'<p>Le présent contrat a pour objet de définir les conditions dans lesquelles L\'APPORTEUR s\'engage à présenter à LA SOCIÉTÉ des candidats sérieux intéressés par l\'acquisition de biens immobiliers commercialisés par LA SOCIÉTÉ dans le cadre de ses programmes immobiliers.</p>'
+    +'<h2>ARTICLE 2 — PROGRAMMES CONCERNÉS</h2>'
+    +'<p>L\'APPORTEUR est autorisé à opérer sur les programmes suivants : '+((ap.programmes&&ap.programmes.length) ? ap.programmes.map(function(pid){ var p=DATA.programmes.find(function(x){return x.id===pid;}); return p?escHtml(p.nom):'—'; }).join(', ') : 'Tous les programmes de LA SOCIÉTÉ')+'.</p>'
+    +'<h2>ARTICLE 3 — RÉMUNÉRATION</h2>'
+    +'<p>En contrepartie de ses services, L\'APPORTEUR percevra une commission calculée comme suit :</p>'
+    +'<p>• <strong>Versement de souscription (apport initial) :</strong> '+(ap.taux_souscription||10)+'% du montant versé.</p>'
+    +'<p>• <strong>Versements réguliers (mensualités) :</strong> '+(ap.taux_regulier||5)+'% de chaque versement effectué par le souscripteur apporté.</p>'
+    +'<p>Les commissions sont payables dans un délai de 30 jours après encaissement effectif des fonds par LA SOCIÉTÉ, par '+escHtml(ap.mode_paiement||'virement bancaire')+'.</p>'
+    +'<h2>ARTICLE 4 — OBLIGATIONS DE L\'APPORTEUR</h2>'
+    +'<p>L\'APPORTEUR s\'engage à : (i) ne présenter que des candidats sérieux et solvables ; (ii) ne pas prendre d\'engagements au nom de LA SOCIÉTÉ ; (iii) respecter la politique tarifaire officielle de LA SOCIÉTÉ ; (iv) maintenir la confidentialité des informations commerciales transmises.</p>'
+    +'<h2>ARTICLE 5 — DURÉE</h2>'
+    +'<p>Le présent contrat est conclu pour une durée de <strong>'+(ap.duree_contrat||12)+' mois</strong> à compter du <strong>'+dateShort(ap.date_contrat||today())+'</strong>, renouvelable par tacite reconduction sauf dénonciation avec préavis de 30 jours.</p>'
+    +(ap.clauses?'<h2>ARTICLE 6 — CLAUSES PARTICULIÈRES</h2><p>'+escHtml(ap.clauses)+'</p>':'')
+    +'<div class="sign"><div class="sign-box"><p>Pour LA SOCIÉTÉ<br>'+escHtml(params.societe||'')+'</p><p style="margin-top:40px;">Signature et cachet :<br>___________________________</p></div>'
+    +'<div class="sign-box"><p>L\'APPORTEUR<br>'+escHtml((ap.prenoms||'')+' '+ap.nom)+'</p><p style="margin-top:40px;">Signature précédée de<br>la mention «Lu et approuvé» :<br>___________________________</p></div></div>'
+    +'</body></html>';
+  var win=window.open('','_blank'); win.document.write(html); win.document.close(); setTimeout(function(){win.print();},400);
+}
+
+// ── Impression contrat de non-contournement ────────────────────────────────────
+function imprimerNonContournement(id) {
+  var ap = id ? DATA.apporteurs.find(function(a){return a.id===id;})
+    : (function(){ var e=document.getElementById('ap-nom'); return e?{nom:e.value,prenoms:(document.getElementById('ap-prenoms')||{}).value||'',tel:(document.getElementById('ap-tel')||{}).value||''}:null; })();
+  if (!ap) { toast('Enregistrez l\'apporteur d\'abord.', 'error'); return; }
+  var params = DATA.params||{};
+  var logo   = getLogoForPrint ? getLogoForPrint() : '';
+  var now    = new Date().toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'});
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Non-contournement — '+escHtml(ap.prenoms+' '+ap.nom)+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;font-size:12px;padding:32px;color:#1C1C2E;line-height:1.7;}'
+    +'h1{color:#1C1C2E;font-size:16px;text-align:center;} h2{color:#B87333;font-size:13px;margin-top:20px;border-bottom:1px solid #E0E0EA;padding-bottom:4px;}'
+    +'p{margin:8px 0;} .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #B87333;padding-bottom:14px;margin-bottom:20px;}'
+    +'.sign{margin-top:50px;display:grid;grid-template-columns:1fr 1fr;gap:40px;}'
+    +'.sign-box{border-top:1px solid #1C1C2E;padding-top:8px;font-size:11px;} @media print{body{padding:16px;}}</style>'
+    +'</head><body>'
+    +'<div class="header">'+(logo?'<img src="'+logo+'" style="height:44px;object-fit:contain;">':'')
+    +'<div style="text-align:center;flex:1;"><h1>ACCORD DE CONFIDENTIALITÉ<br>ET DE NON-CONTOURNEMENT</h1>'
+    +'<div style="font-size:10px;color:#6B6B9A;">Réf. : NC-'+id.slice(-6).toUpperCase()+' · Fait le '+now+'</div></div>'
+    +'<div style="text-align:right;font-size:10px;color:#6B6B9A;">'+escHtml(params.societe||'')+'<br>'+(params.tel||'')+'</div></div>'
+    +'<h2>PARTIES</h2>'
+    +'<p><strong>LA SOCIÉTÉ :</strong> '+escHtml(params.societe||'__________________')+' — ci-après «LA SOCIÉTÉ».</p>'
+    +'<p><strong>L\'APPORTEUR :</strong> '+escHtml((ap.prenoms||'')+' '+ap.nom)+(ap.societe?' ('+escHtml(ap.societe)+')':'')+ ' — ci-après «L\'APPORTEUR».</p>'
+    +'<h2>ARTICLE 1 — ENGAGEMENT DE NON-CONTOURNEMENT</h2>'
+    +'<p>L\'APPORTEUR s\'engage formellement et irrévocablement à ne pas contourner, éviter ou exclure directement ou indirectement LA SOCIÉTÉ dans toute transaction commerciale découlant des informations, contacts ou opportunités d\'affaires introduits par LA SOCIÉTÉ.</p>'
+    +'<p>L\'APPORTEUR s\'interdit notamment de : (i) contacter directement les clients présentés par LA SOCIÉTÉ sans son accord écrit préalable ; (ii) conclure des transactions avec lesdits clients en dehors du cadre défini par le contrat d\'apporteur ; (iii) céder les informations confidentielles à des tiers concurrents.</p>'
+    +'<h2>ARTICLE 2 — CONFIDENTIALITÉ</h2>'
+    +'<p>L\'APPORTEUR s\'engage à maintenir strictement confidentiels tous les documents, données, listes de clients, plans commerciaux, prix et informations techniques transmis par LA SOCIÉTÉ, pendant toute la durée de leur collaboration et pour une période de <strong>5 (cinq) ans</strong> après son terme.</p>'
+    +'<h2>ARTICLE 3 — SANCTIONS</h2>'
+    +'<p>Toute violation du présent accord engagera la responsabilité civile de L\'APPORTEUR et l\'exposera au paiement de dommages et intérêts dont le montant minimal est fixé à <strong>3 fois les commissions perçues</strong> au titre du contrat d\'apporteur. LA SOCIÉTÉ se réserve le droit de résilier immédiatement le contrat d\'apporteur sans indemnité.</p>'
+    +'<h2>ARTICLE 4 — DURÉE</h2>'
+    +'<p>Le présent accord prend effet à la date de signature et demeure en vigueur pendant <strong>5 (cinq) ans</strong> après la fin du contrat d\'apporteur d\'affaire associé.</p>'
+    +'<h2>ARTICLE 5 — LOI APPLICABLE</h2>'
+    +'<p>Le présent accord est régi par le droit ivoirien. Tout litige sera soumis à la juridiction compétente d\'Abidjan, Côte d\'Ivoire.</p>'
+    +'<div class="sign"><div class="sign-box"><p>Pour LA SOCIÉTÉ<br>'+escHtml(params.societe||'')+'</p><p style="margin-top:44px;">Signature et cachet :<br>___________________________</p></div>'
+    +'<div class="sign-box"><p>L\'APPORTEUR<br>'+escHtml((ap.prenoms||'')+' '+ap.nom)+'</p><p style="margin-top:44px;">Signature précédée de<br>«Lu et approuvé — Non-contournement» :<br>___________________________</p></div></div>'
+    +'</body></html>';
+  var win=window.open('','_blank'); win.document.write(html); win.document.close(); setTimeout(function(){win.print();},400);
+}
+
+function exportApporteursCSV() {
+  var rows = ['﻿Nom,Prénoms,Société,Téléphone,Email,Statut,Taux souscr. %,Taux régulier %,Date contrat,Non-contournement'];
+  DATA.apporteurs.forEach(function(a) {
+    rows.push([a.nom,a.prenoms||'',a.societe||'',a.tel,a.email||'',a.statut,a.taux_souscription||10,a.taux_regulier||5,a.date_contrat||'',a.non_contournement||''].join(','));
+  });
+  var blob = new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='apporteurs_'+today()+'.csv'; a.click();
+  toast('Export apporteurs effectué.', 'success');
+}
+
 // ══ RAPPORTS COMMERCIAUX — Version enrichie ══════════════════════════════════
 
 var _chartCommBar = null;
@@ -18653,6 +18955,90 @@ async function init() {
 ══════════════════════════════════════════════════════ */
 
 /* ── HELPERS & POPULATE ──────────────────────────────── */
+
+// ══ PEUPLEMENT UNIFIÉ DES SÉLECTEURS COMMERCIAUX ══════════════════════════════
+
+/**
+ * Peuple TOUS les selects "commercial" de l'application
+ * depuis DATA.employes (dept=commercial, statut=actif)
+ * Source unique = module RH
+ */
+function populateCommerciauxPartout() {
+  var commerciaux = DATA.employes.filter(function(e) {
+    return (e.dept === 'commercial' || e.poste === 'commercial' || e.poste === 'Commercial')
+        && e.statut === 'actif';
+  });
+
+  // Si aucun commercial dans RH, fallback sur les noms dans DATA.clients
+  if (!commerciaux.length) {
+    var nomsFallback = [];
+    DATA.clients.forEach(function(c) { if (c.commercial && !nomsFallback.includes(c.commercial)) nomsFallback.push(c.commercial); });
+    commerciaux = nomsFallback.map(function(n) { return { id: n, nom: n, prenoms: '', dept: 'commercial', statut: 'actif' }; });
+  }
+
+  var buildOptions = function(sel, withTout, currentVal) {
+    if (!sel) return;
+    var cur = currentVal !== undefined ? currentVal : sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    commerciaux.forEach(function(e) {
+      var o = document.createElement('option');
+      o.value = e.id;
+      o.textContent = (e.prenoms ? e.prenoms + ' ' : '') + e.nom;
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  };
+
+  // ── Formulaire Souscripteur (c-commercial) ────────────────────────────────
+  buildOptions(document.getElementById('c-commercial'));
+
+  // ── Formulaire Leads (ld-commercial) ─────────────────────────────────────
+  buildOptions(document.getElementById('ld-commercial'));
+
+  // ── Itinéraires — sélecteur commercial (iti-select-commercial) ────────────
+  buildOptions(document.getElementById('iti-select-commercial'));
+
+  // ── Itinéraires — nouveau (iti-new-commercial) ────────────────────────────
+  buildOptions(document.getElementById('iti-new-commercial'));
+
+  // ── Événements calendrier (ev-commercial) ────────────────────────────────
+  buildOptions(document.getElementById('ev-commercial'));
+
+  // ── Filtre calendrier (cal-filtre-commercial) ─────────────────────────────
+  buildOptions(document.getElementById('cal-filtre-commercial'));
+
+  // ── Filtre carte géo (geo-filter-commercial) ──────────────────────────────
+  buildOptions(document.getElementById('geo-filter-commercial'));
+
+  // ── Rapport sélecteur (rapport-select-commercial) ─────────────────────────
+  // Peuplé par buildRapportsCommerciaux — on laisse sa logique propre
+
+  // ── CR Visites (cr-commercial si présent) ────────────────────────────────
+  buildOptions(document.getElementById('cr-commercial'));
+}
+
+/**
+ * Peuple les selects apporteurs d'affaire depuis DATA.apporteurs
+ */
+function populateApporteursPartout() {
+  var sels = [
+    document.getElementById('c-apporteur'),
+    document.getElementById('filter-apporteur'),
+  ];
+  sels.forEach(function(sel) {
+    if (!sel) return;
+    var cur = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    DATA.apporteurs.forEach(function(a) {
+      var o = document.createElement('option');
+      o.value = a.id;
+      o.textContent = (a.prenoms ? a.prenoms + ' ' : '') + a.nom + (a.societe ? ' — ' + a.societe : '');
+      sel.appendChild(o);
+    });
+    if (cur) sel.value = cur;
+  });
+}
+
 function populateAllERP() {
   // Populate programme selects in new modules
   var selIds = ['parc-programme','filter-programme-foncier','cv-programme','ld-programme','filter-programme-conv'];
@@ -18680,16 +19066,10 @@ function populateAllERP() {
     });
     conSel.value = curCon;
   }
-  // Populate commercial select in lead modal
-  var commSel = document.getElementById('ld-commercial');
-  if (commSel) {
-    while (commSel.options.length > 1) commSel.remove(1);
-    DATA.employes.filter(function(e){ return e.dept==='commercial' && e.statut==='actif'; }).forEach(function(e) {
-      var o = document.createElement('option');
-      o.value = e.id; o.textContent = e.nom + ' ' + e.prenoms;
-      commSel.appendChild(o);
-    });
-  }
+  // Peupler tous les selects commerciaux (source unique = RH)
+  populateCommerciauxPartout();
+  // Peupler tous les selects apporteurs
+  populateApporteursPartout();
 }
 
 /* ══════════════════════════════════════════════════════
