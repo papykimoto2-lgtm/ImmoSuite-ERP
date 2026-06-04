@@ -9672,29 +9672,95 @@ function escHtml(str) {
   return d.innerHTML;
 }
 
-/** Charge et affiche le journal des connexions (150 dernières entrées) */
-async function loadConnexionLog() {
+/** Charge et affiche le journal des connexions avec filtre staff/souscripteur */
+async function loadConnexionLog(filtre) {
   var el = document.getElementById('connexion-log-list');
   if (!el) return;
-  if (!hasRole('admin')) {
-    el.innerHTML = '<em style="color:var(--dim)">Réservé aux administrateurs.</em>';
+  if (!hasRole('admin') && !hasRole('manager')) {
+    el.innerHTML = '<em style="color:var(--dim)">Reserve aux administrateurs.</em>';
     return;
   }
+  filtre = filtre || 'tous';
+
   var logs = [];
   try { logs = await dbGetAll('logs_connexion'); } catch(e) {}
-  logs.sort(function(a, b){ return b.date.localeCompare(a.date); });
-  logs = logs.slice(0, 150);
-  if (!logs.length) { el.innerHTML = '<em style="color:var(--dim)">Aucune entrée de connexion.</em>'; return; }
-  el.innerHTML = logs.map(function(l) {
-    var icon  = l.success ? '✅' : '❌';
-    var color = l.success ? 'var(--vert)' : 'var(--rouge)';
-    var dt    = l.date ? new Date(l.date).toLocaleString('fr-FR') : '—';
-    return '<div style="display:flex;justify-content:space-between;align-items:flex-start;'
-      + 'padding:6px 10px;border-bottom:1px solid var(--border);gap:8px;">'
-      + '<span>' + icon + ' <strong>' + escHtml(l.login) + '</strong>'
-      + ' <span style="color:var(--dim);font-size:11px;">— ' + escHtml(l.detail || '') + '</span></span>'
-      + '<span style="color:' + color + ';white-space:nowrap;font-size:11px;">' + dt + '</span></div>';
-  }).join('');
+  logs.sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  // Filtrage
+  var logsFiltres = logs.filter(function(l) {
+    var isSous = l.login && l.login.startsWith('[SOUSCRIPTEUR]');
+    if (filtre === 'souscripteurs') return isSous;
+    if (filtre === 'staff')         return !isSous;
+    return true;
+  }).slice(0, 200);
+
+  // Stats rapides souscripteurs
+  var totalSous    = logs.filter(function(l){ return l.login && l.login.startsWith('[SOUSCRIPTEUR]'); }).length;
+  var succSous     = logs.filter(function(l){ return l.login && l.login.startsWith('[SOUSCRIPTEUR]') && l.success; }).length;
+  var echSous      = totalSous - succSous;
+  var today        = new Date().toDateString();
+  var todaySous    = logs.filter(function(l){
+    return l.login && l.login.startsWith('[SOUSCRIPTEUR]') && l.success && new Date(l.date).toDateString() === today;
+  }).length;
+
+  // Boutons filtre
+  var btnStyle = function(f) {
+    return filtre === f
+      ? 'background:#0D2354;color:#93C5FD;border:1px solid #3B82F6;'
+      : 'background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0;';
+  };
+
+  el.innerHTML =
+    // Stats souscripteurs
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">'
+    + '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px;text-align:center;">'
+    +   '<div style="font-size:18px;font-weight:700;color:#1D4ED8;">' + totalSous + '</div>'
+    +   '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;">Total connexions portail</div></div>'
+    + '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:10px;text-align:center;">'
+    +   '<div style="font-size:18px;font-weight:700;color:#059669;">' + succSous + '</div>'
+    +   '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;">Connexions reussies</div></div>'
+    + '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px;text-align:center;">'
+    +   '<div style="font-size:18px;font-weight:700;color:#DC2626;">' + echSous + '</div>'
+    +   '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;">Tentatives echouees</div></div>'
+    + '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:10px;text-align:center;">'
+    +   '<div style="font-size:18px;font-weight:700;color:#EA580C;">' + todaySous + '</div>'
+    +   '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:0.5px;">Connexions du jour</div></div>'
+    + '</div>'
+    // Filtres
+    + '<div style="display:flex;gap:6px;margin-bottom:10px;">'
+    + '<button onclick="loadConnexionLog(&quot;tous&quot;)" style="' + btnStyle('tous') + 'padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Tous</button>'
+    + '<button onclick="loadConnexionLog(&quot;souscripteurs&quot;)" style="' + btnStyle('souscripteurs') + 'padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">🔑 Souscripteurs</button>'
+    + '<button onclick="loadConnexionLog(&quot;staff&quot;)" style="' + btnStyle('staff') + 'padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">👤 Staff</button>'
+    + '<span style="margin-left:auto;font-size:11px;color:#94A3B8;align-self:center;">' + logsFiltres.length + ' entree(s)</span>'
+    + '</div>'
+    // Tableau
+    + '<div style="overflow-x:auto;">'
+    + '<table style="width:100%;font-size:12px;border-collapse:collapse;">'
+    + '<thead><tr>'
+    + '<th style="padding:8px 10px;text-align:left;background:#F1F5F9;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Statut</th>'
+    + '<th style="padding:8px 10px;text-align:left;background:#F1F5F9;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Identifiant</th>'
+    + '<th style="padding:8px 10px;text-align:left;background:#F1F5F9;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Detail</th>'
+    + '<th style="padding:8px 10px;text-align:left;background:#F1F5F9;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Date & Heure</th>'
+    + '<th style="padding:8px 10px;text-align:left;background:#F1F5F9;color:#64748B;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Type</th>'
+    + '</tr></thead><tbody>'
+    + (logsFiltres.length ? logsFiltres.map(function(l) {
+        var isSous  = l.login && l.login.startsWith('[SOUSCRIPTEUR]');
+        var loginAff= isSous ? l.login.replace('[SOUSCRIPTEUR] ','') : l.login;
+        var icon    = l.success ? '✅' : '❌';
+        var rowBg   = l.success ? '' : 'background:#FEF2F2;';
+        var dt      = l.date ? new Date(l.date).toLocaleString('fr-FR') : '—';
+        var typeBadge = isSous
+          ? '<span style="background:#EFF6FF;color:#1D4ED8;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;">Portail</span>'
+          : '<span style="background:#F1F5F9;color:#475569;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;">Staff</span>';
+        return '<tr style="' + rowBg + '">'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #E2E8F0;">' + icon + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #E2E8F0;font-weight:600;color:#0F172A;">' + escHtml(loginAff) + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #E2E8F0;color:#64748B;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(l.detail || '') + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #E2E8F0;white-space:nowrap;color:#475569;">' + dt + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #E2E8F0;">' + typeBadge + '</td>'
+          + '</tr>';
+      }).join('') : '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94A3B8;">Aucune entree.</td></tr>')
+    + '</tbody></table></div>';
 }
 
 async function exportJSON() {
@@ -14751,7 +14817,7 @@ function genererCodeAcces(clientId) {
 }
 
 // ── Authentification souscripteur ────────────────────────────
-function authentifierSouscripteur() {
+async function authentifierSouscripteur() {
   var login = document.getElementById('sous-login').value.trim();
   var code  = document.getElementById('sous-password').value.trim();
   var errEl = document.getElementById('sous-login-error');
@@ -14774,8 +14840,23 @@ function authentifierSouscripteur() {
 
   if (!client) {
     errEl.textContent = 'Identifiants incorrects. Vérifiez votre n° de dossier/téléphone et votre code acces.';
-    errEl.style.display = 'block'; return;
+    errEl.style.display = 'block';
+    // Journaliser l'échec
+    await logConnexion('[SOUSCRIPTEUR] ' + login, false, 'Code acces incorrect');
+    return;
   }
+
+  // Journaliser la connexion réussie avec détails souscripteur
+  await logConnexion('[SOUSCRIPTEUR] ' + (client.dossier || client.id), true,
+    'Portail souscripteur — ' + client.prenoms + ' ' + client.nom
+    + ' — Dossier: ' + (client.dossier || '—')
+    + ' — Tel: ' + (client.tel || '—')
+  );
+
+  // Enregistrer timestamp de dernière connexion sur le client
+  client.derniere_connexion_portail = new Date().toISOString();
+  client.nb_connexions_portail = (client.nb_connexions_portail || 0) + 1;
+  await dbPut('clients', client);
 
   SESSION_SOUSCRIPTEUR = client;
   localStorage.setItem('souscripteur_session', JSON.stringify({ id: client.id }));
