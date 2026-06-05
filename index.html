@@ -2295,6 +2295,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('params','comms')">📧 Communications</button>
           <button class="tab-btn" onclick="switchTab('params','workflow')">🔄 Workflow</button>
           <button class="tab-btn" onclick="switchTab('params','backup')">💾 Sauvegardes</button>
+          <button class="tab-btn" onclick="switchTab('params','agrement');renderParamsAgrement()">🏛️ Agrément Promoteur</button>
         </div>
 
         <!-- Société -->
@@ -2852,9 +2853,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ── EMPLOYÉS ─────────────────────────────── -->
+        <!-- Agrément Promoteur -->
+        <div class="tab-pane" id="tab-params-agrement">
+          <div id="params-agrement-content">
+            <div style="text-align:center;padding:30px;color:var(--dim);">Chargement...</div>
+          </div>
+        </div>
+
+      </div>
       <div class="page" id="page-rh-employes">
         <div class="page-header">
           <div>
@@ -5502,6 +5509,340 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════
+     MODAL — Agrément Promoteur
+═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-agrement-promoteur">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-header">
+      <h3>🏛️ Agrément Promoteur Immobilier — Ministère</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-agrement-promoteur')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('agr-prom','infos')">📋 Informations</button>
+        <button class="tab-btn" onclick="switchTab('agr-prom','documents')">📎 Documents</button>
+        <button class="tab-btn" onclick="switchTab('agr-prom','statut')">🔔 Statut & Alertes</button>
+      </div>
+
+      <!-- TAB 1 : Infos générales -->
+      <div class="tab-pane active" id="tab-agr-prom-infos">
+        <input type="hidden" id="agp-id">
+        <div class="form-grid" style="margin-top:14px;">
+          <div class="form-group">
+            <label>N° Agrément</label>
+            <input type="text" class="form-control" id="agp-numero" placeholder="MHU/AGR/2024/0001">
+          </div>
+          <div class="form-group">
+            <label>Organisme délivrant</label>
+            <input type="text" class="form-control" id="agp-organisme" value="Ministère de la Construction, du Logement et de l'Urbanisme">
+          </div>
+          <div class="form-group">
+            <label>Date de dépôt du dossier</label>
+            <input type="date" class="form-control" id="agp-date-depot">
+          </div>
+          <div class="form-group">
+            <label>Date d'obtention</label>
+            <input type="date" class="form-control" id="agp-date-obtention" oninput="calcExpirationAgp()">
+          </div>
+          <div class="form-group">
+            <label>Durée de validité (années)</label>
+            <input type="number" class="form-control" id="agp-duree" value="3" min="1" oninput="calcExpirationAgp()">
+          </div>
+          <div class="form-group">
+            <label>Date d'expiration</label>
+            <input type="text" class="form-control" id="agp-date-expiration" readonly style="color:var(--or);font-weight:700;">
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select class="form-control" id="agp-statut">
+              <option value="en_cours">⏳ En cours d'instruction</option>
+              <option value="obtenu">✅ Obtenu</option>
+              <option value="suspendu">⚠️ Suspendu</option>
+              <option value="renouvellement">🔄 En renouvellement</option>
+              <option value="retire">❌ Retiré</option>
+            </select>
+          </div>
+          <div class="form-group span-2">
+            <label>Observations</label>
+            <textarea class="form-control" id="agp-notes" rows="2" placeholder="Remarques, conditions particulières..."></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="saveAgrementPromoteur()">💾 Enregistrer</button>
+      </div>
+
+      <!-- TAB 2 : Checklist documents -->
+      <div class="tab-pane" id="tab-agr-prom-documents">
+        <div style="margin-top:14px;">
+          <div style="font-size:13px;color:var(--dim);margin-bottom:14px;">
+            Cochez chaque document fourni et uploadez le fichier correspondant.
+          </div>
+          <div id="agp-docs-list"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3 : Statut & Alertes -->
+      <div class="tab-pane" id="tab-agr-prom-statut">
+        <div id="agp-statut-panel" style="margin-top:14px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-agrement-promoteur')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL — Agrément Programme
+═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-agrement-programme">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-header">
+      <h3 id="modal-agrement-programme-titre">📜 Agrément Programme — Ministère</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-agrement-programme')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('agr-prog','infos')">📋 Informations</button>
+        <button class="tab-btn" onclick="switchTab('agr-prog','documents')">📎 Documents</button>
+        <button class="tab-btn" onclick="switchTab('agr-prog','statut')">🔔 Statut & Alertes</button>
+      </div>
+
+      <!-- TAB 1 : Infos générales -->
+      <div class="tab-pane active" id="tab-agr-prog-infos">
+        <input type="hidden" id="agpr-id">
+        <input type="hidden" id="agpr-programme-id">
+        <div class="form-grid" style="margin-top:14px;">
+          <div class="form-group">
+            <label>N° Agrément Programme</label>
+            <input type="text" class="form-control" id="agpr-numero" placeholder="MHU/AGR-PROG/2024/0042">
+          </div>
+          <div class="form-group">
+            <label>Organisme délivrant</label>
+            <input type="text" class="form-control" id="agpr-organisme" value="Ministère de la Construction, du Logement et de l'Urbanisme">
+          </div>
+          <div class="form-group">
+            <label>Date de dépôt</label>
+            <input type="date" class="form-control" id="agpr-date-depot">
+          </div>
+          <div class="form-group">
+            <label>Date d'obtention</label>
+            <input type="date" class="form-control" id="agpr-date-obtention" oninput="calcExpirationAgpr()">
+          </div>
+          <div class="form-group">
+            <label>Durée de validité (années)</label>
+            <input type="number" class="form-control" id="agpr-duree" value="5" min="1" oninput="calcExpirationAgpr()">
+          </div>
+          <div class="form-group">
+            <label>Date d'expiration</label>
+            <input type="text" class="form-control" id="agpr-date-expiration" readonly style="color:var(--or);font-weight:700;">
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select class="form-control" id="agpr-statut">
+              <option value="non_depose">📝 Non déposé</option>
+              <option value="en_instruction">⏳ En instruction</option>
+              <option value="delivre">✅ Délivré</option>
+              <option value="refuse">❌ Refusé</option>
+              <option value="renouvellement">🔄 En renouvellement</option>
+              <option value="expire">⚠️ Expiré</option>
+            </select>
+          </div>
+          <div class="form-group span-2">
+            <label>Observations</label>
+            <textarea class="form-control" id="agpr-notes" rows="2" placeholder="Conditions particulières, réserves émises..."></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="saveAgrementProgramme()">💾 Enregistrer</button>
+      </div>
+
+      <!-- TAB 2 : Checklist documents -->
+      <div class="tab-pane" id="tab-agr-prog-documents">
+        <div style="margin-top:14px;">
+          <div style="font-size:13px;color:var(--dim);margin-bottom:14px;">
+            Cochez chaque document fourni et uploadez le fichier correspondant.
+          </div>
+          <div id="agpr-docs-list"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3 : Statut & Alertes -->
+      <div class="tab-pane" id="tab-agr-prog-statut">
+        <div id="agpr-statut-panel" style="margin-top:14px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-agrement-programme')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Morcellement -->
+<div class="modal-overlay" id="modal-morcellement">
+  <div class="modal" style="max-width:800px;">
+    <div class="modal-header">
+      <h3 id="modal-morcellement-titre">Plan de morcellement</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-morcellement')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tab-nav" id="tab-nav-morcellement">
+        <button class="tab-btn active" onclick="switchTab('morcellement','plan')">📋 Plan</button>
+        <button class="tab-btn" onclick="switchTab('morcellement','parcelles')">🗂 Parcelles</button>
+        <button class="tab-btn" onclick="switchTab('morcellement','generation')">⚡ Génération</button>
+      </div>
+
+      <!-- TAB 1 : Métadonnées du plan -->
+      <div class="tab-pane active" id="tab-morcellement-plan">
+        <input type="hidden" id="mrc-id">
+        <input type="hidden" id="mrc-programme-id">
+        <div class="form-grid" style="margin-top:14px;">
+          <div class="form-group">
+            <label>N° approbation officielle</label>
+            <input type="text" class="form-control" id="mrc-numero" placeholder="Ex: DU/2024/0123">
+          </div>
+          <div class="form-group">
+            <label>Date d'approbation</label>
+            <input type="date" class="form-control" id="mrc-date-approbation">
+          </div>
+          <div class="form-group">
+            <label>Cabinet géomètre</label>
+            <input type="text" class="form-control" id="mrc-geometre" placeholder="Nom du cabinet">
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select class="form-control" id="mrc-statut">
+              <option value="brouillon">Brouillon</option>
+              <option value="approuve">Approuvé</option>
+              <option value="archive">Archivé</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Superficie totale terrain (m²)</label>
+            <input type="number" class="form-control" id="mrc-superficie-totale" oninput="calcSuperficieNette()">
+          </div>
+          <div class="form-group">
+            <label>Superficie voiries & communs (m²)</label>
+            <input type="number" class="form-control" id="mrc-superficie-voirie" value="0" oninput="calcSuperficieNette()">
+          </div>
+          <div class="form-group span-2">
+            <label>Superficie nette constructible (m²)</label>
+            <input type="text" class="form-control" id="mrc-superficie-nette" readonly
+              style="font-weight:700;color:var(--vert);">
+          </div>
+          <div class="form-group span-2">
+            <label>Notes / Observations</label>
+            <textarea class="form-control" id="mrc-notes" rows="2"></textarea>
+          </div>
+        </div>
+
+        <!-- Upload document -->
+        <div style="margin-top:16px;padding:14px;border:2px dashed var(--bord2);border-radius:10px;">
+          <div style="font-weight:700;margin-bottom:8px;">📎 Document officiel (PDF / Image)</div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input type="file" id="mrc-fichier-input" accept=".pdf,.jpg,.jpeg,.png"
+              style="display:none;" onchange="handleMrcFichier(this)">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('mrc-fichier-input').click()">
+              📁 Choisir un fichier
+            </button>
+            <span id="mrc-fichier-nom" style="font-size:12px;color:var(--dim);">Aucun fichier sélectionné</span>
+          </div>
+          <div id="mrc-fichier-preview" style="margin-top:10px;"></div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary" onclick="savePlanMorcellement()">💾 Enregistrer le plan</button>
+        </div>
+      </div>
+
+      <!-- TAB 2 : Saisie des parcelles -->
+      <div class="tab-pane" id="tab-morcellement-parcelles">
+        <div id="mrc-parcelles-liste" style="margin-bottom:16px;"></div>
+
+        <div class="card" style="background:var(--card2);padding:16px;">
+          <div class="form-section-title">➕ Ajouter une parcelle</div>
+          <input type="hidden" id="parc-mrc-id-edit">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Numéro *</label>
+              <input type="text" class="form-control" id="parc-numero" placeholder="M-01">
+            </div>
+            <div class="form-group">
+              <label>Îlot / Bloc</label>
+              <input type="text" class="form-control" id="parc-ilot" placeholder="A, B, Nord...">
+            </div>
+            <div class="form-group">
+              <label>Usage *</label>
+              <select class="form-control" id="parc-usage">
+                <option value="residentiel">🏠 Résidentiel</option>
+                <option value="commercial">🏪 Commercial</option>
+                <option value="voirie">🛣️ Voirie</option>
+                <option value="espace_vert">🌳 Espace vert</option>
+                <option value="equipement">🏫 Équipement</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Superficie (m²)</label>
+              <input type="number" class="form-control" id="parc-superficie">
+            </div>
+            <div class="form-group">
+              <label>Longueur (m)</label>
+              <input type="number" class="form-control" id="parc-longueur">
+            </div>
+            <div class="form-group">
+              <label>Largeur (m)</label>
+              <input type="number" class="form-control" id="parc-largeur">
+            </div>
+            <div class="form-group">
+              <label>Latitude GPS</label>
+              <input type="text" class="form-control" id="parc-lat" placeholder="5.3600">
+            </div>
+            <div class="form-group">
+              <label>Longitude GPS</label>
+              <input type="text" class="form-control" id="parc-lng" placeholder="-4.0083">
+            </div>
+            <div class="form-group">
+              <label>N° Titre Foncier</label>
+              <input type="text" class="form-control" id="parc-tf" placeholder="TF 12345">
+            </div>
+            <div class="form-group">
+              <label>N° ACD</label>
+              <input type="text" class="form-control" id="parc-acd" placeholder="ACD 6789">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:12px;">
+            <button class="btn btn-primary" onclick="saveParcelleMorcellement()">💾 Enregistrer</button>
+            <button class="btn btn-secondary" onclick="clearParcelleForm()">🔄 Réinitialiser</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3 : Génération des lots -->
+      <div class="tab-pane" id="tab-morcellement-generation">
+        <div id="mrc-gen-recap" style="margin-bottom:16px;"></div>
+        <div id="mrc-gen-preview" style="margin-bottom:16px;"></div>
+        <div style="padding:14px;background:rgba(74,196,122,0.08);border:1px solid rgba(74,196,122,0.3);border-radius:10px;">
+          <div style="font-weight:700;color:var(--vert);margin-bottom:6px;">⚡ Génération des lots commerciaux</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">
+            Seules les parcelles à usage <strong>Résidentiel</strong> et <strong>Commercial</strong> seront converties en lots.
+            Les voiries, espaces verts et équipements sont exclus. Les lots déjà existants ne seront pas écrasés.
+          </div>
+          <button class="btn btn-primary" style="background:var(--vert);" onclick="previewGenerationLots()">
+            👁 Aperçu avant génération
+          </button>
+          <button class="btn btn-primary" id="btn-confirmer-generation" style="display:none;margin-left:10px;"
+            onclick="confirmerGenerationLots()">
+            ✅ Confirmer & Générer
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-morcellement')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Modèles de logement -->
 <div class="modal-overlay" id="modal-modeles">
   <div class="modal" style="max-width:700px;">
@@ -7635,14 +7976,18 @@ var DATA = {
   campagnes: [],
   actions_marketing: [],
   segments_marketing: [],
-  modeles_logement: []
+  modeles_logement: [],
+  plans_morcellement: [],
+  parcelles_morcellement: [],
+  agrement_promoteur: [],
+  agrement_programme: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 101; /* Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
+var DB_VERSION = 103; /* Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -7662,7 +8007,11 @@ var ALL_STORES = [
   'commissions',
   'apporteurs',
   'nomenclatures','prix_unitaire','devis_fournisseurs',
-  'modeles_logement'
+  'modeles_logement',
+  'plans_morcellement',
+  'parcelles_morcellement',
+  'agrement_promoteur',
+  'agrement_programme'
 ];
 
 function initDB() {
@@ -8279,6 +8628,9 @@ function switchTab(context, tab) {
   else if (context === 'modal-rapport')   prefix = 'tab-modal-rapport-';
   else if (context === 'users')           prefix = 'tab-params-users-';
   else if (context === 'modal-apporteur')  prefix = 'tab-modal-apporteur-';
+  else if (context === 'morcellement')     prefix = 'tab-morcellement-';
+  else if (context === 'agr-prom')         prefix = 'tab-agr-prom-';
+  else if (context === 'agr-prog')         prefix = 'tab-agr-prog-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
@@ -10121,13 +10473,35 @@ function renderProgrammes() {
       return c && c.programme_id === p.id;
     }).reduce(function(a, v) { return a + (parseFloat(v.montant) || 0); }, 0);
     var pct = lotsTotal > 0 ? Math.round((lotsVendus / lotsTotal) * 100) : 0;
+    var planMrc = (DATA.plans_morcellement || []).find(function(pl) { return pl.programme_id === p.id; });
+    var nbParcelles = (DATA.parcelles_morcellement || []).filter(function(pa) { return pa.programme_id === p.id; }).length;
+    var mrcBadge = planMrc
+      ? '<span class="badge badge-vert" style="font-size:10px;">🗺️ Morcellement · ' + nbParcelles + ' parcelles</span>'
+      : '<span class="badge" style="font-size:10px;background:var(--card2);color:var(--dim);">🗺️ Sans morcellement</span>';
+    var nbModeles = (DATA.modeles_logement || []).filter(function(m) { return m.programme_id === p.id; }).length;
+    var agrProg = (DATA.agrement_programme || []).find(function(a) { return a.programme_id === p.id; });
+    var agrColor = { non_depose:'var(--dim)', en_instruction:'var(--or)', delivre:'var(--vert)', refuse:'var(--rouge)', renouvellement:'var(--bleu)', expire:'var(--rouge)' };
+    var agrLabel = { non_depose:'📝 Sans agrément', en_instruction:'⏳ En instruction', delivre:'✅ Agréé', refuse:'❌ Refusé', renouvellement:'🔄 Renouvellement', expire:'⚠️ Expiré' };
+    var agrBadge = agrProg
+      ? '<span class="badge" style="font-size:10px;background:var(--card2);color:' + (agrColor[agrProg.statut]||'var(--dim)') + ';border:1px solid ' + (agrColor[agrProg.statut]||'var(--dim)') + ';">' + (agrLabel[agrProg.statut]||agrProg.statut) + (agrProg.numero ? ' · ' + agrProg.numero : '') + '</span>'
+      : '<span class="badge" style="font-size:10px;background:var(--card2);color:var(--dim);">📜 Agrément non déposé</span>';
 
     return '<div class="card" style="margin-bottom:16px;">'
-      + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">'
+      + '<div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;flex-wrap:wrap;">'
       + '<div style="flex:1;"><h3 style="font-family:var(--font-head);color:var(--or);font-size:18px;">' + p.nom + '</h3>'
-      + '<span style="font-size:12px;color:var(--blanc-dim);">📍 ' + (p.localisation || 'N/A') + '</span></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">'
+      + '<span style="font-size:12px;color:var(--blanc-dim);">📍 ' + (p.localisation || 'N/A') + '</span>'
+      + (nbModeles ? '<span style="font-size:11px;color:var(--bleu);">🏠 ' + nbModeles + ' type(s)</span>' : '')
+      + '</div></div>'
       + '<span class="badge ' + (statutColors[p.statut] || 'badge-bleu') + '">' + (statutLabels[p.statut] || p.statut) + '</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">'
+      + mrcBadge + agrBadge
+      + '</div>'
+      + '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">'
       + '<button class="btn btn-primary btn-sm" onclick="openModelesModal(\'' + p.id + '\')">🏠 Types</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="openMorcellementModal(\'' + p.id + '\')">🗺️ Morcellement</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="openAgrementProgramme(\'' + p.id + '\')">📜 Agrément</button>'
       + '<button class="btn btn-secondary btn-sm" onclick="openProgrammeModal(\'' + p.id + '\')">✏️ Modifier</button>'
       + '<button class="btn btn-danger btn-sm" onclick="deleteProgramme(\'' + p.id + '\')">🗑</button>'
       + '</div>'
@@ -10144,10 +10518,12 @@ function renderProgrammes() {
 }
 
 async function deleteProgramme(id) {
-  if (!confirm('Supprimer ce programme ? Les lots associés seront aussi supprimés.')) return;
+  if (!confirm('Supprimer ce programme ? Les lots, modèles et plan de morcellement associés seront aussi supprimés.')) return;
   DATA.programmes = DATA.programmes.filter(function(p) { return p.id !== id; });
   DATA.lots = DATA.lots.filter(function(l) { return l.programme_id !== id; });
   DATA.modeles_logement = (DATA.modeles_logement || []).filter(function(m) { return m.programme_id !== id; });
+  DATA.plans_morcellement = (DATA.plans_morcellement || []).filter(function(p) { return p.programme_id !== id; });
+  DATA.parcelles_morcellement = (DATA.parcelles_morcellement || []).filter(function(p) { return p.programme_id !== id; });
   await dbDelete('programmes', id);
   deleteFromSupabase('pi_programmes', id);
   renderProgrammes();
@@ -10310,6 +10686,636 @@ async function genererLotsDepuisModeles() {
   renderModelesList(progId);
   renderLots();
   toast('✅ ' + lotsCreees + ' lot(s) généré(s) automatiquement !', 'success');
+}
+
+/* ══════════════════════════════════════════════════════
+   PLAN DE MORCELLEMENT
+══════════════════════════════════════════════════════ */
+
+function openMorcellementModal(programmeId) {
+  APP.currentMrcProgId = programmeId;
+  APP.editingMrcId = null;
+  APP.editingParcId = null;
+  var prog = DATA.programmes.find(function(p) { return p.id === programmeId; });
+  document.getElementById('modal-morcellement-titre').textContent = '🗺️ Plan de morcellement — ' + (prog ? prog.nom : '');
+  document.getElementById('mrc-programme-id').value = programmeId;
+  clearPlanForm();
+  var existing = (DATA.plans_morcellement || []).find(function(pl) { return pl.programme_id === programmeId; });
+  if (existing) fillPlanForm(existing);
+  switchTab('morcellement', 'plan');
+  renderParcelleListe();
+  openModal('modal-morcellement');
+}
+
+function clearPlanForm() {
+  ['mrc-id','mrc-numero','mrc-date-approbation','mrc-geometre','mrc-superficie-totale','mrc-superficie-voirie','mrc-superficie-nette','mrc-notes'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('mrc-statut').value = 'brouillon';
+  document.getElementById('mrc-fichier-nom').textContent = 'Aucun fichier sélectionné';
+  document.getElementById('mrc-fichier-preview').innerHTML = '';
+  APP._mrcFichierData = null;
+}
+
+function fillPlanForm(pl) {
+  APP.editingMrcId = pl.id;
+  document.getElementById('mrc-id').value = pl.id;
+  document.getElementById('mrc-numero').value = pl.numero || '';
+  document.getElementById('mrc-date-approbation').value = pl.date_approbation || '';
+  document.getElementById('mrc-geometre').value = pl.geometre || '';
+  document.getElementById('mrc-superficie-totale').value = pl.superficie_totale || '';
+  document.getElementById('mrc-superficie-voirie').value = pl.superficie_voirie || 0;
+  document.getElementById('mrc-superficie-nette').value = pl.superficie_nette ? pl.superficie_nette + ' m²' : '';
+  document.getElementById('mrc-notes').value = pl.notes || '';
+  document.getElementById('mrc-statut').value = pl.statut || 'brouillon';
+  if (pl.fichier_nom) {
+    document.getElementById('mrc-fichier-nom').textContent = pl.fichier_nom;
+    if (pl.fichier_data && pl.fichier_type && pl.fichier_type.startsWith('image')) {
+      document.getElementById('mrc-fichier-preview').innerHTML = '<img src="' + pl.fichier_data + '" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;">';
+    } else if (pl.fichier_data) {
+      document.getElementById('mrc-fichier-preview').innerHTML = '<a href="' + pl.fichier_data + '" target="_blank" style="font-size:12px;color:var(--bleu);">📄 Voir le document</a>';
+    }
+  }
+}
+
+function calcSuperficieNette() {
+  var tot = parseFloat(document.getElementById('mrc-superficie-totale').value) || 0;
+  var voi = parseFloat(document.getElementById('mrc-superficie-voirie').value) || 0;
+  var net = Math.max(0, tot - voi);
+  document.getElementById('mrc-superficie-nette').value = net > 0 ? net + ' m²' : '';
+}
+
+function handleMrcFichier(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('mrc-fichier-nom').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    APP._mrcFichierData = e.target.result;
+    APP._mrcFichierNom = file.name;
+    APP._mrcFichierType = file.type;
+    if (file.type.startsWith('image')) {
+      document.getElementById('mrc-fichier-preview').innerHTML = '<img src="' + e.target.result + '" style="max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;">';
+    } else {
+      document.getElementById('mrc-fichier-preview').innerHTML = '<div style="font-size:12px;color:var(--vert);margin-top:6px;">✅ PDF prêt à enregistrer</div>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function savePlanMorcellement() {
+  var progId = document.getElementById('mrc-programme-id').value;
+  if (!progId) { toast('Programme introuvable.', 'error'); return; }
+  var id = APP.editingMrcId || uid();
+  var tot = parseFloat(document.getElementById('mrc-superficie-totale').value) || 0;
+  var voi = parseFloat(document.getElementById('mrc-superficie-voirie').value) || 0;
+  var plan = {
+    id: id,
+    programme_id: progId,
+    numero: document.getElementById('mrc-numero').value.trim(),
+    date_approbation: document.getElementById('mrc-date-approbation').value,
+    geometre: document.getElementById('mrc-geometre').value.trim(),
+    superficie_totale: tot,
+    superficie_voirie: voi,
+    superficie_nette: Math.max(0, tot - voi),
+    statut: document.getElementById('mrc-statut').value,
+    notes: document.getElementById('mrc-notes').value.trim(),
+    fichier_nom: APP._mrcFichierNom || (APP.editingMrcId ? ((DATA.plans_morcellement || []).find(function(p) { return p.id === id; }) || {}).fichier_nom : null),
+    fichier_data: APP._mrcFichierData || (APP.editingMrcId ? ((DATA.plans_morcellement || []).find(function(p) { return p.id === id; }) || {}).fichier_data : null),
+    fichier_type: APP._mrcFichierType || (APP.editingMrcId ? ((DATA.plans_morcellement || []).find(function(p) { return p.id === id; }) || {}).fichier_type : null),
+    created_at: APP.editingMrcId ? undefined : today()
+  };
+  if (!DATA.plans_morcellement) DATA.plans_morcellement = [];
+  if (APP.editingMrcId) {
+    var idx = DATA.plans_morcellement.findIndex(function(p) { return p.id === id; });
+    if (idx >= 0) DATA.plans_morcellement[idx] = plan;
+  } else {
+    DATA.plans_morcellement.push(plan);
+  }
+  APP.editingMrcId = id;
+  document.getElementById('mrc-id').value = id;
+  await dbPut('plans_morcellement', plan);
+  toast('✅ Plan de morcellement enregistré.', 'success');
+}
+
+function renderParcelleListe() {
+  var progId = APP.currentMrcProgId;
+  var plan = (DATA.plans_morcellement || []).find(function(p) { return p.programme_id === progId; });
+  var parcelles = (DATA.parcelles_morcellement || []).filter(function(p) { return p.programme_id === progId; });
+  var container = document.getElementById('mrc-parcelles-liste');
+  if (!container) return;
+
+  var usageLabel = { residentiel: '🏠 Résidentiel', commercial: '🏪 Commercial', voirie: '🛣️ Voirie', espace_vert: '🌳 Espace vert', equipement: '🏫 Équipement' };
+  var usageColor = { residentiel: 'var(--vert)', commercial: 'var(--bleu)', voirie: 'var(--dim)', espace_vert: '#4AC47A', equipement: 'var(--violet)' };
+
+  var nbRes = parcelles.filter(function(p) { return p.usage === 'residentiel'; }).length;
+  var nbCom = parcelles.filter(function(p) { return p.usage === 'commercial'; }).length;
+  var nbVoi = parcelles.filter(function(p) { return p.usage === 'voirie' || p.usage === 'espace_vert' || p.usage === 'equipement'; }).length;
+  var sfTot = parcelles.reduce(function(s, p) { return s + (p.superficie || 0); }, 0);
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">'
+    + '<div class="kpi-card" style="border-top-color:var(--or);"><div class="kpi-label">Total parcelles</div><div class="kpi-value">' + parcelles.length + '</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--vert);"><div class="kpi-label">Résidentiel + Com.</div><div class="kpi-value">' + (nbRes + nbCom) + '</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--dim);"><div class="kpi-label">Voirie & autres</div><div class="kpi-value">' + nbVoi + '</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--bleu);"><div class="kpi-label">Surface totale</div><div class="kpi-value" style="font-size:14px;">' + sfTot.toLocaleString('fr') + ' m²</div></div>'
+    + '</div>';
+
+  if (!parcelles.length) {
+    html += '<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">Aucune parcelle. Saisissez les parcelles ci-dessous.</div>';
+  } else {
+    html += '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'
+      + '<thead><tr><th style="text-align:left;padding:7px;background:var(--card2);">N°</th>'
+      + '<th style="text-align:left;padding:7px;background:var(--card2);">Îlot</th>'
+      + '<th style="text-align:left;padding:7px;background:var(--card2);">Usage</th>'
+      + '<th style="text-align:right;padding:7px;background:var(--card2);">Superficie</th>'
+      + '<th style="text-align:left;padding:7px;background:var(--card2);">Dimensions</th>'
+      + '<th style="text-align:left;padding:7px;background:var(--card2);">TF / ACD</th>'
+      + '<th style="text-align:left;padding:7px;background:var(--card2);">GPS</th>'
+      + '<th style="text-align:center;padding:7px;background:var(--card2);">Lot lié</th>'
+      + '<th style="padding:7px;background:var(--card2);"></th></tr></thead><tbody>'
+      + parcelles.map(function(p) {
+          var lotLie = p.lot_id ? (DATA.lots || []).find(function(l) { return l.id === p.lot_id; }) : null;
+          return '<tr style="border-bottom:1px solid var(--bord);">'
+            + '<td style="padding:7px;font-weight:700;color:var(--or);">' + p.numero + '</td>'
+            + '<td style="padding:7px;">' + (p.ilot || '—') + '</td>'
+            + '<td style="padding:7px;"><span style="color:' + (usageColor[p.usage] || 'var(--blanc)') + ';font-weight:600;">' + (usageLabel[p.usage] || p.usage) + '</span></td>'
+            + '<td style="padding:7px;text-align:right;">' + (p.superficie ? p.superficie + ' m²' : '—') + '</td>'
+            + '<td style="padding:7px;">' + (p.longueur && p.largeur ? p.longueur + 'm × ' + p.largeur + 'm' : '—') + '</td>'
+            + '<td style="padding:7px;font-size:11px;">' + (p.numero_tf || '') + (p.numero_tf && p.numero_acd ? ' / ' : '') + (p.numero_acd || '') + ((!p.numero_tf && !p.numero_acd) ? '—' : '') + '</td>'
+            + '<td style="padding:7px;font-size:11px;color:var(--dim);">' + (p.lat && p.lng ? p.lat + ', ' + p.lng : '—') + '</td>'
+            + '<td style="padding:7px;text-align:center;">' + (lotLie ? '<span style="color:var(--vert);font-size:11px;">✅ Lot ' + lotLie.numero + '</span>' : '<span style="color:var(--dim);font-size:11px;">—</span>') + '</td>'
+            + '<td style="padding:7px;white-space:nowrap;">'
+            + '<button class="btn btn-secondary btn-sm btn-icon" onclick="editParcelleMorcellement(\'' + p.id + '\')">✏️</button> '
+            + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteParcelleMorcellement(\'' + p.id + '\')">🗑</button>'
+            + '</td></tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+  container.innerHTML = html;
+}
+
+function clearParcelleForm() {
+  APP.editingParcId = null;
+  ['parc-numero','parc-ilot','parc-superficie','parc-longueur','parc-largeur','parc-lat','parc-lng','parc-tf','parc-acd'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('parc-usage').value = 'residentiel';
+  document.getElementById('parc-mrc-id-edit').value = '';
+}
+
+function editParcelleMorcellement(id) {
+  var p = (DATA.parcelles_morcellement || []).find(function(x) { return x.id === id; });
+  if (!p) return;
+  APP.editingParcId = id;
+  document.getElementById('parc-mrc-id-edit').value = id;
+  document.getElementById('parc-numero').value = p.numero || '';
+  document.getElementById('parc-ilot').value = p.ilot || '';
+  document.getElementById('parc-usage').value = p.usage || 'residentiel';
+  document.getElementById('parc-superficie').value = p.superficie || '';
+  document.getElementById('parc-longueur').value = p.longueur || '';
+  document.getElementById('parc-largeur').value = p.largeur || '';
+  document.getElementById('parc-lat').value = p.lat || '';
+  document.getElementById('parc-lng').value = p.lng || '';
+  document.getElementById('parc-tf').value = p.numero_tf || '';
+  document.getElementById('parc-acd').value = p.numero_acd || '';
+  document.getElementById('parc-numero').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('parc-numero').focus();
+}
+
+async function saveParcelleMorcellement() {
+  var numero = document.getElementById('parc-numero').value.trim();
+  if (!numero) { toast('Numéro de parcelle obligatoire.', 'error'); return; }
+  var progId = APP.currentMrcProgId;
+  var plan = (DATA.plans_morcellement || []).find(function(p) { return p.programme_id === progId; });
+  var id = APP.editingParcId || uid();
+  var parc = {
+    id: id,
+    programme_id: progId,
+    plan_id: plan ? plan.id : null,
+    numero: numero,
+    ilot: document.getElementById('parc-ilot').value.trim(),
+    usage: document.getElementById('parc-usage').value,
+    superficie: parseFloat(document.getElementById('parc-superficie').value) || 0,
+    longueur: parseFloat(document.getElementById('parc-longueur').value) || 0,
+    largeur: parseFloat(document.getElementById('parc-largeur').value) || 0,
+    lat: document.getElementById('parc-lat').value.trim(),
+    lng: document.getElementById('parc-lng').value.trim(),
+    numero_tf: document.getElementById('parc-tf').value.trim(),
+    numero_acd: document.getElementById('parc-acd').value.trim(),
+    lot_id: APP.editingParcId ? ((DATA.parcelles_morcellement || []).find(function(p) { return p.id === id; }) || {}).lot_id : null,
+    created_at: APP.editingParcId ? undefined : today()
+  };
+  if (!DATA.parcelles_morcellement) DATA.parcelles_morcellement = [];
+  if (APP.editingParcId) {
+    var idx = DATA.parcelles_morcellement.findIndex(function(p) { return p.id === id; });
+    if (idx >= 0) DATA.parcelles_morcellement[idx] = parc;
+  } else {
+    DATA.parcelles_morcellement.push(parc);
+  }
+  await dbPut('parcelles_morcellement', parc);
+  clearParcelleForm();
+  renderParcelleListe();
+  toast('✅ Parcelle ' + numero + ' enregistrée.', 'success');
+}
+
+async function deleteParcelleMorcellement(id) {
+  if (!confirm('Supprimer cette parcelle ?')) return;
+  DATA.parcelles_morcellement = (DATA.parcelles_morcellement || []).filter(function(p) { return p.id !== id; });
+  await dbDelete('parcelles_morcellement', id);
+  renderParcelleListe();
+  toast('Parcelle supprimée.', 'info');
+}
+
+function previewGenerationLots() {
+  var progId = APP.currentMrcProgId;
+  var parcelles = (DATA.parcelles_morcellement || []).filter(function(p) {
+    return p.programme_id === progId && (p.usage === 'residentiel' || p.usage === 'commercial');
+  });
+  var recap = document.getElementById('mrc-gen-recap');
+  var preview = document.getElementById('mrc-gen-preview');
+  var btn = document.getElementById('btn-confirmer-generation');
+
+  var aGenerer = parcelles.filter(function(p) { return !p.lot_id; });
+  var dejaLiees = parcelles.filter(function(p) { return !!p.lot_id; });
+
+  recap.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">'
+    + '<div class="kpi-card" style="border-top-color:var(--vert);"><div class="kpi-label">À générer</div><div class="kpi-value" style="color:var(--vert);">' + aGenerer.length + '</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--bleu);"><div class="kpi-label">Déjà liées</div><div class="kpi-value" style="color:var(--bleu);">' + dejaLiees.length + '</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--or);"><div class="kpi-label">Total convertibles</div><div class="kpi-value">' + parcelles.length + '</div></div>'
+    + '</div>';
+
+  if (!aGenerer.length) {
+    preview.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;">Toutes les parcelles convertibles ont déjà un lot lié.</div>';
+    btn.style.display = 'none';
+    return;
+  }
+
+  preview.innerHTML = '<div style="font-weight:700;margin-bottom:8px;color:var(--or);">Aperçu des lots à créer :</div>'
+    + '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'
+    + '<thead><tr>'
+    + '<th style="text-align:left;padding:6px;background:var(--card2);">N° Lot</th>'
+    + '<th style="text-align:left;padding:6px;background:var(--card2);">Îlot</th>'
+    + '<th style="text-align:left;padding:6px;background:var(--card2);">Usage</th>'
+    + '<th style="text-align:right;padding:6px;background:var(--card2);">Surface</th>'
+    + '<th style="text-align:left;padding:6px;background:var(--card2);">TF / ACD</th>'
+    + '</tr></thead><tbody>'
+    + aGenerer.map(function(p) {
+        return '<tr style="border-bottom:1px solid var(--bord);">'
+          + '<td style="padding:6px;font-weight:700;color:var(--or);">' + p.numero + '</td>'
+          + '<td style="padding:6px;">' + (p.ilot || '—') + '</td>'
+          + '<td style="padding:6px;">' + (p.usage === 'commercial' ? '🏪 Commercial' : '🏠 Résidentiel') + '</td>'
+          + '<td style="padding:6px;text-align:right;">' + (p.superficie || '—') + ' m²</td>'
+          + '<td style="padding:6px;font-size:11px;">' + ([p.numero_tf, p.numero_acd].filter(Boolean).join(' / ') || '—') + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</tbody></table></div>';
+
+  btn.style.display = 'inline-block';
+}
+
+async function confirmerGenerationLots() {
+  var progId = APP.currentMrcProgId;
+  var parcelles = (DATA.parcelles_morcellement || []).filter(function(p) {
+    return p.programme_id === progId && (p.usage === 'residentiel' || p.usage === 'commercial') && !p.lot_id;
+  });
+  if (!parcelles.length) { toast('Aucun lot à générer.', 'info'); return; }
+  var count = 0;
+  for (var i = 0; i < parcelles.length; i++) {
+    var p = parcelles[i];
+    var lot = {
+      id: uid(),
+      programme_id: progId,
+      numero: p.numero,
+      ilot: p.ilot || '',
+      type: p.usage === 'commercial' ? 'Commercial' : 'Résidentiel',
+      surface: p.superficie || 0,
+      pieces: 0,
+      prix: 0,
+      cout_revient: 0,
+      standing: 'moyen',
+      mode_livraison: 'gros_oeuvre',
+      statut: 'disponible',
+      notes: [p.numero_tf, p.numero_acd].filter(Boolean).join(' / '),
+      created_at: today()
+    };
+    if (!DATA.lots) DATA.lots = [];
+    DATA.lots.push(lot);
+    await dbPut('lots', lot);
+    syncToSupabase('pi_lots', lot);
+    var pIdx = DATA.parcelles_morcellement.findIndex(function(x) { return x.id === p.id; });
+    if (pIdx >= 0) {
+      DATA.parcelles_morcellement[pIdx].lot_id = lot.id;
+      await dbPut('parcelles_morcellement', DATA.parcelles_morcellement[pIdx]);
+    }
+    count++;
+  }
+  document.getElementById('btn-confirmer-generation').style.display = 'none';
+  renderParcelleListe();
+  previewGenerationLots();
+  renderLots();
+  toast('✅ ' + count + ' lot(s) généré(s) depuis le morcellement !', 'success');
+}
+
+/* ══════════════════════════════════════════════════════
+   AGRÉMENT PROMOTEUR
+══════════════════════════════════════════════════════ */
+
+var AGP_DOCS = [
+  { key: 'doc_caution_bancaire',     label: 'Caution bancaire',                      info: 'Attestation de caution bancaire délivrée par un établissement agréé' },
+  { key: 'doc_references',           label: 'Références de réalisations',             info: 'Liste des programmes réalisés ou en cours avec justificatifs' },
+  { key: 'doc_domiciliation',        label: 'Attestation de domiciliation bancaire',  info: 'Attestation de domiciliation du compte société' },
+  { key: 'doc_casier',               label: 'Casier judiciaire / Moralité',           info: 'Extrait de casier judiciaire du dirigeant datant de moins de 3 mois' },
+  { key: 'doc_statuts',              label: 'Statuts de la société',                  info: 'Statuts notariés de la société promoteur' },
+  { key: 'doc_rccm',                 label: 'Registre de Commerce (RCCM)',            info: 'Extrait RCCM datant de moins de 3 mois' },
+  { key: 'doc_quitus_dgi',           label: 'Quitus fiscal (DGI)',                    info: 'Attestation de bonne situation fiscale délivrée par la DGI' },
+  { key: 'doc_cnps',                 label: 'Attestation CNPS',                       info: 'Attestation de régularité sociale CNPS' }
+];
+
+var AGPR_DOCS = [
+  { key: 'doc_dossier_technique',    label: 'Dossier technique du programme',         info: 'Plans architecturaux, descriptif technique, budget prévisionnel' },
+  { key: 'doc_plan_masse',           label: 'Plan de masse approuvé',                 info: 'Plan de masse visé par la Direction de l\'Urbanisme' },
+  { key: 'doc_permis_construire',    label: 'Permis de construire',                   info: 'Permis de construire délivré par la commune / préfecture' },
+  { key: 'doc_gfa',                  label: 'Garantie Financière d\'Achèvement (GFA)', info: 'GFA délivrée par une banque ou compagnie d\'assurance agréée' },
+  { key: 'doc_contrat_reservation',  label: 'Contrat de réservation type',            info: 'Modèle de contrat de réservation visé par le notaire' },
+  { key: 'doc_morcellement',         label: 'Plan de morcellement approuvé',          info: 'Plan de morcellement approuvé par le MCLAU' },
+  { key: 'doc_etude_sol',            label: 'Étude de sol / Faisabilité',             info: 'Rapport géotechnique et étude de faisabilité du projet' }
+];
+
+function openAgrementPromoteur() {
+  var existing = (DATA.agrement_promoteur || [])[0];
+  document.getElementById('agp-id').value = existing ? existing.id : '';
+  if (existing) {
+    document.getElementById('agp-numero').value = existing.numero || '';
+    document.getElementById('agp-organisme').value = existing.organisme || 'Ministère de la Construction, du Logement et de l\'Urbanisme';
+    document.getElementById('agp-date-depot').value = existing.date_depot || '';
+    document.getElementById('agp-date-obtention').value = existing.date_obtention || '';
+    document.getElementById('agp-duree').value = existing.duree || 3;
+    document.getElementById('agp-date-expiration').value = existing.date_expiration || '';
+    document.getElementById('agp-statut').value = existing.statut || 'en_cours';
+    document.getElementById('agp-notes').value = existing.notes || '';
+    APP._agpDocs = existing.documents || {};
+  } else {
+    ['agp-numero','agp-date-depot','agp-date-obtention','agp-date-expiration','agp-notes'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('agp-duree').value = 3;
+    document.getElementById('agp-statut').value = 'en_cours';
+    APP._agpDocs = {};
+  }
+  switchTab('agr-prom', 'infos');
+  renderAgrDocsList('agp', AGP_DOCS, 'agp-docs-list');
+  renderAgrStatutPanel('agp');
+  openModal('modal-agrement-promoteur');
+}
+
+function openAgrementProgramme(programmeId) {
+  APP.currentAgrProgId = programmeId;
+  var prog = DATA.programmes.find(function(p) { return p.id === programmeId; });
+  document.getElementById('modal-agrement-programme-titre').textContent = '📜 Agrément Programme — ' + (prog ? prog.nom : '');
+  document.getElementById('agpr-programme-id').value = programmeId;
+  var existing = (DATA.agrement_programme || []).find(function(a) { return a.programme_id === programmeId; });
+  document.getElementById('agpr-id').value = existing ? existing.id : '';
+  if (existing) {
+    document.getElementById('agpr-numero').value = existing.numero || '';
+    document.getElementById('agpr-organisme').value = existing.organisme || 'Ministère de la Construction, du Logement et de l\'Urbanisme';
+    document.getElementById('agpr-date-depot').value = existing.date_depot || '';
+    document.getElementById('agpr-date-obtention').value = existing.date_obtention || '';
+    document.getElementById('agpr-duree').value = existing.duree || 5;
+    document.getElementById('agpr-date-expiration').value = existing.date_expiration || '';
+    document.getElementById('agpr-statut').value = existing.statut || 'non_depose';
+    document.getElementById('agpr-notes').value = existing.notes || '';
+    APP._agprDocs = existing.documents || {};
+  } else {
+    ['agpr-numero','agpr-date-depot','agpr-date-obtention','agpr-date-expiration','agpr-notes'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('agpr-duree').value = 5;
+    document.getElementById('agpr-statut').value = 'non_depose';
+    APP._agprDocs = {};
+  }
+  switchTab('agr-prog', 'infos');
+  renderAgrDocsList('agpr', AGPR_DOCS, 'agpr-docs-list');
+  renderAgrStatutPanel('agpr');
+  openModal('modal-agrement-programme');
+}
+
+function calcExpirationAgp() {
+  var date = document.getElementById('agp-date-obtention').value;
+  var duree = parseInt(document.getElementById('agp-duree').value) || 0;
+  if (date && duree) {
+    var d = new Date(date);
+    d.setFullYear(d.getFullYear() + duree);
+    document.getElementById('agp-date-expiration').value = d.toLocaleDateString('fr-FR');
+  }
+}
+
+function calcExpirationAgpr() {
+  var date = document.getElementById('agpr-date-obtention').value;
+  var duree = parseInt(document.getElementById('agpr-duree').value) || 0;
+  if (date && duree) {
+    var d = new Date(date);
+    d.setFullYear(d.getFullYear() + duree);
+    document.getElementById('agpr-date-expiration').value = d.toLocaleDateString('fr-FR');
+  }
+}
+
+function renderAgrDocsList(prefix, docsDef, containerId) {
+  var store = prefix === 'agp' ? APP._agpDocs : APP._agprDocs;
+  var html = docsDef.map(function(doc, idx) {
+    var state = store[doc.key] || { fourni: false, fichier_nom: null };
+    return '<div class="card" style="margin-bottom:10px;padding:12px;border-left:4px solid ' + (state.fourni ? 'var(--vert)' : 'var(--bord2)') + ';">'
+      + '<div style="display:flex;align-items:flex-start;gap:12px;">'
+      + '<input type="checkbox" id="' + prefix + '-doc-' + idx + '" ' + (state.fourni ? 'checked' : '') + ' onchange="toggleAgrDoc(\'' + prefix + '\',' + idx + ')" style="margin-top:3px;width:16px;height:16px;cursor:pointer;">'
+      + '<div style="flex:1;">'
+      + '<div style="font-weight:700;font-size:13px;">' + doc.label + '</div>'
+      + '<div style="font-size:11px;color:var(--dim);margin-top:2px;">' + doc.info + '</div>'
+      + (state.fichier_nom ? '<div style="font-size:11px;color:var(--vert);margin-top:4px;">📎 ' + state.fichier_nom + '</div>' : '')
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:4px;min-width:120px;">'
+      + '<input type="file" id="' + prefix + '-file-' + idx + '" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handleAgrDocFile(\'' + prefix + '\',' + idx + ',this)">'
+      + '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'' + prefix + '-file-' + idx + '\').click()">📁 ' + (state.fichier_nom ? 'Changer' : 'Joindre') + '</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+  var pct = Math.round((Object.values(store).filter(function(d) { return d.fourni; }).length / docsDef.length) * 100);
+  var recap = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+    + '<strong style="color:var(--or);">' + Object.values(store).filter(function(d) { return d.fourni; }).length + ' / ' + docsDef.length + ' documents fournis</strong>'
+    + '<span style="font-size:13px;color:' + (pct === 100 ? 'var(--vert)' : 'var(--or)') + ';font-weight:700;">' + pct + '%</span>'
+    + '</div>'
+    + '<div class="progress-bar" style="margin-bottom:14px;"><div class="progress-fill" style="width:' + pct + '%;background:' + (pct === 100 ? 'var(--vert)' : 'var(--or)') + ';"></div></div>';
+  document.getElementById(containerId).innerHTML = recap + html;
+}
+
+function toggleAgrDoc(prefix, idx) {
+  var docsDef = prefix === 'agp' ? AGP_DOCS : AGPR_DOCS;
+  var store = prefix === 'agp' ? APP._agpDocs : APP._agprDocs;
+  var key = docsDef[idx].key;
+  if (!store[key]) store[key] = { fourni: false, fichier_nom: null };
+  store[key].fourni = document.getElementById(prefix + '-doc-' + idx).checked;
+  var containerId = prefix === 'agp' ? 'agp-docs-list' : 'agpr-docs-list';
+  renderAgrDocsList(prefix, docsDef, containerId);
+}
+
+function handleAgrDocFile(prefix, idx, input) {
+  var file = input.files[0];
+  if (!file) return;
+  var docsDef = prefix === 'agp' ? AGP_DOCS : AGPR_DOCS;
+  var store = prefix === 'agp' ? APP._agpDocs : APP._agprDocs;
+  var key = docsDef[idx].key;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    if (!store[key]) store[key] = { fourni: false };
+    store[key].fichier_nom = file.name;
+    store[key].fichier_data = e.target.result;
+    store[key].fichier_type = file.type;
+    store[key].fourni = true;
+    document.getElementById(prefix + '-doc-' + idx).checked = true;
+    var containerId = prefix === 'agp' ? 'agp-docs-list' : 'agpr-docs-list';
+    renderAgrDocsList(prefix, docsDef, containerId);
+    renderAgrStatutPanel(prefix);
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderAgrStatutPanel(prefix) {
+  var isPromoteur = prefix === 'agp';
+  var store = isPromoteur ? APP._agpDocs : APP._agprDocs;
+  var docsDef = isPromoteur ? AGP_DOCS : AGPR_DOCS;
+  var containerId = isPromoteur ? 'agp-statut-panel' : 'agpr-statut-panel';
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var nbFournis = docsDef.filter(function(d) { return store[d.key] && store[d.key].fourni; }).length;
+  var manquants = docsDef.filter(function(d) { return !store[d.key] || !store[d.key].fourni; });
+  var statutEl = isPromoteur ? document.getElementById('agp-statut') : document.getElementById('agpr-statut');
+  var statut = statutEl ? statutEl.value : '';
+  var statutColors = { en_cours:'var(--or)', obtenu:'var(--vert)', suspendu:'var(--rouge)', renouvellement:'var(--bleu)', retire:'var(--rouge)', non_depose:'var(--dim)', en_instruction:'var(--or)', delivre:'var(--vert)', refuse:'var(--rouge)', expire:'var(--rouge)' };
+  var statutLabels = { en_cours:'⏳ En cours d\'instruction', obtenu:'✅ Agrément obtenu', suspendu:'⚠️ Suspendu', renouvellement:'🔄 En renouvellement', retire:'❌ Retiré', non_depose:'📝 Non déposé', en_instruction:'⏳ En instruction', delivre:'✅ Délivré', refuse:'❌ Refusé', expire:'⚠️ Expiré' };
+  var dateExpEl = isPromoteur ? document.getElementById('agp-date-expiration') : document.getElementById('agpr-date-expiration');
+  var dateExp = dateExpEl ? dateExpEl.value : '';
+  var alerteExp = '';
+  if (dateExp) {
+    var parts = dateExp.split('/');
+    if (parts.length === 3) {
+      var expDate = new Date(parts[2] + '-' + parts[1] + '-' + parts[0]);
+      var diffDays = Math.round((expDate - new Date()) / 86400000);
+      if (diffDays < 0) alerteExp = '<div style="padding:10px;background:rgba(232,84,84,0.15);border:1px solid var(--rouge);border-radius:8px;color:var(--rouge);font-weight:700;margin-bottom:10px;">🚨 EXPIRÉ depuis ' + Math.abs(diffDays) + ' jours</div>';
+      else if (diffDays <= 90) alerteExp = '<div style="padding:10px;background:rgba(255,171,0,0.15);border:1px solid var(--or);border-radius:8px;color:var(--or);font-weight:700;margin-bottom:10px;">⚠️ Expire dans ' + diffDays + ' jours — Pensez au renouvellement</div>';
+      else alerteExp = '<div style="padding:10px;background:rgba(74,196,122,0.1);border:1px solid var(--vert);border-radius:8px;color:var(--vert);margin-bottom:10px;">✅ Valide — expire dans ' + diffDays + ' jours</div>';
+    }
+  }
+  container.innerHTML = alerteExp
+    + '<div style="padding:14px;border:2px solid ' + (statutColors[statut]||'var(--bord2)') + ';border-radius:10px;margin-bottom:14px;">'
+    + '<div style="font-size:16px;font-weight:700;color:' + (statutColors[statut]||'var(--blanc)') + ';">' + (statutLabels[statut]||statut||'Non défini') + '</div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+    + '<div class="kpi-card" style="border-top-color:var(--vert);"><div class="kpi-label">Documents fournis</div><div class="kpi-value" style="color:var(--vert);">' + nbFournis + ' / ' + docsDef.length + '</div></div>'
+    + '<div class="kpi-card" style="border-top-color:' + (manquants.length ? 'var(--rouge)' : 'var(--vert)') + ';"><div class="kpi-label">Documents manquants</div><div class="kpi-value" style="color:' + (manquants.length ? 'var(--rouge)' : 'var(--vert)') + ';">' + manquants.length + '</div></div>'
+    + '</div>'
+    + (manquants.length ? '<div style="background:var(--card2);padding:12px;border-radius:8px;"><div style="font-weight:700;margin-bottom:8px;color:var(--rouge);">Documents manquants :</div>'
+      + manquants.map(function(d) { return '<div style="font-size:12px;padding:4px 0;color:var(--dim);">• ' + d.label + '</div>'; }).join('')
+      + '</div>' : '<div style="padding:12px;background:rgba(74,196,122,0.1);border-radius:8px;color:var(--vert);font-weight:700;">✅ Dossier complet — tous les documents sont fournis</div>');
+}
+
+async function saveAgrementPromoteur() {
+  var id = document.getElementById('agp-id').value || uid();
+  var agr = {
+    id: id,
+    numero: document.getElementById('agp-numero').value.trim(),
+    organisme: document.getElementById('agp-organisme').value.trim(),
+    date_depot: document.getElementById('agp-date-depot').value,
+    date_obtention: document.getElementById('agp-date-obtention').value,
+    duree: parseInt(document.getElementById('agp-duree').value) || 3,
+    date_expiration: document.getElementById('agp-date-expiration').value,
+    statut: document.getElementById('agp-statut').value,
+    notes: document.getElementById('agp-notes').value.trim(),
+    documents: APP._agpDocs || {},
+    created_at: today()
+  };
+  if (!DATA.agrement_promoteur) DATA.agrement_promoteur = [];
+  var idx = DATA.agrement_promoteur.findIndex(function(a) { return a.id === id; });
+  if (idx >= 0) DATA.agrement_promoteur[idx] = agr;
+  else DATA.agrement_promoteur.push(agr);
+  document.getElementById('agp-id').value = id;
+  await dbPut('agrement_promoteur', agr);
+  renderAgrStatutPanel('agp');
+  toast('✅ Agrément promoteur enregistré.', 'success');
+}
+
+async function saveAgrementProgramme() {
+  var progId = document.getElementById('agpr-programme-id').value;
+  if (!progId) { toast('Programme introuvable.', 'error'); return; }
+  var id = document.getElementById('agpr-id').value || uid();
+  var agr = {
+    id: id,
+    programme_id: progId,
+    numero: document.getElementById('agpr-numero').value.trim(),
+    organisme: document.getElementById('agpr-organisme').value.trim(),
+    date_depot: document.getElementById('agpr-date-depot').value,
+    date_obtention: document.getElementById('agpr-date-obtention').value,
+    duree: parseInt(document.getElementById('agpr-duree').value) || 5,
+    date_expiration: document.getElementById('agpr-date-expiration').value,
+    statut: document.getElementById('agpr-statut').value,
+    notes: document.getElementById('agpr-notes').value.trim(),
+    documents: APP._agprDocs || {},
+    created_at: today()
+  };
+  if (!DATA.agrement_programme) DATA.agrement_programme = [];
+  var idx = DATA.agrement_programme.findIndex(function(a) { return a.id === id; });
+  if (idx >= 0) DATA.agrement_programme[idx] = agr;
+  else DATA.agrement_programme.push(agr);
+  document.getElementById('agpr-id').value = id;
+  await dbPut('agrement_programme', agr);
+  renderProgrammes();
+  renderAgrStatutPanel('agpr');
+  toast('✅ Agrément programme enregistré.', 'success');
+}
+
+function renderParamsAgrement() {
+  var container = document.getElementById('params-agrement-content');
+  if (!container) return;
+  var agp = (DATA.agrement_promoteur || [])[0];
+  var agpStatutColors = { en_cours:'var(--or)', obtenu:'var(--vert)', suspendu:'var(--rouge)', renouvellement:'var(--bleu)', retire:'var(--rouge)' };
+  var agpStatutLabels = { en_cours:'⏳ En cours', obtenu:'✅ Obtenu', suspendu:'⚠️ Suspendu', renouvellement:'🔄 Renouvellement', retire:'❌ Retiré' };
+  var agprStatutColors = { non_depose:'var(--dim)', en_instruction:'var(--or)', delivre:'var(--vert)', refuse:'var(--rouge)', renouvellement:'var(--bleu)', expire:'var(--rouge)' };
+  var agprStatutLabels = { non_depose:'📝 Non déposé', en_instruction:'⏳ En instruction', delivre:'✅ Délivré', refuse:'❌ Refusé', renouvellement:'🔄 Renouvellement', expire:'⚠️ Expiré' };
+
+  var html = '<div class="card" style="margin-bottom:16px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">'
+    + '<div style="font-family:var(--font-head);font-size:16px;color:var(--or);">🏛️ Agrément Promoteur Immobilier</div>'
+    + '<button class="btn btn-primary btn-sm" onclick="openAgrementPromoteur()">✏️ ' + (agp ? 'Modifier' : 'Créer') + '</button>'
+    + '</div>';
+
+  if (agp) {
+    var nbDocs = AGP_DOCS.filter(function(d) { return agp.documents && agp.documents[d.key] && agp.documents[d.key].fourni; }).length;
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">'
+      + '<div class="kpi-card" style="border-top-color:' + (agpStatutColors[agp.statut]||'var(--dim)') + ';"><div class="kpi-label">Statut</div><div class="kpi-value" style="font-size:13px;color:' + (agpStatutColors[agp.statut]||'var(--blanc)') + ';">' + (agpStatutLabels[agp.statut]||agp.statut) + '</div></div>'
+      + '<div class="kpi-card" style="border-top-color:var(--bleu);"><div class="kpi-label">N° Agrément</div><div class="kpi-value" style="font-size:13px;">' + (agp.numero || '—') + '</div></div>'
+      + '<div class="kpi-card" style="border-top-color:' + (nbDocs === AGP_DOCS.length ? 'var(--vert)' : 'var(--or)') + ';"><div class="kpi-label">Documents</div><div class="kpi-value" style="font-size:16px;">' + nbDocs + ' / ' + AGP_DOCS.length + '</div></div>'
+      + '</div>'
+      + (agp.date_expiration ? '<div style="font-size:12px;color:var(--dim);">Validité : ' + agp.date_expiration + '</div>' : '');
+  } else {
+    html += '<div style="padding:14px;background:rgba(232,84,84,0.1);border:1px solid var(--rouge);border-radius:8px;color:var(--rouge);">🚨 Aucun agrément promoteur enregistré. Cliquez sur "Créer" pour commencer.</div>';
+  }
+  html += '</div>';
+
+  var programmes = DATA.programmes || [];
+  if (programmes.length) {
+    html += '<div style="font-weight:700;color:var(--or);margin-bottom:10px;">📜 Agréments par Programme</div>';
+    html += programmes.map(function(p) {
+      var agpr = (DATA.agrement_programme || []).find(function(a) { return a.programme_id === p.id; });
+      var nbDocs = agpr ? AGPR_DOCS.filter(function(d) { return agpr.documents && agpr.documents[d.key] && agpr.documents[d.key].fourni; }).length : 0;
+      return '<div class="card" style="margin-bottom:10px;border-left:4px solid ' + (agpr ? (agprStatutColors[agpr.statut]||'var(--dim)') : 'var(--bord2)') + ';">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+        + '<div><div style="font-weight:700;">' + p.nom + '</div>'
+        + '<div style="font-size:12px;color:var(--dim);">📍 ' + (p.localisation||'N/A') + '</div></div>'
+        + '<div style="text-align:right;">'
+        + (agpr ? '<span style="color:' + (agprStatutColors[agpr.statut]||'var(--dim)') + ';font-weight:700;font-size:13px;">' + (agprStatutLabels[agpr.statut]||agpr.statut) + '</span><div style="font-size:11px;color:var(--dim);">Docs : ' + nbDocs + '/' + AGPR_DOCS.length + (agpr.numero ? ' · ' + agpr.numero : '') + '</div>'
+          : '<span style="color:var(--dim);font-size:12px;">📝 Non déposé</span>')
+        + '</div>'
+        + '<button class="btn btn-secondary btn-sm" onclick="openAgrementProgramme(\'' + p.id + '\')">✏️ ' + (agpr ? 'Modifier' : 'Créer') + '</button>'
+        + '</div></div>';
+    }).join('');
+  }
+  container.innerHTML = html;
 }
 
 /* ──────────────────────────────────────────────────────
