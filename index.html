@@ -1096,6 +1096,226 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 .badge-btn-sim:hover { border-color: var(--or); color: var(--or); transform: translateY(-1px); }
 #scan-badge-input:focus { border-color: var(--bleu); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+
+/* ═══════════════════════════════════════════════
+   MODULE PLANS ARCHITECTURAUX — Vues multi-angles
+═══════════════════════════════════════════════ */
+
+/* Dropzone */
+.plan-dropzone {
+  border: 2px dashed var(--bord2); border-radius: var(--r2);
+  padding: 24px; text-align: center; cursor: pointer;
+  transition: all var(--tr); background: var(--card2);
+  margin-bottom: 4px;
+}
+.plan-dropzone.drag-over {
+  border-color: var(--or); background: var(--or-glow);
+  transform: scale(1.01);
+}
+.plan-dropzone-inner { pointer-events: none; }
+
+/* Grille des slots angles */
+.plan-vues-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+  gap: 10px;
+}
+.plan-slot {
+  border: 1.5px dashed var(--bord2); border-radius: var(--r2);
+  padding: 10px; cursor: pointer; transition: all var(--tr);
+  background: var(--card2); position: relative; min-height: 130px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; gap: 4px;
+}
+.plan-slot:hover  { border-color: var(--or); background: var(--or-glow); }
+.plan-slot.has-file { border-color: var(--bleu); border-style: solid; background: rgba(74,148,224,0.05); }
+.plan-slot.has-file:hover { border-color: var(--or); }
+.plan-slot-icon   { font-size: 22px; line-height: 1; margin-bottom: 2px; }
+.plan-slot-label  { font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--dim); }
+.plan-slot-count  { font-size: 9px; color: var(--bleu); font-weight: 700; margin-top: 2px; }
+.plan-slot-thumb  {
+  width: 100%; height: 80px; object-fit: cover;
+  border-radius: 6px; margin-bottom: 4px;
+}
+.plan-slot-add-btn {
+  font-size: 20px; color: var(--dim);
+  line-height: 1; margin-bottom: 2px;
+}
+.plan-slot-badge {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--bleu); color: #fff;
+  font-size: 9px; font-weight: 700; padding: 1px 5px;
+  border-radius: 8px; min-width: 16px; text-align: center;
+}
+
+/* Vues uploadées (liste) */
+.plan-vues-libres { display: flex; flex-direction: column; gap: 6px; }
+.plan-vue-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card2); border: 1px solid var(--bord);
+  border-radius: var(--r); padding: 8px 10px;
+  animation: fadeInUp 180ms ease both;
+}
+.plan-vue-thumb {
+  width: 48px; height: 48px; object-fit: cover;
+  border-radius: 6px; cursor: pointer; flex-shrink: 0;
+  transition: transform var(--tr);
+}
+.plan-vue-thumb:hover { transform: scale(1.08); }
+.plan-vue-info { flex: 1; min-width: 0; }
+.plan-vue-nom  { font-size: 12px; font-weight: 600; color: var(--blanc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plan-vue-meta { font-size: 10px; color: var(--dim); margin-top: 2px; }
+.plan-vue-angle-sel {
+  padding: 3px 6px; border-radius: 6px; border: 1px solid var(--bord);
+  background: var(--card); font-size: 11px; color: var(--blanc);
+  flex-shrink: 0; max-width: 120px; -webkit-appearance: none;
+}
+
+/* Docs PDF */
+.plan-doc-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card2); border: 1px solid var(--bord);
+  border-radius: var(--r); padding: 8px 12px; margin-bottom: 6px;
+}
+.plan-doc-icon { font-size: 20px; flex-shrink: 0; }
+.plan-doc-info { flex: 1; }
+.plan-doc-nom  { font-size: 12px; font-weight: 600; }
+.plan-doc-taille { font-size: 10px; color: var(--dim); }
+
+/* Galerie sur les cartes (bibliothèque) */
+.plan-card-gallery {
+  display: flex; gap: 4px; margin: 8px 0; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+}
+.plan-card-gallery::-webkit-scrollbar { height: 2px; }
+.plan-card-gallery-thumb {
+  width: 52px; height: 52px; object-fit: cover;
+  border-radius: 6px; cursor: pointer; flex-shrink: 0;
+  border: 1.5px solid var(--bord); transition: all var(--tr);
+}
+.plan-card-gallery-thumb:hover { border-color: var(--or); transform: scale(1.05); }
+.plan-card-angle-tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 8px; font-size: 9px;
+  font-weight: 700; background: rgba(74,148,224,0.12);
+  color: var(--bleu); white-space: nowrap;
+}
+
+/* Lightbox */
+#plan-lightbox { display: none; }
+#plan-lightbox.open { display: flex; }
+
+@media (max-width: 640px) {
+  .plan-vues-grid { grid-template-columns: repeat(3, 1fr); }
+  .plan-slot { min-height: 100px; }
+}
+
+/* ═══════════════════════════════════════════════
+   PHOTOS CHANTIER — Portail Souscripteur
+═══════════════════════════════════════════════ */
+
+/* Grille photos rapport */
+.rch-photo-card {
+  position: relative; border-radius: var(--r2);
+  overflow: hidden; background: var(--card2);
+  border: 1px solid var(--bord); transition: all var(--tr);
+  cursor: pointer;
+}
+.rch-photo-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.rch-photo-thumb {
+  width: 100%; height: 120px; object-fit: cover;
+  display: block; transition: transform .3s;
+}
+.rch-photo-card:hover .rch-photo-thumb { transform: scale(1.04); }
+.rch-photo-overlay {
+  position: absolute; top: 0; left: 0; right: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.4) 0%, transparent 40%);
+  padding: 6px 8px; display: flex; justify-content: space-between;
+}
+.rch-photo-bottom {
+  padding: 6px 8px; font-size: 11px;
+}
+.rch-photo-legende {
+  color: var(--blanc); font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.rch-photo-meta { color: var(--dim); font-size: 10px; margin-top: 2px; }
+.rch-cat-badge {
+  padding: 2px 6px; border-radius: 8px; font-size: 9px;
+  font-weight: 700; background: rgba(0,0,0,.55); color: #fff;
+  white-space: nowrap;
+}
+.rch-del-btn {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(224,82,82,.85); border: none; cursor: pointer;
+  color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Timeline portail souscripteur */
+.portal-tl-item {
+  display: grid; grid-template-columns: 56px 1fr;
+  gap: 12px; margin-bottom: 20px; position: relative;
+}
+.portal-tl-item::before {
+  content: ''; position: absolute;
+  left: 27px; top: 56px; bottom: -20px; width: 2px;
+  background: linear-gradient(180deg, var(--or), transparent);
+}
+.portal-tl-item:last-child::before { display: none; }
+.portal-tl-dot {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0; border: 3px solid var(--card);
+  box-shadow: 0 0 0 2px var(--or);
+}
+.portal-tl-card {
+  background: var(--card); border: 1px solid var(--bord);
+  border-radius: var(--r2); overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.portal-tl-header {
+  padding: 12px 14px; border-bottom: 1px solid var(--bord);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.portal-tl-titre { font-weight: 700; font-size: 14px; color: #1C1C2E; flex: 1; }
+.portal-tl-date  { font-size: 11px; color: var(--dim); }
+.portal-tl-body  { padding: 12px 14px; }
+
+/* Photos portail — grille responsive */
+.portal-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px,1fr));
+  gap: 6px; margin-top: 10px;
+}
+.portal-photo-item {
+  position: relative; border-radius: 8px; overflow: hidden;
+  aspect-ratio: 1; cursor: pointer; background: var(--card2);
+  border: 1px solid var(--bord);
+}
+.portal-photo-item img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform .3s;
+}
+.portal-photo-item:hover img { transform: scale(1.06); }
+.portal-photo-item .portal-photo-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,.7) 0%, transparent 100%);
+  color: #fff; font-size: 9px; padding: 4px 5px 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Phase bars portail */
+.phase-bar-item {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.phase-bar-label { font-size: 12px; font-weight: 600; min-width: 140px; }
+.phase-bar-track { flex: 1; height: 8px; background: var(--bord); border-radius: 4px; overflow: hidden; }
+.phase-bar-fill  { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.phase-bar-pct   { font-size: 11px; font-weight: 700; min-width: 36px; text-align: right; }
 </style>
 <!-- EmailJS SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
@@ -1683,6 +1903,1118 @@ function ptArreterCamera() {
 })();
 
 /* FIN MODULE POINTAGE v2 */
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PLANS ARCHITECTURAUX v2 — Multi-angles, coupes, upload, galerie
+   ImmoSuite v15
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Référentiel des angles/coupes prédéfinis ── */
+var PLAN_ANGLES = [
+  { id:'plan_rdc',     icon:'🏠', label:'Plan RDC',        echelle:'1:100' },
+  { id:'plan_r1',      icon:'🏢', label:'Plan R+1',        echelle:'1:100' },
+  { id:'plan_r2',      icon:'🏗️', label:'Plan R+2',        echelle:'1:100' },
+  { id:'plan_sous_sol',icon:'⛏️', label:'Sous-sol',        echelle:'1:100' },
+  { id:'plan_toiture', icon:'🔱', label:'Plan toiture',    echelle:'1:100' },
+  { id:'plan_masse',   icon:'🗺️', label:'Plan de masse',   echelle:'1:500' },
+  { id:'plan_fondations',icon:'⚙️',label:'Fondations',     echelle:'1:50'  },
+  { id:'facade_avant', icon:'🏛️', label:'Façade avant',    echelle:'1:100' },
+  { id:'facade_arriere',icon:'🔙',label:'Façade arrière',  echelle:'1:100' },
+  { id:'facade_lat_g', icon:'◀️', label:'Façade gauche',   echelle:'1:100' },
+  { id:'facade_lat_d', icon:'▶️', label:'Façade droite',   echelle:'1:100' },
+  { id:'coupe_aa',     icon:'✂️', label:'Coupe A-A',       echelle:'1:50'  },
+  { id:'coupe_bb',     icon:'✂️', label:'Coupe B-B',       echelle:'1:50'  },
+  { id:'coupe_cc',     icon:'✂️', label:'Coupe C-C',       echelle:'1:50'  },
+  { id:'coupe_perspect',icon:'📐',label:'Perspective',     echelle:'—'     },
+  { id:'detail_archi', icon:'🔍', label:'Détail architectural', echelle:'1:20' },
+  { id:'detail_struct',icon:'🔩', label:'Détail structurel',    echelle:'1:20' },
+  { id:'elec',         icon:'⚡', label:'Plan électrique', echelle:'1:100' },
+  { id:'plomb',        icon:'🚿', label:'Plan plomberie',  echelle:'1:100' },
+  { id:'autre',        icon:'📄', label:'Autre vue',       echelle:'—'     }
+];
+
+/* ── État du modal plan ── */
+var PLAN_STATE = {
+  vues: [],   /* tableau des vues uploadées { id, angle_id, label_custom, data, type, nom, taille, echelle } */
+  docs: [],   /* docs joints { id, nom, taille, type, data } */
+  lbIdx: 0   /* index lightbox courant */
+};
+
+/* ── Onglets du modal ── */
+function planSwitchTab(tab) {
+  document.querySelectorAll('.plan-modal-pane').forEach(function(p){ p.style.display='none'; });
+  document.querySelectorAll('#modal-plan-tabnav .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  var pane = document.getElementById('modal-plantab-'+tab);
+  if (pane) pane.style.display = 'block';
+  var btn = document.querySelector('#modal-plan-tabnav .tab-btn[onclick*="\''+tab+'\'"]');
+  if (btn) btn.classList.add('active');
+  if (tab === 'vues') planRenderVuesGrid();
+  if (tab === 'docs') planRenderDocs();
+}
+
+/* ── Badge compte vues ── */
+function planUpdateBadge() {
+  var b = document.getElementById('badge-vues-count');
+  if (!b) return;
+  var n = PLAN_STATE.vues.length;
+  b.textContent = n;
+  b.style.display = n > 0 ? '' : 'none';
+}
+
+/* ── Drag & Drop global ── */
+function planDragOver(e) { e.preventDefault(); document.getElementById('plan-dropzone').classList.add('drag-over'); }
+function planDragLeave(e) { document.getElementById('plan-dropzone').classList.remove('drag-over'); }
+function planDrop(e) {
+  e.preventDefault();
+  document.getElementById('plan-dropzone').classList.remove('drag-over');
+  var files = Array.from(e.dataTransfer.files);
+  planTraiterFichiers(files, null);
+}
+
+/* ── Upload rapide (input file) ── */
+function planQuickUpload(input) {
+  planTraiterFichiers(Array.from(input.files), null);
+  input.value = '';
+}
+
+/* ── Cliquer sur un slot ── */
+function planOuvrirSlot(angleId) {
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.multiple = true;
+  inp.accept = 'image/*,.pdf,.svg,.dxf,.dwg';
+  inp.onchange = function() {
+    planTraiterFichiers(Array.from(inp.files), angleId);
+  };
+  inp.click();
+}
+
+/* ── Traiter des fichiers (avec ou sans angle assigné) ── */
+function planTraiterFichiers(files, angleId) {
+  if (!files.length) return;
+  var MAX = 5 * 1024 * 1024; /* 5 Mo */
+  var ok = 0;
+  files.forEach(function(file) {
+    if (file.size > MAX) { toast('❌ '+file.name+' dépasse 5 Mo.','error'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var vue = {
+        id: 'vue_'+Date.now()+'_'+Math.random().toString(36).substr(2,4),
+        angle_id: angleId || planDevinerAngle(file.name),
+        label_custom: '',
+        data: e.target.result,
+        type: file.type,
+        nom: file.name,
+        taille: file.size,
+        echelle: '',
+        date_ajout: new Date().toISOString().slice(0,10)
+      };
+      PLAN_STATE.vues.push(vue);
+      ok++;
+      planUpdateBadge();
+      planRenderVuesGrid();
+      planRenderVuesLibres();
+    };
+    reader.readAsDataURL(file);
+  });
+  setTimeout(function(){ if(ok>0) toast('✅ '+files.length+' fichier(s) ajouté(s).','success'); }, 300);
+}
+
+/* ── Deviner l'angle depuis le nom de fichier ── */
+function planDevinerAngle(nom) {
+  var n = nom.toLowerCase();
+  if (n.includes('rdc') || n.includes('rez'))  return 'plan_rdc';
+  if (n.includes('r+1') || n.includes('r1'))   return 'plan_r1';
+  if (n.includes('r+2') || n.includes('r2'))   return 'plan_r2';
+  if (n.includes('toiture'))                   return 'plan_toiture';
+  if (n.includes('masse'))                     return 'plan_masse';
+  if (n.includes('fondat'))                    return 'plan_fondations';
+  if (n.includes('facade') && n.includes('avant')) return 'facade_avant';
+  if (n.includes('facade') && n.includes('arr'))   return 'facade_arriere';
+  if (n.includes('facade_g') || n.includes('gauche')) return 'facade_lat_g';
+  if (n.includes('facade_d') || n.includes('droit'))  return 'facade_lat_d';
+  if (n.includes('coupe') && n.includes('a'))  return 'coupe_aa';
+  if (n.includes('coupe') && n.includes('b'))  return 'coupe_bb';
+  if (n.includes('coupe') && n.includes('c'))  return 'coupe_cc';
+  if (n.includes('perspect'))                  return 'coupe_perspect';
+  if (n.includes('detail') && n.includes('str')) return 'detail_struct';
+  if (n.includes('detail'))                    return 'detail_archi';
+  if (n.includes('elec'))                      return 'elec';
+  if (n.includes('plomb'))                     return 'plomb';
+  return 'autre';
+}
+
+/* ── Rendu grille des slots ── */
+function planRenderVuesGrid() {
+  var grid = document.getElementById('plan-vues-grid');
+  if (!grid) return;
+
+  grid.innerHTML = PLAN_ANGLES.map(function(angle) {
+    var vues = PLAN_STATE.vues.filter(function(v){ return v.angle_id === angle.id; });
+    var hasFile = vues.length > 0;
+    var firstVue = vues[0];
+
+    var thumbHtml = '';
+    if (hasFile && firstVue && firstVue.type && firstVue.type.startsWith('image/')) {
+      thumbHtml = '<img class="plan-slot-thumb" src="'+firstVue.data+'" alt="'+angle.label+'"'
+        +' onclick="event.stopPropagation();planOuvrirLightboxAngle(\''+angle.id+'\',0)">';
+    } else if (hasFile && firstVue && firstVue.type === 'application/pdf') {
+      thumbHtml = '<div style="font-size:28px;">📄</div>';
+    }
+
+    var multi = vues.length > 1 ? '<span class="plan-slot-badge">'+vues.length+'</span>' : '';
+    var miniGallery = '';
+    if (vues.length > 1) {
+      miniGallery = '<div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:4px;">'
+        + vues.slice(0,4).map(function(v,i){
+            return v.type && v.type.startsWith('image/')
+              ? '<img src="'+v.data+'" style="width:22px;height:22px;object-fit:cover;border-radius:3px;cursor:pointer;" onclick="event.stopPropagation();planOuvrirLightboxAngle(\''+angle.id+'\','+i+')">'
+              : '<span style="font-size:14px;">📄</span>';
+          }).join('')
+        + (vues.length > 4 ? '<span style="font-size:10px;color:var(--dim);">+'+( vues.length-4)+'</span>' : '')
+        + '</div>';
+    }
+
+    return '<div class="plan-slot '+(hasFile?'has-file':'')+'" onclick="planOuvrirSlot(\''+angle.id+'\')">'
+      + multi
+      + (hasFile && thumbHtml ? thumbHtml : '<div class="plan-slot-add-btn">'+(hasFile?'📂':'+')+'</div>')
+      + '<div class="plan-slot-icon">'+(hasFile?'':angle.icon)+'</div>'
+      + '<div class="plan-slot-label">'+angle.label+'</div>'
+      + (hasFile ? '<div class="plan-slot-count">'+vues.length+' fichier(s)</div>' : '<div style="font-size:9px;color:var(--dim);">'+angle.echelle+'</div>')
+      + miniGallery
+      + (hasFile ? '<div style="display:flex;gap:4px;margin-top:6px;" onclick="event.stopPropagation();">'
+          + '<button class="btn btn-secondary btn-sm btn-icon" style="padding:3px 6px;font-size:10px;" onclick="planOuvrirSlot(\''+angle.id+'\')">+</button>'
+          + '<button class="btn btn-danger btn-sm btn-icon" style="padding:3px 6px;font-size:10px;" onclick="planSupprimerVuesAngle(\''+angle.id+'\')">🗑</button>'
+          + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  planRenderVuesLibres();
+}
+
+/* ── Vues libres (non assignées) ── */
+function planRenderVuesLibres() {
+  var libres = PLAN_STATE.vues; /* on liste toutes avec un select angle */
+  var section = document.getElementById('plan-vues-libres-section');
+  var el = document.getElementById('plan-vues-libres');
+  if (!section || !el) return;
+
+  if (!libres.length) { section.style.display='none'; return; }
+  section.style.display = 'block';
+
+  var angleOptions = PLAN_ANGLES.map(function(a){
+    return '<option value="'+a.id+'">'+a.icon+' '+a.label+'</option>';
+  }).join('');
+
+  el.innerHTML = libres.map(function(v) {
+    var isImg = v.type && v.type.startsWith('image/');
+    var taille = v.taille > 1024*1024 ? (v.taille/1024/1024).toFixed(1)+' Mo' : Math.round(v.taille/1024)+' Ko';
+    var angle = PLAN_ANGLES.find(function(a){ return a.id === v.angle_id; }) || { icon:'📄', label:'Autre' };
+    return '<div class="plan-vue-item" id="pv-'+v.id+'">'
+      + (isImg
+          ? '<img class="plan-vue-thumb" src="'+v.data+'" onclick="planOuvrirLightboxVue(\''+v.id+'\')">'
+          : '<div style="width:48px;height:48px;border-radius:6px;background:rgba(74,148,224,0.12);display:flex;align-items:center;justify-content:center;font-size:22px;">📄</div>')
+      + '<div class="plan-vue-info">'
+      + '<div class="plan-vue-nom">'+v.nom+'</div>'
+      + '<div class="plan-vue-meta">'+taille+' · '+v.date_ajout+'</div>'
+      + '<input class="pt-input-notes" placeholder="Label personnalisé..." value="'+(v.label_custom||'')+'"'
+          + ' onchange="planMajLabel(\''+v.id+'\',this.value)"'
+          + ' style="margin-top:4px;font-size:11px;max-width:200px;">'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">'
+      + '<select class="plan-vue-angle-sel" onchange="planMajAngle(\''+v.id+'\',this.value)">'
+          + PLAN_ANGLES.map(function(a){ return '<option value="'+a.id+'"'+(v.angle_id===a.id?' selected':'')+'>'+a.icon+' '+a.label+'</option>'; }).join('')
+          + '</select>'
+      + '<input class="pt-input-heure" type="text" placeholder="échelle" value="'+(v.echelle||'')+'"'
+          + ' style="width:80px;font-size:11px;" onchange="planMajEchelle(\''+v.id+'\',this.value)">'
+      + (isImg ? '<button class="btn btn-secondary btn-sm btn-icon" style="font-size:11px;" onclick="planOuvrirLightboxVue(\''+v.id+'\')">🔍</button>' : '')
+      + '<button class="btn btn-danger btn-sm btn-icon" style="font-size:11px;" onclick="planSupprimerVue(\''+v.id+'\')">🗑</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function planMajLabel(vueId, val)  { var v = PLAN_STATE.vues.find(function(x){return x.id===vueId;}); if(v) v.label_custom = val; }
+function planMajAngle(vueId, val)  { var v = PLAN_STATE.vues.find(function(x){return x.id===vueId;}); if(v){ v.angle_id = val; planRenderVuesGrid(); } }
+function planMajEchelle(vueId,val) { var v = PLAN_STATE.vues.find(function(x){return x.id===vueId;}); if(v) v.echelle = val; }
+
+function planSupprimerVue(vueId) {
+  PLAN_STATE.vues = PLAN_STATE.vues.filter(function(v){ return v.id !== vueId; });
+  planUpdateBadge(); planRenderVuesGrid();
+}
+function planSupprimerVuesAngle(angleId) {
+  PLAN_STATE.vues = PLAN_STATE.vues.filter(function(v){ return v.angle_id !== angleId; });
+  planUpdateBadge(); planRenderVuesGrid();
+}
+
+/* ── Documents PDF ── */
+function planAjouterDoc(input) {
+  var MAX = 10 * 1024 * 1024;
+  Array.from(input.files).forEach(function(file) {
+    if (file.size > MAX) { toast('❌ '+file.name+' dépasse 10 Mo.','error'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      PLAN_STATE.docs.push({ id:'doc_'+Date.now(), nom:file.name, taille:file.size, type:file.type, data:e.target.result });
+      planRenderDocs();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function planRenderDocs() {
+  var el = document.getElementById('plan-docs-list');
+  if (!el) return;
+  if (!PLAN_STATE.docs.length) { el.innerHTML='<div style="color:var(--dim);font-size:12px;padding:8px 0;">Aucun document joint.</div>'; return; }
+  el.innerHTML = PLAN_STATE.docs.map(function(d) {
+    var taille = d.taille > 1024*1024 ? (d.taille/1024/1024).toFixed(1)+' Mo' : Math.round(d.taille/1024)+' Ko';
+    var icone = d.type==='application/pdf'?'📕':d.type.includes('word')?'📘':d.type.includes('excel')?'📗':'📎';
+    return '<div class="plan-doc-item">'
+      +'<div class="plan-doc-icon">'+icone+'</div>'
+      +'<div class="plan-doc-info"><div class="plan-doc-nom">'+d.nom+'</div><div class="plan-doc-taille">'+taille+'</div></div>'
+      +'<a href="'+d.data+'" download="'+d.nom+'" class="btn btn-secondary btn-sm btn-icon" style="font-size:11px;">⬇</a>'
+      +'<button class="btn btn-danger btn-sm btn-icon" style="font-size:11px;" onclick="planSupprimerDoc(\''+d.id+'\')">🗑</button>'
+      +'</div>';
+  }).join('');
+}
+function planSupprimerDoc(id) {
+  PLAN_STATE.docs = PLAN_STATE.docs.filter(function(d){ return d.id !== id; });
+  planRenderDocs();
+}
+
+/* ── Lightbox ── */
+function planOuvrirLightboxAngle(angleId, startIdx) {
+  var vues = PLAN_STATE.vues.filter(function(v){ return v.angle_id===angleId && v.type && v.type.startsWith('image/'); });
+  planShowLightbox(vues, startIdx||0);
+}
+function planOuvrirLightboxVue(vueId) {
+  var idx = PLAN_STATE.vues.findIndex(function(v){ return v.id===vueId; });
+  var imgVues = PLAN_STATE.vues.filter(function(v){ return v.type && v.type.startsWith('image/'); });
+  var imgIdx = imgVues.findIndex(function(v){ return v.id===vueId; });
+  planShowLightbox(imgVues, Math.max(0,imgIdx));
+}
+function planShowLightbox(vues, idx) {
+  if (!vues.length) return;
+  PLAN_STATE._lbVues = vues;
+  PLAN_STATE.lbIdx  = idx;
+  var lb = document.getElementById('plan-lightbox');
+  if (!lb) return;
+  lb.classList.add('open');
+  lb.style.display='flex';
+  planUpdateLightbox();
+  document.addEventListener('keydown', planLbKeyHandler);
+}
+function planUpdateLightbox() {
+  var vues = PLAN_STATE._lbVues||[];
+  var v = vues[PLAN_STATE.lbIdx];
+  if (!v) return;
+  var img = document.getElementById('plan-lightbox-img');
+  var lbl = document.getElementById('plan-lightbox-label');
+  if (img) img.src = v.data;
+  var angle = PLAN_ANGLES.find(function(a){ return a.id===v.angle_id; })||{ icon:'📄', label:'Vue' };
+  if (lbl) lbl.textContent = angle.icon+' '+angle.label+(v.label_custom?' — '+v.label_custom:'')
+    +' — '+(PLAN_STATE.lbIdx+1)+'/'+vues.length
+    +(v.echelle?' ('+v.echelle+')':'');
+  var prev = document.getElementById('plan-lb-prev');
+  var next = document.getElementById('plan-lb-next');
+  if (prev) prev.style.opacity = PLAN_STATE.lbIdx>0?'1':'0.3';
+  if (next) next.style.opacity = PLAN_STATE.lbIdx<vues.length-1?'1':'0.3';
+}
+function planCloseLightbox() {
+  var lb = document.getElementById('plan-lightbox');
+  if (lb) { lb.classList.remove('open'); lb.style.display='none'; }
+  document.removeEventListener('keydown', planLbKeyHandler);
+}
+function planLightboxNav(dir) {
+  var vues = PLAN_STATE._lbVues||[];
+  PLAN_STATE.lbIdx = Math.max(0, Math.min(vues.length-1, PLAN_STATE.lbIdx+dir));
+  planUpdateLightbox();
+}
+function planLbKeyHandler(e) {
+  if (e.key==='ArrowRight') planLightboxNav(1);
+  if (e.key==='ArrowLeft')  planLightboxNav(-1);
+  if (e.key==='Escape')     planCloseLightbox();
+}
+
+/* ── openPlanModal v2 ── */
+function openPlanModal(id) {
+  APP.editingId = id || null;
+
+  /* Reset état */
+  PLAN_STATE.vues = [];
+  PLAN_STATE.docs = [];
+  planUpdateBadge();
+
+  /* Peupler programmes */
+  var pSel = document.getElementById('plan-programme');
+  if (pSel && pSel.options.length <= 1) {
+    DATA.programmes.forEach(function(p){
+      var o = document.createElement('option'); o.value=p.id; o.textContent=p.nom; pSel.appendChild(o);
+    });
+  }
+
+  var el = function(eid, v) { var e=document.getElementById(eid); if(e) e.value=v||''; };
+
+  if (id) {
+    var p = (DATA.plans_arch||[]).find(function(x){ return x.id===id; });
+    if (p) {
+      el('plan-ref', p.ref);
+      el('plan-programme', p.programme_id);
+      el('plan-type', p.type);
+      el('plan-niveau', p.niveau);
+      el('plan-surface', p.surface);
+      el('plan-version', p.version);
+      el('plan-architecte', p.architecte);
+      el('plan-date', p.date);
+      el('plan-statut', p.statut);
+      el('plan-echelle', p.echelle);
+      el('plan-description', p.description);
+      /* Charger vues existantes */
+      PLAN_STATE.vues = p.vues ? JSON.parse(JSON.stringify(p.vues)) : [];
+      PLAN_STATE.docs = p.docs ? JSON.parse(JSON.stringify(p.docs)) : [];
+      planUpdateBadge();
+    }
+    document.getElementById('modal-plan-title').textContent = '📐 Modifier le plan';
+  } else {
+    ['plan-ref','plan-surface','plan-version','plan-architecte','plan-description','plan-echelle'].forEach(function(f){ el(f,''); });
+    el('plan-type','f3'); el('plan-niveau','rdc'); el('plan-statut','brouillon'); el('plan-date',today());
+    document.getElementById('modal-plan-title').textContent = '📐 Enregistrer un plan architectural';
+  }
+
+  /* Afficher onglet infos par défaut */
+  planSwitchTab('infos');
+  openModal('modal-plan');
+}
+
+/* ── savePlan v2 ── */
+async function savePlan() {
+  var ref = document.getElementById('plan-ref').value.trim();
+  if (!ref) { toast('Référence obligatoire.','error'); return; }
+
+  var p = {
+    id: APP.editingId || uid(),
+    ref: ref,
+    programme_id: document.getElementById('plan-programme').value,
+    type: document.getElementById('plan-type').value,
+    niveau: document.getElementById('plan-niveau').value,
+    surface: parseFloat(document.getElementById('plan-surface').value)||0,
+    version: document.getElementById('plan-version').value.trim()||'V1',
+    architecte: document.getElementById('plan-architecte').value.trim(),
+    date: document.getElementById('plan-date').value,
+    statut: document.getElementById('plan-statut').value,
+    echelle: document.getElementById('plan-echelle').value.trim(),
+    description: document.getElementById('plan-description').value.trim(),
+    vues: JSON.parse(JSON.stringify(PLAN_STATE.vues)),
+    docs: JSON.parse(JSON.stringify(PLAN_STATE.docs)),
+    created_at: APP.editingId ? undefined : today()
+  };
+
+  var idx = (DATA.plans_arch||[]).findIndex(function(x){ return x.id===p.id; });
+  if (idx >= 0) DATA.plans_arch[idx]=p; else DATA.plans_arch.push(p);
+  await dbPut('plans_arch', p);
+
+  closeModal('modal-plan');
+  renderPlansFull();
+  var nbVues = p.vues.length;
+  toast('✅ Plan enregistré'+(nbVues>0?' avec '+nbVues+' vue(s).':'.'), 'success');
+}
+
+/* ── renderPlansFull v2 — cartes avec galerie ── */
+function renderPlansFull() {
+  var box = document.getElementById('plans-box');
+  if (!box) return;
+
+  var q    = ((document.getElementById('search-plans')||{}).value||'').toLowerCase();
+  var type = (document.getElementById('filter-type-plan')||{}).value||'';
+  var prog = (document.getElementById('filter-plan-programme')||{}).value||'';
+
+  /* Peupler filtre programme */
+  var pSel = document.getElementById('filter-plan-programme');
+  if (pSel && pSel.options.length<=1) {
+    DATA.programmes.forEach(function(p){
+      var o=document.createElement('option');o.value=p.id;o.textContent=p.nom;pSel.appendChild(o);
+    });
+  }
+
+  var list = (DATA.plans_arch||[]).filter(function(p){
+    return (!q||(p.ref+' '+(p.description||'')).toLowerCase().includes(q))
+        && (!type||p.type===type)
+        && (!prog||p.programme_id===prog);
+  });
+
+  if (!list.length) {
+    box.innerHTML = '<div class="card"><div style="padding:24px;text-align:center;color:var(--dim);">Aucun plan. <button class="btn btn-sm btn-secondary" onclick="openPlanModal()" style="margin-left:8px;">+ Enregistrer un plan</button></div></div>';
+    return;
+  }
+
+  var tL = { f2:'F2',f3:'F3',f4:'F4',villa:'Villa',commerce:'Commerce' };
+  var nI = { rdc:'🏠',r1:'🏢',r2:'🏗️',facade:'🎨',coupe:'✂️',masse:'🗺️',fondations:'⛏️',toiture:'🔱' };
+  var sC = { brouillon:'badge-neutre',valide:'badge-or',approuve:'badge-vert',archive:'badge-rouge' };
+
+  box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;">'
+    + list.map(function(p) {
+        var pr = (DATA.programmes||[]).find(function(x){return x.id===p.programme_id;})||{nom:'—'};
+        var vues = p.vues || [];
+        var imgVues = vues.filter(function(v){ return v.type && v.type.startsWith('image/'); });
+        var nbDocs = (p.docs||[]).length;
+
+        /* Mini galerie */
+        var galleryHtml = '';
+        if (imgVues.length) {
+          galleryHtml = '<div class="plan-card-gallery">'
+            + imgVues.slice(0,6).map(function(v,i){
+                var angle = PLAN_ANGLES.find(function(a){return a.id===v.angle_id;})||{icon:'📄',label:''};
+                return '<div style="position:relative;flex-shrink:0;">'
+                  + '<img class="plan-card-gallery-thumb" src="'+v.data+'"'
+                  + ' title="'+angle.label+(v.label_custom?' — '+v.label_custom:'')+'"'
+                  + ' onclick="planOuvrirGalerieCarte(\''+p.id+'\','+i+')">'
+                  + '<div style="position:absolute;bottom:2px;left:2px;font-size:8px;background:rgba(0,0,0,0.55);color:#fff;border-radius:3px;padding:1px 3px;line-height:1.2;">'+angle.icon+'</div>'
+                  + '</div>';
+              }).join('')
+            + (imgVues.length>6?'<div style="width:52px;height:52px;border-radius:6px;background:var(--card2);border:1px solid var(--bord);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--dim);flex-shrink:0;">+'+( imgVues.length-6)+'</div>':'')
+            + '</div>';
+        }
+
+        /* Tags angles */
+        var anglesPresents = [];
+        vues.forEach(function(v){
+          if (anglesPresents.indexOf(v.angle_id)<0) anglesPresents.push(v.angle_id);
+        });
+        var tagsHtml = anglesPresents.slice(0,5).map(function(aid){
+          var a = PLAN_ANGLES.find(function(x){return x.id===aid;})||{icon:'📄',label:aid};
+          return '<span class="plan-card-angle-tag">'+a.icon+' '+a.label+'</span>';
+        }).join('');
+
+        return '<div class="card">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+          + '<div><div style="font-size:20px;">'+(nI[p.niveau]||'📄')+'</div>'
+          + '<div style="font-family:monospace;font-size:11px;color:var(--bleu);margin-top:2px;">'+p.ref+'</div></div>'
+          + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+          + '<span class="badge '+(sC[p.statut]||'badge-bleu')+'">'+p.statut+'</span>'
+          + (vues.length?'<span style="font-size:9px;color:var(--bleu);font-weight:700;">'+vues.length+' vue(s)</span>':'')
+          + '</div></div>'
+          + '<div style="font-weight:700;font-size:14px;margin-bottom:2px;">'+(tL[p.type]||p.type)+' — '+p.version+'</div>'
+          + '<div style="font-size:12px;color:var(--dim);">'+pr.nom+' · Échelle: '+(p.echelle||'—')+'</div>'
+          + (p.architecte?'<div style="font-size:11px;color:var(--dim);margin-top:2px;">🏗️ '+p.architecte+'</div>':'')
+          + (galleryHtml || '')
+          + (tagsHtml?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0;">'+tagsHtml+'</div>':'')
+          + (nbDocs?'<div style="font-size:10px;color:var(--dim);margin-top:4px;">📎 '+nbDocs+' document(s) joint(s)</div>':'')
+          + '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">'
+          + '<button class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;" onclick="openPlanModal(\''+p.id+'\')">✏️ Modifier</button>'
+          + (imgVues.length?'<button class="btn btn-bleu btn-sm btn-icon" onclick="planOuvrirGalerieCarte(\''+p.id+'\',0)" title="Voir la galerie">🔍</button>':'')
+          + '<button class="btn btn-danger btn-sm btn-icon" onclick="deletePlan(\''+p.id+'\')">🗑</button>'
+          + '</div></div>';
+      }).join('')
+    + '</div>';
+}
+
+/* ── Ouvrir galerie depuis carte ── */
+function planOuvrirGalerieCarte(planId, startIdx) {
+  var p = (DATA.plans_arch||[]).find(function(x){ return x.id===planId; });
+  if (!p) return;
+  var imgVues = (p.vues||[]).filter(function(v){ return v.type && v.type.startsWith('image/'); });
+  if (!imgVues.length) { toast('Aucune image disponible.','info'); return; }
+  /* Réutiliser PLAN_STATE._lbVues temporairement */
+  PLAN_STATE._lbVues = imgVues;
+  PLAN_STATE.lbIdx = Math.min(startIdx||0, imgVues.length-1);
+  var lb = document.getElementById('plan-lightbox');
+  if (lb) { lb.classList.add('open'); lb.style.display='flex'; }
+  planUpdateLightbox();
+  document.addEventListener('keydown', planLbKeyHandler);
+}
+
+/* ── Override renderPlans ── */
+function renderPlans() { renderPlansFull(); }
+
+async function deletePlan(id) {
+  if (!confirm('Supprimer ce plan et toutes ses vues ?')) return;
+  DATA.plans_arch = (DATA.plans_arch||[]).filter(function(p){ return p.id!==id; });
+  await dbDelete('plans_arch', id);
+  renderPlansFull();
+  toast('Plan supprimé.','info');
+}
+
+/* FIN MODULE PLANS v2 */
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PHOTOS CHANTIER & PORTAIL SOUSCRIPTEUR — ImmoSuite v15
+   Upload photos rapport · Timeline portail · Galerie programme
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── État local modal rapport ── */
+var RCH_STATE = {
+  photos: [],       /* photos du rapport en cours { id, data, type, nom, taille, categorie, legende, visible, date } */
+  cameraStream: null
+};
+
+var RCH_CAT_LABELS = {
+  general:'Général', amenagement:'Aménagement', vrd:'VRD',
+  fondations:'Fondations', gros_oeuvre:'Gros œuvre',
+  second_oeuvre:'Second œuvre', finition:'Finitions', reception:'Réception'
+};
+var RCH_CAT_ICONS = {
+  general:'📸', amenagement:'🗺️', vrd:'🚧', fondations:'⛏️',
+  gros_oeuvre:'🏗️', second_oeuvre:'🔧', finition:'🎨', reception:'🏁'
+};
+var RCH_PHASE_ICONS = {
+  amenagement:'🗺️', vrd:'🚧', construction:'🏗️', finition:'🎨', reception:'🏁'
+};
+
+/* ─────────────────────────────────────────────
+   ONGLETS MODAL RAPPORT
+──────────────────────────────────────────────── */
+function rchSwitchTab(tab) {
+  ['rapport','photos','apercu'].forEach(function(t){
+    var p = document.getElementById('rch-pane-'+t);
+    if (p) p.style.display = 'none';
+  });
+  document.querySelectorAll('#rch-tabnav .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  var pane = document.getElementById('rch-pane-'+tab);
+  if (pane) pane.style.display = 'block';
+  var btn = document.querySelector('#rch-tabnav .tab-btn[onclick*="\''+tab+'\'"]');
+  if (btn) btn.classList.add('active');
+  if (tab === 'apercu') rchGenererApercu();
+}
+
+function rchUpdateBadgePhotos() {
+  var b = document.getElementById('rch-badge-photos');
+  if (b) { b.textContent = RCH_STATE.photos.length; b.style.display = RCH_STATE.photos.length ? '' : 'none'; }
+}
+
+/* ─────────────────────────────────────────────
+   UPLOAD PHOTOS
+──────────────────────────────────────────────── */
+function rchPhotoDrop(e) {
+  e.preventDefault();
+  document.getElementById('plan-dropzone') && document.getElementById('plan-dropzone').classList.remove('drag-over');
+  document.getElementById('rch-photo-dropzone') && document.getElementById('rch-photo-dropzone').classList.remove('drag-over');
+  rchTraiterPhotos(Array.from(e.dataTransfer.files));
+}
+
+function rchAjouterPhotos(input) {
+  rchTraiterPhotos(Array.from(input.files));
+  input.value = '';
+}
+
+function rchTraiterPhotos(files) {
+  var MAX = 5 * 1024 * 1024;
+  var catDef = (document.getElementById('rch-photo-categorie-defaut')||{}).value || 'general';
+  var legDef = (document.getElementById('rch-photo-legende-defaut')||{}).value || '';
+  var loaded = 0;
+  files.filter(function(f){ return f.type.startsWith('image/'); }).forEach(function(file) {
+    if (file.size > MAX) { toast('❌ '+file.name+' dépasse 5 Mo.','error'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      RCH_STATE.photos.push({
+        id: 'p_'+Date.now()+'_'+Math.random().toString(36).substr(2,4),
+        data: e.target.result,
+        type: file.type,
+        nom: file.name,
+        taille: file.size,
+        categorie: catDef,
+        legende: legDef || file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' '),
+        visible: true, /* visible souscripteurs par défaut */
+        date: new Date().toISOString().slice(0,10)
+      });
+      loaded++;
+      rchUpdateBadgePhotos();
+      rchRenderPhotosGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+  if (!files.filter(function(f){ return f.type.startsWith('image/'); }).length) {
+    toast('⚠️ Seuls les fichiers image sont acceptés.','error');
+  }
+}
+
+function rchAppliquerMetaDefaut() {
+  var cat = (document.getElementById('rch-photo-categorie-defaut')||{}).value || 'general';
+  var leg = (document.getElementById('rch-photo-legende-defaut')||{}).value || '';
+  RCH_STATE.photos.forEach(function(p){ p.categorie = cat; if (leg) p.legende = leg; });
+  rchRenderPhotosGrid();
+  toast('✅ Métadonnées appliquées à toutes les photos.','success');
+}
+
+/* ─────────────────────────────────────────────
+   RENDU GRILLE PHOTOS
+──────────────────────────────────────────────── */
+function rchRenderPhotosGrid() {
+  var grid = document.getElementById('rch-photos-grid');
+  if (!grid) return;
+  if (!RCH_STATE.photos.length) {
+    grid.innerHTML = '<div style="color:var(--dim);font-size:13px;grid-column:1/-1;padding:10px 0;">Aucune photo. Glisser-déposer ou utiliser les boutons ci-dessus.</div>';
+    return;
+  }
+  grid.innerHTML = RCH_STATE.photos.map(function(p, i) {
+    var catIcon = RCH_CAT_ICONS[p.categorie] || '📸';
+    var catLabel = RCH_CAT_LABELS[p.categorie] || p.categorie;
+    var catOpts = Object.keys(RCH_CAT_LABELS).map(function(k){
+      return '<option value="'+k+'"'+(p.categorie===k?' selected':'')+'>'+RCH_CAT_ICONS[k]+' '+RCH_CAT_LABELS[k]+'</option>';
+    }).join('');
+    return '<div class="rch-photo-card">'
+      +'<img class="rch-photo-thumb" src="'+p.data+'" alt="'+p.legende+'"'
+      +' onclick="rchOuvrirLightbox('+i+')">'
+      +'<div class="rch-photo-overlay">'
+      +'<span class="rch-cat-badge">'+catIcon+' '+catLabel+'</span>'
+      +'<button class="rch-del-btn" onclick="event.stopPropagation();rchSupprimerPhoto(\''+p.id+'\')">×</button>'
+      +'</div>'
+      +'<div class="rch-photo-bottom">'
+      +'<input class="pt-input-notes" value="'+p.legende.replace(/"/g,'&quot;')+'"'
+        +' placeholder="Légende..."'
+        +' onchange="rchMajLegende(\''+p.id+'\',this.value)"'
+        +' style="font-size:11px;margin-bottom:4px;" onclick="event.stopPropagation();">'
+      +'<div style="display:flex;gap:4px;align-items:center;">'
+      +'<select onchange="rchMajCategorie(\''+p.id+'\',this.value)"'
+        +' class="form-control" style="font-size:10px;padding:2px 4px;min-height:28px;" onclick="event.stopPropagation();">'
+        +catOpts+'</select>'
+      +'<label style="display:flex;align-items:center;gap:3px;font-size:9px;cursor:pointer;white-space:nowrap;" title="Visible souscripteurs">'
+        +'<input type="checkbox" '+(p.visible?'checked':'')+' onchange="rchMajVisible(\''+p.id+'\',this.checked)"'
+        +' style="accent-color:var(--vert);"> 👁️</label>'
+      +'</div></div></div>';
+  }).join('');
+}
+
+function rchMajLegende(id, val)  { var p=RCH_STATE.photos.find(function(x){return x.id===id;}); if(p) p.legende=val; }
+function rchMajCategorie(id,val) { var p=RCH_STATE.photos.find(function(x){return x.id===id;}); if(p){ p.categorie=val; rchRenderPhotosGrid(); } }
+function rchMajVisible(id,val)   { var p=RCH_STATE.photos.find(function(x){return x.id===id;}); if(p) p.visible=val; }
+function rchSupprimerPhoto(id)   { RCH_STATE.photos=RCH_STATE.photos.filter(function(x){return x.id!==id;}); rchUpdateBadgePhotos(); rchRenderPhotosGrid(); }
+
+/* ─────────────────────────────────────────────
+   CAMÉRA MOBILE
+──────────────────────────────────────────────── */
+async function rchOuvrirCamera() {
+  var zone = document.getElementById('rch-camera-zone');
+  if (!zone) return;
+  try {
+    var stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+    RCH_STATE.cameraStream = stream;
+    var video = document.getElementById('rch-camera-video');
+    video.srcObject = stream;
+    await video.play();
+    zone.style.display = 'block';
+    zone.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  } catch(e) { toast('❌ Caméra : '+e.message,'error'); }
+}
+function rchFermerCamera() {
+  if (RCH_STATE.cameraStream) { RCH_STATE.cameraStream.getTracks().forEach(function(t){t.stop();}); RCH_STATE.cameraStream=null; }
+  var zone = document.getElementById('rch-camera-zone');
+  if (zone) zone.style.display='none';
+}
+function rchCapturerPhoto() {
+  var video  = document.getElementById('rch-camera-video');
+  var canvas = document.getElementById('rch-camera-canvas');
+  if (!video||!canvas) return;
+  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  var dataUrl = canvas.toDataURL('image/jpeg',0.85);
+  var date = new Date().toISOString().slice(0,10);
+  var catDef = (document.getElementById('rch-photo-categorie-defaut')||{}).value||'general';
+  RCH_STATE.photos.push({
+    id:'cam_'+Date.now(), data:dataUrl, type:'image/jpeg',
+    nom:'photo_chantier_'+date+'.jpg', taille:0,
+    categorie:catDef, legende:'Photo chantier '+date,
+    visible:true, date:date
+  });
+  rchUpdateBadgePhotos(); rchRenderPhotosGrid();
+  toast('📸 Photo capturée !','success');
+  if (navigator.vibrate) navigator.vibrate(50);
+}
+
+/* ─────────────────────────────────────────────
+   LIGHTBOX RAPIDE
+──────────────────────────────────────────────── */
+function rchOuvrirLightbox(idx) {
+  PLAN_STATE._lbVues = RCH_STATE.photos.map(function(p){ return { data:p.data, type:p.type, angle_id:'general', label_custom:p.legende }; });
+  PLAN_STATE.lbIdx = idx;
+  var lb = document.getElementById('plan-lightbox');
+  if (lb) { lb.style.display='flex'; lb.classList.add('open'); }
+  planUpdateLightbox();
+  document.addEventListener('keydown', planLbKeyHandler);
+}
+
+/* ─────────────────────────────────────────────
+   APERÇU SOUSCRIPTEUR
+──────────────────────────────────────────────── */
+function rchGenererApercu() {
+  var el = document.getElementById('rch-apercu-content');
+  if (!el) return;
+  var avance = parseInt((document.getElementById('rch-avancement')||{}).value)||0;
+  var avPrevu= parseInt((document.getElementById('rch-avancement-prevu')||{}).value)||0;
+  var cat    = (document.getElementById('rch-categorie')||{}).value||'construction';
+  var travaux= (document.getElementById('rch-travaux-realises')||{}).value||'';
+  var prevus = (document.getElementById('rch-travaux-prevus')||{}).value||'';
+  var dateDeb= (document.getElementById('rch-date-debut')||{}).value||today();
+  var dateFin= (document.getElementById('rch-date-fin')||{}).value||today();
+  var visib  = (document.getElementById('rch-visibilite')||{}).value||'souscripteurs';
+  var photos  = RCH_STATE.photos.filter(function(p){ return p.visible; });
+
+  if (visib === 'interne') {
+    el.innerHTML = '<div class="alert alert-warn">🔒 Ce rapport est marqué <strong>Interne</strong> — il ne sera pas visible par les souscripteurs.</div>';
+    return;
+  }
+
+  var icon = RCH_PHASE_ICONS[cat] || '🏗️';
+  var catLabel = { amenagement:'Aménagement', vrd:'VRD', construction:'Construction', finition:'Finitions', reception:'Réception' };
+
+  var photoHtml = '';
+  if (photos.length) {
+    photoHtml = '<div class="portal-photos-grid">'
+      + photos.slice(0,9).map(function(p,i){
+          return '<div class="portal-photo-item">'
+            +'<img src="'+p.data+'" alt="'+p.legende+'">'
+            +'<div class="portal-photo-label">'+p.legende+'</div>'
+            +'</div>';
+        }).join('')
+      + (photos.length>9 ? '<div class="portal-photo-item" style="display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--dim);">+'+( photos.length-9)+'</div>' : '')
+      + '</div>';
+  }
+
+  el.innerHTML = '<div class="portal-tl-item">'
+    +'<div class="portal-tl-dot" style="background:linear-gradient(135deg,var(--or),var(--or-dark));">'+icon+'</div>'
+    +'<div class="portal-tl-card">'
+    +'<div class="portal-tl-header">'
+    +'<div class="portal-tl-titre">'+icon+' '+(catLabel[cat]||cat)+'</div>'
+    +'<div class="portal-tl-date">📅 Du '+dateDeb+' au '+dateFin+'</div>'
+    +'</div>'
+    +'<div class="portal-tl-body">'
+    +'<div style="display:flex;gap:16px;margin-bottom:12px;">'
+    +'<div style="flex:1;"><div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Avancement réalisé</div>'
+    +'<div style="height:10px;background:var(--bord);border-radius:5px;overflow:hidden;">'
+    +'<div style="height:100%;width:'+avance+'%;background:linear-gradient(90deg,var(--vert),#4AC47A);border-radius:5px;"></div>'
+    +'</div><div style="font-size:12px;font-weight:700;color:var(--vert);margin-top:3px;">'+avance+'%</div></div>'
+    +(avPrevu?'<div style="flex:1;"><div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Avancement prévu</div>'
+    +'<div style="height:10px;background:var(--bord);border-radius:5px;overflow:hidden;">'
+    +'<div style="height:100%;width:'+avPrevu+'%;background:linear-gradient(90deg,var(--bleu),#60A5FA);border-radius:5px;"></div>'
+    +'</div><div style="font-size:12px;font-weight:700;color:var(--bleu);margin-top:3px;">'+avPrevu+'%</div></div>':'')
+    +'</div>'
+    +(travaux?'<div style="font-size:13px;margin-bottom:8px;"><strong>✅ Travaux réalisés :</strong><div style="color:var(--dim);margin-top:4px;white-space:pre-line;font-size:12px;">'+travaux+'</div></div>':'')
+    +(prevus?'<div style="font-size:13px;margin-bottom:8px;"><strong>🔜 Travaux prévus :</strong><div style="color:var(--dim);margin-top:4px;white-space:pre-line;font-size:12px;">'+prevus+'</div></div>':'')
+    +(photoHtml?'<div><strong style="font-size:13px;">📸 Photos ('+photos.length+')</strong>'+photoHtml+'</div>':'')
+    +'</div></div></div>';
+}
+
+/* ─────────────────────────────────────────────
+   PATCH saveRapportChantier — inclure les photos
+──────────────────────────────────────────────── */
+(function(){
+  /* On patche les deux définitions existantes de saveRapportChantier */
+  var originalSave = typeof saveRapportChantier === 'function' ? saveRapportChantier : null;
+  saveRapportChantier = async function() {
+    var convId = document.getElementById('rch-convention').value;
+    if (!convId) { toast('Sélectionnez une convention.','error'); return; }
+    var av = parseInt(document.getElementById('rch-avancement').value)||0;
+    var r = {
+      id: APP.editingId || uid(),
+      convention_id: convId,
+      numero: document.getElementById('rch-numero').value.trim(),
+      date_debut: document.getElementById('rch-date-debut').value,
+      date_fin: document.getElementById('rch-date-fin').value,
+      avancement: av,
+      avancement_prevu: parseInt(document.getElementById('rch-avancement-prevu').value)||0,
+      nb_ouvriers: parseInt(document.getElementById('rch-ouvriers').value)||0,
+      meteo: document.getElementById('rch-meteo').value,
+      categorie: (document.getElementById('rch-categorie')||{value:'construction'}).value,
+      travaux_realises: document.getElementById('rch-travaux-realises').value.trim(),
+      travaux_prevus: document.getElementById('rch-travaux-prevus').value.trim(),
+      difficultes: document.getElementById('rch-difficultes').value.trim(),
+      depenses: parseFloat(document.getElementById('rch-depenses').value)||0,
+      budget_cumul: parseFloat(document.getElementById('rch-budget-cumul').value)||0,
+      observations: document.getElementById('rch-observations').value.trim(),
+      valideur: document.getElementById('rch-valideur').value.trim(),
+      statut: document.getElementById('rch-statut').value,
+      visibilite: (document.getElementById('rch-visibilite')||{value:'souscripteurs'}).value,
+      photos: JSON.parse(JSON.stringify(RCH_STATE.photos)),
+      created_at: APP.editingId ? undefined : today()
+    };
+    var idx = DATA.rapports_chantier.findIndex(function(x){ return x.id===APP.editingId; });
+    if (idx>=0) DATA.rapports_chantier[idx]=r; else DATA.rapports_chantier.push(r);
+    await dbPut('rapports_chantier', r);
+    /* Mettre à jour avancement convention */
+    var conv = DATA.conventions.find(function(c){ return c.id===convId; });
+    if (conv && av>=(conv.avancement||0)) { conv.avancement=av; await dbPut('conventions',conv); }
+    closeModal('modal-rapport-chantier');
+    rchFermerCamera();
+    renderChantiersDashboard();
+    if (typeof renderRapports === 'function') renderRapports();
+    if (typeof renderConventions === 'function') renderConventions();
+    var nbPhotos = r.photos.length;
+    toast('✅ Rapport enregistré'+(nbPhotos?' avec '+nbPhotos+' photo(s).':'.'), 'success');
+  };
+})();
+
+/* ─────────────────────────────────────────────
+   PATCH openRapportChantier — charger les photos
+──────────────────────────────────────────────── */
+(function(){
+  var origOpen = typeof openRapportChantier === 'function' ? openRapportChantier : null;
+  openRapportChantier = function(convId) {
+    APP.editingId = null;
+    RCH_STATE.photos = [];
+    rchFermerCamera();
+
+    /* Peupler conventions */
+    var sel = document.getElementById('rch-convention');
+    if (sel) {
+      while (sel.options.length>1) sel.remove(1);
+      (DATA.conventions||[]).forEach(function(c){
+        var prog = (DATA.programmes||[]).find(function(p){ return p.id===c.programme_id; })||{nom:''};
+        var o=document.createElement('option'); o.value=c.id;
+        o.textContent=(prog.nom?prog.nom+' — ':'')+c.constructeur_nom+' ('+c.numero+')';
+        sel.appendChild(o);
+      });
+      if (convId) sel.value = convId;
+    }
+    /* Dates auto */
+    var now = new Date();
+    var monday = new Date(now); monday.setDate(now.getDate()-now.getDay()+1);
+    var friday = new Date(monday); friday.setDate(monday.getDate()+4);
+    var el = function(eid,v){ var e=document.getElementById(eid); if(e) e.value=v||''; };
+    el('rch-date-debut', monday.toISOString().slice(0,10));
+    el('rch-date-fin',   friday.toISOString().slice(0,10));
+    el('rch-numero','');
+    el('rch-avancement','0'); el('rch-avancement-prevu','0');
+    el('rch-ouvriers','0'); el('rch-depenses','0'); el('rch-budget-cumul','0');
+    el('rch-travaux-realises',''); el('rch-travaux-prevus','');
+    el('rch-difficultes',''); el('rch-observations',''); el('rch-valideur','');
+
+    rchUpdateBadgePhotos();
+    rchRenderPhotosGrid();
+    rchSwitchTab('rapport');
+    document.getElementById('rch-modal-title').textContent = '📋 Rapport hebdomadaire de chantier';
+    openModal('modal-rapport-chantier');
+  };
+})();
+
+/* ─────────────────────────────────────────────
+   PATCH editRapportChantier — charger les photos
+──────────────────────────────────────────────── */
+(function(){
+  var origEdit = typeof editRapportChantier === 'function' ? editRapportChantier : null;
+  editRapportChantier = function(id) {
+    APP.editingId = id;
+    openRapportChantier();
+    setTimeout(function(){
+      var r = DATA.rapports_chantier.find(function(x){ return x.id===id; });
+      if (!r) return;
+      var el = function(eid,v){ var e=document.getElementById(eid); if(e) e.value=v||''; };
+      el('rch-convention',r.convention_id);
+      el('rch-numero',r.numero);
+      el('rch-date-debut',r.date_debut);
+      el('rch-date-fin',r.date_fin);
+      el('rch-avancement',r.avancement);
+      el('rch-avancement-prevu',r.avancement_prevu);
+      el('rch-ouvriers',r.nb_ouvriers);
+      el('rch-meteo',r.meteo);
+      el('rch-categorie',r.categorie||'construction');
+      el('rch-travaux-realises',r.travaux_realises);
+      el('rch-travaux-prevus',r.travaux_prevus);
+      el('rch-difficultes',r.difficultes);
+      el('rch-depenses',r.depenses);
+      el('rch-budget-cumul',r.budget_cumul);
+      el('rch-observations',r.observations);
+      el('rch-valideur',r.valideur);
+      el('rch-statut',r.statut);
+      el('rch-visibilite',r.visibilite||'souscripteurs');
+      /* Charger photos */
+      RCH_STATE.photos = r.photos ? JSON.parse(JSON.stringify(r.photos)) : [];
+      rchUpdateBadgePhotos();
+      rchRenderPhotosGrid();
+      document.getElementById('rch-modal-title').textContent = 'Modifier rapport';
+      if (typeof updateRapportGauge==='function') updateRapportGauge();
+    }, 120);
+  };
+})();
+
+/* ─────────────────────────────────────────────
+   PORTAIL SOUSCRIPTEUR — Onglet Suivi Travaux
+──────────────────────────────────────────────── */
+
+/* Patch switchPortalTab pour charger l'onglet travaux */
+(function(){
+  var origSwitch = switchPortalTab;
+  switchPortalTab = function(tab) {
+    /* Ajouter 'travaux' à la liste des onglets connus */
+    var tabs = ['dashboard','travaux','contrat','echeances','versements','documents','paiement'];
+    tabs.forEach(function(t){
+      var el = document.getElementById('portal-tab-'+t); if(el) el.classList.remove('active');
+    });
+    var active = document.getElementById('portal-tab-'+tab);
+    if (active) active.classList.add('active');
+    document.querySelectorAll('#page-portail-souscripteur .tab-btn').forEach(function(btn){
+      var oc = btn.getAttribute('onclick')||'';
+      btn.classList.toggle('active', oc.indexOf("'"+tab+"'")!==-1);
+    });
+    if (tab==='echeances')   renderEcheancierSouscripteur();
+    if (tab==='paiement')    renderDemandesPortail();
+    if (tab==='travaux')     portalRenderTravaux();
+  };
+})();
+
+function portalRenderTravaux() {
+  if (!SESSION_SOUSCRIPTEUR) return;
+  var c    = SESSION_SOUSCRIPTEUR;
+  var prog = (DATA.programmes||[]).find(function(p){ return p.id===c.programme_id; });
+
+  /* Peupler select programme (si multi-programmes plus tard) */
+  var selProg = document.getElementById('portal-travaux-prog');
+  if (selProg && selProg.options.length <= 1) {
+    (DATA.programmes||[]).forEach(function(p){
+      var o=document.createElement('option'); o.value=p.id; o.textContent=p.nom; selProg.appendChild(o);
+    });
+    if (prog) selProg.value = prog.id;
+  }
+
+  var progId    = (selProg||{}).value || (prog ? prog.id : '');
+  var catFilter = (document.getElementById('portal-travaux-categorie')||{}).value || '';
+
+  /* Rapports visibles de ce programme */
+  var conventions = (DATA.conventions||[]).filter(function(c){ return c.programme_id===progId; });
+  var convIds = conventions.map(function(c){ return c.id; });
+  var rapports = (DATA.rapports_chantier||[]).filter(function(r){
+    return convIds.indexOf(r.convention_id)!==-1
+      && r.visibilite !== 'interne'
+      && (!catFilter || r.categorie===catFilter);
+  }).sort(function(a,b){ return (b.date_debut||'').localeCompare(a.date_debut||''); });
+
+  /* ── Barres de phases ── */
+  var phasesEl = document.getElementById('portal-travaux-phases');
+  if (phasesEl) {
+    var cats = ['amenagement','vrd','construction','finition','reception'];
+    var catLabels = { amenagement:'Aménagement',vrd:'VRD',construction:'Construction',finition:'Finitions',reception:'Réception' };
+    var catColors = { amenagement:'var(--bleu)',vrd:'var(--or)',construction:'var(--vert)',finition:'var(--violet)',reception:'var(--vert)' };
+    var phaseBars = cats.map(function(cat){
+      var raps = (DATA.rapports_chantier||[]).filter(function(r){ return convIds.indexOf(r.convention_id)!==-1 && r.categorie===cat; });
+      var maxAv = raps.length ? Math.max.apply(null, raps.map(function(r){ return r.avancement||0; })) : 0;
+      return { cat:cat, label:catLabels[cat], pct:maxAv, color:catColors[cat], icon:RCH_PHASE_ICONS[cat]||'🏗️', rapCount:raps.length };
+    }).filter(function(b){ return b.rapCount>0; });
+
+    if (!phaseBars.length) {
+      phasesEl.innerHTML = '<div class="card-title">📊 Avancement par phase</div><div style="color:var(--dim);font-size:13px;">Aucun rapport disponible.</div>';
+    } else {
+      phasesEl.innerHTML = '<div class="card-title">📊 Avancement par phase</div>'
+        + phaseBars.map(function(b){
+            return '<div class="phase-bar-item">'
+              +'<div class="phase-bar-label">'+b.icon+' '+b.label+'</div>'
+              +'<div class="phase-bar-track"><div class="phase-bar-fill" style="width:'+b.pct+'%;background:'+b.color+';"></div></div>'
+              +'<div class="phase-bar-pct" style="color:'+b.color+';">'+b.pct+'%</div>'
+              +'</div>';
+          }).join('');
+    }
+  }
+
+  /* ── Timeline des rapports ── */
+  var tlEl = document.getElementById('portal-travaux-timeline');
+  if (!tlEl) return;
+
+  if (!rapports.length) {
+    tlEl.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--dim);">Aucun rapport de chantier disponible pour le moment.<br><small>Les rapports validés apparaîtront ici au fil de l\'avancement.</small></div>';
+  } else {
+    tlEl.innerHTML = rapports.map(function(r, idx) {
+      var cat = r.categorie||'construction';
+      var icon = RCH_PHASE_ICONS[cat]||'🏗️';
+      var catLabel = {amenagement:'Aménagement',vrd:'VRD',construction:'Construction',finition:'Finitions',reception:'Réception'};
+      var photos = (r.photos||[]).filter(function(p){ return p.visible; });
+
+      var photoHtml = '';
+      if (photos.length) {
+        photoHtml = '<div style="margin-top:10px;">'
+          +'<div style="font-size:12px;font-weight:700;margin-bottom:6px;">📸 '+photos.length+' photo(s)</div>'
+          +'<div class="portal-photos-grid">'
+          + photos.slice(0,8).map(function(p,i){
+              return '<div class="portal-photo-item" onclick="portalOuvrirPhoto(\''+r.id+'\','+i+')">'
+                +'<img src="'+p.data+'" alt="'+p.legende+'" loading="lazy">'
+                +'<div class="portal-photo-label">'+p.legende+'</div>'
+                +'</div>';
+            }).join('')
+          + (photos.length>8?'<div class="portal-photo-item" style="display:flex;align-items:center;justify-content:center;background:var(--card2);font-weight:700;color:var(--dim);font-size:13px;cursor:pointer;" onclick="portalOuvrirPhoto(\''+r.id+'\',8)">+'+( photos.length-8)+'</div>':'')
+          + '</div></div>';
+      }
+
+      var dotColor = r.statut==='transmis'?'linear-gradient(135deg,var(--vert),#16A34A)'
+        : r.statut==='valide'?'linear-gradient(135deg,var(--or),var(--or-dark))'
+        : 'linear-gradient(135deg,var(--bleu),#2563EB)';
+
+      return '<div class="portal-tl-item">'
+        +'<div class="portal-tl-dot" style="background:'+dotColor+';">'+icon+'</div>'
+        +'<div class="portal-tl-card">'
+        +'<div class="portal-tl-header">'
+        +'<div class="portal-tl-titre">'+(catLabel[cat]||cat)+(r.numero?' — '+r.numero:'')+'</div>'
+        +'<span class="badge badge-'+(r.statut==='transmis'?'vert':r.statut==='valide'?'or':'bleu')+'">'+r.statut+'</span>'
+        +'<div class="portal-tl-date">'+r.date_debut+(r.date_fin&&r.date_fin!==r.date_debut?' → '+r.date_fin:'')+'</div>'
+        +'</div>'
+        +'<div class="portal-tl-body">'
+        +'<div style="display:flex;gap:16px;margin-bottom:10px;flex-wrap:wrap;">'
+        +'<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:var(--dim);">Avancement réalisé</div>'
+        +'<div style="height:8px;background:var(--bord);border-radius:4px;overflow:hidden;margin:4px 0;">'
+        +'<div style="height:100%;width:'+(r.avancement||0)+'%;background:var(--vert);border-radius:4px;"></div></div>'
+        +'<div style="font-size:13px;font-weight:700;color:var(--vert);">'+(r.avancement||0)+'%</div></div>'
+        +(r.avancement_prevu?'<div style="flex:1;min-width:140px;"><div style="font-size:11px;color:var(--dim);">Avancement prévu</div>'
+          +'<div style="height:8px;background:var(--bord);border-radius:4px;overflow:hidden;margin:4px 0;">'
+          +'<div style="height:100%;width:'+(r.avancement_prevu||0)+'%;background:var(--bleu);border-radius:4px;"></div></div>'
+          +'<div style="font-size:13px;font-weight:700;color:var(--bleu);">'+(r.avancement_prevu||0)+'%</div></div>':'')
+        +'</div>'
+        +(r.travaux_realises?'<div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:700;color:#1C1C2E;margin-bottom:4px;">✅ Travaux réalisés</div><div style="font-size:12px;color:var(--dim);white-space:pre-line;">'+r.travaux_realises+'</div></div>':'')
+        +(r.travaux_prevus?'<div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:700;color:#1C1C2E;margin-bottom:4px;">🔜 Prochaine semaine</div><div style="font-size:12px;color:var(--dim);">'+r.travaux_prevus+'</div></div>':'')
+        +(r.meteo&&r.meteo!=='favorable'?'<div style="font-size:11px;color:var(--dim);">🌤️ Météo : '+r.meteo+'</div>':'')
+        + photoHtml
+        +'</div></div></div>';
+    }).join('');
+  }
+
+  /* ── Galerie globale toutes photos du programme ── */
+  var galEl = document.getElementById('portal-galerie-photos');
+  if (galEl) {
+    var toutesPhotos = [];
+    rapports.forEach(function(r){
+      (r.photos||[]).filter(function(p){ return p.visible; }).forEach(function(p){
+        toutesPhotos.push({ rapportId:r.id, photo:p, dateSemaine:r.date_debut, cat:r.categorie });
+      });
+    });
+    if (!toutesPhotos.length) {
+      galEl.innerHTML = '<div style="color:var(--dim);font-size:12px;grid-column:1/-1;padding:8px 0;">Aucune photo disponible.</div>';
+    } else {
+      galEl.style.gridTemplateColumns = 'repeat(auto-fill,minmax(110px,1fr))';
+      galEl.innerHTML = toutesPhotos.slice(0,24).map(function(item,i){
+        return '<div class="portal-photo-item" onclick="portalOuvrirGalerie('+i+')">'
+          +'<img src="'+item.photo.data+'" alt="'+item.photo.legende+'" loading="lazy">'
+          +'<div class="portal-photo-label">'+item.photo.legende+'</div>'
+          +'</div>';
+      }).join('')
+      + (toutesPhotos.length>24?'<div style="grid-column:1/-1;text-align:center;color:var(--dim);font-size:12px;padding:8px 0;">'+toutesPhotos.length+' photos au total</div>':'');
+      /* Stocker pour lightbox */
+      window._portalAllPhotos = toutesPhotos;
+    }
+  }
+}
+
+/* Lightbox portail — réutilise la même lightbox */
+function portalOuvrirPhoto(rapportId, startIdx) {
+  var r = (DATA.rapports_chantier||[]).find(function(x){ return x.id===rapportId; });
+  if (!r) return;
+  var photos = (r.photos||[]).filter(function(p){ return p.visible; });
+  PLAN_STATE._lbVues = photos.map(function(p){ return { data:p.data, type:p.type, angle_id:p.categorie, label_custom:p.legende }; });
+  PLAN_STATE.lbIdx = Math.min(startIdx||0, photos.length-1);
+  var lb = document.getElementById('plan-lightbox');
+  if (lb) { lb.style.display='flex'; lb.classList.add('open'); }
+  planUpdateLightbox();
+  document.addEventListener('keydown', planLbKeyHandler);
+}
+
+function portalOuvrirGalerie(startIdx) {
+  var all = window._portalAllPhotos||[];
+  PLAN_STATE._lbVues = all.map(function(item){ return { data:item.photo.data, type:item.photo.type, angle_id:item.cat, label_custom:item.photo.legende+' ('+item.dateSemaine+')' }; });
+  PLAN_STATE.lbIdx = Math.min(startIdx||0, PLAN_STATE._lbVues.length-1);
+  var lb = document.getElementById('plan-lightbox');
+  if (lb) { lb.style.display='flex'; lb.classList.add('open'); }
+  planUpdateLightbox();
+  document.addEventListener('keydown', planLbKeyHandler);
+}
+
+/* FIN MODULE PHOTOS CHANTIER */
+
 </script>
 </head>
 <body>
@@ -5805,6 +7137,7 @@ function ptArreterCamera() {
 
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchPortalTab('dashboard')">📊 Tableau de bord</button>
+          <button class="tab-btn" onclick="switchPortalTab('travaux')">🏗️ Avancement Travaux</button>
           <button class="tab-btn" onclick="switchPortalTab('contrat')">📄 Contrat & lots</button>
           <button class="tab-btn" onclick="switchPortalTab('echeances')">📅 Échéancier</button>
           <button class="tab-btn" onclick="switchPortalTab('versements')">💳 Mes versements</button>
@@ -5824,6 +7157,37 @@ function ptArreterCamera() {
               <div class="card-title">📋 Derniers versements</div>
               <div id="portal-recents-versements"></div>
             </div>
+          </div>
+        </div>
+
+        <!-- Suivi Travaux & Photos -->
+        <div class="tab-pane" id="portal-tab-travaux">
+
+          <!-- Sélecteur programme (si multi-programmes) -->
+          <div class="filters-bar" style="margin-bottom:14px;">
+            <select class="filter-select" id="portal-travaux-prog" onchange="portalRenderTravaux()">
+              <option value="">Tous les programmes</option>
+            </select>
+            <select class="filter-select" id="portal-travaux-categorie" onchange="portalRenderTravaux()">
+              <option value="">Toutes catégories</option>
+              <option value="amenagement">🗺️ Aménagement</option>
+              <option value="vrd">🚧 VRD</option>
+              <option value="construction">🏗️ Construction</option>
+              <option value="finition">🎨 Finitions</option>
+              <option value="reception">🏁 Réception</option>
+            </select>
+          </div>
+
+          <!-- Barre de progression globale par phase -->
+          <div class="card" style="margin-bottom:14px;" id="portal-travaux-phases"></div>
+
+          <!-- Timeline des rapports + photos -->
+          <div id="portal-travaux-timeline"></div>
+
+          <!-- Galerie photos du programme -->
+          <div class="card" style="margin-top:14px;">
+            <div class="card-title">📸 Galerie photos de chantier</div>
+            <div id="portal-galerie-photos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:10px;"></div>
           </div>
         </div>
 
@@ -8814,56 +10178,129 @@ function ptArreterCamera() {
 
 <!-- ══ Modal Plan architectural ═════════════════════ -->
 <div class="modal-overlay" id="modal-plan">
-  <div class="modal">
+  <div class="modal modal-lg">
+    <div class="modal-handle"></div>
     <div class="modal-header">
-      <h3>Enregistrer un plan architectural</h3>
+      <h3 id="modal-plan-title">📐 Enregistrer un plan architectural</h3>
       <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-plan')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group"><label>Référence plan *</label><input type="text" class="form-control" id="plan-ref" placeholder="PLAN-F3-RDC-V2"></div>
-        <div class="form-group"><label>Programme</label><select class="form-control" id="plan-programme"><option value="">— Tous —</option></select></div>
-        <div class="form-group"><label>Type logement *</label>
-          <select class="form-control" id="plan-type">
-            <option value="f2">F2 / 2 pièces</option>
-            <option value="f3">F3 / 3 pièces</option>
-            <option value="f4">F4 / 4 pièces</option>
-            <option value="villa">Villa duplex</option>
-            <option value="commerce">Local commercial</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Niveau / Étage</label>
-          <select class="form-control" id="plan-niveau">
-            <option value="rdc">Rez-de-chaussée</option>
-            <option value="r1">R+1</option>
-            <option value="r2">R+2</option>
-            <option value="facade">Façade</option>
-            <option value="coupe">Coupe</option>
-            <option value="masse">Plan de masse</option>
-            <option value="fondations">Fondations</option>
-            <option value="toiture">Toiture</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Surface (m²)</label><input type="number" class="form-control" id="plan-surface"></div>
-        <div class="form-group"><label>Version</label><input type="text" class="form-control" id="plan-version" placeholder="V1, V2..."></div>
-        <div class="form-group"><label>Architecte</label><input type="text" class="form-control" id="plan-architecte"></div>
-        <div class="form-group"><label>Date plan</label><input type="date" class="form-control" id="plan-date"></div>
-        <div class="form-group"><label>Statut</label>
-          <select class="form-control" id="plan-statut">
-            <option value="brouillon">Brouillon</option>
-            <option value="valide">Validé</option>
-            <option value="approuve">Approuvé MO</option>
-            <option value="archive">Archivé</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Échelle</label><input type="text" class="form-control" id="plan-echelle" placeholder="1:100, 1:50..."></div>
-        <div class="form-group span-2"><label>Description</label><textarea class="form-control" id="plan-description" rows="2" placeholder="Description technique, remarques..."></textarea></div>
+
+      <!-- Onglets du modal -->
+      <div class="tab-nav" id="modal-plan-tabnav" style="margin-bottom:16px;">
+        <button class="tab-btn active" onclick="planSwitchTab('infos')">📋 Informations</button>
+        <button class="tab-btn" onclick="planSwitchTab('vues')">🗂️ Vues & Angles <span id="badge-vues-count" class="badge badge-bleu" style="margin-left:4px;display:none;">0</span></button>
+        <button class="tab-btn" onclick="planSwitchTab('docs')">📎 Documents PDF</button>
       </div>
+
+      <!-- ── ONGLET INFORMATIONS ── -->
+      <div id="modal-plantab-infos" class="plan-modal-pane" style="display:block;">
+        <div class="form-grid">
+          <div class="form-group"><label>Référence plan *</label><input type="text" class="form-control" id="plan-ref" placeholder="PLAN-F3-RDC-V2"></div>
+          <div class="form-group"><label>Programme</label><select class="form-control" id="plan-programme"><option value="">— Tous —</option></select></div>
+          <div class="form-group"><label>Type logement *</label>
+            <select class="form-control" id="plan-type">
+              <option value="f2">F2 / 2 pièces</option>
+              <option value="f3">F3 / 3 pièces</option>
+              <option value="f4">F4 / 4 pièces</option>
+              <option value="villa">Villa duplex</option>
+              <option value="commerce">Local commercial</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Niveau principal</label>
+            <select class="form-control" id="plan-niveau">
+              <option value="rdc">Rez-de-chaussée</option>
+              <option value="r1">R+1</option>
+              <option value="r2">R+2</option>
+              <option value="facade">Façade</option>
+              <option value="coupe">Coupe</option>
+              <option value="masse">Plan de masse</option>
+              <option value="fondations">Fondations</option>
+              <option value="toiture">Toiture</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Surface (m²)</label><input type="number" class="form-control" id="plan-surface"></div>
+          <div class="form-group"><label>Version</label><input type="text" class="form-control" id="plan-version" placeholder="V1, V2..."></div>
+          <div class="form-group"><label>Architecte</label><input type="text" class="form-control" id="plan-architecte"></div>
+          <div class="form-group"><label>Date plan</label><input type="date" class="form-control" id="plan-date"></div>
+          <div class="form-group"><label>Statut</label>
+            <select class="form-control" id="plan-statut">
+              <option value="brouillon">Brouillon</option>
+              <option value="valide">Validé</option>
+              <option value="approuve">Approuvé MO</option>
+              <option value="archive">Archivé</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Échelle principale</label><input type="text" class="form-control" id="plan-echelle" placeholder="1:100, 1:50..."></div>
+          <div class="form-group span-2"><label>Description / Remarques</label><textarea class="form-control" id="plan-description" rows="2" placeholder="Description technique, notes architecte..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- ── ONGLET VUES & ANGLES ── -->
+      <div id="modal-plantab-vues" class="plan-modal-pane" style="display:none;">
+        <div class="alert alert-info" style="margin-bottom:14px;">
+          📐 Uploadez les plans sous différents angles et coupes. Formats acceptés : PNG, JPG, PDF, DWG, SVG — max 5 Mo par fichier.
+        </div>
+
+        <!-- Zone drop globale -->
+        <div id="plan-dropzone" class="plan-dropzone"
+          ondragover="planDragOver(event)" ondragleave="planDragLeave(event)" ondrop="planDrop(event)">
+          <div class="plan-dropzone-inner">
+            <div style="font-size:32px;margin-bottom:8px;">📂</div>
+            <div style="font-weight:700;color:var(--blanc);font-size:14px;">Glisser-déposer des fichiers ici</div>
+            <div style="font-size:12px;color:var(--dim);margin:4px 0 12px;">ou choisir l'angle et ajouter manuellement</div>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('plan-file-quick').click()">
+              + Ajouter fichiers
+            </button>
+            <input type="file" id="plan-file-quick" multiple accept="image/*,.pdf,.dwg,.svg,.dxf"
+              style="display:none;" onchange="planQuickUpload(this)">
+          </div>
+        </div>
+
+        <!-- Grille des slots d'angles prédéfinis -->
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:16px 0 10px;">Angles & Coupes prédéfinis</div>
+        <div id="plan-vues-grid" class="plan-vues-grid"></div>
+
+        <!-- Vues uploadées (non assignées à un slot) -->
+        <div id="plan-vues-libres-section" style="display:none;margin-top:16px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:10px;">Vues supplémentaires</div>
+          <div id="plan-vues-libres" class="plan-vues-libres"></div>
+        </div>
+      </div>
+
+      <!-- ── ONGLET DOCUMENTS PDF ── -->
+      <div id="modal-plantab-docs" class="plan-modal-pane" style="display:none;">
+        <div style="font-size:12px;color:var(--dim);margin-bottom:12px;">Joindre les documents officiels : permis, notes de calcul, mémoire technique...</div>
+        <div id="plan-docs-list" style="margin-bottom:12px;"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('plan-doc-input').click()">
+            📎 Ajouter document
+          </button>
+          <input type="file" id="plan-doc-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.zip"
+            style="display:none;" onchange="planAjouterDoc(this)">
+          <span style="font-size:11px;color:var(--dim);">PDF, Word, Excel, ZIP — max 10 Mo</span>
+        </div>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-plan')">Annuler</button>
-      <button class="btn btn-primary" onclick="savePlan()">💾 Enregistrer</button>
+      <button class="btn btn-bleu btn-sm" onclick="planSwitchTab('vues')">🗂️ Ajouter des vues</button>
+      <button class="btn btn-primary" onclick="savePlan()">💾 Enregistrer le plan</button>
     </div>
+  </div>
+</div>
+
+<!-- ── LIGHTBOX PLAN ── -->
+<div id="plan-lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1500;
+  display:none;align-items:center;justify-content:center;flex-direction:column;" onclick="planCloseLightbox()">
+  <button style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.1);border:none;color:#fff;
+    font-size:22px;width:40px;height:40px;border-radius:50%;cursor:pointer;" onclick="planCloseLightbox()">✕</button>
+  <img id="plan-lightbox-img" src="" style="max-width:92vw;max-height:85vh;object-fit:contain;border-radius:8px;" onclick="event.stopPropagation()">
+  <div id="plan-lightbox-label" style="color:rgba(255,255,255,0.75);font-size:13px;margin-top:12px;"></div>
+  <div style="display:flex;gap:12px;margin-top:10px;">
+    <button id="plan-lb-prev" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:18px;" onclick="event.stopPropagation();planLightboxNav(-1)">‹</button>
+    <button id="plan-lb-next" style="background:rgba(255,255,255,0.1);border:none;color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:18px;" onclick="event.stopPropagation();planLightboxNav(1)">›</button>
   </div>
 </div>
 
@@ -8969,77 +10406,172 @@ function ptArreterCamera() {
 <!-- ══ Modal Rapport de chantier ════════════════════ -->
 <div class="modal-overlay" id="modal-rapport-chantier">
   <div class="modal modal-lg">
+    <div class="modal-handle"></div>
     <div class="modal-header">
-      <h3 id="rch-modal-title">Rapport hebdomadaire de chantier</h3>
+      <h3 id="rch-modal-title">📋 Rapport hebdomadaire de chantier</h3>
       <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-rapport-chantier')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group"><label>Convention *</label>
-          <select class="form-control" id="rch-convention" onchange="onSelectConventionRapport()">
-            <option value="">— Sélectionner —</option>
-          </select>
+
+      <!-- Onglets modal rapport -->
+      <div class="tab-nav" id="rch-tabnav" style="margin-bottom:16px;">
+        <button class="tab-btn active" onclick="rchSwitchTab('rapport')">📋 Rapport</button>
+        <button class="tab-btn" onclick="rchSwitchTab('photos')">📸 Photos <span id="rch-badge-photos" class="badge badge-bleu" style="margin-left:4px;display:none;">0</span></button>
+        <button class="tab-btn" onclick="rchSwitchTab('apercu')">👁️ Aperçu</button>
+      </div>
+
+      <!-- ── Onglet Rapport ── -->
+      <div id="rch-pane-rapport" class="rch-pane" style="display:block;">
+        <div class="form-grid">
+          <div class="form-group"><label>Convention *</label>
+            <select class="form-control" id="rch-convention" onchange="onSelectConventionRapport()">
+              <option value="">— Sélectionner —</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Semaine du *</label><input type="date" class="form-control" id="rch-date-debut"></div>
+          <div class="form-group"><label>Au</label><input type="date" class="form-control" id="rch-date-fin"></div>
+          <div class="form-group"><label>N° Rapport</label><input type="text" class="form-control" id="rch-numero" placeholder="R-2025-001"></div>
+          <div class="form-group"><label>Catégorie travaux</label>
+            <select class="form-control" id="rch-categorie">
+              <option value="amenagement">🗺️ Aménagement</option>
+              <option value="vrd">🚧 VRD — Voirie & Réseaux Divers</option>
+              <option value="construction">🏗️ Construction / Gros œuvre</option>
+              <option value="finition">🎨 Second œuvre / Finitions</option>
+              <option value="reception">🏁 Réception / Livraison</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Avancement réalisé (%)</label><input type="number" class="form-control" id="rch-avancement" min="0" max="100" oninput="updateRapportGauge()"></div>
+          <div class="form-group"><label>Avancement prévu (%)</label><input type="number" class="form-control" id="rch-avancement-prevu" min="0" max="100"></div>
+          <div class="form-group"><label>Nb ouvriers présents</label><input type="number" class="form-control" id="rch-ouvriers" value="0"></div>
+          <div class="form-group"><label>Météo</label>
+            <select class="form-control" id="rch-meteo">
+              <option value="favorable">Favorable ☀️</option>
+              <option value="nuageux">Nuageux ⛅</option>
+              <option value="pluie">Pluie 🌧️ (arrêt travaux)</option>
+              <option value="forte-pluie">Forte pluie ⛈️</option>
+            </select>
+          </div>
+          <div class="form-group span-2">
+            <label>Travaux réalisés cette semaine *</label>
+            <textarea class="form-control" id="rch-travaux-realises" rows="3" placeholder="• Coulage dalle niveau R+1 — Surface 150 m²&#10;• Montage murs porteurs bloc A&#10;• Ferraillage colonnes axe C-D"></textarea>
+          </div>
+          <div class="form-group span-2">
+            <label>Travaux prévus semaine prochaine</label>
+            <textarea class="form-control" id="rch-travaux-prevus" rows="2" placeholder="• Coulage dalles R+2 bloc B..."></textarea>
+          </div>
+          <div class="form-group span-2">
+            <label>Difficultés / Points bloquants</label>
+            <textarea class="form-control" id="rch-difficultes" rows="2" placeholder="Retard livraison acier, problème sol..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Dépenses semaine (FCFA)</label>
+            <input type="number" class="form-control" id="rch-depenses" value="0">
+          </div>
+          <div class="form-group">
+            <label>Budget consommé cumulé (FCFA)</label>
+            <input type="number" class="form-control" id="rch-budget-cumul" value="0">
+          </div>
+          <div class="form-group span-2">
+            <label>Observations / Décisions de chantier</label>
+            <textarea class="form-control" id="rch-observations" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Validé par</label>
+            <input type="text" class="form-control" id="rch-valideur" placeholder="Nom du chef de chantier / DT">
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select class="form-control" id="rch-statut">
+              <option value="brouillon">Brouillon</option>
+              <option value="valide">Validé</option>
+              <option value="transmis">Transmis MO</option>
+            </select>
+          </div>
+          <div class="form-group span-2">
+            <label>Visibilité souscripteurs</label>
+            <select class="form-control" id="rch-visibilite">
+              <option value="interne">🔒 Interne seulement</option>
+              <option value="souscripteurs">👁️ Visible par les souscripteurs</option>
+            </select>
+          </div>
         </div>
-        <div class="form-group"><label>Semaine du *</label><input type="date" class="form-control" id="rch-date-debut"></div>
-        <div class="form-group"><label>Au</label><input type="date" class="form-control" id="rch-date-fin"></div>
-        <div class="form-group"><label>N° Rapport</label><input type="text" class="form-control" id="rch-numero" placeholder="R-2025-001"></div>
-        <div class="form-group"><label>Avancement réalisé (%)</label><input type="number" class="form-control" id="rch-avancement" min="0" max="100" oninput="updateRapportGauge()"></div>
-        <div class="form-group"><label>Avancement prévu (%)</label><input type="number" class="form-control" id="rch-avancement-prevu" min="0" max="100"></div>
-        <div class="form-group"><label>Nb ouvriers présents</label><input type="number" class="form-control" id="rch-ouvriers" value="0"></div>
-        <div class="form-group"><label>Météo</label>
-          <select class="form-control" id="rch-meteo">
-            <option value="favorable">Favorable ☀️</option>
-            <option value="nuageux">Nuageux ⛅</option>
-            <option value="pluie">Pluie 🌧️ (arrêt travaux)</option>
-            <option value="forte-pluie">Forte pluie ⛈️</option>
-          </select>
-        </div>
-        <div class="form-group span-2">
-          <label>Travaux réalisés cette semaine *</label>
-          <textarea class="form-control" id="rch-travaux-realises" rows="3" placeholder="• Coulage dalle niveau R+1 — Surface 150 m²&#10;• Montage murs porteurs bloc A&#10;• Ferraillage colonnes axe C-D"></textarea>
-        </div>
-        <div class="form-group span-2">
-          <label>Travaux prévus semaine prochaine</label>
-          <textarea class="form-control" id="rch-travaux-prevus" rows="2" placeholder="• Coulage dalles R+2 bloc B..."></textarea>
-        </div>
-        <div class="form-group span-2">
-          <label>Difficultés / Points bloquants</label>
-          <textarea class="form-control" id="rch-difficultes" rows="2" placeholder="Retard livraison acier, problème sol..."></textarea>
-        </div>
-        <div class="form-group">
-          <label>Dépenses semaine (FCFA)</label>
-          <input type="number" class="form-control" id="rch-depenses" value="0">
-        </div>
-        <div class="form-group">
-          <label>Budget consommé cumulé (FCFA)</label>
-          <input type="number" class="form-control" id="rch-budget-cumul" value="0">
-        </div>
-        <div class="form-group span-2">
-          <label>Observations / Décisions de chantier</label>
-          <textarea class="form-control" id="rch-observations" rows="2"></textarea>
-        </div>
-        <div class="form-group">
-          <label>Validé par</label>
-          <input type="text" class="form-control" id="rch-valideur" placeholder="Nom du chef de chantier / DT">
-        </div>
-        <div class="form-group">
-          <label>Statut</label>
-          <select class="form-control" id="rch-statut">
-            <option value="brouillon">Brouillon</option>
-            <option value="valide">Validé</option>
-            <option value="transmis">Transmis MO</option>
-          </select>
+        <!-- Jauge -->
+        <div class="card" style="background:var(--card2);margin-top:14px;" id="rch-gauge-box">
+          <div class="card-title">Avancement chantier — Réalisé vs Prévu</div>
+          <div id="rch-gauge-content" style="font-size:13px;color:var(--dim);">Renseignez les % pour voir la comparaison.</div>
         </div>
       </div>
-      <!-- Jauge avancement -->
-      <div class="card" style="background:var(--card2);margin-top:14px;" id="rch-gauge-box">
-        <div class="card-title">Avancement chantier — Réalisé vs Prévu</div>
-        <div id="rch-gauge-content" style="font-size:13px;color:var(--blanc-dim);">Renseignez les % pour voir la comparaison.</div>
+
+      <!-- ── Onglet Photos ── -->
+      <div id="rch-pane-photos" class="rch-pane" style="display:none;">
+        <div class="alert alert-info" style="margin-bottom:14px;">
+          📸 Ajoutez des photos de l'avancement du chantier. Elles seront visibles dans le portail souscripteur selon la visibilité choisie.
+        </div>
+
+        <!-- Dropzone photos -->
+        <div id="rch-photo-dropzone" class="plan-dropzone"
+          ondragover="planDragOver(event)" ondragleave="planDragLeave(event)"
+          ondrop="rchPhotoDrop(event)" style="margin-bottom:14px;">
+          <div class="plan-dropzone-inner">
+            <div style="font-size:36px;margin-bottom:8px;">📸</div>
+            <div style="font-weight:700;font-size:14px;">Glisser des photos ici</div>
+            <div style="font-size:12px;color:var(--dim);margin:4px 0 12px;">JPG, PNG, HEIC — max 5 Mo par photo</div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('rch-photo-input').click()">
+                📷 Depuis la galerie
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="rchOuvrirCamera()">
+                📱 Prendre une photo
+              </button>
+            </div>
+            <input type="file" id="rch-photo-input" multiple accept="image/*"
+              style="display:none;" capture="" onchange="rchAjouterPhotos(this)">
+          </div>
+        </div>
+
+        <!-- Formulaire photo rapide (légende + catégorie) -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;" id="rch-photo-meta-bar">
+          <select class="filter-select" id="rch-photo-categorie-defaut">
+            <option value="general">📸 Général</option>
+            <option value="amenagement">🗺️ Aménagement</option>
+            <option value="vrd">🚧 VRD</option>
+            <option value="fondations">⛏️ Fondations</option>
+            <option value="gros_oeuvre">🏗️ Gros œuvre</option>
+            <option value="second_oeuvre">🔧 Second œuvre</option>
+            <option value="finition">🎨 Finitions</option>
+            <option value="reception">🏁 Réception</option>
+          </select>
+          <input class="search-input" id="rch-photo-legende-defaut" placeholder="Légende par défaut (optionnel)" style="flex:1;min-width:200px;">
+          <button class="btn btn-secondary btn-sm" onclick="rchAppliquerMetaDefaut()">Appliquer à toutes</button>
+        </div>
+
+        <!-- Grille photos avec édition inline -->
+        <div id="rch-photos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;"></div>
+
+        <!-- Prise de vue caméra -->
+        <div id="rch-camera-zone" style="display:none;margin-top:14px;">
+          <div style="position:relative;background:#000;border-radius:var(--r2);overflow:hidden;max-height:280px;">
+            <video id="rch-camera-video" style="width:100%;max-height:280px;object-fit:cover;" playsinline muted></video>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;justify-content:center;">
+            <button class="btn btn-primary" onclick="rchCapturerPhoto()">📸 Capturer</button>
+            <button class="btn btn-danger btn-sm" onclick="rchFermerCamera()">✕ Fermer</button>
+          </div>
+          <canvas id="rch-camera-canvas" style="display:none;"></canvas>
+        </div>
       </div>
+
+      <!-- ── Onglet Aperçu souscripteur ── -->
+      <div id="rch-pane-apercu" class="rch-pane" style="display:none;">
+        <div class="alert alert-info" style="margin-bottom:12px;">👁️ Aperçu tel que le verra un souscripteur dans son portail.</div>
+        <div id="rch-apercu-content"></div>
+      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-rapport-chantier')">Annuler</button>
       <button class="btn btn-secondary btn-sm" onclick="printRapportChantier()">🖨️ Imprimer</button>
+      <button class="btn btn-bleu btn-sm" onclick="rchSwitchTab('photos')">📸 Photos</button>
       <button class="btn btn-primary" onclick="saveRapportChantier()">💾 Enregistrer</button>
     </div>
   </div>
@@ -20322,22 +21854,10 @@ async function savePermis(){var num=document.getElementById('perm-numero').value
 async function deletePermis(id){if(!confirm('Supprimer ce permis ?'))return;DATA.permis=DATA.permis.filter(function(p){return p.id!==id;});await dbDelete('permis',id);renderPermis();toast('Supprimé.','info');}
 
 /* ─── Plans architecturaux ─────────────────────────── */
-function renderPlansFull(){
-  var box=document.getElementById('plans-box');if(!box)return;
-  var q=((document.getElementById('search-plans')||{}).value||'').toLowerCase();
-  var type=(document.getElementById('filter-type-plan')||{}).value||'';
-  var prog=(document.getElementById('filter-plan-programme')||{}).value||'';
-  var pSel=document.getElementById('filter-plan-programme');if(pSel&&pSel.options.length<=1)DATA.programmes.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nom;pSel.appendChild(o);});
-  var list=(DATA.plans_arch||[]).filter(function(p){return(!q||(p.ref+' '+(p.description||'')).toLowerCase().includes(q))&&(!type||p.type===type)&&(!prog||p.programme_id===prog);});
-  if(!list.length){box.innerHTML='<div class="card"><div style="padding:24px;text-align:center;color:var(--blanc-dim);">Aucun plan. Cliquez <strong style="color:var(--or);">+ Enregistrer un plan</strong>.</div></div>';return;}
-  var tL={f2:'F2',f3:'F3',f4:'F4',villa:'Villa',commerce:'Commerce'};
-  var nI={rdc:'🏠',r1:'🏢',r2:'🏗️',facade:'🎨',coupe:'✂️',masse:'🗺️',fondations:'⛏️',toiture:'🔱'};
-  var sC={brouillon:'badge-neutre',valide:'badge-or',approuve:'badge-vert',archive:'badge-rouge'};
-  box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">'+list.map(function(p){var pr=DATA.programmes.find(function(x){return x.id===p.programme_id;})||{nom:'—'};return'<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div><div style="font-size:24px;">'+(nI[p.niveau]||'📄')+'</div><div style="font-family:monospace;font-size:11px;color:var(--bleu);">'+p.ref+'</div></div><span class="badge '+(sC[p.statut]||'badge-bleu')+'">'+p.statut+'</span></div><div style="font-weight:700;font-size:14px;margin-bottom:4px;">'+(tL[p.type]||p.type)+'</div><div style="font-size:12px;color:var(--blanc-dim);">Niveau: '+(p.niveau||'—')+' — Échelle: '+(p.echelle||'—')+'</div><div style="font-size:11px;color:var(--dim);margin-top:4px;">'+pr.nom+' — v.'+(p.version||'1')+'</div><div style="display:flex;gap:6px;margin-top:10px;"><button class="btn btn-secondary btn-sm btn-icon" onclick="openPlanModal(\''+p.id+'\')">✏️</button><button class="btn btn-danger btn-sm btn-icon" onclick="deletePlan(\''+p.id+'\')">🗑</button></div></div>';}).join('')+'</div>';
-}
-function openPlanModal(id){APP.editingId=id||null;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=v||'';};var pSel=document.getElementById('plan-programme');if(pSel&&pSel.options.length<=1)DATA.programmes.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nom;pSel.appendChild(o);});if(id){var p=DATA.plans_arch.find(function(x){return x.id===id;});if(p){el('plan-ref',p.ref);el('plan-programme',p.programme_id);el('plan-type',p.type);el('plan-niveau',p.niveau);el('plan-surface',p.surface);el('plan-version',p.version);el('plan-architecte',p.architecte);el('plan-date',p.date);el('plan-statut',p.statut);el('plan-echelle',p.echelle);el('plan-description',p.description);}}else{['plan-ref','plan-surface','plan-version','plan-architecte','plan-description','plan-echelle'].forEach(function(f){el(f,'');});el('plan-type','f3');el('plan-niveau','rdc');el('plan-statut','brouillon');el('plan-date',today());}document.getElementById('modal-plan').classList.add('open');}
-async function savePlan(){var ref=document.getElementById('plan-ref').value.trim();if(!ref){toast('Référence obligatoire.','error');return;}var p={id:APP.editingId||uid(),ref:ref,programme_id:document.getElementById('plan-programme').value,type:document.getElementById('plan-type').value,niveau:document.getElementById('plan-niveau').value,surface:parseFloat(document.getElementById('plan-surface').value)||0,version:document.getElementById('plan-version').value.trim()||'V1',architecte:document.getElementById('plan-architecte').value.trim(),date:document.getElementById('plan-date').value,statut:document.getElementById('plan-statut').value,echelle:document.getElementById('plan-echelle').value.trim(),description:document.getElementById('plan-description').value.trim(),created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.plans_arch.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.plans_arch[idx]=p;}else DATA.plans_arch.push(p);await dbPut('plans_arch',p);closeModal('modal-plan');renderPlansFull();toast('Plan enregistré.','success');}
-async function deletePlan(id){if(!confirm('Supprimer ce plan ?'))return;DATA.plans_arch=DATA.plans_arch.filter(function(p){return p.id!==id;});await dbDelete('plans_arch',id);renderPlansFull();toast('Supprimé.','info');}
+/* renderPlansFull v1 supprimée — v2 définie ci-dessus */
+/* fonction v1 remplacée par v2 */
+/* fonction v1 remplacée par v2 */
+/* fonction v1 remplacée par v2 */
 
 /* ─── Situations de travaux ───────────────────────── */
 function onSelectConventionSitu(){var id=document.getElementById('situ-convention').value;if(!id)return;var conv=DATA.conventions.find(function(c){return c.id===id;});if(!conv)return;document.getElementById('situ-avancement').value=conv.avancement||0;var cumul=DATA.situations.filter(function(s){return s.convention_id===id&&s.statut!=='contestee';}).reduce(function(s,x){return s+(x.montant_ht||0);},0);document.getElementById('situ-cumul-prec').value=cumul;var nb=DATA.situations.filter(function(s){return s.convention_id===id;}).length+1;document.getElementById('situ-numero').value='SIT-'+String(nb).padStart(3,'0');}
