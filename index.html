@@ -5523,6 +5523,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <button class="tab-btn active" onclick="switchTab('agr-prom','infos')">📋 Informations</button>
         <button class="tab-btn" onclick="switchTab('agr-prom','documents')">📎 Documents</button>
         <button class="tab-btn" onclick="switchTab('agr-prom','statut')">🔔 Statut & Alertes</button>
+        <button class="tab-btn" onclick="switchTab('agr-prom','conventions');renderConvAgrement()">🤝 Conventions</button>
       </div>
 
       <!-- TAB 1 : Infos générales -->
@@ -5584,6 +5585,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <!-- TAB 3 : Statut & Alertes -->
       <div class="tab-pane" id="tab-agr-prom-statut">
         <div id="agp-statut-panel" style="margin-top:14px;"></div>
+      </div>
+
+      <!-- TAB 4 : Conventions partenaires agrement -->
+      <div class="tab-pane" id="tab-agr-prom-conventions">
+        <div style="margin-top:14px;">
+          <div id="agp-conv-progress-bar" style="margin-bottom:16px;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:12px;color:var(--dim);">10 types de conventions pour l'agrement promoteur CI</span>
+            <button class="btn btn-primary btn-sm" onclick="openConvAgrModal()">+ Nouvelle convention</button>
+          </div>
+          <div id="agp-conv-tracker"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -7980,14 +7993,15 @@ var DATA = {
   plans_morcellement: [],
   parcelles_morcellement: [],
   agrement_promoteur: [],
-  agrement_programme: []
+  agrement_programme: [],
+  conv_agrement: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 103; /* Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
+var DB_VERSION = 105; /* v105: ajout store conv_agrement. Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -8011,7 +8025,8 @@ var ALL_STORES = [
   'plans_morcellement',
   'parcelles_morcellement',
   'agrement_promoteur',
-  'agrement_programme'
+  'agrement_programme',
+  'conv_agrement'
 ];
 
 function initDB() {
@@ -23651,6 +23666,205 @@ document.addEventListener('DOMContentLoaded', function() {
   setTimeout(initAnimations, 600);
 });
 
+
+/* =====================================================
+   MODULE CONVENTIONS AGREMENT PROMOTEUR v1.0
+   10 conventions partenaires pour le dossier d'agrement
+===================================================== */
+var CONV_AGR_TYPES = [
+  { key: 'urbaniste',       emoji: 'U',  label: "Cabinet d'Urbaniste",              required: true,  desc: "Plan d'urbanisme, integration PUD/SDAU" },
+  { key: 'architecte',      emoji: 'A',  label: "Cabinet d'Architecture",            required: true,  desc: 'Plans architecturaux, permis de construire' },
+  { key: 'vrd',             emoji: 'V',  label: 'Cabinet VRD',                       required: true,  desc: 'Voirie, Reseaux, Drainage' },
+  { key: 'etudes_geo',      emoji: 'G',  label: "Bureau d'Etudes Geotechniques",     required: true,  desc: 'Etudes de sol, faisabilite technique' },
+  { key: 'geometre',        emoji: 'Gm', label: 'Geometre Expert',                   required: true,  desc: 'Morcellement, bornage, leve topographique' },
+  { key: 'notaire',         emoji: 'N',  label: 'Notaire',                           required: true,  desc: 'Actes de vente, contrats reservation, titres fonciers' },
+  { key: 'bureau_controle', emoji: 'CT', label: 'Bureau de Controle Technique',      required: true,  desc: 'Controle conformite constructions (SOCOTEC/APAVE)' },
+  { key: 'banque_gfa',      emoji: 'B',  label: 'Banque - Garantie Financiere (GFA)',required: true,  desc: "Garantie Financiere d'Achevement (obligatoire VFI)" },
+  { key: 'assurance',       emoji: 'As', label: 'Assurance Dommages-Ouvrage',        required: false, desc: 'Couverture dommages construction (recommandee)' },
+  { key: 'entreprise',      emoji: 'E',  label: 'Entreprise de Construction',        required: false, desc: "Attestation capacite d'execution (selon dossier)" }
+];
+
+var CONV_AGR_LABELS = {
+  urbaniste:      "Cabinet d'Urbaniste",
+  architecte:     "Cabinet d'Architecture",
+  vrd:            'Cabinet VRD',
+  etudes_geo:     "Bureau d'Etudes Geotechniques",
+  geometre:       'Geometre Expert',
+  notaire:        'Notaire',
+  bureau_controle:'Bureau de Controle Technique',
+  banque_gfa:     'Banque - Garantie Financiere (GFA)',
+  assurance:      'Assurance Dommages-Ouvrage',
+  entreprise:     'Entreprise de Construction'
+};
+
+function convAgrByType(type) {
+  return (DATA.conv_agrement || []).filter(function(c) { return c.type === type; });
+}
+
+function convAgrStatutStyle(s) {
+  return s === 'signe' ? 'color:var(--vert);font-weight:600;'
+       : s === 'expire' ? 'color:var(--rouge);font-weight:600;'
+       : s === 'resilie' ? 'color:var(--dim);'
+       : 'color:var(--or);';
+}
+
+function convAgrStatutText(s) {
+  return s === 'signe' ? 'Signe'
+       : s === 'expire' ? 'Expire'
+       : s === 'resilie' ? 'Resilie'
+       : 'En negociation';
+}
+
+function renderConvAgrement() {
+  var nbRequired = 8;
+  var signedRequired = CONV_AGR_TYPES.filter(function(t) {
+    return t.required && convAgrByType(t.key).some(function(c) { return c.statut === 'signe'; });
+  }).length;
+  var signedAll = CONV_AGR_TYPES.filter(function(t) {
+    return convAgrByType(t.key).some(function(c) { return c.statut === 'signe'; });
+  }).length;
+  var pct = Math.round((signedRequired / nbRequired) * 100);
+  var barColor = pct === 100 ? 'var(--vert)' : pct >= 50 ? 'var(--or)' : 'var(--rouge)';
+
+  var barEl = document.getElementById('agp-conv-progress-bar');
+  if (barEl) {
+    barEl.innerHTML =
+      '<div style="background:var(--card);border:1px solid var(--bord);border-radius:10px;padding:14px;">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:8px;">' +
+          '<b style="font-size:14px;">Completion du dossier conventions</b>' +
+          '<b style="color:' + barColor + ';">' + pct + '%</b>' +
+        '</div>' +
+        '<div style="background:var(--bord);border-radius:6px;height:10px;overflow:hidden;">' +
+          '<div style="background:' + barColor + ';height:100%;width:' + pct + '%;border-radius:6px;transition:width 0.4s;"></div>' +
+        '</div>' +
+        '<div style="margin-top:8px;font-size:12px;color:var(--dim);">' + signedRequired + '/8 obligatoires signees &mdash; ' + signedAll + '/10 au total</div>' +
+        (pct === 100 ? '<div style="margin-top:8px;padding:6px 12px;background:rgba(74,196,122,0.12);border:1px solid var(--vert);border-radius:6px;font-size:12px;color:var(--vert);font-weight:700;">Dossier conventions complet</div>' : '') +
+      '</div>';
+  }
+
+  var tracker = document.getElementById('agp-conv-tracker');
+  if (!tracker) return;
+  var html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  CONV_AGR_TYPES.forEach(function(type) {
+    var typeConvs = convAgrByType(type.key);
+    var hasSigned = typeConvs.some(function(c) { return c.statut === 'signe'; });
+    var hasAny    = typeConvs.length > 0;
+    var rowBg     = hasSigned ? 'rgba(74,196,122,0.06)' : hasAny ? 'rgba(184,115,51,0.06)' : type.required ? 'rgba(224,82,82,0.03)' : 'transparent';
+    var bord      = hasSigned ? 'var(--vert)' : hasAny ? 'var(--or)' : type.required ? 'var(--rouge)' : 'var(--bord)';
+    var dotClr    = hasSigned ? 'var(--vert)' : hasAny ? 'var(--or)' : type.required ? 'var(--rouge)' : 'var(--bord2)';
+    var dotChar   = hasSigned ? '&#9679;' : hasAny ? '&#9681;' : '&#9675;';
+    html += '<div style="background:' + rowBg + ';border:1px solid ' + bord + ';border-radius:10px;padding:12px 14px;">';
+    html += '<div style="display:flex;align-items:flex-start;gap:10px;">';
+    html += '<span style="color:' + dotClr + ';font-size:18px;margin-top:2px;">' + dotChar + '</span>';
+    html += '<div style="flex:1;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+    var badge = type.required ? '<span style="font-size:10px;background:rgba(224,82,82,0.15);color:var(--rouge);padding:1px 5px;border-radius:4px;margin-left:6px;">OBL.</span>'
+                              : '<span style="font-size:10px;background:rgba(107,107,154,0.15);color:var(--dim);padding:1px 5px;border-radius:4px;margin-left:6px;">opt.</span>';
+    html += '<span style="font-weight:700;font-size:13px;">' + type.label + badge + '</span>';
+    html += '<button class="btn btn-secondary btn-sm" onclick="openConvAgrModal(null,\'' + type.key + '\')">+ Ajouter</button>';
+    html += '</div>';
+    html += '<div style="font-size:11px;color:var(--dim);margin-top:2px;">' + type.desc + '</div>';
+    if (typeConvs.length > 0) {
+      html += '<div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">';
+      typeConvs.forEach(function(c) {
+        var expireDate = c.date_expiration ? new Date(c.date_expiration) : null;
+        var now = new Date();
+        var expTag = '';
+        if (expireDate) {
+          var diffDays = (expireDate - now) / 86400000;
+          if (diffDays < 0) expTag = '<span style="color:var(--rouge);font-size:11px;margin-left:4px;">[EXPIREE]</span>';
+          else if (diffDays <= 90) expTag = '<span style="color:var(--or);font-size:11px;margin-left:4px;">[expire bientot]</span>';
+        }
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--bord);border-radius:7px;padding:7px 11px;font-size:12px;">';
+        html += '<div>';
+        html += '<span style="font-weight:600;">' + c.cabinet + '</span>';
+        if (c.numero) html += ' <span style="color:var(--dim);">n&deg;' + c.numero + '</span>';
+        html += ' <span style="' + convAgrStatutStyle(c.statut) + '">' + convAgrStatutText(c.statut) + '</span>';
+        if (c.date_expiration) html += '<span style="color:var(--dim);margin-left:6px;">exp.' + formatDate(c.date_expiration) + '</span>' + expTag;
+        html += '</div>';
+        html += '<div style="display:flex;gap:5px;">';
+        html += '<button class="btn btn-secondary btn-sm" onclick="openConvAgrModal(\'' + c.id + '\')">Modifier</button>';
+        html += '<button class="btn btn-secondary btn-sm" style="color:var(--rouge);" onclick="deleteConvAgr(\'' + c.id + '\')">Suppr.</button>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="margin-top:5px;font-size:12px;color:' + (type.required ? 'var(--rouge)' : 'var(--dim)') + ';font-style:italic;">' + (type.required ? 'Convention obligatoire non saisie' : 'Non renseignee') + '</div>';
+    }
+    html += '</div></div></div>';
+  });
+  html += '</div>';
+  html += '<p style="margin-top:8px;font-size:11px;color:var(--dim);"><b>OBL.</b> = obligatoire pour le dossier d\'agrement promoteur CI</p>';
+  tracker.innerHTML = html;
+}
+
+function openConvAgrModal(id, defaultType) {
+  APP.editingId = id || null;
+  var flds = ['cag-cabinet','cag-numero','cag-date-signature','cag-date-expiration','cag-montant','cag-contact','cag-notes'];
+  if (id) {
+    var c = (DATA.conv_agrement || []).find(function(x) { return x.id === id; });
+    if (!c) return;
+    document.getElementById('cag-id').value              = c.id;
+    document.getElementById('cag-type').value            = c.type || '';
+    document.getElementById('cag-cabinet').value         = c.cabinet || '';
+    document.getElementById('cag-numero').value          = c.numero || '';
+    document.getElementById('cag-date-signature').value  = c.date_signature || '';
+    document.getElementById('cag-date-expiration').value = c.date_expiration || '';
+    document.getElementById('cag-montant').value         = c.montant || '';
+    document.getElementById('cag-contact').value         = c.contact || '';
+    document.getElementById('cag-notes').value           = c.notes || '';
+    document.getElementById('cag-statut').value          = c.statut || 'en_negociation';
+    document.getElementById('modal-conv-agr-titre').textContent = 'Modifier Convention — ' + (CONV_AGR_LABELS[c.type] || c.type);
+  } else {
+    document.getElementById('cag-id').value    = '';
+    document.getElementById('cag-type').value  = defaultType || '';
+    document.getElementById('cag-statut').value= 'en_negociation';
+    flds.forEach(function(fid) { var el = document.getElementById(fid); if (el) el.value = ''; });
+    document.getElementById('modal-conv-agr-titre').textContent = 'Nouvelle Convention Partenaire';
+  }
+  openModal('modal-conv-agrement');
+}
+
+async function saveConvAgr() {
+  var type    = document.getElementById('cag-type').value;
+  var cabinet = document.getElementById('cag-cabinet').value.trim();
+  if (!type)    { toast('Selectionnez le type de convention.', 'error'); return; }
+  if (!cabinet) { toast('Le cabinet est obligatoire.', 'error'); return; }
+  if (!DATA.conv_agrement) DATA.conv_agrement = [];
+  var id = document.getElementById('cag-id').value || null;
+  var obj = {
+    id:              id || uid(),
+    type:            type,
+    cabinet:         cabinet,
+    numero:          document.getElementById('cag-numero').value.trim(),
+    date_signature:  document.getElementById('cag-date-signature').value,
+    date_expiration: document.getElementById('cag-date-expiration').value,
+    montant:         parseFloat(document.getElementById('cag-montant').value) || 0,
+    contact:         document.getElementById('cag-contact').value.trim(),
+    notes:           document.getElementById('cag-notes').value.trim(),
+    statut:          document.getElementById('cag-statut').value,
+    created_at:      id ? undefined : today()
+  };
+  if (id) {
+    var idx = DATA.conv_agrement.findIndex(function(x) { return x.id === id; });
+    if (idx >= 0) DATA.conv_agrement[idx] = obj; else DATA.conv_agrement.push(obj);
+  } else {
+    DATA.conv_agrement.push(obj);
+  }
+  await dbPut('conv_agrement', obj);
+  closeModal('modal-conv-agrement');
+  renderConvAgrement();
+  toast('Convention enregistree.', 'success');
+}
+
+async function deleteConvAgr(id) {
+  if (!confirm('Supprimer cette convention ?')) return;
+  DATA.conv_agrement = (DATA.conv_agrement || []).filter(function(c) { return c.id !== id; });
+  await dbDelete('conv_agrement', id);
+  renderConvAgrement();
+  toast('Convention supprimee.', 'success');
+}
+/* FIN MODULE CONVENTIONS AGREMENT */
 </script>
 <!-- ── MODAL ANALYSE 360° (ADMIN) ──────────────────────────────── -->
 <div class="modal-overlay" id="modal-analyse360">
@@ -23704,5 +23918,80 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 </div>
+
+<!-- =======================================================
+     MODAL CONVENTION AGREMENT PROMOTEUR
+======================================================= -->
+<div class="modal-overlay" id="modal-conv-agrement">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3 id="modal-conv-agr-titre">Convention Partenaire</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-conv-agrement')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cag-id">
+      <div class="form-grid" style="margin-top:10px;">
+        <div class="form-group">
+          <label>Type de convention <span style="color:var(--rouge);">*</span></label>
+          <select class="form-control" id="cag-type">
+            <option value="">Selectionner...</option>
+            <option value="urbaniste">Cabinet d'Urbaniste</option>
+            <option value="architecte">Cabinet d'Architecture</option>
+            <option value="vrd">Cabinet VRD</option>
+            <option value="etudes_geo">Bureau d'Etudes Geotechniques</option>
+            <option value="geometre">Geometre Expert</option>
+            <option value="notaire">Notaire</option>
+            <option value="bureau_controle">Bureau de Controle Technique</option>
+            <option value="banque_gfa">Banque - Garantie Financiere (GFA)</option>
+            <option value="assurance">Assurance Dommages-Ouvrage</option>
+            <option value="entreprise">Entreprise de Construction</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select class="form-control" id="cag-statut">
+            <option value="en_negociation">En negociation</option>
+            <option value="signe">Signe</option>
+            <option value="expire">Expire</option>
+            <option value="resilie">Resilie</option>
+          </select>
+        </div>
+        <div class="form-group span-2">
+          <label>Cabinet / Prestataire <span style="color:var(--rouge);">*</span></label>
+          <input type="text" class="form-control" id="cag-cabinet" placeholder="Raison sociale">
+        </div>
+        <div class="form-group">
+          <label>N de convention</label>
+          <input type="text" class="form-control" id="cag-numero" placeholder="CONV/2025/001">
+        </div>
+        <div class="form-group">
+          <label>Date de signature</label>
+          <input type="date" class="form-control" id="cag-date-signature">
+        </div>
+        <div class="form-group">
+          <label>Date d'expiration</label>
+          <input type="date" class="form-control" id="cag-date-expiration">
+        </div>
+        <div class="form-group">
+          <label>Montant (FCFA)</label>
+          <input type="number" class="form-control" id="cag-montant" placeholder="0" min="0">
+        </div>
+        <div class="form-group span-2">
+          <label>Contact</label>
+          <input type="text" class="form-control" id="cag-contact" placeholder="M. Dupont - 07 00 00 00">
+        </div>
+        <div class="form-group span-2">
+          <label>Notes</label>
+          <textarea class="form-control" id="cag-notes" rows="2" placeholder="Observations..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-conv-agrement')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveConvAgr()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
