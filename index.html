@@ -1050,6 +1050,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">⚖️</span><span>Dossiers Juridiques</span>
         <span class="nav-badge" id="badge-juridique" style="display:none;">!</span>
       </div>
+      <div class="nav-item" onclick="goTo('amenagement')" data-page="amenagement">
+        <span class="nav-icon">🌍</span><span>Aménagement foncier</span>
+      </div>
 
       <!-- ÉTAPE 2 : MONTAGE — concevoir et contractualiser le programme -->
       <div class="nav-section"><span class="nav-step">2</span><span>Montage du Programme</span></div>
@@ -4735,6 +4738,158 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="card" id="prev-results"></div>
       </div>
 
+      <!-- ══ AMÉNAGEMENT FONCIER ══════════════════════════ -->
+      <div class="page" id="page-amenagement">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Aménagement foncier</div>
+            <div class="page-subtitle">Aménageurs · Conventions · Situations · Avenants · Retenues de garantie</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="amEtatRecap()">📄 Récap PDF</button>
+          <button class="btn btn-primary" onclick="amOpenConventionModal()">+ Convention</button>
+        </div>
+
+        <div id="am-kpis" style="margin-bottom:16px;"></div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('am','liste')">📋 Conventions</button>
+          <button class="tab-btn" onclick="switchTab('am','situations')">📊 Situations travaux</button>
+          <button class="tab-btn" onclick="switchTab('am','avenants')">📝 Avenants</button>
+          <button class="tab-btn" onclick="switchTab('am','garanties')">🔒 Retenues de garantie</button>
+          <button class="tab-btn" onclick="switchTab('am','amenageurs')">🏗️ Aménageurs</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-am-liste">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>Aménageur</th><th>Programme</th><th>Objet</th><th>Montant TTC</th><th>Statut / Avt.</th><th>Actions</th></tr></thead>
+            <tbody id="tbody-am-conventions"></tbody></table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-am-situations">
+          <div style="margin-bottom:10px;"><button class="btn btn-primary btn-sm" onclick="amOpenSituationModal()">+ Situation de travaux</button></div>
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>Date</th><th>Convention</th><th>Aménageur</th><th>N°</th><th>HT</th><th>Retenue</th><th>Net</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody id="tbody-am-situations"></tbody></table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-am-avenants">
+          <div style="margin-bottom:10px;"><button class="btn btn-primary btn-sm" onclick="amOpenAvenantModal()">+ Avenant</button></div>
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>Convention</th><th>Objet</th><th>Montant TTC</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody id="tbody-am-avenants"></tbody></table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-am-garanties">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>Convention</th><th>Aménageur</th><th>Retenue cumulée</th><th>Fin prévue</th><th>État</th><th>Action</th></tr></thead>
+            <tbody id="tbody-am-garanties"></tbody></table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-am-amenageurs">
+          <div style="margin-bottom:10px;"><button class="btn btn-primary btn-sm" onclick="amOpenAmenageurModal()">+ Aménageur</button></div>
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>Raison sociale</th><th>Spécialité</th><th>Téléphone</th><th>RCCM</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody id="tbody-am-amenageurs"></tbody></table></div></div>
+        </div>
+      </div>
+
+      <!-- Modal Aménageur -->
+      <div class="modal-overlay" id="modal-am-amenageur">
+        <div class="modal"><div class="modal-header"><h3 id="am-modal-amenageur-title">Nouvel aménageur foncier</h3>
+          <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-am-amenageur')">✕</button></div>
+          <div class="modal-body"><div class="form-grid">
+            <div class="form-group span-2"><label>Raison sociale *</label><input type="text" class="form-control" id="am-rs"></div>
+            <div class="form-group"><label>Spécialité</label><select class="form-control" id="am-specialite">
+              <option value="vrd">VRD</option><option value="terrassement">Terrassement</option><option value="voirie">Voirie</option>
+              <option value="reseaux">Réseaux divers</option><option value="viabilisation">Viabilisation</option>
+              <option value="bornage">Bornage / Topographie</option><option value="autre">Autre</option></select></div>
+            <div class="form-group"><label>Responsable</label><input type="text" class="form-control" id="am-resp"></div>
+            <div class="form-group"><label>Téléphone</label><input type="text" class="form-control" id="am-tel"></div>
+            <div class="form-group"><label>Email</label><input type="text" class="form-control" id="am-email"></div>
+            <div class="form-group"><label>RCCM</label><input type="text" class="form-control" id="am-rccm"></div>
+            <div class="form-group"><label>NCC</label><input type="text" class="form-control" id="am-ncc"></div>
+            <div class="form-group"><label>Agrément</label><input type="text" class="form-control" id="am-agrement"></div>
+            <div class="form-group span-2"><label>Adresse</label><input type="text" class="form-control" id="am-adresse"></div>
+            <div class="form-group"><label>Banque</label><input type="text" class="form-control" id="am-banque"></div>
+            <div class="form-group"><label>N° Compte</label><input type="text" class="form-control" id="am-compte"></div>
+            <div class="form-group"><label>Statut</label><select class="form-control" id="am-statut"><option value="actif">Actif</option><option value="inactif">Inactif</option></select></div>
+          </div></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-am-amenageur')">Annuler</button>
+            <button class="btn btn-primary" onclick="amSaveAmenageur()">Enregistrer</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Convention aménagement -->
+      <div class="modal-overlay" id="modal-am-convention">
+        <div class="modal"><div class="modal-header"><h3 id="am-cv-modal-title">Nouvelle convention d'aménagement</h3>
+          <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-am-convention')">✕</button></div>
+          <div class="modal-body"><div class="form-grid">
+            <div class="form-group"><label>N° Convention *</label><input type="text" class="form-control" id="am-cv-numero" placeholder="CVA-001"></div>
+            <div class="form-group"><label>Aménageur *</label><select class="form-control" id="am-cv-amenageur"></select></div>
+            <div class="form-group"><label>Programme</label><select class="form-control" id="am-cv-programme"></select></div>
+            <div class="form-group"><label>Date signature</label><input type="date" class="form-control" id="am-cv-date-signature"></div>
+            <div class="form-group span-2"><label>Objet des travaux</label><input type="text" class="form-control" id="am-cv-objet" placeholder="VRD + viabilisation tranche 1"></div>
+            <div class="form-group"><label>Montant HT (FCFA)</label><input type="number" class="form-control" id="am-cv-ht" oninput="amCalcConvention()" value="0"></div>
+            <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="am-cv-tva" value="18" oninput="amCalcConvention()"></div>
+            <div class="form-group"><label>Montant TTC (auto)</label><input type="number" class="form-control" id="am-cv-ttc" readonly style="color:var(--or);font-weight:700;"></div>
+            <div class="form-group"><label>Retenue garantie (%)</label><input type="number" class="form-control" id="am-cv-retenue-pct" value="10" oninput="amCalcConvention()"></div>
+            <div class="form-group"><label>Retenue (auto)</label><input type="number" class="form-control" id="am-cv-retenue-montant" readonly></div>
+            <div class="form-group"><label>Avance démarrage (%)</label><input type="number" class="form-control" id="am-cv-avance-pct" value="20" oninput="amCalcConvention()"></div>
+            <div class="form-group"><label>Avance (auto)</label><input type="number" class="form-control" id="am-cv-avance-montant" readonly></div>
+            <div class="form-group"><label>Délai (mois)</label><input type="number" class="form-control" id="am-cv-delai" value="12"></div>
+            <div class="form-group"><label>Date démarrage</label><input type="date" class="form-control" id="am-cv-date-demarrage"></div>
+            <div class="form-group"><label>Date fin prévue</label><input type="date" class="form-control" id="am-cv-date-fin-prev"></div>
+            <div class="form-group"><label>Avancement (%)</label><input type="number" class="form-control" id="am-cv-avancement" value="0"></div>
+            <div class="form-group"><label>Statut</label><select class="form-control" id="am-cv-statut">
+              <option value="brouillon">Brouillon</option><option value="en_cours">En cours</option>
+              <option value="termine">Terminé</option><option value="reception_definitive">Réception définitive</option>
+              <option value="suspendu">Suspendu</option></select></div>
+            <div class="form-group span-2"><label>Description</label><textarea class="form-control" id="am-cv-description" rows="2"></textarea></div>
+          </div></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-am-convention')">Annuler</button>
+            <button class="btn btn-primary" onclick="amSaveConvention()">Enregistrer</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Situation aménagement -->
+      <div class="modal-overlay" id="modal-am-situation">
+        <div class="modal"><div class="modal-header"><h3 id="am-situ-modal-title">Nouvelle situation de travaux</h3>
+          <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-am-situation')">✕</button></div>
+          <div class="modal-body"><div class="form-grid">
+            <div class="form-group"><label>Convention *</label><select class="form-control" id="am-situ-convention"></select></div>
+            <div class="form-group"><label>N° Situation *</label><input type="text" class="form-control" id="am-situ-numero" placeholder="SIT-001"></div>
+            <div class="form-group"><label>Date</label><input type="date" class="form-control" id="am-situ-date"></div>
+            <div class="form-group"><label>Avancement (%)</label><input type="number" class="form-control" id="am-situ-avancement" value="0"></div>
+            <div class="form-group"><label>Montant HT (FCFA)</label><input type="number" class="form-control" id="am-situ-ht" value="0" oninput="amCalcSituation()"></div>
+            <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="am-situ-tva" value="18" oninput="amCalcSituation()"></div>
+            <div class="form-group"><label>Montant TTC (auto)</label><input type="number" class="form-control" id="am-situ-ttc" readonly style="color:var(--or);font-weight:700;"></div>
+            <div class="form-group"><label>Retenue garantie (%)</label><input type="number" class="form-control" id="am-situ-retenue-pct" value="10" oninput="amCalcSituation()"></div>
+            <div class="form-group"><label>Net à payer (auto)</label><input type="number" class="form-control" id="am-situ-net" readonly style="color:var(--vert);font-weight:700;"></div>
+            <div class="form-group"><label>Mode règlement</label><select class="form-control" id="am-situ-mode"><option value="virement">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile Money</option><option value="especes">Espèces</option></select></div>
+            <div class="form-group"><label>Statut</label><select class="form-control" id="am-situ-statut"><option value="brouillon">Brouillon</option><option value="validee">Validée (→ écriture 605/401)</option><option value="payee">Payée (+ règlement)</option></select></div>
+            <div class="form-group span-2"><label>Travaux réalisés</label><textarea class="form-control" id="am-situ-travaux" rows="2"></textarea></div>
+          </div></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-am-situation')">Annuler</button>
+            <button class="btn btn-primary" onclick="amSaveSituation()">Enregistrer</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Avenant aménagement -->
+      <div class="modal-overlay" id="modal-am-avenant">
+        <div class="modal"><div class="modal-header"><h3 id="am-av-modal-title">Nouvel avenant</h3>
+          <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-am-avenant')">✕</button></div>
+          <div class="modal-body"><div class="form-grid">
+            <div class="form-group"><label>Convention *</label><select class="form-control" id="am-av-convention"></select></div>
+            <div class="form-group"><label>N° Avenant *</label><input type="text" class="form-control" id="am-av-numero" placeholder="AV-001"></div>
+            <div class="form-group"><label>Date</label><input type="date" class="form-control" id="am-av-date"></div>
+            <div class="form-group span-2"><label>Objet</label><input type="text" class="form-control" id="am-av-objet"></div>
+            <div class="form-group"><label>Montant HT (FCFA)</label><input type="number" class="form-control" id="am-av-ht" value="0" oninput="amCalcAvenant()"></div>
+            <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="am-av-tva" value="18" oninput="amCalcAvenant()"></div>
+            <div class="form-group"><label>Montant TTC (auto)</label><input type="number" class="form-control" id="am-av-ttc" readonly style="color:var(--or);font-weight:700;"></div>
+            <div class="form-group"><label>Statut</label><select class="form-control" id="am-av-statut"><option value="projet">Projet</option><option value="signe">Signé</option><option value="rejete">Rejeté</option></select></div>
+          </div></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-am-avenant')">Annuler</button>
+            <button class="btn btn-primary" onclick="amSaveAvenant()">Enregistrer</button></div>
+        </div>
+      </div>
+
       <!-- ══ PORTAIL SOUSCRIPTEUR ══════════════════════ -->
       <div class="page" id="page-portail-souscripteur">
         <div class="page-header">
@@ -8063,14 +8218,18 @@ var DATA = {
   agrement_promoteur: [],
   agrement_programme: [],
   conv_agrement: [],
-  previsionnels: []
+  previsionnels: [],
+  amenageurs: [],
+  conventions_amenagement: [],
+  situations_amenagement: [],
+  avenants_amenagement: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 106; /* v106: ajout store previsionnels. Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
+var DB_VERSION = 107; /* v107: stores aménagement foncier. Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -8096,7 +8255,11 @@ var ALL_STORES = [
   'agrement_promoteur',
   'agrement_programme',
   'conv_agrement',
-  'previsionnels'
+  'previsionnels',
+  'amenageurs',
+  'conventions_amenagement',
+  'situations_amenagement',
+  'avenants_amenagement'
 ];
 
 function initDB() {
@@ -8661,6 +8824,7 @@ function goTo(page) {
   if (page === 'crm-apporteurs') { renderApporteurs(); buildKPIsApporteurs(); }
   if (page === 'tresorerie-page') { buildTresorerieDetaille(); }
   if (page === 'previsionnel') { loadPrevisionnel(); }
+  if (page === 'amenagement') { loadAmenagement(); }
 }
 
 function switchTab(context, tab) {
@@ -8717,6 +8881,7 @@ function switchTab(context, tab) {
   else if (context === 'morcellement')     prefix = 'tab-morcellement-';
   else if (context === 'agr-prom')         prefix = 'tab-agr-prom-';
   else if (context === 'agr-prog')         prefix = 'tab-agr-prog-';
+  else if (context === 'am')               prefix = 'tab-am-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
@@ -24472,6 +24637,484 @@ function etatDossierBancaire() {
     + '<p style="font-size:10px;color:#888;margin-top:14px;">Document prévisionnel établi sur hypothèses de gestion. Sans valeur d\'engagement.</p>';
   genererEtatPDF({ titre:'Dossier bancaire — Prévisionnel', sousTitre:_prevSousTitre(s), orientation:'paysage',
     couleur:'#1D4ED8', cssExtra:'.pb{page-break-before:always;}', contenu:contenu });
+}
+
+/* =====================================================
+   MODULE AMÉNAGEMENT FONCIER (parallèle aux conventions
+   constructeurs). Registre aménageurs + conventions +
+   situations travaux + avenants + retenues de garantie.
+   Comptabilité dédiée : Débit 605 / Crédit 401.
+===================================================== */
+
+var CPT_AMENAGEMENT_DEBIT = '605'; /* Achats de matériaux de construction / travaux d'aménagement */
+
+function _amInit() {
+  if (!DATA.amenageurs) DATA.amenageurs = [];
+  if (!DATA.conventions_amenagement) DATA.conventions_amenagement = [];
+  if (!DATA.situations_amenagement) DATA.situations_amenagement = [];
+  if (!DATA.avenants_amenagement) DATA.avenants_amenagement = [];
+}
+function _amName(id) {
+  var a = (DATA.amenageurs || []).find(function(x){ return x.id === id; });
+  return a ? a.raison_sociale : '—';
+}
+function _amProg(id) {
+  var p = (DATA.programmes || []).find(function(x){ return x.id === id; });
+  return p ? p.nom : '—';
+}
+
+/* ---- Chargement page ---- */
+function loadAmenagement() {
+  _amInit();
+  // selects
+  var pSel = document.getElementById('am-cv-programme');
+  if (pSel) pSel.innerHTML = '<option value="">— Programme —</option>'
+    + (DATA.programmes || []).map(function(p){ return '<option value="' + p.id + '">' + escHtml(p.nom) + '</option>'; }).join('');
+  var aSel = document.getElementById('am-cv-amenageur');
+  if (aSel) aSel.innerHTML = '<option value="">— Sélectionner —</option>'
+    + (DATA.amenageurs || []).map(function(a){ return '<option value="' + a.id + '">' + escHtml(a.raison_sociale) + '</option>'; }).join('');
+  ['am-situ-convention', 'am-av-convention'].forEach(function(id){
+    var sel = document.getElementById(id);
+    if (sel) sel.innerHTML = '<option value="">— Convention —</option>'
+      + (DATA.conventions_amenagement || []).map(function(c){ return '<option value="' + c.id + '">' + escHtml(c.numero + ' — ' + _amName(c.amenageur_id)) + '</option>'; }).join('');
+  });
+  amRenderKPIs();
+  amRenderAmenageurs();
+  amRenderConventions();
+  amRenderSituations();
+  amRenderAvenants();
+  amRenderGaranties();
+}
+
+function amRenderKPIs() {
+  var box = document.getElementById('am-kpis');
+  if (!box) return;
+  var convs = DATA.conventions_amenagement || [];
+  var montant = convs.reduce(function(a, c){ return a + (c.montant_ttc || 0); }, 0);
+  var actifs = convs.filter(function(c){ return c.statut !== 'termine' && c.statut !== 'reception_definitive'; }).length;
+  var retenues = (DATA.situations_amenagement || []).filter(function(s){ return s.retenue > 0 && (s.statut === 'validee' || s.statut === 'payee'); })
+    .reduce(function(a, s){ return a + s.retenue; }, 0);
+  box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">'
+    + '<div class="kpi-card" data-icon="🏗️"><div class="kpi-label">Aménageurs</div><div class="kpi-value">' + (DATA.amenageurs || []).length + '</div></div>'
+    + '<div class="kpi-card" data-icon="📋"><div class="kpi-label">Conventions actives</div><div class="kpi-value">' + actifs + '</div></div>'
+    + '<div class="kpi-card" data-icon="💰"><div class="kpi-label">Montant engagé</div><div class="kpi-value or" style="font-size:16px;">' + fmtF(montant) + ' F</div></div>'
+    + '<div class="kpi-card" data-icon="🔒"><div class="kpi-label">Retenues garanties</div><div class="kpi-value" style="font-size:16px;color:var(--rouge);">' + fmtF(retenues) + ' F</div></div>'
+    + '</div>';
+}
+
+/* ================= REGISTRE AMÉNAGEURS ================= */
+function amOpenAmenageurModal(id) {
+  _amInit();
+  APP.editingId = id || null;
+  var a = id ? DATA.amenageurs.find(function(x){ return x.id === id; }) : null;
+  document.getElementById('am-modal-amenageur-title').textContent = a ? 'Modifier aménageur' : 'Nouvel aménageur foncier';
+  var f = { 'am-rs': 'raison_sociale', 'am-rccm': 'rccm', 'am-ncc': 'ncc', 'am-resp': 'responsable',
+    'am-tel': 'tel', 'am-email': 'email', 'am-adresse': 'adresse', 'am-specialite': 'specialite',
+    'am-agrement': 'agrement', 'am-banque': 'banque', 'am-compte': 'compte', 'am-statut': 'statut' };
+  Object.keys(f).forEach(function(el){ var e = document.getElementById(el); if (e) e.value = a ? (a[f[el]] || '') : ''; });
+  openModal('modal-am-amenageur');
+}
+async function amSaveAmenageur() {
+  _amInit();
+  var rs = document.getElementById('am-rs').value.trim();
+  if (!rs) { toast('Raison sociale obligatoire.', 'error'); return; }
+  var a = {
+    id: APP.editingId || uid(), raison_sociale: rs,
+    rccm: document.getElementById('am-rccm').value.trim(),
+    ncc: document.getElementById('am-ncc').value.trim(),
+    responsable: document.getElementById('am-resp').value.trim(),
+    tel: document.getElementById('am-tel').value.trim(),
+    email: document.getElementById('am-email').value.trim(),
+    adresse: document.getElementById('am-adresse').value.trim(),
+    specialite: document.getElementById('am-specialite').value,
+    agrement: document.getElementById('am-agrement').value.trim(),
+    banque: document.getElementById('am-banque').value.trim(),
+    compte: document.getElementById('am-compte').value.trim(),
+    statut: document.getElementById('am-statut').value,
+    created_at: APP.editingId ? undefined : today()
+  };
+  var idx = DATA.amenageurs.findIndex(function(x){ return x.id === a.id; });
+  if (idx >= 0) DATA.amenageurs[idx] = a; else DATA.amenageurs.push(a);
+  await dbPut('amenageurs', a);
+  closeModal('modal-am-amenageur'); loadAmenagement();
+  toast('Aménageur enregistré.', 'success');
+}
+async function amDeleteAmenageur(id) {
+  if (!confirm('Supprimer cet aménageur ?')) return;
+  DATA.amenageurs = DATA.amenageurs.filter(function(x){ return x.id !== id; });
+  await dbDelete('amenageurs', id);
+  loadAmenagement();
+  toast('Aménageur supprimé.', 'success');
+}
+function amRenderAmenageurs() {
+  var tb = document.getElementById('tbody-am-amenageurs');
+  if (!tb) return;
+  var list = DATA.amenageurs || [];
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun aménageur enregistré.</td></tr>'; return; }
+  var spec = { vrd: 'VRD', terrassement: 'Terrassement', voirie: 'Voirie', reseaux: 'Réseaux', viabilisation: 'Viabilisation', bornage: 'Bornage', autre: 'Autre' };
+  tb.innerHTML = list.map(function(a){
+    return '<tr><td><strong>' + escHtml(a.raison_sociale) + '</strong><br><span style="font-size:11px;color:var(--blanc-dim);">' + escHtml(a.responsable || '') + '</span></td>'
+      + '<td>' + (spec[a.specialite] || a.specialite || '—') + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(a.tel || '—') + '</td>'
+      + '<td style="font-size:11px;">' + escHtml(a.rccm || '—') + '</td>'
+      + '<td><span class="badge ' + (a.statut === 'actif' ? 'badge-vert' : 'badge-rouge') + '">' + (a.statut || 'actif') + '</span></td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="amOpenAmenageurModal(\'' + a.id + '\')">✏️</button> '
+      + '<button class="btn btn-danger btn-sm btn-icon" onclick="amDeleteAmenageur(\'' + a.id + '\')">🗑</button></td></tr>';
+  }).join('');
+}
+
+/* ================= CONVENTIONS AMÉNAGEMENT ================= */
+function amCalcConvention() {
+  var ht = parseFloat(document.getElementById('am-cv-ht').value) || 0;
+  var tva = parseFloat(document.getElementById('am-cv-tva').value) || 0;
+  var ttc = ht * (1 + tva / 100);
+  document.getElementById('am-cv-ttc').value = Math.round(ttc);
+  var rp = parseFloat(document.getElementById('am-cv-retenue-pct').value) || 0;
+  document.getElementById('am-cv-retenue-montant').value = Math.round(ttc * rp / 100);
+  var ap = parseFloat(document.getElementById('am-cv-avance-pct').value) || 0;
+  document.getElementById('am-cv-avance-montant').value = Math.round(ttc * ap / 100);
+}
+function amOpenConventionModal(id) {
+  _amInit();
+  APP.editingId = id || null;
+  var c = id ? DATA.conventions_amenagement.find(function(x){ return x.id === id; }) : null;
+  document.getElementById('am-cv-modal-title').textContent = c ? 'Modifier convention' : 'Nouvelle convention d\'aménagement';
+  var v = {
+    'am-cv-numero': c ? c.numero : '', 'am-cv-amenageur': c ? c.amenageur_id : '', 'am-cv-programme': c ? c.programme_id : '',
+    'am-cv-objet': c ? c.objet : '', 'am-cv-date-signature': c ? c.date_signature : '',
+    'am-cv-ht': c ? c.montant_ht : 0, 'am-cv-tva': c ? c.tva_pct : 18, 'am-cv-ttc': c ? c.montant_ttc : 0,
+    'am-cv-retenue-pct': c ? c.retenue_pct : 10, 'am-cv-retenue-montant': c ? c.retenue_montant : 0,
+    'am-cv-avance-pct': c ? c.avance_pct : 20, 'am-cv-avance-montant': c ? c.avance_montant : 0,
+    'am-cv-delai': c ? c.delai : 12, 'am-cv-date-demarrage': c ? c.date_demarrage : '', 'am-cv-date-fin-prev': c ? c.date_fin_prev : '',
+    'am-cv-avancement': c ? c.avancement : 0, 'am-cv-statut': c ? c.statut : 'en_cours', 'am-cv-description': c ? c.description : ''
+  };
+  Object.keys(v).forEach(function(el){ var e = document.getElementById(el); if (e) e.value = v[el]; });
+  openModal('modal-am-convention');
+}
+async function amSaveConvention() {
+  _amInit();
+  var num = document.getElementById('am-cv-numero').value.trim();
+  var amId = document.getElementById('am-cv-amenageur').value;
+  if (!num || !amId) { toast('N° convention et aménageur obligatoires.', 'error'); return; }
+  amCalcConvention();
+  var c = {
+    id: APP.editingId || uid(), nature: 'amenagement', numero: num, amenageur_id: amId,
+    programme_id: document.getElementById('am-cv-programme').value,
+    objet: document.getElementById('am-cv-objet').value.trim(),
+    description: document.getElementById('am-cv-description').value.trim(),
+    date_signature: document.getElementById('am-cv-date-signature').value,
+    statut: document.getElementById('am-cv-statut').value,
+    montant_ht: parseFloat(document.getElementById('am-cv-ht').value) || 0,
+    tva_pct: parseFloat(document.getElementById('am-cv-tva').value) || 18,
+    montant_ttc: parseFloat(document.getElementById('am-cv-ttc').value) || 0,
+    retenue_pct: parseFloat(document.getElementById('am-cv-retenue-pct').value) || 10,
+    retenue_montant: parseFloat(document.getElementById('am-cv-retenue-montant').value) || 0,
+    avance_pct: parseFloat(document.getElementById('am-cv-avance-pct').value) || 20,
+    avance_montant: parseFloat(document.getElementById('am-cv-avance-montant').value) || 0,
+    delai: parseInt(document.getElementById('am-cv-delai').value) || 12,
+    date_demarrage: document.getElementById('am-cv-date-demarrage').value,
+    date_fin_prev: document.getElementById('am-cv-date-fin-prev').value,
+    avancement: parseInt(document.getElementById('am-cv-avancement').value) || 0,
+    created_at: APP.editingId ? undefined : today()
+  };
+  var idx = DATA.conventions_amenagement.findIndex(function(x){ return x.id === c.id; });
+  if (idx >= 0) DATA.conventions_amenagement[idx] = c; else DATA.conventions_amenagement.push(c);
+  await dbPut('conventions_amenagement', c);
+  closeModal('modal-am-convention'); loadAmenagement();
+  toast('Convention d\'aménagement enregistrée.', 'success');
+}
+async function amDeleteConvention(id) {
+  if (!confirm('Supprimer cette convention ?')) return;
+  DATA.conventions_amenagement = DATA.conventions_amenagement.filter(function(x){ return x.id !== id; });
+  await dbDelete('conventions_amenagement', id);
+  loadAmenagement();
+  toast('Convention supprimée.', 'success');
+}
+function amRenderConventions() {
+  var tb = document.getElementById('tbody-am-conventions');
+  if (!tb) return;
+  var list = DATA.conventions_amenagement || [];
+  var sC = { brouillon: 'badge-bleu', en_cours: 'badge-or', termine: 'badge-vert', reception_definitive: 'badge-vert', suspendu: 'badge-rouge' };
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune convention d\'aménagement.</td></tr>'; return; }
+  tb.innerHTML = list.map(function(c){
+    return '<tr><td style="font-family:monospace;color:var(--or);">' + escHtml(c.numero) + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(_amName(c.amenageur_id)) + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(_amProg(c.programme_id)) + '</td>'
+      + '<td style="font-size:11px;">' + escHtml(c.objet || '—') + '</td>'
+      + '<td style="font-weight:700;color:var(--or);">' + fmtF(c.montant_ttc || 0) + ' F</td>'
+      + '<td><span class="badge ' + (sC[c.statut] || 'badge-bleu') + '">' + (c.statut || '—') + '</span> ' + (c.avancement || 0) + '%</td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="amEtatConvention(\'' + c.id + '\')" title="PDF">📄</button> '
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="amOpenConventionModal(\'' + c.id + '\')">✏️</button> '
+      + '<button class="btn btn-danger btn-sm btn-icon" onclick="amDeleteConvention(\'' + c.id + '\')">🗑</button></td></tr>';
+  }).join('');
+}
+
+/* ================= SITUATIONS DE TRAVAUX ================= */
+function amCalcSituation() {
+  var ht = parseFloat(document.getElementById('am-situ-ht').value) || 0;
+  var tva = parseFloat(document.getElementById('am-situ-tva').value) || 18;
+  var rp = parseFloat(document.getElementById('am-situ-retenue-pct').value) || 10;
+  var ttc = ht * (1 + tva / 100);
+  var retenue = ttc * rp / 100;
+  document.getElementById('am-situ-ttc').value = Math.round(ttc);
+  document.getElementById('am-situ-net').value = Math.round(ttc - retenue);
+}
+function amOpenSituationModal(id) {
+  _amInit();
+  APP.editingId = id || null;
+  var s = id ? DATA.situations_amenagement.find(function(x){ return x.id === id; }) : null;
+  document.getElementById('am-situ-modal-title').textContent = s ? 'Modifier situation' : 'Nouvelle situation de travaux';
+  var v = { 'am-situ-convention': s ? s.convention_id : '', 'am-situ-numero': s ? s.numero : '', 'am-situ-date': s ? s.date : today(),
+    'am-situ-avancement': s ? s.avancement : 0, 'am-situ-ht': s ? s.montant_ht : 0, 'am-situ-tva': s ? s.tva_pct : 18,
+    'am-situ-ttc': s ? s.montant_ttc : 0, 'am-situ-retenue-pct': s ? s.retenue_pct : 10, 'am-situ-net': s ? s.net : 0,
+    'am-situ-mode': s ? s.mode : 'virement', 'am-situ-statut': s ? s.statut : 'brouillon', 'am-situ-travaux': s ? s.travaux : '' };
+  Object.keys(v).forEach(function(el){ var e = document.getElementById(el); if (e) e.value = v[el]; });
+  openModal('modal-am-situation');
+}
+async function amSaveSituation() {
+  _amInit();
+  var conv = document.getElementById('am-situ-convention').value;
+  var num = document.getElementById('am-situ-numero').value.trim();
+  if (!conv || !num) { toast('Convention et n° situation obligatoires.', 'error'); return; }
+  amCalcSituation();
+  var ht = parseFloat(document.getElementById('am-situ-ht').value) || 0;
+  var tva = parseFloat(document.getElementById('am-situ-tva').value) || 18;
+  var rp = parseFloat(document.getElementById('am-situ-retenue-pct').value) || 10;
+  var ttc = ht * (1 + tva / 100);
+  var retenue = ttc * rp / 100;
+  var s = {
+    id: APP.editingId || uid(), convention_id: conv, numero: num,
+    date: document.getElementById('am-situ-date').value || today(),
+    avancement: parseInt(document.getElementById('am-situ-avancement').value) || 0,
+    montant_ht: ht, tva_pct: tva, montant_ttc: Math.round(ttc),
+    retenue_pct: rp, retenue: Math.round(retenue), net: Math.round(ttc - retenue),
+    mode: document.getElementById('am-situ-mode').value,
+    statut: document.getElementById('am-situ-statut').value,
+    travaux: document.getElementById('am-situ-travaux').value.trim(),
+    created_at: APP.editingId ? undefined : today()
+  };
+  var idx = DATA.situations_amenagement.findIndex(function(x){ return x.id === s.id; });
+  if (idx >= 0) DATA.situations_amenagement[idx] = s; else DATA.situations_amenagement.push(s);
+  await dbPut('situations_amenagement', s);
+
+  // Comptabilisation : Débit 605 / Crédit 401 (et règlement si payée)
+  if (s.statut === 'validee' || s.statut === 'payee') {
+    var cv = DATA.conventions_amenagement.find(function(x){ return x.id === conv; }) || { numero: '' };
+    var lib = 'Situation aménagement ' + s.numero + ' — ' + cv.numero + ' — ' + _amName(cv.amenageur_id);
+    var ecr = { id: 'ecr_amsit_' + s.id, ref: 'AMG-' + s.numero, date: s.date, piece: s.numero,
+      libelle: lib, compte: CPT_AMENAGEMENT_DEBIT, compte_debit: CPT_AMENAGEMENT_DEBIT, compte_credit: '401',
+      montant: s.montant_ht, type: 'charge', mode: s.mode, programme_id: cv.programme_id || '',
+      notes: 'Avancement ' + s.avancement + '%', created_at: today() };
+    if (!DATA.ecritures.some(function(e){ return e.id === ecr.id; })) DATA.ecritures.push(ecr);
+    else { var ei = DATA.ecritures.findIndex(function(e){ return e.id === ecr.id; }); DATA.ecritures[ei] = ecr; }
+    await dbPut('ecritures', ecr);
+    if (s.statut === 'payee') {
+      var ep = { id: 'ecr_ampay_' + s.id, ref: 'AMG-PAY-' + s.numero, date: s.date, piece: s.numero,
+        libelle: 'Règlement ' + lib, compte: '401', compte_debit: '401', compte_credit: '512',
+        montant: s.net, type: 'actif', mode: s.mode, created_at: today() };
+      if (!DATA.ecritures.some(function(e){ return e.id === ep.id; })) DATA.ecritures.push(ep);
+      else { var pi = DATA.ecritures.findIndex(function(e){ return e.id === ep.id; }); DATA.ecritures[pi] = ep; }
+      await dbPut('ecritures', ep);
+    }
+    if (typeof buildBalance === 'function') buildBalance();
+    if (typeof buildCompteResultat === 'function') buildCompteResultat();
+    toast('✅ Situation + écriture ' + CPT_AMENAGEMENT_DEBIT + '/401 créée.', 'success');
+  } else {
+    toast('Situation enregistrée.', 'success');
+  }
+  closeModal('modal-am-situation'); loadAmenagement();
+}
+async function amDeleteSituation(id) {
+  if (!confirm('Supprimer cette situation ?')) return;
+  DATA.situations_amenagement = DATA.situations_amenagement.filter(function(x){ return x.id !== id; });
+  await dbDelete('situations_amenagement', id);
+  loadAmenagement();
+  toast('Situation supprimée.', 'success');
+}
+function amRenderSituations() {
+  var tb = document.getElementById('tbody-am-situations');
+  if (!tb) return;
+  var list = (DATA.situations_amenagement || []).slice().sort(function(a, b){ return (b.date || '').localeCompare(a.date || ''); });
+  var sC = { brouillon: 'badge-bleu', validee: 'badge-or', payee: 'badge-vert' };
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune situation.</td></tr>'; return; }
+  tb.innerHTML = list.map(function(s){
+    var cv = (DATA.conventions_amenagement || []).find(function(c){ return c.id === s.convention_id; }) || { numero: '—' };
+    return '<tr><td>' + dateShort(s.date) + '</td>'
+      + '<td style="font-family:monospace;color:var(--or);font-size:11px;">' + escHtml(cv.numero) + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(_amName(cv.amenageur_id)) + '</td>'
+      + '<td style="font-family:monospace;color:var(--bleu);">' + escHtml(s.numero) + '</td>'
+      + '<td>' + fmtF(s.montant_ht || 0) + '</td>'
+      + '<td style="color:var(--rouge);">' + fmtF(s.retenue || 0) + '</td>'
+      + '<td style="font-weight:700;color:var(--vert);">' + fmtF(s.net || 0) + '</td>'
+      + '<td><span class="badge ' + (sC[s.statut] || 'badge-bleu') + '">' + s.statut + '</span></td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="amEtatSituation(\'' + s.id + '\')" title="PDF">📄</button> '
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="amOpenSituationModal(\'' + s.id + '\')">✏️</button> '
+      + '<button class="btn btn-danger btn-sm btn-icon" onclick="amDeleteSituation(\'' + s.id + '\')">🗑</button></td></tr>';
+  }).join('');
+}
+
+/* ================= AVENANTS ================= */
+function amCalcAvenant() {
+  var ht = parseFloat(document.getElementById('am-av-ht').value) || 0;
+  var tva = parseFloat(document.getElementById('am-av-tva').value) || 18;
+  document.getElementById('am-av-ttc').value = Math.round(ht * (1 + tva / 100));
+}
+function amOpenAvenantModal(id) {
+  _amInit();
+  APP.editingId = id || null;
+  var a = id ? DATA.avenants_amenagement.find(function(x){ return x.id === id; }) : null;
+  document.getElementById('am-av-modal-title').textContent = a ? 'Modifier avenant' : 'Nouvel avenant';
+  var v = { 'am-av-convention': a ? a.convention_id : '', 'am-av-numero': a ? a.numero : '', 'am-av-date': a ? a.date : today(),
+    'am-av-objet': a ? a.objet : '', 'am-av-ht': a ? a.montant_ht : 0, 'am-av-tva': a ? a.tva_pct : 18,
+    'am-av-ttc': a ? a.montant_ttc : 0, 'am-av-statut': a ? a.statut : 'projet' };
+  Object.keys(v).forEach(function(el){ var e = document.getElementById(el); if (e) e.value = v[el]; });
+  openModal('modal-am-avenant');
+}
+async function amSaveAvenant() {
+  _amInit();
+  var conv = document.getElementById('am-av-convention').value;
+  var num = document.getElementById('am-av-numero').value.trim();
+  if (!conv || !num) { toast('Convention et n° avenant obligatoires.', 'error'); return; }
+  amCalcAvenant();
+  var a = {
+    id: APP.editingId || uid(), convention_id: conv, numero: num,
+    date: document.getElementById('am-av-date').value || today(),
+    objet: document.getElementById('am-av-objet').value.trim(),
+    montant_ht: parseFloat(document.getElementById('am-av-ht').value) || 0,
+    tva_pct: parseFloat(document.getElementById('am-av-tva').value) || 18,
+    montant_ttc: parseFloat(document.getElementById('am-av-ttc').value) || 0,
+    statut: document.getElementById('am-av-statut').value,
+    created_at: APP.editingId ? undefined : today()
+  };
+  var idx = DATA.avenants_amenagement.findIndex(function(x){ return x.id === a.id; });
+  if (idx >= 0) DATA.avenants_amenagement[idx] = a; else DATA.avenants_amenagement.push(a);
+  await dbPut('avenants_amenagement', a);
+  closeModal('modal-am-avenant'); loadAmenagement();
+  toast('Avenant enregistré.', 'success');
+}
+async function amDeleteAvenant(id) {
+  if (!confirm('Supprimer cet avenant ?')) return;
+  DATA.avenants_amenagement = DATA.avenants_amenagement.filter(function(x){ return x.id !== id; });
+  await dbDelete('avenants_amenagement', id);
+  loadAmenagement();
+  toast('Avenant supprimé.', 'success');
+}
+function amRenderAvenants() {
+  var tb = document.getElementById('tbody-am-avenants');
+  if (!tb) return;
+  var list = DATA.avenants_amenagement || [];
+  var sC = { projet: 'badge-bleu', signe: 'badge-vert', rejete: 'badge-rouge' };
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun avenant.</td></tr>'; return; }
+  tb.innerHTML = list.map(function(a){
+    var cv = (DATA.conventions_amenagement || []).find(function(c){ return c.id === a.convention_id; }) || { numero: '—' };
+    return '<tr><td style="font-family:monospace;color:var(--or);">' + escHtml(a.numero) + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(cv.numero + ' — ' + _amName(cv.amenageur_id)) + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(a.objet || '—') + '</td>'
+      + '<td style="font-weight:700;color:var(--or);">' + fmtF(a.montant_ttc || 0) + ' F</td>'
+      + '<td><span class="badge ' + (sC[a.statut] || 'badge-bleu') + '">' + a.statut + '</span></td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="amOpenAvenantModal(\'' + a.id + '\')">✏️</button> '
+      + '<button class="btn btn-danger btn-sm btn-icon" onclick="amDeleteAvenant(\'' + a.id + '\')">🗑</button></td></tr>';
+  }).join('');
+}
+
+/* ================= RETENUES DE GARANTIE ================= */
+function amRenderGaranties() {
+  var tb = document.getElementById('tbody-am-garanties');
+  if (!tb) return;
+  var retenues = (DATA.situations_amenagement || []).filter(function(s){ return s.retenue > 0 && (s.statut === 'validee' || s.statut === 'payee'); });
+  if (!retenues.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune retenue constituée.</td></tr>'; return; }
+  var byConv = {};
+  retenues.forEach(function(s){ if (!byConv[s.convention_id]) byConv[s.convention_id] = 0; byConv[s.convention_id] += s.retenue; });
+  tb.innerHTML = Object.keys(byConv).map(function(cid){
+    var cv = (DATA.conventions_amenagement || []).find(function(c){ return c.id === cid; }) || { numero: '—' };
+    var lib = cv.statut === 'reception_definitive' || cv.statut === 'termine';
+    return '<tr style="' + (lib ? 'background:rgba(74,196,122,0.05);' : '') + '">'
+      + '<td style="font-family:monospace;color:var(--or);">' + escHtml(cv.numero) + '</td>'
+      + '<td style="font-size:12px;">' + escHtml(_amName(cv.amenageur_id)) + '</td>'
+      + '<td style="font-weight:700;color:var(--rouge);">' + fmtF(byConv[cid]) + ' F</td>'
+      + '<td>' + (cv.date_fin_prev || '—') + '</td>'
+      + '<td><span class="badge ' + (lib ? 'badge-vert' : 'badge-or') + '">' + (lib ? 'Libérable' : 'Bloquée') + '</span></td>'
+      + '<td>' + (lib ? '<button class="btn btn-primary btn-sm" onclick="amLibererGarantie(\'' + cid + '\',' + byConv[cid] + ')">💰 Libérer</button>'
+        : '<button class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:.4;">🔒</button>') + '</td></tr>';
+  }).join('');
+}
+async function amLibererGarantie(convId, montant) {
+  if (!confirm('Libérer la retenue de garantie de ' + fmtF(montant) + ' FCFA ?')) return;
+  var cv = (DATA.conventions_amenagement || []).find(function(c){ return c.id === convId; }) || { numero: '' };
+  var ecr = { id: 'ecr_amgar_' + convId, ref: 'AMG-GAR-' + cv.numero, date: today(), piece: cv.numero,
+    libelle: 'Libération retenue garantie — ' + cv.numero + ' — ' + _amName(cv.amenageur_id),
+    compte: '4011', compte_debit: '4011', compte_credit: '512', montant: montant, type: 'actif', mode: 'virement', created_at: today() };
+  DATA.ecritures.push(ecr);
+  await dbPut('ecritures', ecr);
+  if (typeof buildBalance === 'function') buildBalance();
+  toast('Retenue libérée — écriture 4011/512 créée.', 'success');
+  loadAmenagement();
+}
+
+/* ================= ÉTATS PDF ================= */
+function amEtatConvention(id) {
+  var c = (DATA.conventions_amenagement || []).find(function(x){ return x.id === id; });
+  if (!c) { toast('Convention introuvable.', 'error'); return; }
+  var contenu = '<table>'
+    + '<tr><th style="width:35%;">Aménageur foncier</th><td>' + escHtml(_amName(c.amenageur_id)) + '</td></tr>'
+    + '<tr><th>Programme</th><td>' + escHtml(_amProg(c.programme_id)) + '</td></tr>'
+    + '<tr><th>Objet des travaux</th><td>' + escHtml(c.objet || '—') + '</td></tr>'
+    + '<tr><th>Date de signature</th><td>' + dateShort(c.date_signature) + '</td></tr>'
+    + '<tr><th>Délai d\'exécution</th><td>' + (c.delai || 0) + ' mois</td></tr>'
+    + '<tr><th>Démarrage / Fin prévue</th><td>' + dateShort(c.date_demarrage) + ' → ' + dateShort(c.date_fin_prev) + '</td></tr>'
+    + '</table>'
+    + '<h3>Conditions financières</h3><table>'
+    + '<tr><th style="width:35%;">Montant HT</th><td class="num">' + fcfa(c.montant_ht || 0) + '</td></tr>'
+    + '<tr><th>TVA ' + (c.tva_pct || 18) + '%</th><td class="num">' + fcfa((c.montant_ttc || 0) - (c.montant_ht || 0)) + '</td></tr>'
+    + '<tr class="total"><td>Montant TTC</td><td class="num">' + fcfa(c.montant_ttc || 0) + '</td></tr>'
+    + '<tr><th>Avance de démarrage (' + (c.avance_pct || 0) + '%)</th><td class="num">' + fcfa(c.avance_montant || 0) + '</td></tr>'
+    + '<tr><th>Retenue de garantie (' + (c.retenue_pct || 0) + '%)</th><td class="num">' + fcfa(c.retenue_montant || 0) + '</td></tr>'
+    + '</table>'
+    + (c.description ? '<h3>Description</h3><p>' + escHtml(c.description) + '</p>' : '')
+    + '<div class="etat-signatures"><div><div class="etat-sign-line">L\'aménageur</div></div>'
+    + '<div><div class="etat-sign-line">Le maître d\'ouvrage</div></div></div>';
+  genererEtatPDF({ titre: 'Convention d\'aménagement foncier', sousTitre: c.numero + ' — ' + _amName(c.amenageur_id),
+    reference: c.numero, couleur: '#16a34a', contenu: contenu });
+}
+function amEtatSituation(id) {
+  var s = (DATA.situations_amenagement || []).find(function(x){ return x.id === id; });
+  if (!s) { toast('Situation introuvable.', 'error'); return; }
+  var cv = (DATA.conventions_amenagement || []).find(function(c){ return c.id === s.convention_id; }) || { numero: '—' };
+  var contenu = '<table>'
+    + '<tr><th style="width:35%;">Maître d\'ouvrage</th><td>' + escHtml((_prevSociete().nom) || 'ImmoSuite ERP') + '</td></tr>'
+    + '<tr><th>Aménageur</th><td>' + escHtml(_amName(cv.amenageur_id)) + '</td></tr>'
+    + '<tr><th>Convention</th><td>' + escHtml(cv.numero) + '</td></tr>'
+    + '<tr><th>Programme</th><td>' + escHtml(_amProg(cv.programme_id)) + '</td></tr>'
+    + '<tr><th>Date</th><td>' + dateShort(s.date) + '</td></tr>'
+    + '<tr><th>Avancement</th><td>' + (s.avancement || 0) + '%</td></tr>'
+    + '</table>'
+    + (s.travaux ? '<h3>Travaux réalisés</h3><p>' + escHtml(s.travaux) + '</p>' : '')
+    + '<h3>Décompte</h3><table>'
+    + '<tr><th style="width:55%;">Montant HT</th><td class="num">' + fcfa(s.montant_ht || 0) + '</td></tr>'
+    + '<tr><th>TVA</th><td class="num">' + fcfa((s.montant_ttc || 0) - (s.montant_ht || 0)) + '</td></tr>'
+    + '<tr><th>Montant TTC</th><td class="num">' + fcfa(s.montant_ttc || 0) + '</td></tr>'
+    + '<tr><th>Retenue de garantie (' + (s.retenue_pct || 0) + '%)</th><td class="num">\u2212 ' + fcfa(s.retenue || 0) + '</td></tr>'
+    + '<tr class="total"><td>NET À PAYER</td><td class="num">' + fcfa(s.net || 0) + '</td></tr>'
+    + '</table>'
+    + '<div class="etat-signatures"><div><div class="etat-sign-line">L\'aménageur</div></div>'
+    + '<div><div class="etat-sign-line">Le maître d\'ouvrage</div></div></div>';
+  genererEtatPDF({ titre: 'Situation de travaux d\'aménagement N° ' + s.numero, sousTitre: cv.numero + ' — ' + _amName(cv.amenageur_id),
+    reference: s.numero, couleur: '#16a34a', contenu: contenu });
+}
+function amEtatRecap() {
+  var list = DATA.conventions_amenagement || [];
+  var tot = 0;
+  var rows = list.map(function(c){
+    tot += c.montant_ttc || 0;
+    return '<tr><td>' + escHtml(c.numero) + '</td><td>' + escHtml(_amName(c.amenageur_id)) + '</td>'
+      + '<td>' + escHtml(_amProg(c.programme_id)) + '</td><td>' + escHtml(c.objet || '—') + '</td>'
+      + '<td class="num">' + fmtF(c.montant_ttc || 0) + '</td><td style="text-align:center;">' + (c.avancement || 0) + '%</td></tr>';
+  }).join('');
+  if (!list.length) rows = '<tr><td colspan="6" style="text-align:center;color:#888;">Aucune convention</td></tr>';
+  var contenu = '<table><thead><tr><th>N°</th><th>Aménageur</th><th>Programme</th><th>Objet</th><th class="num">Montant TTC</th><th style="text-align:center;">Avt.</th></tr></thead>'
+    + '<tbody>' + rows + '<tr class="total"><td colspan="4">TOTAL ENGAGÉ</td><td class="num">' + fmtF(tot) + '</td><td></td></tr></tbody></table>';
+  genererEtatPDF({ titre: 'Conventions d\'aménagement foncier', sousTitre: 'Récapitulatif — ' + list.length + ' convention(s)',
+    orientation: 'paysage', couleur: '#16a34a', contenu: contenu });
 }
 
 /* Lancer au démarrage */
