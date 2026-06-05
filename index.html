@@ -1521,6 +1521,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <select class="filter-select" id="filter-annee-compta" onchange="loadComptabilite()">
           </select>
           <button class="btn btn-secondary btn-sm" onclick="exportJournalCSV()">⬇ Export journal</button>
+          <button class="btn btn-secondary btn-sm" onclick="etatJournal()">🖨️ Journal PDF</button>
           <button class="btn btn-primary" onclick="openEcritureModal()">+ Écriture</button>
         </div>
 
@@ -1596,6 +1597,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--blanc-dim);">
               <input type="checkbox" id="balance-mouvements" onchange="buildBalance()" style="accent-color:var(--or);"> Comptes mouvementés uniquement
             </label>
+            <button class="btn btn-secondary btn-sm" onclick="etatBalance()">🖨️ Balance PDF</button>
           </div>
           <div class="card" id="balance-box">
             <div style="color:var(--blanc-dim);font-size:13px;">Chargement…</div>
@@ -1958,6 +1960,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <select class="filter-select" id="filter-gl-compte" onchange="buildGrandLivre()">
               <option value="">— Sélectionner un compte —</option>
             </select>
+            <button class="btn btn-secondary btn-sm" onclick="etatGrandLivre()">🖨️ Grand livre PDF</button>
           </div>
           <div class="card" id="grandlivre-box">
             <div style="color:var(--blanc-dim);font-size:13px;">Sélectionnez un compte pour afficher le grand livre.</div>
@@ -9359,7 +9362,7 @@ function openClientModal(id) {
     var docBtns = document.getElementById('doc-btns');
     docBtns.style.display = 'flex';
     docBtns.innerHTML = '<button class="btn btn-secondary btn-sm" onclick="printContrat(\'' + id + '\')">📄 Contrat réservation</button>'
-      + '<button class="btn btn-secondary btn-sm" onclick="printEcheancier(\'' + id + '\')">📅 Échéancier</button>';
+      + '<button class="btn btn-secondary btn-sm" onclick="etatEcheancier(\'' + id + '\')">📅 Échéancier</button>';
     // Documents téléversés
     setTimeout(function(){ refreshDocumentsForEntity('client', id); }, 80);
   } else {
@@ -11942,95 +11945,103 @@ function buildBilan() {
 }
 
 /* ── COMPTE DE RÉSULTAT SYSCOHADA ────────────────────── */
+/* ── SOURCE DE CALCUL UNIQUE DU RÉSULTAT (sans chevauchement) ── */
+function _calcResultat(year) {
+  var ec = DATA.ecritures.filter(function(e){ return e.date && e.date.startsWith(year); });
+  function deb(pfx){ return ec.filter(function(e){ var c=e.compte_debit||e.compte||''; return pfx.some(function(p){ return c.indexOf(p)===0; }); }).reduce(function(a,e){ return a+e.montant; },0); }
+  function cre(pfx){ return ec.filter(function(e){ var c=e.compte_credit||''; return pfx.some(function(p){ return c.indexOf(p)===0; }); }).reduce(function(a,e){ return a+e.montant; },0); }
+  // Produits (crédits classe 7) — buckets exclusifs
+  var ventes      = cre(['70']);
+  var prodStockee = cre(['71','72']);
+  var autresProd  = cre(['73','74','75']);
+  var prodFin     = cre(['76']);
+  var prodHAO     = cre(['77']);
+  var reprises    = cre(['78']);
+  // Charges (débits classe 6) — buckets exclusifs
+  var achats      = deb(['60']);
+  var transports  = deb(['61']);
+  var servExt     = deb(['62']);
+  var impots      = deb(['63']);
+  var personnel   = deb(['64']);
+  var autresCh    = deb(['65']);
+  var chargesFin  = deb(['66']);
+  var chargesHAO  = deb(['67']);
+  var dotations   = deb(['68']);
+  var participation = deb(['691']);
+  var isComptab   = deb(['693']);
+  // Soldes intermédiaires
+  var production  = ventes + prodStockee;
+  var consoTiers  = achats + transports + servExt;
+  var va          = production + autresProd - consoTiers;
+  var ebe         = va - personnel - impots;
+  var rExploit    = ebe - dotations - autresCh + reprises;
+  var rFin        = prodFin - chargesFin;
+  var rHAO        = prodHAO - chargesHAO;
+  var rAvantIS    = rExploit + rFin + rHAO - participation;
+  var is          = isComptab > 0 ? isComptab : (rAvantIS > 0 ? Math.round(rAvantIS * 0.25) : 0);
+  var isEstime    = !(isComptab > 0) && is > 0;
+  var rNet        = rAvantIS - is;
+  var totalProduits = ventes + prodStockee + autresProd + prodFin + prodHAO + reprises;
+  var totalCharges  = achats + transports + servExt + impots + personnel + autresCh + chargesFin + chargesHAO + dotations + participation + is;
+  return { year:year, ventes:ventes, prodStockee:prodStockee, autresProd:autresProd, prodFin:prodFin, prodHAO:prodHAO, reprises:reprises,
+    achats:achats, transports:transports, servExt:servExt, impots:impots, personnel:personnel, autresCh:autresCh,
+    chargesFin:chargesFin, chargesHAO:chargesHAO, dotations:dotations, participation:participation, is:is, isComptab:isComptab, isEstime:isEstime,
+    production:production, va:va, ebe:ebe, rExploit:rExploit, rFin:rFin, rHAO:rHAO, rAvantIS:rAvantIS, rNet:rNet,
+    totalProduits:totalProduits, totalCharges:totalCharges };
+}
+
+/* ── COMPTE DE RÉSULTAT SYSCOHADA ────────────────────── */
 function buildCompteResultat() {
   var box = document.getElementById('compte-resultat-box');
   if (!box) return;
-  var year = document.getElementById('filter-annee-compta').value || new Date().getFullYear();
-  var ecrituresAn = DATA.ecritures.filter(function(e){ return e.date && e.date.startsWith(year); });
-
-  function sumClasse(classe, sous) {
-    return ecrituresAn.filter(function(e){
-      var cd = e.compte_debit || e.compte;
-      return sous ? cd.startsWith(sous) : (APP.planComptable.find(function(c){ return c.code===cd && c.classe===classe; }));
-    }).reduce(function(a,e){ return a + e.montant; }, 0);
-  }
-  function sumDebits(prefixes) {
-    return ecrituresAn.filter(function(e){
-      var cd = e.compte_debit || e.compte;
-      return prefixes.some(function(p){ return cd.startsWith(p); });
-    }).reduce(function(a,e){ return a + e.montant; }, 0);
-  }
-
-  // PRODUITS
-  var ventesMarchd = sumDebits(['701','702','703','704','706','707','708']) + sumDebits(['411','412']); // approx
-  var ventesLots = ecrituresAn.filter(function(e){ return (e.compte_credit||'').startsWith('70'); }).reduce(function(a,e){ return a+e.montant; }, 0);
-  var autresProduits = ecrituresAn.filter(function(e){ return (e.compte_credit||'').startsWith('71') || (e.compte_credit||'').startsWith('72') || (e.compte_credit||'').startsWith('73') || (e.compte_credit||'').startsWith('74'); }).reduce(function(a,e){ return a+e.montant; }, 0);
-  var prodFinanciers = ecrituresAn.filter(function(e){ return (e.compte_credit||'').startsWith('76') || (e.compte_credit||'').startsWith('77'); }).reduce(function(a,e){ return a+e.montant; }, 0);
-  var totalProduits = ventesLots + autresProduits + prodFinanciers;
-
-  // CHARGES
-  var achats = sumDebits(['60','61']);
-  var chargesExternes = sumDebits(['62','63']);
-  var chargesPersonnel = sumDebits(['64','645','646']);
-  var impotsTaxes = sumDebits(['63','693']);
-  var dotationsAmort = sumDebits(['68']);
-  var chargesFinancieres = sumDebits(['66']);
-  var chargesHAO = sumDebits(['67','671','672','673']);
-  var totalCharges = achats + chargesExternes + chargesPersonnel + impotsTaxes + dotationsAmort + chargesFinancieres + chargesHAO;
-
-  // Soldes intermédiaires
-  var margeCommerciale = ventesLots - achats;
-  var valeurAjoutee = margeCommerciale + autresProduits - chargesExternes;
-  var excedentBrut = valeurAjoutee - chargesPersonnel - impotsTaxes;
-  var resultatExploitation = excedentBrut - dotationsAmort;
-  var resultatFinancier = prodFinanciers - chargesFinancieres;
-  var resultatAvantIS = resultatExploitation + resultatFinancier - chargesHAO;
-  var is = resultatAvantIS > 0 ? resultatAvantIS * 0.25 : 0; // IS 25% CI
-  var resultatNet = resultatAvantIS - is;
+  var year = document.getElementById('filter-annee-compta').value || String(new Date().getFullYear());
+  var R = _calcResultat(year);
 
   function crRow(label, val, bold, color) {
-    return '<tr' + (bold ? ' style="font-weight:700;"' : '') + '>'
-      + '<td>' + label + '</td>'
+    return '<tr' + (bold ? ' style="font-weight:700;"' : '') + '><td>' + label + '</td>'
       + '<td style="text-align:right;color:' + (color || (val >= 0 ? 'var(--vert)' : 'var(--rouge)')) + ';font-weight:' + (bold?'700':'400') + ';">'
-      + (val !== 0 ? (val > 0 ? '' : '−') + fmtF(Math.abs(val)) : '—') + '</td></tr>';
+      + (val !== 0 ? (val > 0 ? '' : '\u2212') + fmtF(Math.abs(val)) : '\u2014') + '</td></tr>';
   }
 
   box.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">'
-    // CHARGES
-    + '<div><div class="form-section-title" style="color:var(--rouge);">CHARGES — Classe 6</div>'
+    + '<div><div class="form-section-title" style="color:var(--rouge);">CHARGES \u2014 Classe 6</div>'
     + '<table style="width:100%;font-size:13px;"><tbody>'
-    + crRow('Achats de marchandises et matières (60)', achats, false, 'var(--rouge)')
-    + crRow('Transports et services extérieurs (61-62)', chargesExternes, false, 'var(--rouge)')
-    + crRow('Charges de personnel (64-645-646)', chargesPersonnel, false, 'var(--rouge)')
-    + crRow('Impôts, taxes et versements assimilés (63)', impotsTaxes, false, 'var(--rouge)')
-    + crRow('Dotations aux amortissements (68)', dotationsAmort, false, 'var(--rouge)')
-    + crRow('Charges financières (66)', chargesFinancieres, false, 'var(--rouge)')
-    + crRow('Charges HAO (67)', chargesHAO, false, 'var(--rouge)')
-    + crRow('Impôt sur les Sociétés (25%)', is, false, 'var(--rouge)')
-    + '<tr style="font-weight:700;border-top:2px solid var(--rouge);"><td>TOTAL CHARGES</td><td style="text-align:right;color:var(--rouge);font-size:15px;">' + fmtF(totalCharges + is) + '</td></tr>'
+    + crRow('Achats (60)', R.achats, false, 'var(--rouge)')
+    + crRow('Transports (61)', R.transports, false, 'var(--rouge)')
+    + crRow('Services ext\u00e9rieurs (62)', R.servExt, false, 'var(--rouge)')
+    + crRow('Imp\u00f4ts &amp; taxes (63)', R.impots, false, 'var(--rouge)')
+    + crRow('Charges de personnel (64)', R.personnel, false, 'var(--rouge)')
+    + crRow('Autres charges (65)', R.autresCh, false, 'var(--rouge)')
+    + crRow('Charges financi\u00e8res (66)', R.chargesFin, false, 'var(--rouge)')
+    + crRow('Charges HAO (67)', R.chargesHAO, false, 'var(--rouge)')
+    + crRow('Dotations amortissements (68)', R.dotations, false, 'var(--rouge)')
+    + crRow('Participation des travailleurs (691)', R.participation, false, 'var(--rouge)')
+    + crRow('Imp\u00f4t sur les soci\u00e9t\u00e9s' + (R.isEstime ? ' (estim\u00e9 25%)' : ' (693)'), R.is, false, 'var(--rouge)')
+    + '<tr style="font-weight:700;border-top:2px solid var(--rouge);"><td>TOTAL CHARGES</td><td style="text-align:right;color:var(--rouge);font-size:15px;">' + fmtF(R.totalCharges) + '</td></tr>'
     + '</tbody></table></div>'
-    // PRODUITS
-    + '<div><div class="form-section-title" style="color:var(--vert);">PRODUITS — Classe 7</div>'
+    + '<div><div class="form-section-title" style="color:var(--vert);">PRODUITS \u2014 Classe 7</div>'
     + '<table style="width:100%;font-size:13px;"><tbody>'
-    + crRow('Ventes de lots / logements / travaux (70)', ventesLots, false, 'var(--vert)')
-    + crRow('Autres produits d\'exploitation (71-74)', autresProduits, false, 'var(--vert)')
-    + crRow('Produits financiers et HAO (76-77)', prodFinanciers, false, 'var(--vert)')
-    + '<tr style="font-weight:700;border-top:2px solid var(--vert);"><td>TOTAL PRODUITS</td><td style="text-align:right;color:var(--vert);font-size:15px;">' + fmtF(totalProduits) + '</td></tr>'
+    + crRow('Ventes lots / logements / travaux (70)', R.ventes, false, 'var(--vert)')
+    + crRow('Production stock\u00e9e / immobilis\u00e9e (71-72)', R.prodStockee, false, 'var(--vert)')
+    + crRow('Autres produits d\'exploitation (73-75)', R.autresProd, false, 'var(--vert)')
+    + crRow('Reprises (78)', R.reprises, false, 'var(--vert)')
+    + crRow('Produits financiers (76)', R.prodFin, false, 'var(--vert)')
+    + crRow('Produits HAO (77)', R.prodHAO, false, 'var(--vert)')
+    + '<tr style="font-weight:700;border-top:2px solid var(--vert);"><td>TOTAL PRODUITS</td><td style="text-align:right;color:var(--vert);font-size:15px;">' + fmtF(R.totalProduits) + '</td></tr>'
     + '</tbody></table>'
-    // Soldes intermédiaires
-    + '<div class="form-section-title" style="margin-top:20px;color:var(--or);">SOLDES INTERMÉDIAIRES DE GESTION</div>'
+    + '<div class="form-section-title" style="margin-top:20px;color:var(--or);">SOLDES INTERM\u00c9DIAIRES DE GESTION</div>'
     + '<table style="width:100%;font-size:12px;"><tbody>'
-    + crRow('Marge commerciale brute', margeCommerciale, false)
-    + crRow('Valeur Ajoutée (VA)', valeurAjoutee, true)
-    + crRow('Excédent Brut d\'Exploitation (EBE)', excedentBrut, true)
-    + crRow('Résultat d\'exploitation', resultatExploitation, false)
-    + crRow('Résultat financier', resultatFinancier, false)
-    + crRow('Résultat avant IS', resultatAvantIS, false)
+    + crRow('Production de l\'exercice', R.production, false)
+    + crRow('Valeur Ajout\u00e9e (VA)', R.va, true)
+    + crRow('Exc\u00e9dent Brut d\'Exploitation (EBE)', R.ebe, true)
+    + crRow('R\u00e9sultat d\'exploitation', R.rExploit, false)
+    + crRow('R\u00e9sultat financier', R.rFin, false)
+    + crRow('R\u00e9sultat HAO', R.rHAO, false)
+    + crRow('R\u00e9sultat avant IS', R.rAvantIS, false)
     + '</tbody></table></div></div>'
-    // Résultat net
-    + '<div style="margin-top:20px;padding:20px;border-radius:var(--radius);background:' + (resultatNet >= 0 ? 'rgba(82,196,122,0.08)' : 'rgba(224,82,82,0.08)') + ';border:2px solid ' + (resultatNet >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';display:flex;justify-content:space-between;align-items:center;">'
-    + '<div><div style="font-weight:700;font-size:16px;">RÉSULTAT NET DE L\'EXERCICE ' + year + '</div><div style="font-size:12px;color:var(--blanc-dim);">Après IS à 25% — SYSCOHADA révisé</div></div>'
-    + '<div style="font-size:28px;font-weight:700;color:' + (resultatNet >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';">' + (resultatNet >= 0 ? '+' : '') + fmtF(resultatNet) + ' FCFA</div></div>';
+    + '<div style="margin-top:20px;padding:20px;border-radius:var(--radius);background:' + (R.rNet >= 0 ? 'rgba(82,196,122,0.08)' : 'rgba(224,82,82,0.08)') + ';border:2px solid ' + (R.rNet >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';display:flex;justify-content:space-between;align-items:center;">'
+    + '<div><div style="font-weight:700;font-size:16px;">R\u00c9SULTAT NET DE L\'EXERCICE ' + year + '</div><div style="font-size:12px;color:var(--blanc-dim);">' + (R.isEstime ? 'IS estim\u00e9 \u00e0 25% (non encore comptabilis\u00e9)' : 'Apr\u00e8s IS \u2014 SYSCOHADA r\u00e9vis\u00e9') + '</div></div>'
+    + '<div style="font-size:28px;font-weight:700;color:' + (R.rNet >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';">' + (R.rNet >= 0 ? '+' : '') + fmtF(R.rNet) + ' FCFA</div></div>';
 }
 
 /* ── GRAND LIVRE ─────────────────────────────────────── */
@@ -12101,29 +12112,9 @@ function exportJournalCSV() {
 }
 
 /* ── IMPRESSION BILAN & RÉSULTAT ─────────────────────── */
-function printBilan() {
-  var box = document.getElementById('bilan-box');
-  if (!box) return;
-  var year = document.getElementById('filter-annee-compta').value;
-  var win = window.open('','','width=900,height=700');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bilan ' + year + '</title>'
-    + '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:30px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:6px 10px;} th{background:#f5f0e0;} h2{color:#1D4ED8;}</style></head><body>'
-    + '<h2>' + (DATA.params.societe||'ImmoSuite ERP') + ' — BILAN SYSCOHADA ' + year + '</h2>'
-    + box.innerHTML + '</body></html>');
-  win.document.close(); win.print();
-}
+function printBilan() { etatBilan(); }
 
-function printResultat() {
-  var box = document.getElementById('compte-resultat-box');
-  if (!box) return;
-  var year = document.getElementById('filter-annee-compta').value;
-  var win = window.open('','','width=900,height=700');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Résultat ' + year + '</title>'
-    + '<style>body{font-family:Arial,sans-serif;font-size:12px;padding:30px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:6px 10px;} th{background:#f5f0e0;} h2{color:#1D4ED8;}</style></head><body>'
-    + '<h2>' + (DATA.params.societe||'ImmoSuite ERP') + ' — COMPTE DE RÉSULTAT SYSCOHADA ' + year + '</h2>'
-    + box.innerHTML + '</body></html>');
-  win.document.close(); win.print();
-}
+function printResultat() { etatCompteResultat(); }
 
 function buildTresorerie() {
   var year = document.getElementById('filter-annee-compta').value || new Date().getFullYear();
@@ -12205,7 +12196,8 @@ function detectRelances() {
       + '<td><span class="badge ' + niveauBadge + '">' + niveau + '</span></td>'
       + '<td style="font-size:11px;">' + (lastRelance ? dateShort(lastRelance.date) : 'Jamais') + '</td>'
       + '<td style="white-space:nowrap;">'
-      + '<button class="btn btn-primary btn-sm" onclick="openRelanceModal(\'' + r.id + '\')">📨 Relancer</button>'
+      + '<button class="btn btn-primary btn-sm" onclick="openRelanceModal(\'' + r.id + '\')">📨 Relancer</button> '
+      + '<button class="btn btn-secondary btn-sm" onclick="etatRelance(\'' + r.id + '\')">📄 Lettre PDF</button>'
       + '</td></tr>';
   }).join('');
 }
@@ -19238,7 +19230,7 @@ function telechargerContrat() {
 
 function telechargerEcheancier() {
   if (!SESSION_SOUSCRIPTEUR) return;
-  printEcheancier(SESSION_SOUSCRIPTEUR.id);
+  etatEcheancier(SESSION_SOUSCRIPTEUR.id);
 }
 
 function telechargerAttestationVersement() {
@@ -19281,22 +19273,7 @@ function telechargerAttestationVersement() {
 }
 
 function telechargerRecu(versementId) {
-  var v = DATA.versements.find(function(x){ return x.id === versementId; });
-  if (v && typeof showRecu === 'function') showRecu(v);
-  else if (v) {
-    var c = DATA.clients.find(function(x){ return x.id === v.client_id; }) || {};
-    var win = window.open('','','width=600,height=450');
-    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reçu</title>'
-      +'<style>body{font-family:Arial;padding:30px;font-size:13px;} .box{border:2px solid #1A6B3A;padding:20px;border-radius:8px;} h2{color:#1A6B3A;}</style></head><body>'
-      +'<div class="box"><h2>REÇU DE PAIEMENT</h2>'
-      +'<p><strong>Client :</strong> '+c.nom+' '+c.prenoms+'</p>'
-      +'<p><strong>Date :</strong> '+dateShort(v.date)+'</p>'
-      +'<p><strong>Montant :</strong> '+fmtF(v.montant)+' FCFA</p>'
-      +'<p><strong>Mode :</strong> '+v.mode+'</p>'
-      +'<p><strong>Référence :</strong> '+(v.ref||'—')+'</p>'
-      +'</div></body></html>');
-    win.document.close(); win.print();
-  }
+  etatRecuVersement(versementId);
 }
 
 /* ─── Simulation paiement ────────────────────────────── */
@@ -23659,6 +23636,379 @@ function etatTableauHTML(cols, rows, totaux) {
     }).join('') + '</tr>';
   }
   return '<table><thead><tr>' + th + '</tr></thead><tbody>' + body + foot + '</tbody></table>';
+}
+
+/* =====================================================
+   ÉTATS PDF — MODULE SOUSCRIPTEURS / VERSEMENTS
+   Reçu · Échéancier · Lettre de relance
+   Routés sur genererEtatPDF() — entête société + A4
+===================================================== */
+
+/* Reçu de paiement officiel */
+function etatRecuVersement(versementId) {
+  var v = DATA.versements.find(function(x){ return x.id === versementId; });
+  if (!v) { toast('Versement introuvable.', 'error'); return; }
+  var c    = DATA.clients.find(function(x){ return x.id === v.client_id; });
+  var prog = c ? DATA.programmes.find(function(p){ return p.id === c.programme_id; }) : null;
+  var lot  = c ? DATA.lots.find(function(l){ return l.id === c.lot_id; }) : null;
+  var totalVerse = DATA.versements.filter(function(x){ return x.client_id === v.client_id; })
+    .reduce(function(a,x){ return a + (parseFloat(x.montant)||0); }, 0);
+  var totalContrat = (c && parseFloat(c.montant_total)) || 0;
+  var reste = Math.max(0, totalContrat - totalVerse);
+  var nomClient = c ? ((c.nom||'') + ' ' + (c.prenoms||'')).trim() : '—';
+
+  var contenu =
+      '<table>'
+    +   '<tr><th style="width:35%;">Reçu de</th><td>' + escHtml(nomClient) + '</td></tr>'
+    +   '<tr><th>Téléphone</th><td>' + escHtml((c && c.tel) || '—') + '</td></tr>'
+    +   '<tr><th>Programme</th><td>' + escHtml(prog ? prog.nom : '—') + '</td></tr>'
+    +   '<tr><th>Lot</th><td>' + (lot ? 'Lot ' + escHtml(lot.numero) + (lot.type ? ' — ' + escHtml(lot.type) : '') : '—') + '</td></tr>'
+    +   '<tr><th>Mode de règlement</th><td>' + escHtml(v.mode || '—') + '</td></tr>'
+    +   '<tr><th>Date</th><td>' + dateShort(v.date) + '</td></tr>'
+    + '</table>'
+    + '<div style="margin:18px 0;padding:18px;border:2px solid #1D4ED8;border-radius:10px;text-align:center;background:rgba(29,78,216,0.06);">'
+    +   '<div style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:1px;">Montant reçu</div>'
+    +   '<div style="font-size:30px;font-weight:800;color:#1D4ED8;margin-top:4px;">' + fcfa(v.montant) + '</div>'
+    + '</div>'
+    + '<table>'
+    +   '<tr><th style="width:35%;">Total versé à ce jour</th><td class="num">' + fcfa(totalVerse) + '</td></tr>'
+    +   '<tr><th>Montant du contrat</th><td class="num">' + fcfa(totalContrat) + '</td></tr>'
+    +   '<tr class="total"><td>Reste à payer</td><td class="num">' + fcfa(reste) + '</td></tr>'
+    + '</table>'
+    + '<p style="font-size:11px;color:#555;margin-top:14px;">Ce reçu atteste la réception du montant ci-dessus, sous réserve d\'encaissement effectif.</p>'
+    + '<div class="etat-signatures">'
+    +   '<div><div class="etat-sign-line">Le souscripteur</div></div>'
+    +   '<div><div class="etat-sign-line">Pour la société</div></div>'
+    + '</div>';
+
+  genererEtatPDF({
+    titre: 'Reçu de paiement',
+    sousTitre: nomClient + (prog ? ' — ' + prog.nom : ''),
+    reference: v.ref || v.id,
+    couleur: '#1D4ED8',
+    contenu: contenu
+  });
+}
+
+/* Échéancier prévisionnel avec statut payé / dû */
+function etatEcheancier(clientId) {
+  var c = DATA.clients.find(function(x){ return x.id === clientId; });
+  if (!c) { toast('Souscripteur introuvable.', 'error'); return; }
+  var prog = DATA.programmes.find(function(p){ return p.id === c.programme_id; });
+  var lot  = DATA.lots.find(function(l){ return l.id === c.lot_id; });
+  var apport = parseFloat(c.apport) || 0;
+  var total  = parseFloat(c.montant_total) || 0;
+  var duree  = parseInt(c.duree) || 0;
+  var mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
+  var totalVerse = DATA.versements.filter(function(v){ return v.client_id === c.id; })
+    .reduce(function(a,v){ return a + (parseFloat(v.montant)||0); }, 0);
+  var debut = c.date_debut ? new Date(c.date_debut) : new Date();
+
+  function ligneStatut(paye) {
+    return '<td style="text-align:center;color:' + (paye ? '#16a34a' : '#dc2626') + ';font-weight:600;">'
+      + (paye ? 'Payé' : 'Dû') + '</td>';
+  }
+
+  var rows = '';
+  var cumul = apport;
+  if (apport > 0) {
+    rows += '<tr><td>0</td><td>Apport initial</td><td class="num">' + fmtF(apport) + '</td>'
+      + '<td class="num">' + fmtF(Math.min(cumul, total)) + '</td>' + ligneStatut(totalVerse >= apport) + '</tr>';
+  }
+  for (var i = 0; i < duree; i++) {
+    var d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+    cumul += mensualite;
+    var cumulClamp = Math.min(cumul, total);
+    rows += '<tr><td>' + (i + 1) + '</td><td>' + d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' }) + '</td>'
+      + '<td class="num">' + fmtF(mensualite) + '</td><td class="num">' + fmtF(cumulClamp) + '</td>'
+      + ligneStatut(totalVerse >= cumulClamp) + '</tr>';
+  }
+  var reste = Math.max(0, total - totalVerse);
+
+  var contenu =
+      '<table>'
+    +   '<tr><th style="width:25%;">Souscripteur</th><td>' + escHtml((c.nom||'') + ' ' + (c.prenoms||'')) + '</td>'
+    +       '<th style="width:18%;">Programme</th><td>' + escHtml(prog ? prog.nom : '—') + '</td></tr>'
+    +   '<tr><th>Lot</th><td>' + (lot ? 'Lot ' + escHtml(lot.numero) : '—') + '</td>'
+    +       '<th>Durée</th><td>' + duree + ' mois</td></tr>'
+    +   '<tr><th>Montant total</th><td class="num">' + fcfa(total) + '</td>'
+    +       '<th>Mensualité</th><td class="num">' + fcfa(mensualite) + '</td></tr>'
+    +   '<tr><th>Versé à ce jour</th><td class="num">' + fcfa(totalVerse) + '</td>'
+    +       '<th>Reste à payer</th><td class="num">' + fcfa(reste) + '</td></tr>'
+    + '</table>'
+    + '<h3>Tableau d\'amortissement</h3>'
+    + '<table><thead><tr><th>N°</th><th>Échéance</th><th class="num">Montant</th><th class="num">Cumul</th>'
+    +   '<th style="text-align:center;">Statut</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+  genererEtatPDF({
+    titre: 'Échéancier de paiement',
+    sousTitre: (c.nom||'') + ' ' + (c.prenoms||'') + (prog ? ' — ' + prog.nom : ''),
+    reference: c.id,
+    couleur: '#1D4ED8',
+    contenu: contenu
+  });
+}
+
+/* Lettre de relance graduée selon le retard */
+function etatRelance(clientId) {
+  var c = DATA.clients.find(function(x){ return x.id === clientId; });
+  if (!c) { toast('Souscripteur introuvable.', 'error'); return; }
+  var r = getRetardataires().find(function(x){ return x.id === clientId; });
+  if (!r) { toast('Aucun retard détecté pour ce souscripteur.', 'info'); return; }
+  var prog = DATA.programmes.find(function(p){ return p.id === c.programme_id; });
+  var lot  = DATA.lots.find(function(l){ return l.id === c.lot_id; });
+  var s = (typeof _identiteSociete === 'function')
+    ? _identiteSociete()
+    : { nom: (DATA.params && DATA.params.societe) || 'ImmoSuite ERP' };
+
+  var niveau, objet, couleur, corps;
+  if (r.moisRetard >= 6) {
+    niveau = 'Notification de résiliation'; objet = 'Résiliation pour défaut de paiement'; couleur = '#7C3AED';
+    corps = 'Malgré nos relances successives, nous constatons un retard de paiement de <strong>' + r.moisRetard
+      + ' mois</strong>, correspondant à un impayé de <strong>' + fcfa(r.montantDu) + '</strong>. '
+      + 'En conséquence, nous vous notifions notre intention de procéder à la résiliation de votre contrat de souscription, '
+      + 'conformément à ses clauses, à défaut de régularisation intégrale sous quinzaine.';
+  } else if (r.moisRetard >= 3) {
+    niveau = 'Mise en demeure'; objet = 'Mise en demeure de payer'; couleur = '#dc2626';
+    corps = 'Nous vous mettons en demeure de régulariser, sous huitaine, vos échéances impayées s\'élevant à <strong>'
+      + fcfa(r.montantDu) + '</strong> (soit ' + r.moisRetard + ' mois de retard). '
+      + 'À défaut, nous nous réservons le droit d\'engager toute procédure utile au recouvrement.';
+  } else if (r.moisRetard >= 2) {
+    niveau = 'Lettre de relance'; objet = 'Échéances impayées'; couleur = '#D97706';
+    corps = 'Nous vous rappelons que votre compte présente un retard de <strong>' + r.moisRetard
+      + ' mois</strong>, pour un montant de <strong>' + fcfa(r.montantDu) + '</strong>. '
+      + 'Nous vous prions de bien vouloir régulariser votre situation dans les meilleurs délais.';
+  } else {
+    niveau = 'Rappel d\'échéance'; objet = 'Rappel amiable'; couleur = '#1D4ED8';
+    corps = 'Sauf erreur de notre part, votre compte présente un solde échu de <strong>' + fcfa(r.montantDu)
+      + '</strong>. Nous vous remercions de bien vouloir procéder au règlement à votre meilleure convenance.';
+  }
+
+  var contenu =
+      '<table style="margin-bottom:18px;">'
+    +   '<tr><th style="width:30%;">Souscripteur</th><td>' + escHtml((c.nom||'') + ' ' + (c.prenoms||'')) + '</td></tr>'
+    +   '<tr><th>Programme / Lot</th><td>' + escHtml(prog ? prog.nom : '—') + (lot ? ' — Lot ' + escHtml(lot.numero) : '') + '</td></tr>'
+    +   '<tr><th>Adresse</th><td>' + escHtml(c.adresse || '—') + '</td></tr>'
+    +   '<tr><th>Téléphone</th><td>' + escHtml(c.tel || '—') + '</td></tr>'
+    + '</table>'
+    + '<p style="margin:0 0 8px;"><strong>Objet :</strong> ' + escHtml(objet) + '</p>'
+    + '<p>Madame, Monsieur,</p>'
+    + '<p style="line-height:1.7;text-align:justify;">' + corps + '</p>'
+    + '<table style="margin-top:14px;">'
+    +   '<tr><th style="width:50%;">Mois de retard</th><td class="num">' + r.moisRetard + '</td></tr>'
+    +   '<tr class="total"><td>Montant à régulariser</td><td class="num">' + fcfa(r.montantDu) + '</td></tr>'
+    + '</table>'
+    + '<p style="margin-top:14px;">Dans l\'attente de votre régularisation, nous vous prions d\'agréer, Madame, Monsieur, '
+    +   'l\'expression de nos salutations distinguées.</p>'
+    + '<div class="etat-signatures"><div></div>'
+    +   '<div><div class="etat-sign-line">' + escHtml(s.nom || 'La Direction') + '</div></div></div>';
+
+  genererEtatPDF({
+    titre: niveau,
+    sousTitre: objet,
+    reference: c.id,
+    couleur: couleur,
+    contenu: contenu
+  });
+}
+
+/* =====================================================
+   ÉTATS PDF — COMPTABILITÉ SYSCOHADA
+   Journal · Balance · Bilan · Résultat · Grand livre
+   Recalcul depuis DATA.ecritures (cohérent écran)
+===================================================== */
+
+function _comptaYear() {
+  var el = document.getElementById('filter-annee-compta');
+  return (el && el.value) || String(new Date().getFullYear());
+}
+
+/* Journal général */
+function etatJournal() {
+  var year = _comptaYear();
+  var list = DATA.ecritures.filter(function(e){ return !year || (e.date && e.date.startsWith(year)); })
+    .sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+  var totD = 0, totC = 0;
+  var rows = list.map(function(e){
+    totD += e.montant; totC += e.montant;
+    return '<tr><td>' + dateShort(e.date) + '</td><td>' + escHtml(e.ref || '—') + '</td>'
+      + '<td>' + escHtml(e.libelle || '') + '</td>'
+      + '<td>' + escHtml(e.compte_debit || e.compte || '') + '</td><td>' + escHtml(e.compte_credit || '') + '</td>'
+      + '<td class="num">' + fmtF(e.montant) + '</td><td class="num">' + fmtF(e.montant) + '</td></tr>';
+  }).join('');
+  if (!list.length) rows = '<tr><td colspan="7" style="text-align:center;color:#888;">Aucune écriture</td></tr>';
+  var contenu = '<table><thead><tr><th>Date</th><th>N° Pièce</th><th>Libellé</th>'
+    + '<th>Cpt Débit</th><th>Cpt Crédit</th><th class="num">Débit</th><th class="num">Crédit</th></tr></thead><tbody>'
+    + rows
+    + '<tr class="total"><td colspan="5">TOTAUX (' + list.length + ' écritures)</td>'
+    + '<td class="num">' + fmtF(totD) + '</td><td class="num">' + fmtF(totC) + '</td></tr></tbody></table>';
+  genererEtatPDF({ titre:'Journal général', sousTitre:'Exercice ' + year + ' — SYSCOHADA révisé',
+    orientation:'paysage', couleur:'#1D4ED8', contenu:contenu });
+}
+
+/* Balance générale des comptes */
+function etatBalance() {
+  var year = _comptaYear();
+  var classeF = (document.getElementById('filter-balance-classe') || {}).value || '';
+  var mvtOnly = document.getElementById('balance-mouvements') && document.getElementById('balance-mouvements').checked;
+  var comptesMvt = {};
+  DATA.ecritures.filter(function(e){ return !year || (e.date && e.date.startsWith(year)); }).forEach(function(e){
+    var cd = e.compte_debit || e.compte, cc = e.compte_credit;
+    if (!comptesMvt[cd]) comptesMvt[cd] = { debit:0, credit:0 };
+    comptesMvt[cd].debit += e.montant;
+    if (cc) { if (!comptesMvt[cc]) comptesMvt[cc] = { debit:0, credit:0 }; comptesMvt[cc].credit += e.montant; }
+  });
+  var plan = APP.planComptable.filter(function(c){
+    if (classeF && c.classe !== classeF) return false;
+    if (mvtOnly && !comptesMvt[c.code]) return false;
+    return true;
+  });
+  var tMD = 0, tMC = 0, tSD = 0, tSC = 0;
+  var rows = plan.map(function(c){
+    var m = comptesMvt[c.code] || { debit:0, credit:0 };
+    var sd = Math.max(0, m.debit - m.credit), sc = Math.max(0, m.credit - m.debit);
+    tMD += m.debit; tMC += m.credit; tSD += sd; tSC += sc;
+    return '<tr><td>' + escHtml(c.code) + '</td><td>' + escHtml(c.label || '') + '</td>'
+      + '<td style="text-align:center;">' + c.classe + '</td>'
+      + '<td class="num">' + (m.debit ? fmtF(m.debit) : '—') + '</td><td class="num">' + (m.credit ? fmtF(m.credit) : '—') + '</td>'
+      + '<td class="num">' + (sd ? fmtF(sd) : '—') + '</td><td class="num">' + (sc ? fmtF(sc) : '—') + '</td></tr>';
+  }).join('');
+  var equ = (Math.abs(tMD - tMC) < 1 && tMD > 0) ? '✔ Balance équilibrée — Débit = Crédit = ' + fmtF(tMD) + ' FCFA'
+    : (tMD > 0 ? '⚠ Balance déséquilibrée — Écart : ' + fmtF(Math.abs(tMD - tMC)) + ' FCFA' : '');
+  var contenu = '<table><thead><tr><th>Compte</th><th>Intitulé</th><th style="text-align:center;">Cl.</th>'
+    + '<th class="num">Mvt Débit</th><th class="num">Mvt Crédit</th><th class="num">Solde Déb.</th><th class="num">Solde Créd.</th></tr></thead><tbody>'
+    + rows
+    + '<tr class="total"><td colspan="3">TOTAUX</td><td class="num">' + fmtF(tMD) + '</td><td class="num">' + fmtF(tMC) + '</td>'
+    + '<td class="num">' + fmtF(tSD) + '</td><td class="num">' + fmtF(tSC) + '</td></tr></tbody></table>'
+    + (equ ? '<p style="margin-top:10px;font-weight:600;">' + equ + '</p>' : '');
+  genererEtatPDF({ titre:'Balance générale des comptes', sousTitre:'Exercice ' + year + ' — SYSCOHADA',
+    orientation:'paysage', couleur:'#1D4ED8', contenu:contenu });
+}
+
+/* Bilan SYSCOHADA */
+function etatBilan() {
+  var year = _comptaYear();
+  var soldes = {};
+  DATA.ecritures.filter(function(e){ return e.date && e.date < ((+year + 1) + '-01-01'); }).forEach(function(e){
+    var cd = e.compte_debit || e.compte, cc = e.compte_credit;
+    if (!soldes[cd]) soldes[cd] = 0; soldes[cd] += e.montant;
+    if (cc) { if (!soldes[cc]) soldes[cc] = 0; soldes[cc] -= e.montant; }
+  });
+  function gs(codes) {
+    var t = 0;
+    codes.forEach(function(code){
+      APP.planComptable.filter(function(c){ return c.code.indexOf(code) === 0; }).forEach(function(c){ t += soldes[c.code] || 0; });
+    });
+    return t;
+  }
+  var actifImmo = gs(['21','22','23','24','27']);
+  var stocks    = gs(['31','32','33','34','35','36']);
+  var creances  = gs(['411','412','418','421','423','461','471']);
+  var treso     = gs(['51','52','53','55','57']);
+  var totalActif = actifImmo + stocks + creances + treso;
+  var capitaux  = gs(['101','106','111']);
+  var resultBrut = gs(['7']) - gs(['6']);
+  var dettesLT  = gs(['16','17','18']);
+  var dF  = Math.abs(gs(['401','402','408']));
+  var dFS = Math.abs(gs(['431','432','441','443','445','447','448']));
+  var dP  = Math.abs(gs(['422']));
+  var totalPassif = capitaux + resultBrut + dettesLT + dF + dFS + dP;
+  function r(l, v){ return '<tr><td>' + l + '</td><td class="num">' + fmtF(Math.abs(v)) + '</td></tr>'; }
+  var actif = '<h3>ACTIF</h3><table><thead><tr><th>Rubriques SYSCOHADA</th><th class="num">Montant (FCFA)</th></tr></thead><tbody>'
+    + r('Immobilisations corporelles (Cl.2)', actifImmo)
+    + r('Stocks (lots, travaux en cours)', stocks)
+    + r('Créances clients & débiteurs', creances)
+    + r('Trésorerie (banques, caisses, MM)', treso)
+    + '<tr class="total"><td>TOTAL ACTIF</td><td class="num">' + fmtF(totalActif) + '</td></tr></tbody></table>';
+  var passif = '<h3>PASSIF</h3><table><thead><tr><th>Rubriques SYSCOHADA</th><th class="num">Montant (FCFA)</th></tr></thead><tbody>'
+    + r('Capital social', Math.abs(capitaux))
+    + r('Résultat de l\'exercice ' + year, resultBrut)
+    + r('Emprunts & dettes à LT', Math.abs(dettesLT))
+    + r('Fournisseurs', dF)
+    + r('Dettes fiscales & sociales', dFS)
+    + r('Dettes envers le personnel', dP)
+    + '<tr class="total"><td>TOTAL PASSIF</td><td class="num">' + fmtF(totalPassif) + '</td></tr></tbody></table>';
+  var eq = Math.abs(totalActif - totalPassif) < 100 ? '✔ Bilan équilibré (Actif = Passif)'
+    : '⚠ Écart Actif / Passif : ' + fmtF(Math.abs(totalActif - totalPassif)) + ' FCFA';
+  var contenu = '<div style="display:flex;gap:18px;"><div style="flex:1;">' + actif + '</div><div style="flex:1;">' + passif + '</div></div>'
+    + '<p style="margin-top:12px;font-weight:600;">' + eq + '</p>';
+  genererEtatPDF({ titre:'Bilan SYSCOHADA', sousTitre:'Exercice clos le 31/12/' + year, couleur:'#1D4ED8', contenu:contenu });
+}
+
+/* Compte de résultat SYSCOHADA */
+function etatCompteResultat() {
+  var year = _comptaYear();
+  var R = _calcResultat(year);
+  function row(l, v){ return '<tr><td>' + l + '</td><td class="num">' + (v ? fmtF(v) : '\u2014') + '</td></tr>'; }
+  function sig(l, v){ return '<tr><td>' + l + '</td><td class="num">' + (v < 0 ? '\u2212' : '') + fmtF(Math.abs(v)) + '</td></tr>'; }
+  var charges = '<h3>Charges \u2014 Classe 6</h3><table><tbody>'
+    + row('Achats (60)', R.achats)
+    + row('Transports (61)', R.transports)
+    + row('Services ext\u00e9rieurs (62)', R.servExt)
+    + row('Imp\u00f4ts &amp; taxes (63)', R.impots)
+    + row('Charges de personnel (64)', R.personnel)
+    + row('Autres charges (65)', R.autresCh)
+    + row('Charges financi\u00e8res (66)', R.chargesFin)
+    + row('Charges HAO (67)', R.chargesHAO)
+    + row('Dotations amortissements (68)', R.dotations)
+    + row('Participation (691)', R.participation)
+    + row('Imp\u00f4t sur les soci\u00e9t\u00e9s' + (R.isEstime ? ' (estim\u00e9 25%)' : ' (693)'), R.is)
+    + '<tr class="total"><td>TOTAL CHARGES</td><td class="num">' + fmtF(R.totalCharges) + '</td></tr></tbody></table>';
+  var produits = '<h3>Produits \u2014 Classe 7</h3><table><tbody>'
+    + row('Ventes lots / logements / travaux (70)', R.ventes)
+    + row('Production stock\u00e9e / immobilis\u00e9e (71-72)', R.prodStockee)
+    + row('Autres produits d\'exploitation (73-75)', R.autresProd)
+    + row('Reprises (78)', R.reprises)
+    + row('Produits financiers (76)', R.prodFin)
+    + row('Produits HAO (77)', R.prodHAO)
+    + '<tr class="total"><td>TOTAL PRODUITS</td><td class="num">' + fmtF(R.totalProduits) + '</td></tr></tbody></table>';
+  var sigT = '<h3>Soldes interm\u00e9diaires de gestion</h3><table><tbody>'
+    + sig('Production de l\'exercice', R.production)
+    + sig('Valeur ajout\u00e9e (VA)', R.va)
+    + sig('Exc\u00e9dent brut d\'exploitation (EBE)', R.ebe)
+    + sig('R\u00e9sultat d\'exploitation', R.rExploit)
+    + sig('R\u00e9sultat financier', R.rFin)
+    + sig('R\u00e9sultat HAO', R.rHAO)
+    + sig('R\u00e9sultat avant IS', R.rAvantIS)
+    + '</tbody></table>';
+  var net = '<div style="margin-top:14px;padding:14px;border:2px solid ' + (R.rNet >= 0 ? '#16a34a' : '#dc2626')
+    + ';border-radius:10px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<strong>R\u00c9SULTAT NET DE L\'EXERCICE ' + year + '</strong>'
+    + '<span style="font-size:22px;font-weight:800;color:' + (R.rNet >= 0 ? '#16a34a' : '#dc2626') + ';">'
+    + (R.rNet >= 0 ? '+' : '') + fmtF(R.rNet) + ' FCFA</span></div>';
+  var contenu = '<div style="display:flex;gap:18px;"><div style="flex:1;">' + charges + '</div><div style="flex:1;">' + produits + '</div></div>'
+    + sigT + net
+    + (R.isEstime ? '<p style="margin-top:8px;font-size:10px;color:#888;">IS estim\u00e9 \u00e0 25% (aucune \u00e9criture compte 693 sur l\'exercice).</p>' : '');
+  genererEtatPDF({ titre:'Compte de r\u00e9sultat SYSCOHADA', sousTitre:'Exercice ' + year + (R.isEstime ? ' \u2014 IS estim\u00e9' : ''), couleur:'#1D4ED8', contenu:contenu });
+}
+
+function etatGrandLivre() {
+  var year = _comptaYear();
+  var compte = (document.getElementById('filter-gl-compte') || {}).value || '';
+  if (!compte) { toast('Sélectionnez un compte d\'abord.', 'error'); return; }
+  var pe = APP.planComptable.find(function(c){ return c.code === compte; });
+  var mvts = DATA.ecritures.filter(function(e){
+    return (!year || (e.date && e.date.startsWith(year)))
+      && ((e.compte_debit || e.compte) === compte || e.compte_credit === compte);
+  }).sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+  var solde = 0, tD = 0, tC = 0;
+  var rows = mvts.map(function(e){
+    var isD = (e.compte_debit || e.compte) === compte;
+    var d = isD ? e.montant : 0, c = isD ? 0 : e.montant;
+    tD += d; tC += c; solde += d - c;
+    var ctp = isD ? e.compte_credit : (e.compte_debit || e.compte);
+    return '<tr><td>' + dateShort(e.date) + '</td><td>' + escHtml(e.ref || '—') + '</td><td>' + escHtml(e.libelle || '') + '</td>'
+      + '<td>' + escHtml(ctp || '—') + '</td><td class="num">' + (d ? fmtF(d) : '—') + '</td><td class="num">' + (c ? fmtF(c) : '—') + '</td>'
+      + '<td class="num">' + fmtF(solde) + '</td></tr>';
+  }).join('');
+  if (!mvts.length) rows = '<tr><td colspan="7" style="text-align:center;color:#888;">Aucun mouvement</td></tr>';
+  var contenu = '<table><thead><tr><th>Date</th><th>N° Pièce</th><th>Libellé</th><th>Contrep.</th>'
+    + '<th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde cumulé</th></tr></thead><tbody>'
+    + rows
+    + '<tr class="total"><td colspan="4">TOTAUX</td><td class="num">' + fmtF(tD) + '</td><td class="num">' + fmtF(tC) + '</td>'
+    + '<td class="num">' + fmtF(tD - tC) + '</td></tr></tbody></table>';
+  genererEtatPDF({ titre:'Grand livre — Compte ' + compte, sousTitre:(pe ? pe.label : '') + ' · Exercice ' + year,
+    orientation:'paysage', couleur:'#1D4ED8', contenu:contenu });
 }
 
 /* Lancer au démarrage */
