@@ -5497,6 +5497,75 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   </div>
 </div>
 
+<!-- Modal Modèles de logement -->
+<div class="modal-overlay" id="modal-modeles">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h3 id="modal-modeles-prog-nom">Types de logements</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-modeles')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modeles-list" style="margin-bottom:20px;"></div>
+      <div class="card" style="background:var(--card2);padding:16px;">
+        <div class="form-section-title">➕ Ajouter un type de logement</div>
+        <input type="hidden" id="modele-id">
+        <input type="hidden" id="modele-programme-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Type / Nom *</label>
+            <input type="text" class="form-control" id="modele-nom" placeholder="Villa Duplex, F3, Studio...">
+          </div>
+          <div class="form-group">
+            <label>Nb unités prévues</label>
+            <input type="number" class="form-control" id="modele-nb" min="1" value="1">
+          </div>
+          <div class="form-group">
+            <label>Surface (m²)</label>
+            <input type="number" class="form-control" id="modele-surface">
+          </div>
+          <div class="form-group">
+            <label>Nombre de pièces</label>
+            <input type="number" class="form-control" id="modele-pieces">
+          </div>
+          <div class="form-group">
+            <label>Prix de vente (FCFA)</label>
+            <input type="number" class="form-control" id="modele-prix">
+          </div>
+          <div class="form-group">
+            <label>Coût de revient (FCFA)</label>
+            <input type="number" class="form-control" id="modele-cout">
+          </div>
+          <div class="form-group">
+            <label>Standing</label>
+            <select class="form-control" id="modele-standing">
+              <option value="economique">Économique</option>
+              <option value="moyen">Moyen standing</option>
+              <option value="haut">Haut de gamme</option>
+              <option value="prestige">Prestige / Luxe</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description courte</label>
+            <input type="text" class="form-control" id="modele-desc" placeholder="Ex: Vue jardin, terrasse...">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn btn-primary" onclick="saveModele()">💾 Enregistrer ce type</button>
+          <button class="btn btn-secondary" onclick="clearModeleForm()">🔄 Réinitialiser</button>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:14px;background:rgba(74,196,122,0.08);border:1px solid rgba(74,196,122,0.3);border-radius:10px;">
+        <div style="font-weight:700;color:var(--vert);margin-bottom:6px;">⚡ Génération automatique des lots</div>
+        <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">Génère automatiquement tous les lots à partir des modèles définis. Les lots déjà existants ne seront pas écrasés.</div>
+        <button class="btn btn-primary" style="background:var(--vert);" onclick="genererLotsDepuisModeles()">🏗️ Générer les lots automatiquement</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-modeles')">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Lot -->
 <div class="modal-overlay" id="modal-lot">
   <div class="modal">
@@ -7546,14 +7615,15 @@ var DATA = {
   rapports_chantier: [],
   campagnes: [],
   actions_marketing: [],
-  segments_marketing: []
+  segments_marketing: [],
+  modeles_logement: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 100; /* Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
+var DB_VERSION = 101; /* Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -7572,7 +7642,8 @@ var ALL_STORES = [
   'custom_roles',
   'commissions',
   'apporteurs',
-  'nomenclatures','prix_unitaire','devis_fournisseurs'
+  'nomenclatures','prix_unitaire','devis_fournisseurs',
+  'modeles_logement'
 ];
 
 function initDB() {
@@ -10029,6 +10100,7 @@ function renderProgrammes() {
       + '<div style="flex:1;"><h3 style="font-family:var(--font-head);color:var(--or);font-size:18px;">' + p.nom + '</h3>'
       + '<span style="font-size:12px;color:var(--blanc-dim);">📍 ' + (p.localisation || 'N/A') + '</span></div>'
       + '<span class="badge ' + (statutColors[p.statut] || 'badge-bleu') + '">' + (statutLabels[p.statut] || p.statut) + '</span>'
+      + '<button class="btn btn-primary btn-sm" onclick="openModelesModal(\'' + p.id + '\')">🏠 Types</button>'
       + '<button class="btn btn-secondary btn-sm" onclick="openProgrammeModal(\'' + p.id + '\')">✏️ Modifier</button>'
       + '<button class="btn btn-danger btn-sm" onclick="deleteProgramme(\'' + p.id + '\')">🗑</button>'
       + '</div>'
@@ -10048,10 +10120,161 @@ async function deleteProgramme(id) {
   if (!confirm('Supprimer ce programme ? Les lots associés seront aussi supprimés.')) return;
   DATA.programmes = DATA.programmes.filter(function(p) { return p.id !== id; });
   DATA.lots = DATA.lots.filter(function(l) { return l.programme_id !== id; });
+  DATA.modeles_logement = (DATA.modeles_logement || []).filter(function(m) { return m.programme_id !== id; });
   await dbDelete('programmes', id);
   deleteFromSupabase('pi_programmes', id);
   renderProgrammes();
   toast('Programme supprimé.', 'info');
+}
+
+function openModelesModal(programmeId) {
+  APP.currentProgrammeId = programmeId;
+  APP.editingModeleId = null;
+  var prog = DATA.programmes.find(function(p) { return p.id === programmeId; });
+  document.getElementById('modal-modeles-prog-nom').textContent = '🏠 Types de logements — ' + (prog ? prog.nom : '');
+  document.getElementById('modele-programme-id').value = programmeId;
+  clearModeleForm();
+  renderModelesList(programmeId);
+  openModal('modal-modeles');
+}
+
+function clearModeleForm() {
+  APP.editingModeleId = null;
+  ['modele-id','modele-nom','modele-surface','modele-pieces','modele-prix','modele-cout','modele-desc'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('modele-nb').value = '1';
+  document.getElementById('modele-standing').value = 'moyen';
+}
+
+function renderModelesList(programmeId) {
+  var pid = programmeId || APP.currentProgrammeId;
+  var modeles = (DATA.modeles_logement || []).filter(function(m) { return m.programme_id === pid; });
+  var container = document.getElementById('modeles-list');
+  if (!modeles.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px;font-size:13px;">Aucun type défini. Ajoutez des types ci-dessous.</div>';
+    return;
+  }
+  var standingLabel = { economique: '💚 Économique', moyen: '💛 Moyen standing', haut: '🟠 Haut de gamme', prestige: '💎 Prestige' };
+  var totalUnites = modeles.reduce(function(s, m) { return s + (m.nb_unites || 0); }, 0);
+  container.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><strong style="color:var(--or);">' + modeles.length + ' type(s) — ' + totalUnites + ' unités prévues</strong></div>'
+    + modeles.map(function(m) {
+      var lotsExistants = (DATA.lots || []).filter(function(l) { return l.programme_id === m.programme_id && l.type === m.nom; }).length;
+      var lotsVendus = (DATA.lots || []).filter(function(l) { return l.programme_id === m.programme_id && l.type === m.nom && l.statut === 'vendu'; }).length;
+      var pct = m.nb_unites > 0 ? Math.round((lotsVendus / m.nb_unites) * 100) : 0;
+      return '<div class="card" style="margin-bottom:10px;border-left:4px solid var(--or);">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
+        + '<div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--or);">🏠 ' + m.nom + '</div>'
+        + '<div style="font-size:12px;color:var(--dim);margin-top:3px;">' + (m.pieces ? m.pieces + ' pièces' : '') + (m.surface ? ' · ' + m.surface + ' m²' : '') + (m.description ? ' · ' + m.description : '') + '</div>'
+        + '<div style="font-size:12px;margin-top:4px;">' + (standingLabel[m.standing] || m.standing) + '</div></div>'
+        + '<div style="text-align:right;min-width:140px;">'
+        + '<div style="font-weight:700;color:var(--vert);font-size:14px;">' + fcfa(m.prix_vente) + '</div>'
+        + '<div style="font-size:11px;color:var(--dim);">Coût : ' + fcfa(m.cout_revient) + '</div>'
+        + '<div style="font-size:11px;margin-top:4px;"><span style="color:var(--bleu);">' + lotsExistants + ' lots créés</span> · <span style="color:var(--rouge);">' + lotsVendus + ' vendus</span> / <strong>' + m.nb_unites + '</strong> prévus</div></div></div>'
+        + '<div class="progress-bar" style="margin:8px 0 4px;"><div class="progress-fill" style="width:' + pct + '%;background:var(--rouge);"></div></div>'
+        + '<div style="display:flex;gap:8px;margin-top:8px;">'
+        + '<button class="btn btn-secondary btn-sm" onclick="editModele(\'' + m.id + '\')">✏️ Modifier</button>'
+        + '<button class="btn btn-danger btn-sm" onclick="deleteModele(\'' + m.id + '\')">🗑 Supprimer</button>'
+        + '</div></div>';
+    }).join('');
+}
+
+function editModele(id) {
+  var m = (DATA.modeles_logement || []).find(function(x) { return x.id === id; });
+  if (!m) return;
+  APP.editingModeleId = id;
+  document.getElementById('modele-id').value = m.id;
+  document.getElementById('modele-nom').value = m.nom || '';
+  document.getElementById('modele-nb').value = m.nb_unites || 1;
+  document.getElementById('modele-surface').value = m.surface || '';
+  document.getElementById('modele-pieces').value = m.pieces || '';
+  document.getElementById('modele-prix').value = m.prix_vente || '';
+  document.getElementById('modele-cout').value = m.cout_revient || '';
+  document.getElementById('modele-desc').value = m.description || '';
+  document.getElementById('modele-standing').value = m.standing || 'moyen';
+  document.getElementById('modele-nom').scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('modele-nom').focus();
+}
+
+async function saveModele() {
+  var nom = document.getElementById('modele-nom').value.trim();
+  if (!nom) { toast('Le nom du type est obligatoire.', 'error'); return; }
+  var progId = document.getElementById('modele-programme-id').value;
+  if (!progId) { toast('Programme introuvable.', 'error'); return; }
+  var id = APP.editingModeleId || uid();
+  var modele = {
+    id: id,
+    programme_id: progId,
+    nom: nom,
+    nb_unites: parseInt(document.getElementById('modele-nb').value) || 1,
+    surface: parseFloat(document.getElementById('modele-surface').value) || 0,
+    pieces: parseInt(document.getElementById('modele-pieces').value) || 0,
+    prix_vente: parseFloat(document.getElementById('modele-prix').value) || 0,
+    cout_revient: parseFloat(document.getElementById('modele-cout').value) || 0,
+    standing: document.getElementById('modele-standing').value,
+    description: document.getElementById('modele-desc').value.trim(),
+    created_at: APP.editingModeleId ? undefined : today()
+  };
+  if (!DATA.modeles_logement) DATA.modeles_logement = [];
+  if (APP.editingModeleId) {
+    var idx = DATA.modeles_logement.findIndex(function(m) { return m.id === id; });
+    if (idx >= 0) DATA.modeles_logement[idx] = modele;
+  } else {
+    DATA.modeles_logement.push(modele);
+  }
+  await dbPut('modeles_logement', modele);
+  syncToSupabase('pi_modeles_logement', modele);
+  clearModeleForm();
+  renderModelesList(progId);
+  toast('✅ Type "' + nom + '" enregistré.', 'success');
+}
+
+async function deleteModele(id) {
+  if (!confirm('Supprimer ce type de logement ?')) return;
+  DATA.modeles_logement = (DATA.modeles_logement || []).filter(function(m) { return m.id !== id; });
+  await dbDelete('modeles_logement', id);
+  renderModelesList(APP.currentProgrammeId);
+  toast('Type supprimé.', 'info');
+}
+
+async function genererLotsDepuisModeles() {
+  var progId = APP.currentProgrammeId;
+  var modeles = (DATA.modeles_logement || []).filter(function(m) { return m.programme_id === progId; });
+  if (!modeles.length) { toast('Aucun type défini pour ce programme.', 'error'); return; }
+  var lotsCreees = 0;
+  for (var mi = 0; mi < modeles.length; mi++) {
+    var m = modeles[mi];
+    var lotsExistants = (DATA.lots || []).filter(function(l) { return l.programme_id === progId && l.type === m.nom; });
+    var dejaCreees = lotsExistants.length;
+    var aCreer = m.nb_unites - dejaCreees;
+    for (var i = 0; i < aCreer; i++) {
+      var num = String(dejaCreees + i + 1).padStart(2, '0');
+      var lot = {
+        id: uid(),
+        programme_id: progId,
+        numero: m.nom.substring(0, 2).toUpperCase() + '-' + num,
+        ilot: '',
+        type: m.nom,
+        surface: m.surface,
+        pieces: m.pieces,
+        prix: m.prix_vente,
+        cout_revient: m.cout_revient,
+        standing: m.standing,
+        statut: 'disponible',
+        notes: m.description || '',
+        created_at: today()
+      };
+      if (!DATA.lots) DATA.lots = [];
+      DATA.lots.push(lot);
+      await dbPut('lots', lot);
+      syncToSupabase('pi_lots', lot);
+      lotsCreees++;
+    }
+  }
+  renderModelesList(progId);
+  renderLots();
+  toast('✅ ' + lotsCreees + ' lot(s) généré(s) automatiquement !', 'success');
 }
 
 /* ──────────────────────────────────────────────────────
