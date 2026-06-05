@@ -14466,6 +14466,15 @@ function buildPopupContent(type, data) {
 // Initialiser la carte Leaflet
 function initLeafletMap() {
   if (_geoMap) return; // déjà initialisé
+  // Leaflet nécessite sa feuille de style, sinon les tuiles s'affichent fragmentées/tronquées
+  if (!document.getElementById('leaflet-css')) {
+    var lcss = document.createElement('link');
+    lcss.id = 'leaflet-css';
+    lcss.rel = 'stylesheet';
+    lcss.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    lcss.onload = function() { if (_geoMap) _refreshGeoMap(true); };
+    document.head.appendChild(lcss);
+  }
   if (typeof L === 'undefined') {
     // Charger Leaflet dynamiquement
     var script = document.createElement('script');
@@ -19102,7 +19111,7 @@ function buildCoutRevient(){
   var totalCA=DATA.versements.reduce(function(s,v){return s+(v.montant||0);},0);
   var totalCout=totalF+totalM+totalE;var marge=totalCA-totalCout;
   kpiEl.innerHTML=[{l:'Foncier',v:fmtF(totalF)+' FCFA',i:'🌍',c:'kpi-blue'},{l:'Marchés TTC',v:fmtF(totalM)+' FCFA',i:'🏗️',c:'kpi-copper'},{l:'Études',v:fmtF(totalE)+' FCFA',i:'📐',c:''},{l:'Coût total',v:fmtF(totalCout)+' FCFA',i:'📊',c:'kpi-red'},{l:'CA encaissé',v:fmtF(totalCA)+' FCFA',i:'💰',c:'kpi-green'},{l:'Marge brute',v:fmtF(marge)+' FCFA',i:marge>=0?'📈':'📉',c:marge>=0?'kpi-green':'kpi-red'}].map(function(k){return'<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div><div class="kpi-value or" style="font-size:15px;">'+k.v+'</div></div>';}).join('');
-  detEl.innerHTML=DATA.programmes.map(function(prog){var lotsP=DATA.lots.filter(function(l){return l.programme_id===prog.id;});var vendus=lotsP.filter(function(l){return l.statut==='vendu';}).length;var caP=DATA.versements.filter(function(v){var cli=DATA.clients.find(function(c){return c.id===v.client_id;});return cli&&cli.programme_id===prog.id;}).reduce(function(s,v){return s+(v.montant||0);},0);var mP=DATA.conventions.filter(function(c){return c.programme_id===prog.id;}).reduce(function(s,c){return s+(c.montant_ttc||0);},0);var fP=DATA.terrains.filter(function(t){return t.programme_id===prog.id;}).reduce(function(s,t){return s+(t.valeur_actuelle||t.prix_acq||0);},0);var eP=DATA.conceptions.filter(function(c){return c.programme_id===prog.id;}).reduce(function(s,c){return s+(c.cout||0);},0);var coutP=fP+mP+eP;var margeP=caP-coutP;var convs=DATA.conventions.filter(function(c){return c.programme_id===prog.id&&c.avancement;});var av=convs.length?Math.round(convs.reduce(function(s,c){return s+(c.avancement||0);},0)/convs.length):0;return'<div class="card" style="margin-bottom:16px;border-left:4px solid var(--or);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div><div style="font-weight:700;font-size:16px;">'+prog.nom+'</div><div style="font-size:12px;color:var(--blanc-dim);">'+prog.localisation+' — '+vendus+'/'+lotsP.length+' lots vendus</div></div><div style="text-align:right;"><div style="font-size:11px;color:var(--blanc-dim);">Avancement chantiers</div><div style="font-size:22px;font-weight:700;color:var(--or);">'+av+'%</div></div></div><div class="avancement-barre" style="margin-bottom:14px;"><div class="avancement-fill" style="width:'+av+'%;"></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px;"><div><div style="color:var(--blanc-dim);">Foncier</div><div style="font-weight:700;color:var(--bleu);">'+fmtF(fP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Travaux</div><div style="font-weight:700;">'+fmtF(mP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Études</div><div style="font-weight:700;">'+fmtF(eP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Coût total</div><div style="font-weight:700;color:var(--rouge);">'+fmtF(coutP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">CA encaissé</div><div style="font-weight:700;color:var(--vert);">'+fmtF(caP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Marge brute</div><div style="font-weight:700;color:'+(margeP>=0?'var(--vert)':'var(--rouge)')+';">'+fmtF(margeP)+' FCFA</div></div></div></div>';}).join('');
+  detEl.innerHTML=DATA.programmes.map(function(prog){var lotsP=DATA.lots.filter(function(l){return l.programme_id===prog.id;});var vendus=lotsP.filter(function(l){return l.statut==='vendu';}).length;var caP=DATA.versements.filter(function(v){var cli=DATA.clients.find(function(c){return c.id===v.client_id;});return cli&&cli.programme_id===prog.id;}).reduce(function(s,v){return s+(v.montant||0);},0);var mP=DATA.conventions.filter(function(c){return c.programme_id===prog.id;}).reduce(function(s,c){return s+(c.montant_ttc||0);},0);var fP=DATA.terrains.filter(function(t){return t.programme_id===prog.id;}).reduce(function(s,t){return s+(t.valeur_actuelle||t.prix_acq||0);},0);var eP=DATA.conceptions.filter(function(c){return c.programme_id===prog.id;}).reduce(function(s,c){return s+(c.cout||0);},0);var aP=(DATA.conventions_amenagement||[]).filter(function(c){return c.programme_id===prog.id;}).reduce(function(s,c){return s+(c.montant_ttc||0);},0);var coutP=fP+mP+eP+aP;var margeP=caP-coutP;var convs=DATA.conventions.filter(function(c){return c.programme_id===prog.id&&c.avancement;}).concat((DATA.conventions_amenagement||[]).filter(function(c){return c.programme_id===prog.id&&c.avancement;}));var av=convs.length?Math.round(convs.reduce(function(s,c){return s+(c.avancement||0);},0)/convs.length):0;return'<div class="card" style="margin-bottom:16px;border-left:4px solid var(--or);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><div><div style="font-weight:700;font-size:16px;">'+prog.nom+'</div><div style="font-size:12px;color:var(--blanc-dim);">'+prog.localisation+' — '+vendus+'/'+lotsP.length+' lots vendus</div></div><div style="text-align:right;"><div style="font-size:11px;color:var(--blanc-dim);">Avancement chantiers</div><div style="font-size:22px;font-weight:700;color:var(--or);">'+av+'%</div></div></div><div class="avancement-barre" style="margin-bottom:14px;"><div class="avancement-fill" style="width:'+av+'%;"></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px;"><div><div style="color:var(--blanc-dim);">Foncier</div><div style="font-weight:700;color:var(--bleu);">'+fmtF(fP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Travaux</div><div style="font-weight:700;">'+fmtF(mP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Études</div><div style="font-weight:700;">'+fmtF(eP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Aménagement</div><div style="font-weight:700;color:var(--vert);">'+fmtF(aP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Coût total</div><div style="font-weight:700;color:var(--rouge);">'+fmtF(coutP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">CA encaissé</div><div style="font-weight:700;color:var(--vert);">'+fmtF(caP)+' FCFA</div></div><div><div style="color:var(--blanc-dim);">Marge brute</div><div style="font-weight:700;color:'+(margeP>=0?'var(--vert)':'var(--rouge)')+';">'+fmtF(margeP)+' FCFA</div></div></div></div>';}).join('');
 }
 
 
@@ -24457,11 +24466,23 @@ function prevSeedFromProgramme() {
   if (!pid) { toast('Sélectionnez un programme.', 'info'); return; }
   var lots = (DATA.lots || []).filter(function(l){ return l.programme_id === pid; });
   if (!lots.length) { toast('Aucun lot sur ce programme.', 'info'); return; }
-  var prix = lots.reduce(function(a, l){ return a + (parseFloat(l.prix) || 0); }, 0) / lots.length;
+  var n = lots.length;
+  var prix = lots.reduce(function(a, l){ return a + (parseFloat(l.prix) || 0); }, 0) / n;
   if (prix > 0) _sv('prev-prix-lot', Math.round(prix));
-  _sv('prev-lots-an', Math.max(1, Math.round(lots.length / (parseInt(_gv('prev-horizon')) || 3))));
+  _sv('prev-lots-an', Math.max(1, Math.round(n / (parseInt(_gv('prev-horizon')) || 3))));
+  // Coûts réels par lot
+  var terrains = (DATA.terrains || []).filter(function(t){ return t.programme_id === pid; })
+    .reduce(function(a, t){ return a + (parseFloat(t.valeur_actuelle || t.prix_acq) || 0); }, 0);
+  var amenagement = (DATA.conventions_amenagement || []).filter(function(c){ return c.programme_id === pid; })
+    .reduce(function(a, c){ return a + (parseFloat(c.montant_ht) || 0); }, 0);
+  var construction = (DATA.conventions || []).filter(function(c){ return c.programme_id === pid; })
+    .reduce(function(a, c){ return a + (parseFloat(c.montant_ht) || 0); }, 0);
+  var foncierLot = Math.round((terrains + amenagement) / n); // foncier + viabilisation
+  var travauxLot = Math.round(construction / n);
+  if (foncierLot > 0) _sv('prev-foncier-lot', foncierLot);
+  if (travauxLot > 0) _sv('prev-travaux-lot', travauxLot);
   prevRender();
-  toast('Hypothèses pré-remplies depuis le programme.', 'success');
+  toast('Hypothèses pré-remplies (dont aménagement réel : ' + fmtF(Math.round(amenagement / n)) + ' F/lot).', 'success');
 }
 
 async function prevSaveScenario() {
