@@ -1136,6 +1136,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('tresorerie-page')" data-page="tresorerie-page">
         <span class="nav-icon">💵</span><span>Trésorerie</span>
       </div>
+      <div class="nav-item" onclick="goTo('previsionnel')" data-page="previsionnel">
+        <span class="nav-icon">📈</span><span>Prévisionnel / BP</span>
+      </div>
 
       <!-- ÉTAPE 9 : RH — gérer les ressources humaines -->
       <div class="nav-section"><span class="nav-step">9</span><span>Ressources Humaines</span></div>
@@ -4670,6 +4673,68 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div id="tresorerie-detaille-box"></div>
       </div>
 
+      <!-- ══ PRÉVISIONNEL / BUSINESS PLAN BANCAIRE ══════════ -->
+      <div class="page" id="page-previsionnel">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Prévisionnel / Business Plan</div>
+            <div class="page-subtitle">Compte d'exploitation · Résultat · Plan de financement · Trésorerie — dossier bancaire</div>
+          </div>
+          <div class="spacer"></div>
+          <select class="filter-select" id="prev-select" onchange="prevSelectScenario()"></select>
+          <button class="btn btn-secondary btn-sm" onclick="prevNewScenario()">+ Nouveau</button>
+          <button class="btn btn-secondary btn-sm" onclick="prevSaveScenario()">💾 Enregistrer</button>
+          <button class="btn btn-secondary btn-sm" onclick="prevDeleteScenario()">🗑️ Supprimer</button>
+          <button class="btn btn-primary" onclick="etatDossierBancaire()">🏦 Dossier bancaire PDF</button>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="form-section-title">Hypothèses du scénario</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+            <div class="form-group"><label>Nom du scénario</label><input type="text" class="form-control" id="prev-nom" oninput="prevRender()"></div>
+            <div class="form-group"><label>Programme lié</label><select class="form-control" id="prev-programme" onchange="prevRender()"></select></div>
+            <div class="form-group"><label>Date de début</label><input type="date" class="form-control" id="prev-date" onchange="prevRender()"></div>
+            <div class="form-group"><label>Horizon (années)</label><select class="form-control" id="prev-horizon" onchange="prevRender()"><option value="3">3 ans</option><option value="4">4 ans</option><option value="5">5 ans</option></select></div>
+          </div>
+          <div style="margin:6px 0 10px;"><button class="btn btn-secondary btn-sm" onclick="prevSeedFromProgramme()">⚡ Pré-remplir depuis le programme</button></div>
+          <div class="form-section-title" style="font-size:13px;color:var(--blanc-dim);">Activité</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+            <div class="form-group"><label>Prix moyen / lot (F)</label><input type="number" class="form-control" id="prev-prix-lot" oninput="prevRender()"></div>
+            <div class="form-group"><label>Lots vendus / an</label><input type="number" class="form-control" id="prev-lots-an" oninput="prevRender()"></div>
+            <div class="form-group"><label>Croissance ventes / an (%)</label><input type="number" class="form-control" id="prev-croissance" oninput="prevRender()"></div>
+            <div class="form-group"><label>Apport acheteur (%)</label><input type="number" class="form-control" id="prev-apport" oninput="prevRender()"></div>
+            <div class="form-group"><label>Durée crédit acheteur (mois)</label><input type="number" class="form-control" id="prev-credit-mois" oninput="prevRender()"></div>
+            <div class="form-group"><label>Coût foncier / lot (F)</label><input type="number" class="form-control" id="prev-foncier-lot" oninput="prevRender()"></div>
+            <div class="form-group"><label>Coût travaux / lot (F)</label><input type="number" class="form-control" id="prev-travaux-lot" oninput="prevRender()"></div>
+            <div class="form-group"><label>Études (% du CA)</label><input type="number" class="form-control" id="prev-etudes-pct" oninput="prevRender()"></div>
+            <div class="form-group"><label>Commissions (% du CA)</label><input type="number" class="form-control" id="prev-commission-pct" oninput="prevRender()"></div>
+            <div class="form-group"><label>Charges fixes / mois (F)</label><input type="number" class="form-control" id="prev-charges-fixes" oninput="prevRender()"></div>
+            <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="prev-tva" oninput="prevRender()"></div>
+            <div class="form-group"><label>IS (%)</label><input type="number" class="form-control" id="prev-is" oninput="prevRender()"></div>
+          </div>
+          <div class="form-section-title" style="font-size:13px;color:var(--blanc-dim);">Financement</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+            <div class="form-group"><label>Emprunt bancaire (F)</label><input type="number" class="form-control" id="prev-emp-montant" oninput="prevRender()"></div>
+            <div class="form-group"><label>Taux emprunt (% / an)</label><input type="number" class="form-control" id="prev-emp-taux" oninput="prevRender()"></div>
+            <div class="form-group"><label>Durée emprunt (mois)</label><input type="number" class="form-control" id="prev-emp-duree" oninput="prevRender()"></div>
+            <div class="form-group"><label>Différé (mois)</label><input type="number" class="form-control" id="prev-emp-differe" oninput="prevRender()"></div>
+            <div class="form-group"><label>Apports associés (F)</label><input type="number" class="form-control" id="prev-apports" oninput="prevRender()"></div>
+            <div class="form-group"><label>Subventions (F)</label><input type="number" class="form-control" id="prev-subventions" oninput="prevRender()"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="etatPrevExploitation()">🖨️ Exploitation PDF</button>
+            <button class="btn btn-secondary btn-sm" onclick="etatPrevResultat()">🖨️ Résultat PDF</button>
+            <button class="btn btn-secondary btn-sm" onclick="etatPrevPlanFinancement()">🖨️ Plan financement PDF</button>
+            <button class="btn btn-secondary btn-sm" onclick="etatPrevTresorerie()">🖨️ Trésorerie PDF</button>
+          </div>
+        </div>
+
+        <div class="card" id="prev-results"></div>
+      </div>
+
       <!-- ══ PORTAIL SOUSCRIPTEUR ══════════════════════ -->
       <div class="page" id="page-portail-souscripteur">
         <div class="page-header">
@@ -7997,14 +8062,15 @@ var DATA = {
   parcelles_morcellement: [],
   agrement_promoteur: [],
   agrement_programme: [],
-  conv_agrement: []
+  conv_agrement: [],
+  previsionnels: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 105; /* v105: ajout store conv_agrement. Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
+var DB_VERSION = 106; /* v106: ajout store previsionnels. Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -8029,7 +8095,8 @@ var ALL_STORES = [
   'parcelles_morcellement',
   'agrement_promoteur',
   'agrement_programme',
-  'conv_agrement'
+  'conv_agrement',
+  'previsionnels'
 ];
 
 function initDB() {
@@ -8593,6 +8660,7 @@ function goTo(page) {
   if (page === 'crm-rapports')   { buildRapportsCommerciaux(); }
   if (page === 'crm-apporteurs') { renderApporteurs(); buildKPIsApporteurs(); }
   if (page === 'tresorerie-page') { buildTresorerieDetaille(); }
+  if (page === 'previsionnel') { loadPrevisionnel(); }
 }
 
 function switchTab(context, tab) {
@@ -24009,6 +24077,401 @@ function etatGrandLivre() {
     + '<td class="num">' + fmtF(tD - tC) + '</td></tr></tbody></table>';
   genererEtatPDF({ titre:'Grand livre — Compte ' + compte, sousTitre:(pe ? pe.label : '') + ' · Exercice ' + year,
     orientation:'paysage', couleur:'#1D4ED8', contenu:contenu });
+}
+
+/* =====================================================
+   MODULE PRÉVISIONNEL / BUSINESS PLAN BANCAIRE
+   Moteur de scénario unique → 4 documents
+   Compte d'exploitation · Compte de résultat · Plan de
+   financement · Trésorerie prévisionnels + Dossier groupé
+===================================================== */
+
+/* ---- Valeurs par défaut d'un scénario ---- */
+function _prevDefaut() {
+  return {
+    id: '', nom: 'Nouveau prévisionnel', programme_id: '',
+    date_debut: today().slice(0, 7) + '-01', horizon_annees: 3,
+    hyp: {
+      prix_lot: 15000000, lots_par_an: 24, croissance: 10, apport: 20, credit_mois: 24,
+      foncier_lot: 4000000, travaux_lot: 6000000, etudes_pct: 4, commission_pct: 5,
+      charges_fixes_mois: 2500000, tva: 18, is: 25
+    },
+    fin: { emp_montant: 100000000, emp_taux: 9, emp_duree: 60, emp_differe: 12, apports: 30000000, subventions: 0 },
+    created_at: today()
+  };
+}
+
+/* ---- MOTEUR : projections mensuelles + annuelles ---- */
+function _prevCompute(s) {
+  var H = Math.max(3, Math.min(5, parseInt(s.horizon_annees) || 3));
+  var N = H * 12;
+  var h = s.hyp || {}, f = s.fin || {};
+  var prix = +h.prix_lot || 0, lotsAn0 = +h.lots_par_an || 0, g = (+h.croissance || 0) / 100;
+  var apport = (+h.apport || 0) / 100, credit = Math.max(1, +h.credit_mois || 1);
+  var coutLot = (+h.foncier_lot || 0) + (+h.travaux_lot || 0);
+  var etudesP = (+h.etudes_pct || 0) / 100, commP = (+h.commission_pct || 0) / 100;
+  var chFixeM = +h.charges_fixes_mois || 0, tva = (+h.tva || 0) / 100, isP = (+h.is || 0) / 100;
+
+  // Emprunt
+  var P = +f.emp_montant || 0, i = (+f.emp_taux || 0) / 100 / 12;
+  var dur = Math.max(1, +f.emp_duree || 1), diff = Math.max(0, +f.emp_differe || 0);
+  var nAmort = Math.max(1, dur - diff);
+  var annuite = i > 0 ? P * i / (1 - Math.pow(1 + i, -nAmort)) : P / nAmort;
+
+  var saleM = [], encM = [], prodM = [], etuM = [], comM = [], tvaM = [], intM = [], capM = [];
+  var outstanding = P;
+  var debut = new Date(s.date_debut || today());
+
+  for (var m = 0; m < N; m++) {
+    var y = Math.floor(m / 12);
+    var lotsM = (lotsAn0 * Math.pow(1 + g, y)) / 12;
+    var sv = lotsM * prix;
+    saleM[m] = sv;
+    prodM[m] = lotsM * coutLot;
+    etuM[m] = sv * etudesP;
+    comM[m] = sv * commP;
+    tvaM[m] = Math.max(0, tva * (sv - prodM[m] - etuM[m]));
+    encM[m] = 0;
+    // service emprunt (mois calendaire m -> échéance n° m+1)
+    var loanM = m + 1, interet = 0, capital = 0;
+    if (loanM <= dur && outstanding > 0.5) {
+      interet = outstanding * i;
+      if (loanM > diff) { capital = annuite - interet; if (capital > outstanding) capital = outstanding; outstanding -= capital; }
+    }
+    intM[m] = interet; capM[m] = capital;
+  }
+  // Encaissements (cohortes : apport au mois de vente + solde étalé)
+  for (var k = 0; k < N; k++) {
+    encM[k] += apport * saleM[k];
+    var solde = (1 - apport) * saleM[k];
+    var mens = solde / credit;
+    for (var j = 1; j <= credit; j++) { if (k + j < N) encM[k + j] += mens; }
+  }
+
+  // Agrégats annuels
+  var years = [];
+  for (var yy = 0; yy < H; yy++) {
+    var a = { y: yy, an: debut.getFullYear() + yy, CA: 0, prodCost: 0, etudes: 0, comm: 0, chFixes: chFixeM * 12,
+      interets: 0, rembCapital: 0, encaisse: 0, tvaPayee: 0 };
+    for (var mm = yy * 12; mm < (yy + 1) * 12; mm++) {
+      a.CA += saleM[mm]; a.prodCost += prodM[mm]; a.etudes += etuM[mm]; a.comm += comM[mm];
+      a.interets += intM[mm]; a.rembCapital += capM[mm]; a.encaisse += encM[mm]; a.tvaPayee += tvaM[mm];
+    }
+    a.chargesExpl = a.prodCost + a.etudes + a.comm + a.chFixes;
+    a.ebe = a.CA - a.chargesExpl;
+    a.dotations = 0;
+    a.rExploit = a.ebe - a.dotations;
+    a.rAvantIS = a.rExploit - a.interets;
+    a.is = a.rAvantIS > 0 ? Math.round(a.rAvantIS * isP) : 0;
+    a.rNet = a.rAvantIS - a.is;
+    a.caf = a.rNet + a.dotations;
+    a.varBFR = a.CA - a.encaisse; // hausse créances acheteurs
+    years.push(a);
+  }
+
+  // Trésorerie mensuelle
+  var treso = [], cumul = 0;
+  for (var t = 0; t < N; t++) {
+    var yt = Math.floor(t / 12);
+    var inflow = encM[t] + (t === 0 ? (P + (+f.apports || 0) + (+f.subventions || 0)) : 0);
+    var isMois = 0;
+    // IS de l'année y payé au 1er mois de l'année suivante
+    if (t % 12 === 0 && t > 0) isMois = years[yt - 1] ? years[yt - 1].is : 0;
+    var outflow = prodM[t] + etuM[t] + comM[t] + chFixeM + tvaM[t] + intM[t] + capM[t] + isMois;
+    var net = inflow - outflow;
+    cumul += net;
+    var dlab = new Date(debut.getFullYear(), debut.getMonth() + t, 1);
+    treso.push({ label: dlab.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+      inflow: inflow, outflow: outflow, net: net, cumul: cumul });
+  }
+
+  // Plan de financement annuel
+  var plan = [], cumulPF = 0;
+  years.forEach(function(a, idx) {
+    var ressources = a.caf + (idx === 0 ? (P + (+f.apports || 0) + (+f.subventions || 0)) : 0) + (a.varBFR < 0 ? -a.varBFR : 0);
+    var emplois = a.rembCapital + (a.varBFR > 0 ? a.varBFR : 0);
+    var solde = ressources - emplois;
+    cumulPF += solde;
+    plan.push({ an: a.an, caf: a.caf, ressources: ressources, emplois: emplois, rembCapital: a.rembCapital,
+      varBFR: a.varBFR, solde: solde, cumul: cumulPF });
+  });
+
+  // Totaux + ratios
+  var T = { CA: 0, rNet: 0, ebe: 0, service: 0, isTot: 0 };
+  years.forEach(function(a){ T.CA += a.CA; T.rNet += a.rNet; T.ebe += a.ebe; T.service += a.interets + a.rembCapital; T.isTot += a.is; });
+  var y1 = years[0] || { CA:0, prodCost:0, etudes:0, comm:0, chFixes:0, ebe:0, is:0, interets:0, rembCapital:0 };
+  var variables1 = y1.prodCost + y1.etudes + y1.comm;
+  var tauxMV = y1.CA > 0 ? (y1.CA - variables1) / y1.CA : 0;
+  var seuilRentab = tauxMV > 0 ? y1.chFixes / tauxMV : 0;
+  var service1 = y1.interets + y1.rembCapital;
+  var dscr = service1 > 0 ? (y1.ebe - y1.is) / service1 : 0;
+  var margeNettePct = T.CA > 0 ? (T.rNet / T.CA) * 100 : 0;
+  var cafCumul = years.reduce(function(x, a){ return x + a.caf; }, 0);
+  var capaRemb = P > 0 ? cafCumul / P : 0;
+
+  return { H: H, N: N, years: years, treso: treso, plan: plan, totals: T,
+    ratios: { seuilRentab: seuilRentab, dscr: dscr, margeNettePct: margeNettePct, capaRemb: capaRemb } };
+}
+
+/* ============ UI ============ */
+function loadPrevisionnel() {
+  if (!DATA.previsionnels) DATA.previsionnels = [];
+  // selects programme
+  var pSel = document.getElementById('prev-programme');
+  if (pSel) {
+    pSel.innerHTML = '<option value="">— Aucun (saisie libre) —</option>'
+      + (DATA.programmes || []).map(function(p){ return '<option value="' + p.id + '">' + escHtml(p.nom) + '</option>'; }).join('');
+  }
+  // select scénarios
+  var sSel = document.getElementById('prev-select');
+  if (sSel) {
+    var cur = sSel.value;
+    sSel.innerHTML = '<option value="">— Nouveau scénario —</option>'
+      + DATA.previsionnels.map(function(s){ return '<option value="' + s.id + '">' + escHtml(s.nom) + '</option>'; }).join('');
+    if (cur) sSel.value = cur;
+  }
+  if (!APP._prevCurrent) APP._prevCurrent = _prevDefaut();
+  prevFillForm(APP._prevCurrent);
+  prevRender();
+}
+
+function prevSelectScenario() {
+  var id = document.getElementById('prev-select').value;
+  if (!id) { APP._prevCurrent = _prevDefaut(); }
+  else { APP._prevCurrent = DATA.previsionnels.find(function(s){ return s.id === id; }) || _prevDefaut(); }
+  prevFillForm(APP._prevCurrent);
+  prevRender();
+}
+
+function prevNewScenario() {
+  APP._prevCurrent = _prevDefaut();
+  document.getElementById('prev-select').value = '';
+  prevFillForm(APP._prevCurrent);
+  prevRender();
+}
+
+function _gv(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+function _gn(id) { return parseFloat(_gv(id)) || 0; }
+
+function prevReadForm() {
+  var s = APP._prevCurrent || _prevDefaut();
+  s.nom = _gv('prev-nom').trim() || 'Prévisionnel';
+  s.programme_id = _gv('prev-programme');
+  s.date_debut = _gv('prev-date') || s.date_debut;
+  s.horizon_annees = Math.max(3, Math.min(5, parseInt(_gv('prev-horizon')) || 3));
+  s.hyp = {
+    prix_lot: _gn('prev-prix-lot'), lots_par_an: _gn('prev-lots-an'), croissance: _gn('prev-croissance'),
+    apport: _gn('prev-apport'), credit_mois: _gn('prev-credit-mois'),
+    foncier_lot: _gn('prev-foncier-lot'), travaux_lot: _gn('prev-travaux-lot'),
+    etudes_pct: _gn('prev-etudes-pct'), commission_pct: _gn('prev-commission-pct'),
+    charges_fixes_mois: _gn('prev-charges-fixes'), tva: _gn('prev-tva'), is: _gn('prev-is')
+  };
+  s.fin = {
+    emp_montant: _gn('prev-emp-montant'), emp_taux: _gn('prev-emp-taux'), emp_duree: _gn('prev-emp-duree'),
+    emp_differe: _gn('prev-emp-differe'), apports: _gn('prev-apports'), subventions: _gn('prev-subventions')
+  };
+  return s;
+}
+
+function _sv(id, v) { var e = document.getElementById(id); if (e) e.value = (v === undefined || v === null) ? '' : v; }
+function prevFillForm(s) {
+  var h = s.hyp || {}, f = s.fin || {};
+  _sv('prev-nom', s.nom); _sv('prev-programme', s.programme_id); _sv('prev-date', s.date_debut);
+  _sv('prev-horizon', s.horizon_annees);
+  _sv('prev-prix-lot', h.prix_lot); _sv('prev-lots-an', h.lots_par_an); _sv('prev-croissance', h.croissance);
+  _sv('prev-apport', h.apport); _sv('prev-credit-mois', h.credit_mois);
+  _sv('prev-foncier-lot', h.foncier_lot); _sv('prev-travaux-lot', h.travaux_lot);
+  _sv('prev-etudes-pct', h.etudes_pct); _sv('prev-commission-pct', h.commission_pct);
+  _sv('prev-charges-fixes', h.charges_fixes_mois); _sv('prev-tva', h.tva); _sv('prev-is', h.is);
+  _sv('prev-emp-montant', f.emp_montant); _sv('prev-emp-taux', f.emp_taux); _sv('prev-emp-duree', f.emp_duree);
+  _sv('prev-emp-differe', f.emp_differe); _sv('prev-apports', f.apports); _sv('prev-subventions', f.subventions);
+}
+
+function prevSeedFromProgramme() {
+  var pid = _gv('prev-programme');
+  if (!pid) { toast('Sélectionnez un programme.', 'info'); return; }
+  var lots = (DATA.lots || []).filter(function(l){ return l.programme_id === pid; });
+  if (!lots.length) { toast('Aucun lot sur ce programme.', 'info'); return; }
+  var prix = lots.reduce(function(a, l){ return a + (parseFloat(l.prix) || 0); }, 0) / lots.length;
+  if (prix > 0) _sv('prev-prix-lot', Math.round(prix));
+  _sv('prev-lots-an', Math.max(1, Math.round(lots.length / (parseInt(_gv('prev-horizon')) || 3))));
+  prevRender();
+  toast('Hypothèses pré-remplies depuis le programme.', 'success');
+}
+
+async function prevSaveScenario() {
+  var s = prevReadForm();
+  if (!s.id) s.id = uid();
+  var idx = DATA.previsionnels.findIndex(function(x){ return x.id === s.id; });
+  if (idx >= 0) DATA.previsionnels[idx] = s; else DATA.previsionnels.push(s);
+  APP._prevCurrent = s;
+  if (typeof dbPut === 'function') await dbPut('previsionnels', s);
+  loadPrevisionnel();
+  document.getElementById('prev-select').value = s.id;
+  toast('Scénario enregistré.', 'success');
+}
+
+async function prevDeleteScenario() {
+  var s = APP._prevCurrent;
+  if (!s || !s.id) { toast('Aucun scénario enregistré à supprimer.', 'info'); return; }
+  if (!confirm('Supprimer le scénario « ' + s.nom + ' » ?')) return;
+  DATA.previsionnels = DATA.previsionnels.filter(function(x){ return x.id !== s.id; });
+  if (typeof dbDelete === 'function') await dbDelete('previsionnels', s.id);
+  prevNewScenario();
+  loadPrevisionnel();
+  toast('Scénario supprimé.', 'success');
+}
+
+/* ---- Rendu écran ---- */
+function prevRender() {
+  var box = document.getElementById('prev-results');
+  if (!box) return;
+  var s = prevReadForm();
+  var c = _prevCompute(s);
+  var r = c.ratios;
+  function kpi(lbl, val, color) {
+    return '<div class="kpi-card" style="border-top-color:' + (color || 'var(--bleu)') + ';"><div class="kpi-label">' + lbl
+      + '</div><div class="kpi-value" style="font-size:17px;color:' + (color || 'var(--blanc)') + ';">' + val + '</div></div>';
+  }
+  var kpis = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+    + kpi('CA cumulé (' + c.H + ' ans)', fmtF(c.totals.CA) + ' F', 'var(--vert)')
+    + kpi('Résultat net cumulé', fmtF(c.totals.rNet) + ' F', c.totals.rNet >= 0 ? 'var(--vert)' : 'var(--rouge)')
+    + kpi('DSCR année 1', (r.dscr).toFixed(2) + (r.dscr >= 1.2 ? ' ✔' : ' ⚠'), r.dscr >= 1.2 ? 'var(--vert)' : 'var(--or)')
+    + kpi('Marge nette', r.margeNettePct.toFixed(1) + '%', 'var(--bleu)')
+    + '</div>';
+
+  function annTable(rows, head) {
+    return '<div class="table-wrap"><table style="font-size:12px;"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+  // Exploitation
+  var exHead = '<th>Rubrique</th>' + c.years.map(function(a){ return '<th style="text-align:right;">' + a.an + '</th>'; }).join('');
+  function exLine(lbl, key, color) {
+    return '<tr><td>' + lbl + '</td>' + c.years.map(function(a){ return '<td style="text-align:right;color:' + (color || 'inherit') + ';">' + fmtF(a[key]) + '</td>'; }).join('') + '</tr>';
+  }
+  var exploit = '<div class="form-section-title" style="color:var(--or);">① Compte d\'exploitation prévisionnel</div>'
+    + annTable(
+        exLine('Chiffre d\'affaires (ventes)', 'CA', 'var(--vert)')
+      + exLine('Coût de production (foncier+travaux)', 'prodCost', 'var(--rouge)')
+      + exLine('Études', 'etudes', 'var(--rouge)')
+      + exLine('Commissions', 'comm', 'var(--rouge)')
+      + exLine('Charges fixes', 'chFixes', 'var(--rouge)')
+      + '<tr style="font-weight:700;border-top:2px solid var(--or);"><td>EBE / Résultat d\'exploitation</td>'
+      + c.years.map(function(a){ return '<td style="text-align:right;color:' + (a.ebe >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';">' + fmtF(a.ebe) + '</td>'; }).join('') + '</tr>'
+      , exHead);
+  // Résultat
+  var resultat = '<div class="form-section-title" style="margin-top:18px;color:var(--bleu);">② Compte de résultat prévisionnel</div>'
+    + annTable(
+        exLine('Résultat d\'exploitation', 'rExploit')
+      + exLine('Charges financières (intérêts)', 'interets', 'var(--rouge)')
+      + exLine('Résultat avant IS', 'rAvantIS')
+      + exLine('Impôt sur les sociétés', 'is', 'var(--rouge)')
+      + '<tr style="font-weight:700;border-top:2px solid var(--bleu);"><td>RÉSULTAT NET</td>'
+      + c.years.map(function(a){ return '<td style="text-align:right;color:' + (a.rNet >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';">' + fmtF(a.rNet) + '</td>'; }).join('') + '</tr>'
+      , exHead);
+  // Plan de financement
+  var pfHead = '<th>Rubrique</th>' + c.plan.map(function(p){ return '<th style="text-align:right;">' + p.an + '</th>'; }).join('');
+  function pfLine(lbl, key, color) {
+    return '<tr><td>' + lbl + '</td>' + c.plan.map(function(p){ return '<td style="text-align:right;color:' + (color || 'inherit') + ';">' + fmtF(p[key]) + '</td>'; }).join('') + '</tr>';
+  }
+  var planfin = '<div class="form-section-title" style="margin-top:18px;color:var(--vert);">③ Plan de financement prévisionnel</div>'
+    + annTable(
+        pfLine('Ressources (CAF + apports + emprunt)', 'ressources', 'var(--vert)')
+      + pfLine('Emplois (remb. capital + Δ BFR)', 'emplois', 'var(--rouge)')
+      + pfLine('Solde annuel', 'solde')
+      + '<tr style="font-weight:700;border-top:2px solid var(--vert);"><td>Trésorerie cumulée (plan)</td>'
+      + c.plan.map(function(p){ return '<td style="text-align:right;color:' + (p.cumul >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';">' + fmtF(p.cumul) + '</td>'; }).join('') + '</tr>'
+      , pfHead);
+  // Trésorerie (résumé 12 premiers mois)
+  var tr12 = c.treso.slice(0, 12);
+  var tRows = tr12.map(function(t){
+    return '<tr><td>' + t.label + '</td><td style="text-align:right;color:var(--vert);">' + fmtF(t.inflow) + '</td>'
+      + '<td style="text-align:right;color:var(--rouge);">' + fmtF(t.outflow) + '</td>'
+      + '<td style="text-align:right;color:' + (t.cumul >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';font-weight:600;">' + fmtF(t.cumul) + '</td></tr>';
+  }).join('');
+  var treso = '<div class="form-section-title" style="margin-top:18px;color:var(--rouge);">④ Trésorerie prévisionnelle (12 premiers mois — détail complet dans le PDF)</div>'
+    + annTable(tRows, '<th>Mois</th><th style="text-align:right;">Encaissements</th><th style="text-align:right;">Décaissements</th><th style="text-align:right;">Solde cumulé</th>');
+
+  var alerte = (c.treso.some(function(t){ return t.cumul < 0; }))
+    ? '<div class="alert alert-error" style="margin-top:12px;">⚠ Trésorerie négative sur certains mois — prévoir financement complémentaire ou différé plus long.</div>'
+    : '<div class="alert alert-success" style="margin-top:12px;">✔ Trésorerie cumulée positive sur tout l\'horizon.</div>';
+
+  var ratiosBox = '<div style="margin-top:16px;padding:14px;border-radius:var(--radius);background:rgba(29,78,216,0.06);border:1px solid rgba(29,78,216,0.2);font-size:12px;">'
+    + '<strong>Ratios bancaires :</strong> Seuil de rentabilité ≈ ' + fmtF(r.seuilRentab) + ' F/an · '
+    + 'DSCR an 1 = ' + r.dscr.toFixed(2) + ' (cible ≥ 1,20) · '
+    + 'Capacité de remboursement (CAF cumulée / emprunt) = ' + r.capaRemb.toFixed(2) + 'x</div>';
+
+  box.innerHTML = kpis + exploit + resultat + planfin + treso + alerte + ratiosBox;
+}
+
+/* ---- Helpers PDF ---- */
+function _prevSociete() { return (typeof _identiteSociete === 'function') ? _identiteSociete() : { nom: (DATA.params && DATA.params.societe) || 'ImmoSuite ERP' }; }
+function _prevSousTitre(s) {
+  var prog = (DATA.programmes || []).find(function(p){ return p.id === s.programme_id; });
+  return (s.nom || 'Prévisionnel') + (prog ? ' — ' + prog.nom : '') + ' · Horizon ' + s.horizon_annees + ' ans';
+}
+function _prevExploitHTML(c) {
+  var head = '<th>Rubrique</th>' + c.years.map(function(a){ return '<th class="num">' + a.an + '</th>'; }).join('');
+  function L(lbl, key) { return '<tr><td>' + lbl + '</td>' + c.years.map(function(a){ return '<td class="num">' + fmtF(a[key]) + '</td>'; }).join('') + '</tr>'; }
+  return '<table><thead><tr>' + head + '</tr></thead><tbody>'
+    + L('Chiffre d\'affaires (ventes)', 'CA') + L('Coût de production', 'prodCost') + L('Études', 'etudes')
+    + L('Commissions', 'comm') + L('Charges fixes', 'chFixes')
+    + '<tr class="total"><td>EBE / Résultat d\'exploitation</td>' + c.years.map(function(a){ return '<td class="num">' + fmtF(a.ebe) + '</td>'; }).join('') + '</tr></tbody></table>';
+}
+function _prevResultatHTML(c) {
+  var head = '<th>Rubrique</th>' + c.years.map(function(a){ return '<th class="num">' + a.an + '</th>'; }).join('');
+  function L(lbl, key) { return '<tr><td>' + lbl + '</td>' + c.years.map(function(a){ return '<td class="num">' + fmtF(a[key]) + '</td>'; }).join('') + '</tr>'; }
+  return '<table><thead><tr>' + head + '</tr></thead><tbody>'
+    + L('Résultat d\'exploitation', 'rExploit') + L('Charges financières (intérêts)', 'interets')
+    + L('Résultat avant IS', 'rAvantIS') + L('Impôt sur les sociétés', 'is')
+    + '<tr class="total"><td>RÉSULTAT NET</td>' + c.years.map(function(a){ return '<td class="num">' + fmtF(a.rNet) + '</td>'; }).join('') + '</tr></tbody></table>';
+}
+function _prevPlanHTML(c) {
+  var head = '<th>Rubrique</th>' + c.plan.map(function(p){ return '<th class="num">' + p.an + '</th>'; }).join('');
+  function L(lbl, key) { return '<tr><td>' + lbl + '</td>' + c.plan.map(function(p){ return '<td class="num">' + fmtF(p[key]) + '</td>'; }).join('') + '</tr>'; }
+  return '<table><thead><tr>' + head + '</tr></thead><tbody>'
+    + L('CAF', 'caf') + L('Ressources', 'ressources') + L('Emplois', 'emplois') + L('Solde annuel', 'solde')
+    + '<tr class="total"><td>Trésorerie cumulée</td>' + c.plan.map(function(p){ return '<td class="num">' + fmtF(p.cumul) + '</td>'; }).join('') + '</tr></tbody></table>';
+}
+function _prevTresoHTML(c) {
+  var rows = c.treso.map(function(t){
+    return '<tr><td>' + t.label + '</td><td class="num">' + fmtF(t.inflow) + '</td><td class="num">' + fmtF(t.outflow) + '</td>'
+      + '<td class="num">' + fmtF(t.net) + '</td><td class="num">' + fmtF(t.cumul) + '</td></tr>';
+  }).join('');
+  return '<table><thead><tr><th>Mois</th><th class="num">Encaissements</th><th class="num">Décaissements</th>'
+    + '<th class="num">Solde net</th><th class="num">Cumulé</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+/* ---- 4 états individuels ---- */
+function etatPrevExploitation() { var s = prevReadForm(); var c = _prevCompute(s);
+  genererEtatPDF({ titre:'Compte d\'exploitation prévisionnel', sousTitre:_prevSousTitre(s), orientation:'paysage', couleur:'#B8860B', contenu:_prevExploitHTML(c) }); }
+function etatPrevResultat() { var s = prevReadForm(); var c = _prevCompute(s);
+  genererEtatPDF({ titre:'Compte de résultat prévisionnel', sousTitre:_prevSousTitre(s), orientation:'paysage', couleur:'#1D4ED8', contenu:_prevResultatHTML(c) }); }
+function etatPrevPlanFinancement() { var s = prevReadForm(); var c = _prevCompute(s);
+  genererEtatPDF({ titre:'Plan de financement prévisionnel', sousTitre:_prevSousTitre(s), orientation:'paysage', couleur:'#16a34a', contenu:_prevPlanHTML(c) }); }
+function etatPrevTresorerie() { var s = prevReadForm(); var c = _prevCompute(s);
+  genererEtatPDF({ titre:'Trésorerie prévisionnelle', sousTitre:_prevSousTitre(s) + ' · ' + c.N + ' mois', orientation:'paysage', couleur:'#dc2626', contenu:_prevTresoHTML(c) }); }
+
+/* ---- Dossier bancaire complet (un seul PDF) ---- */
+function etatDossierBancaire() {
+  var s = prevReadForm();
+  var c = _prevCompute(s);
+  var r = c.ratios;
+  var synth = '<table><tbody>'
+    + '<tr><th style="width:55%;">Chiffre d\'affaires cumulé (' + c.H + ' ans)</th><td class="num">' + fcfa(c.totals.CA) + '</td></tr>'
+    + '<tr><th>Résultat net cumulé</th><td class="num">' + fcfa(c.totals.rNet) + '</td></tr>'
+    + '<tr><th>Marge nette moyenne</th><td class="num">' + r.margeNettePct.toFixed(1) + ' %</td></tr>'
+    + '<tr><th>Seuil de rentabilité (an 1)</th><td class="num">' + fcfa(r.seuilRentab) + '</td></tr>'
+    + '<tr><th>DSCR année 1 (cible ≥ 1,20)</th><td class="num">' + r.dscr.toFixed(2) + '</td></tr>'
+    + '<tr class="total"><td>Capacité de remboursement (CAF cumulée / emprunt)</td><td class="num">' + r.capaRemb.toFixed(2) + 'x</td></tr>'
+    + '</tbody></table>';
+  var contenu = '<h3>Synthèse du projet</h3>' + synth
+    + '<div class="pb"></div><h3>① Compte d\'exploitation prévisionnel</h3>' + _prevExploitHTML(c)
+    + '<div class="pb"></div><h3>② Compte de résultat prévisionnel</h3>' + _prevResultatHTML(c)
+    + '<div class="pb"></div><h3>③ Plan de financement prévisionnel</h3>' + _prevPlanHTML(c)
+    + '<div class="pb"></div><h3>④ Trésorerie prévisionnelle (' + c.N + ' mois)</h3>' + _prevTresoHTML(c)
+    + '<p style="font-size:10px;color:#888;margin-top:14px;">Document prévisionnel établi sur hypothèses de gestion. Sans valeur d\'engagement.</p>';
+  genererEtatPDF({ titre:'Dossier bancaire — Prévisionnel', sousTitre:_prevSousTitre(s), orientation:'paysage',
+    couleur:'#1D4ED8', cssExtra:'.pb{page-break-before:always;}', contenu:contenu });
 }
 
 /* Lancer au démarrage */
