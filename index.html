@@ -1019,9 +1019,671 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .btn-bleu:active { background:rgba(74,148,224,0.25); }
 .btn-success { background:rgba(74,196,122,0.12);color:var(--vert);border:1px solid rgba(74,196,122,0.3); }
 .btn-success:active { background:rgba(74,196,122,0.25); }
+
+/* ═══════════════════════════════════════════════
+   TABLEAU POINTAGE RAPIDE — ImmoSuite v15
+═══════════════════════════════════════════════ */
+
+/* Tableau inline-editable */
+#table-pointage-rapide tbody tr { transition: background var(--tr); }
+#table-pointage-rapide tbody tr:hover { background: rgba(184,115,51,0.04); }
+#table-pointage-rapide tbody tr.pt-row-P  { border-left: 3px solid var(--vert); }
+#table-pointage-rapide tbody tr.pt-row-A  { border-left: 3px solid var(--rouge); background: rgba(224,82,82,0.03); }
+#table-pointage-rapide tbody tr.pt-row-R  { border-left: 3px solid var(--or); background: rgba(184,115,51,0.04); }
+#table-pointage-rapide tbody tr.pt-row-C  { border-left: 3px solid var(--violet); background: rgba(138,82,224,0.03); }
+#table-pointage-rapide tbody tr.pt-row-AT { border-left: 3px solid var(--rouge); background: rgba(224,82,82,0.03); }
+#table-pointage-rapide tbody tr.pt-row-F  { border-left: 3px solid var(--bord2); opacity: .7; }
+#table-pointage-rapide tbody tr.pt-row-W  { background: rgba(200,200,220,0.12); opacity:.6; }
+#table-pointage-rapide tbody tr.pt-selected { background: rgba(37,99,235,0.06) !important; outline: 1px solid rgba(37,99,235,0.25); }
+
+/* Selects inline dans tableau */
+.pt-select-statut {
+  padding: 4px 6px; border-radius: 6px; border: 1px solid var(--bord);
+  background: transparent; font-size: 12px; font-weight: 600;
+  cursor: pointer; width: 100%; min-width: 95px;
+  -webkit-appearance: none;
+}
+.pt-select-statut.s-P { background: rgba(74,196,122,0.15); color: var(--vert); border-color: rgba(74,196,122,0.3); }
+.pt-select-statut.s-A { background: rgba(224,82,82,0.15); color: var(--rouge); border-color: rgba(224,82,82,0.3); }
+.pt-select-statut.s-R { background: rgba(184,115,51,0.15); color: var(--or); border-color: rgba(184,115,51,0.3); }
+.pt-select-statut.s-C { background: rgba(138,82,224,0.15); color: var(--violet); border-color: rgba(138,82,224,0.3); }
+.pt-select-statut.s-AT{ background: rgba(224,82,82,0.15); color: var(--rouge); border-color: rgba(224,82,82,0.3); }
+.pt-select-statut.s-M { background: rgba(74,148,224,0.15); color: var(--bleu); border-color: rgba(74,148,224,0.3); }
+.pt-select-statut.s-F { background: var(--card2); color: var(--dim); }
+
+/* Inputs heure inline */
+.pt-input-heure {
+  padding: 4px 6px; border-radius: 6px; border: 1px solid var(--bord);
+  background: var(--card2); font-size: 12px; font-family: monospace;
+  width: 80px; text-align: center;
+  -webkit-appearance: none;
+}
+.pt-input-heure:focus { outline: none; border-color: var(--or); background: #fff; }
+.pt-input-heure.late { border-color: var(--rouge); color: var(--rouge); }
+
+/* Input notes inline */
+.pt-input-notes {
+  padding: 3px 8px; border-radius: 6px; border: 1px solid transparent;
+  background: transparent; font-size: 12px; width: 100%;
+  transition: border-color var(--tr), background var(--tr);
+}
+.pt-input-notes:focus { outline: none; border-color: var(--bord); background: var(--card2); }
+
+/* Colonne impact mini */
+.pt-impact-cell { font-size: 10px; font-weight: 700; text-align: center; white-space: nowrap; }
+
+/* Badge scan */
+@media (max-width: 640px) {
+  .scan-grid { grid-template-columns: 1fr !important; }
+}
+.scan-log-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-bottom: 1px solid var(--bord); font-size: 12px;
+}
+.scan-log-item:last-child { border-bottom: none; }
+.scan-log-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.scan-log-item.entree .scan-log-avatar { background: var(--vert); }
+.scan-log-item.sortie .scan-log-avatar { background: var(--or); }
+.scan-log-item.erreur .scan-log-avatar { background: var(--rouge); }
+.badge-btn-sim {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--bord);
+  background: var(--card); cursor: pointer; font-size: 11px;
+  transition: all var(--tr); font-family: var(--fb);
+}
+.badge-btn-sim:hover { border-color: var(--or); color: var(--or); transform: translateY(-1px); }
+#scan-badge-input:focus { border-color: var(--bleu); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
 </style>
 <!-- EmailJS SDK -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
+
+/* ═══════════════════════════════════════════════════════════════════════
+   POINTAGE v2 — Tableau rapide inline + Scan Badge
+   ImmoSuite v15
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── État global tableau ── */
+var PT = {
+  dirty: {},          /* empId_date → objet pointage modifié non sauvegardé */
+  selected: new Set(), /* lignes sélectionnées */
+  scanMode: 'entree',
+  scanStream: null,
+  scanAnimFrame: null,
+  scanDebounceTimer: null,
+  scanLog: []
+};
+
+/* ── Statuts ── */
+var PT_LABELS = { P:'Présent', A:'Absent', R:'Retard', C:'Congé', AT:'Maladie', M:'Mi-temps', W:'Week-end', F:'Non saisi' };
+var PT_COLORS = { P:'var(--vert)', A:'var(--rouge)', R:'var(--or)', C:'var(--violet)', AT:'var(--rouge)', M:'var(--bleu)', W:'var(--dim)', F:'var(--dim)' };
+var PT_AVATARS = ['#2563EB','#16A34A','#DC2626','#7C3AED','#D97706','#0891B2','#BE185D','#65A30D'];
+
+/* ── Override renderPointageJour pour rediriger vers le tableau ── */
+var _origRenderPointageJour = renderPointageJour;
+renderPointageJour = function() { renderPointageTableau(); };
+
+/* ────────────────────────────────────────────
+   TABLEAU RAPIDE JOURNALIER
+─────────────────────────────────────────────── */
+function renderPointageTableau() {
+  var date = (document.getElementById('pointage-jour')||{}).value || new Date().toISOString().slice(0,10);
+  var dept = (document.getElementById('pointage-filter-dept')||{}).value || '';
+  var tbody = document.getElementById('tbody-pointage-rapide');
+  if (!tbody) return;
+
+  var actifs = (DATA.employes||[]).filter(function(e){
+    return e.statut === 'actif' && (!dept || e.dept === dept);
+  }).sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+
+  if (!actifs.length) {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--dim);padding:20px;">Aucun employé actif.</td></tr>';
+    return;
+  }
+
+  var dayOfWeek = new Date(date + 'T00:00:00').getDay();
+  var isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  var mois = (document.getElementById('pointage-mois')||{}).value || date.slice(0,7);
+
+  var kpi = { P:0, A:0, R:0, C:0, F:0 };
+
+  tbody.innerHTML = actifs.map(function(e, idx) {
+    /* Chercher pointage existant ou dirty */
+    var dirtyKey = e.id + '_' + date;
+    var p = PT.dirty[dirtyKey] || getPointageJour(e.id, date);
+    var statut = p ? p.statut : (isWeekend ? 'W' : 'F');
+
+    /* Compter KPI */
+    if (statut === 'P' || statut === 'M') kpi.P++;
+    else if (statut === 'A' || statut === 'AT') kpi.A++;
+    else if (statut === 'R') kpi.R++;
+    else if (statut === 'C') kpi.C++;
+    else if (statut === 'F') kpi.F++;
+
+    /* Calcul heures */
+    var heures = p ? heuresTravaillees(p) : 0;
+    var hSupp  = p ? (p.heures_supp || 0) : 0;
+    var retardMin = 0;
+    if (p && p.heure_entree && p.heure_entree > '08:15') {
+      var hp = p.heure_entree.split(':');
+      retardMin = Math.max(0, (parseInt(hp[0])-8)*60 + parseInt(hp[1]));
+    }
+
+    /* Impact paie mini */
+    var joursOuvres = joursOuvresDansMois(mois);
+    var sJ = joursOuvres > 0 ? Math.round((e.salaire_base||0)/joursOuvres) : 0;
+    var impactVal = statut === 'A' ? -sJ : statut === 'M' ? -Math.round(sJ/2) : hSupp > 0 ? Math.round((e.salaire_base||0)/(joursOuvres*8)*hSupp*1.25) : 0;
+    var impactStr = impactVal === 0 ? '' : (impactVal > 0 ? '+' : '') + fmtF(impactVal);
+    var impactColor = impactVal < 0 ? 'var(--rouge)' : impactVal > 0 ? 'var(--vert)' : 'var(--dim)';
+
+    var isSelected = PT.selected.has(dirtyKey);
+    var rowClass = 'pt-row-' + statut + (isSelected ? ' pt-selected' : '');
+
+    var selectOptions = ['P','R','A','C','AT','M'].map(function(s){
+      return '<option value="'+s+'"'+(statut===s?' selected':'')+'>'+PT_LABELS[s]+'</option>';
+    }).join('');
+    if (isWeekend) selectOptions = '<option value="W">Week-end</option>';
+
+    return '<tr class="'+rowClass+'" id="pt-row-'+e.id+'" data-emp="'+e.id+'" data-date="'+date+'">'
+      + '<td style="text-align:center;">'
+      + (isWeekend ? '' : '<input type="checkbox" class="pt-row-cb" data-key="'+dirtyKey+'" onchange="ptToggleRow(this)" '+(isSelected?'checked':'')+' >')
+      + '</td>'
+      + '<td><div style="font-size:13px;font-weight:600;color:#1C1C2E;">'+e.nom+' '+e.prenoms+'</div>'
+      + '<div style="font-size:10px;color:var(--dim);">'+e.poste+(e.dept?' · '+e.dept:'')+'</div></td>'
+      + '<td style="font-family:monospace;font-size:11px;color:var(--or);">'+e.matricule+'</td>'
+      + '<td>'
+      + (isWeekend
+          ? '<span class="badge badge-neutre">Week-end</span>'
+          : '<select class="pt-select-statut s-'+statut+'" data-emp="'+e.id+'" data-date="'+date+'"'
+            + ' onchange="ptCellStatutChange(this)">'
+            + selectOptions + '</select>')
+      + '</td>'
+      + '<td>'+(isWeekend ? '' : '<input class="pt-input-heure'+(retardMin>0?' late':'')+'" type="time"'
+          +' value="'+(p ? (p.heure_entree||'08:00') : '08:00')+'"'
+          +' data-emp="'+e.id+'" data-date="'+date+'" data-field="heure_entree"'
+          +' onchange="ptCellHeureChange(this)" '
+          +(statut==='A'||statut==='C'||statut==='AT'?'disabled':'')+' >')
+      + '</td>'
+      + '<td>'+(isWeekend ? '' : '<input class="pt-input-heure" type="time"'
+          +' value="'+(p ? (p.heure_sortie||'17:00') : '17:00')+'"'
+          +' data-emp="'+e.id+'" data-date="'+date+'" data-field="heure_sortie"'
+          +' onchange="ptCellHeureChange(this)" '
+          +(statut==='A'||statut==='C'||statut==='AT'?'disabled':'')+' >')
+      + '</td>'
+      + '<td>'+(isWeekend ? '' : '<input class="pt-input-heure" type="number" min="0" max="6" step="0.5"'
+          +' value="'+(hSupp||0)+'" style="width:60px;text-align:center;"'
+          +' data-emp="'+e.id+'" data-date="'+date+'" data-field="heures_supp"'
+          +' onchange="ptCellHeureChange(this)">')
+      + '</td>'
+      + '<td>'+(isWeekend ? '' : '<input class="pt-input-heure" type="number" min="0" max="120" step="15"'
+          +' value="'+(p?(p.pause||60):60)+'" style="width:55px;text-align:center;"'
+          +' data-emp="'+e.id+'" data-date="'+date+'" data-field="pause"'
+          +' onchange="ptCellHeureChange(this)">')
+      + '</td>'
+      + '<td style="text-align:center;"><span style="font-size:12px;font-weight:700;color:'+(heures>=7.5?'var(--vert)':heures>0?'var(--or)':'var(--dim)')+';">'
+      + (heures > 0 ? heures.toFixed(1)+'h' : '—') + '</span>'
+      + (retardMin > 0 ? '<div style="font-size:9px;color:var(--rouge);">+'+retardMin+'min</div>' : '')
+      + '</td>'
+      + '<td><input class="pt-input-notes" placeholder="—" value="'+(p?((p.notes||'').replace(/"/g,'&quot;')):'') + '"'
+          + ' data-emp="'+e.id+'" data-date="'+date+'" data-field="notes"'
+          + ' onchange="ptCellHeureChange(this)"></td>'
+      + '<td class="pt-impact-cell" style="color:'+impactColor+';">'+(impactStr||'—')+'</td>'
+      + '</tr>';
+  }).join('');
+
+  /* KPIs */
+  var elP = document.getElementById('pt-kpi-p'); if(elP) elP.textContent = '✅ '+kpi.P+' présents';
+  var elA = document.getElementById('pt-kpi-a'); if(elA) elA.textContent = '❌ '+kpi.A+' absents';
+  var elR = document.getElementById('pt-kpi-r'); if(elR) elR.textContent = '⏰ '+kpi.R+' retards';
+  var elC = document.getElementById('pt-kpi-c'); if(elC) elC.textContent = '🌴 '+kpi.C+' congés';
+  var elF = document.getElementById('pt-kpi-ns'); if(elF) elF.textContent = '◌ '+kpi.F+' non saisis';
+
+  var recap = document.getElementById('pointage-recap-jour');
+  if (recap) recap.textContent = actifs.length + ' employés · ' + Object.keys(PT.dirty).length + ' modification(s) non sauvegardée(s)';
+}
+
+/* ── Changement statut inline ── */
+function ptCellStatutChange(sel) {
+  var empId = sel.dataset.emp, date = sel.dataset.date;
+  var newStatut = sel.value;
+  /* Mettre à jour classe du select */
+  sel.className = 'pt-select-statut s-' + newStatut;
+  /* Désactiver/activer inputs heure selon statut */
+  var row = sel.closest('tr');
+  if (row) {
+    var disableHeure = ['A','C','AT'].indexOf(newStatut) >= 0;
+    row.querySelectorAll('.pt-input-heure[data-field="heure_entree"],.pt-input-heure[data-field="heure_sortie"]').forEach(function(inp){
+      inp.disabled = disableHeure;
+    });
+    row.className = row.className.replace(/pt-row-\w+/, 'pt-row-' + newStatut);
+  }
+  ptMarkDirty(empId, date, 'statut', newStatut);
+}
+
+/* ── Changement heure/notes inline ── */
+function ptCellHeureChange(inp) {
+  var empId = inp.dataset.emp, date = inp.dataset.date, field = inp.dataset.field;
+  /* Classe retard sur heure_entree */
+  if (field === 'heure_entree') {
+    inp.classList.toggle('late', inp.value > '08:15');
+  }
+  ptMarkDirty(empId, date, field, inp.value);
+}
+
+/* ── Marquer dirty + recalc heures ── */
+function ptMarkDirty(empId, date, field, value) {
+  var key = empId + '_' + date;
+  if (!PT.dirty[key]) {
+    var existing = getPointageJour(empId, date);
+    PT.dirty[key] = existing
+      ? JSON.parse(JSON.stringify(existing))
+      : { id: 'pt_'+empId+'_'+date.replace(/-/g,''), employe_id: empId, date: date,
+          statut: 'P', heure_entree: '08:00', heure_sortie: '17:00', pause: 60,
+          heures_supp: 0, justifie: '1', notes: '', created_at: date };
+  }
+  PT.dirty[key][field] = value;
+  /* Recalc heures affichées dans la ligne */
+  var row = document.getElementById('pt-row-' + empId);
+  if (row) {
+    var p = PT.dirty[key];
+    var h = heuresTravaillees(p);
+    var hCell = row.querySelectorAll('td')[8];
+    if (hCell) hCell.innerHTML = '<span style="font-size:12px;font-weight:700;color:'+(h>=7.5?'var(--vert)':h>0?'var(--or)':'var(--dim)')+';">'+(h>0?h.toFixed(1)+'h':'—')+'</span>';
+  }
+  /* Recap */
+  var recap = document.getElementById('pointage-recap-jour');
+  if (recap) recap.textContent = (DATA.employes||[]).filter(function(e){return e.statut==='actif';}).length + ' employés · ' + Object.keys(PT.dirty).length + ' modification(s) non sauvegardée(s)';
+}
+
+/* ── Sauvegarder tout le tableau ── */
+async function ptSauvegarderTableau() {
+  var keys = Object.keys(PT.dirty);
+  if (!keys.length) { toast('Aucune modification à sauvegarder.', 'info'); return; }
+  var count = 0;
+  for (var i = 0; i < keys.length; i++) {
+    var pt = PT.dirty[keys[i]];
+    var idx = DATA.pointages.findIndex(function(p){ return p.employe_id===pt.employe_id && p.date===pt.date; });
+    if (idx >= 0) DATA.pointages[idx] = pt; else DATA.pointages.push(pt);
+    await dbPut('pointages', pt);
+    count++;
+  }
+  PT.dirty = {};
+  renderPointageTableau();
+  buildPointageMensuel();
+  buildImpactPaie();
+  checkPointageBadge();
+  toast('✅ ' + count + ' pointage(s) sauvegardé(s).', 'success');
+}
+
+/* ── Tous présents ── */
+function ptTousPresents() {
+  var date = (document.getElementById('pointage-jour')||{}).value || new Date().toISOString().slice(0,10);
+  var dept = (document.getElementById('pointage-filter-dept')||{}).value || '';
+  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif' && (!dept||e.dept===dept); });
+  var dayOfWeek = new Date(date+'T00:00:00').getDay();
+  if (dayOfWeek===0||dayOfWeek===6) { toast('Week-end sélectionné.','info'); return; }
+  actifs.forEach(function(e) {
+    var key = e.id + '_' + date;
+    var existing = getPointageJour(e.id, date);
+    if (!existing || existing.statut === 'F') {
+      if (!PT.dirty[key]) {
+        PT.dirty[key] = existing
+          ? JSON.parse(JSON.stringify(existing))
+          : { id:'pt_'+e.id+'_'+date.replace(/-/g,''), employe_id:e.id, date:date,
+              statut:'P', heure_entree:'08:00', heure_sortie:'17:00', pause:60,
+              heures_supp:0, justifie:'1', notes:'', created_at:date };
+      }
+      PT.dirty[key].statut = 'P';
+    }
+  });
+  renderPointageTableau();
+  toast('✅ Tous marqués présents — Sauvegarder pour confirmer.', 'success');
+}
+
+/* ── Sélection multiple ── */
+function ptToggleAll(cb) {
+  document.querySelectorAll('.pt-row-cb').forEach(function(c){
+    c.checked = cb.checked;
+    var key = c.dataset.key;
+    if (cb.checked) PT.selected.add(key); else PT.selected.delete(key);
+    var row = c.closest('tr');
+    if (row) row.classList.toggle('pt-selected', cb.checked);
+  });
+  ptUpdateSelectionBar();
+}
+
+function ptToggleRow(cb) {
+  var key = cb.dataset.key;
+  if (cb.checked) PT.selected.add(key); else PT.selected.delete(key);
+  var row = cb.closest('tr');
+  if (row) row.classList.toggle('pt-selected', cb.checked);
+  ptUpdateSelectionBar();
+}
+
+function ptUpdateSelectionBar() {
+  var bar = document.getElementById('pt-selection-bar');
+  var count = document.getElementById('pt-selection-count');
+  if (!bar||!count) return;
+  var n = PT.selected.size;
+  bar.style.display = n > 0 ? 'flex' : 'none';
+  count.textContent = n + ' sélectionné(s)';
+}
+
+function ptActionSelection(statut) {
+  var date = (document.getElementById('pointage-jour')||{}).value || new Date().toISOString().slice(0,10);
+  PT.selected.forEach(function(key) {
+    var empId = key.split('_')[0];
+    ptMarkDirty(empId, date, 'statut', statut);
+  });
+  PT.selected.clear();
+  renderPointageTableau();
+  ptUpdateSelectionBar();
+}
+
+function ptAnnulerSelection() {
+  PT.selected.clear();
+  document.querySelectorAll('.pt-row-cb').forEach(function(c){ c.checked = false; });
+  document.querySelectorAll('#tbody-pointage-rapide tr').forEach(function(r){ r.classList.remove('pt-selected'); });
+  ptUpdateSelectionBar();
+}
+
+/* ── Export CSV jour ── */
+function ptExportJourCSV() {
+  var date = (document.getElementById('pointage-jour')||{}).value || new Date().toISOString().slice(0,10);
+  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif'; });
+  var rows = [['Matricule','Nom','Prénom','Poste','Statut','Entrée','Sortie','H.Supp','Heures','Notes']];
+  actifs.forEach(function(e) {
+    var p = getPointageJour(e.id, date);
+    var s = p ? p.statut : 'F';
+    var h = p ? heuresTravaillees(p).toFixed(1) : '0';
+    rows.push([e.matricule, e.nom, e.prenoms, e.poste, PT_LABELS[s]||s,
+      p?p.heure_entree:'', p?p.heure_sortie:'', p?p.heures_supp||0:0, h, p?p.notes||'':'']);
+  });
+  var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = 'pointage_'+date+'.csv'; a.click();
+}
+
+/* ─────────────────────────────────────────────
+   SCAN BADGE
+──────────────────────────────────────────────── */
+
+/* Horloge scan */
+function ptUpdateScanHeure() {
+  var el = document.getElementById('scan-heure-auto');
+  if (el) el.textContent = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(ptUpdateScanHeure, 1000);
+
+/* Date log scan */
+function ptInitScanTab() {
+  var el = document.getElementById('scan-date-log');
+  if (el) el.textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'});
+  ptUpdateScanHeure();
+  ptSetScanMode('entree');
+  ptRenderNonPointes();
+  ptRenderBadgeButtons();
+  /* Focus sur le champ scan */
+  var inp = document.getElementById('scan-badge-input');
+  if (inp) setTimeout(function(){ inp.focus(); }, 200);
+}
+
+function ptSetScanMode(mode) {
+  PT.scanMode = mode;
+  var lbl = document.getElementById('scan-mode-label');
+  var btnE = document.getElementById('btn-scan-entree');
+  var btnS = document.getElementById('btn-scan-sortie');
+  if (lbl) lbl.innerHTML = 'Mode : <strong style="color:'+(mode==='entree'?'var(--vert)':'var(--or)')+';">'+(mode==='entree'?'ENTRÉE':'SORTIE')+'</strong> — <span id="scan-heure-auto"></span>';
+  if (btnE) { btnE.className = 'btn btn-sm '+(mode==='entree'?'btn-success':'btn-secondary'); btnE.style.flex='1'; }
+  if (btnS) { btnS.className = 'btn btn-sm '+(mode==='sortie'?'btn-primary':'btn-secondary'); btnS.style.flex='1'; }
+  ptUpdateScanHeure();
+}
+
+/* Debounce pour douchette (envoie Entrée automatiquement après ~500ms de silence) */
+function ptScanBadgeDebounce() {
+  clearTimeout(PT.scanDebounceTimer);
+  PT.scanDebounceTimer = setTimeout(function() {
+    var val = (document.getElementById('scan-badge-input')||{}).value || '';
+    if (val.trim().length >= 2) ptValiderScan();
+  }, 600);
+}
+
+async function ptValiderScan() {
+  clearTimeout(PT.scanDebounceTimer);
+  var inp = document.getElementById('scan-badge-input');
+  if (!inp) return;
+  var matricule = inp.value.trim().toUpperCase();
+  inp.value = '';
+  inp.focus();
+  if (!matricule) return;
+
+  await ptEnregistrerScanBadge(matricule);
+}
+
+async function ptEnregistrerScanBadge(matricule) {
+  var now = new Date();
+  var heure = now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  var date  = now.toISOString().slice(0,10);
+
+  /* Chercher l'employé par matricule */
+  var emp = (DATA.employes||[]).find(function(e){
+    return (e.matricule||'').toUpperCase() === matricule || e.id === matricule;
+  });
+
+  if (!emp) {
+    ptAjouterLog({ type:'erreur', matricule:matricule, heure:heure, msg:'Badge inconnu : '+matricule });
+    toast('❌ Badge inconnu : '+matricule, 'error');
+    ptShowScanResult(null, matricule, heure);
+    return;
+  }
+
+  /* Créer ou mettre à jour le pointage */
+  var existing = getPointageJour(emp.id, date);
+  var pt;
+
+  if (PT.scanMode === 'entree') {
+    var statut = heure > '08:15' ? 'R' : 'P';
+    pt = existing
+      ? Object.assign({}, existing, { heure_entree: heure, statut: (existing.statut==='P'||existing.statut==='R')?existing.statut:statut })
+      : { id:'pt_'+emp.id+'_'+date.replace(/-/g,''), employe_id:emp.id, date:date,
+          statut:statut, heure_entree:heure, heure_sortie:'', pause:60,
+          heures_supp:0, justifie:'1', notes:'Scan badge', created_at:date };
+  } else {
+    /* Sortie */
+    pt = existing
+      ? Object.assign({}, existing, { heure_sortie: heure })
+      : { id:'pt_'+emp.id+'_'+date.replace(/-/g,''), employe_id:emp.id, date:date,
+          statut:'P', heure_entree:'08:00', heure_sortie:heure, pause:60,
+          heures_supp:0, justifie:'1', notes:'Scan badge sortie', created_at:date };
+  }
+
+  var idx = DATA.pointages.findIndex(function(p){ return p.employe_id===emp.id && p.date===date; });
+  if (idx>=0) DATA.pointages[idx]=pt; else DATA.pointages.push(pt);
+  await dbPut('pointages', pt);
+
+  /* Log */
+  ptAjouterLog({ type: PT.scanMode, emp:emp, heure:heure, statut:pt.statut });
+  ptShowScanResult(emp, matricule, heure, pt.statut);
+  ptRenderNonPointes();
+  checkPointageBadge();
+
+  /* Feedback sonore (vibration mobile) */
+  if (navigator.vibrate) navigator.vibrate([50]);
+
+  toast((PT.scanMode==='entree'?'▶ Entrée':'⏹ Sortie')+' — '+emp.nom+' '+emp.prenoms+' ('+heure+')', 'success');
+
+  /* Rafraîchir tableau si visible */
+  if (document.getElementById('tab-pointage-journalier').classList.contains('active')) {
+    renderPointageTableau();
+  }
+}
+
+function ptAjouterLog(entry) {
+  PT.scanLog.unshift(entry);
+  if (PT.scanLog.length > 50) PT.scanLog.pop();
+  ptRenderLog();
+}
+
+function ptRenderLog() {
+  var el = document.getElementById('scan-log');
+  if (!el) return;
+  if (!PT.scanLog.length) { el.innerHTML='<div style="color:var(--dim);font-size:12px;padding:8px 0;">Aucun scan.</div>'; return; }
+  el.innerHTML = PT.scanLog.map(function(s, i){
+    var ico = s.type==='entree'?'▶':s.type==='sortie'?'⏹':'❌';
+    var nom = s.emp ? s.emp.nom+' '+s.emp.prenoms : s.matricule;
+    var sub = s.emp ? (s.emp.poste||'') : 'Badge inconnu';
+    var statusBadge = s.statut ? '<span class="badge badge-'+(s.statut==='P'||s.statut==='M'?'vert':s.statut==='R'?'or':'rouge')+'">'+PT_LABELS[s.statut]+'</span>' : '';
+    return '<div class="scan-log-item '+s.type+'">'
+      +'<div class="scan-log-avatar">'+ico+'</div>'
+      +'<div style="flex:1;"><div style="font-size:12px;font-weight:600;">'+nom+'</div>'
+      +'<div style="font-size:10px;color:var(--dim);">'+sub+'</div></div>'
+      +statusBadge
+      +'<div style="font-size:11px;font-family:monospace;color:var(--dim);">'+s.heure+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function ptShowScanResult(emp, matricule, heure, statut) {
+  var card = document.getElementById('scan-result-card');
+  var content = document.getElementById('scan-result-content');
+  if (!card||!content) return;
+  card.style.display = 'block';
+  card.style.borderLeftColor = emp ? 'var(--vert)' : 'var(--rouge)';
+  if (!emp) {
+    content.innerHTML = '<div style="color:var(--rouge);font-size:14px;font-weight:700;">❌ Badge inconnu : '+matricule+'</div><div style="font-size:12px;color:var(--dim);">'+heure+'</div>';
+    return;
+  }
+  var idx = (DATA.employes||[]).findIndex(function(e){ return e.id===emp.id; });
+  var avatarColor = PT_AVATARS[Math.abs(idx) % PT_AVATARS.length];
+  content.innerHTML = '<div style="display:flex;align-items:center;gap:12px;">'
+    +'<div style="width:48px;height:48px;border-radius:50%;background:'+avatarColor+';display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;">'+emp.nom.charAt(0)+'</div>'
+    +'<div><div style="font-size:15px;font-weight:700;">'+emp.nom+' '+emp.prenoms+'</div>'
+    +'<div style="font-size:12px;color:var(--dim);">'+emp.poste+' · '+emp.matricule+'</div>'
+    +'<div style="margin-top:6px;display:flex;gap:8px;align-items:center;">'
+    +'<span style="font-size:13px;font-weight:700;font-family:monospace;">'+heure+'</span>'
+    +'<span class="badge badge-'+(PT.scanMode==='entree'?'vert':'or')+'">'+(PT.scanMode==='entree'?'▶ Entrée':'⏹ Sortie')+'</span>'
+    +(statut?'<span class="badge badge-'+(statut==='P'||statut==='M'?'vert':statut==='R'?'or':'rouge')+'">'+PT_LABELS[statut]+'</span>':'')
+    +'</div></div></div>';
+  setTimeout(function(){ if(card) card.style.borderLeftColor='var(--bord)'; }, 4000);
+}
+
+function ptRenderNonPointes() {
+  var el = document.getElementById('scan-non-pointes');
+  if (!el) return;
+  var date = new Date().toISOString().slice(0,10);
+  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif'; });
+  var nonPointes = actifs.filter(function(e){ return !getPointageJour(e.id,date); });
+  if (!nonPointes.length) { el.innerHTML='<div style="color:var(--vert);font-size:12px;padding:6px 0;">✅ Tous les employés sont pointés.</div>'; return; }
+  el.innerHTML = nonPointes.map(function(e,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bord);">'
+      +'<div style="width:22px;height:22px;border-radius:50%;background:'+PT_AVATARS[i%PT_AVATARS.length]+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;">'+e.nom.charAt(0)+'</div>'
+      +'<div style="flex:1;"><div style="font-size:12px;font-weight:600;">'+e.nom+' '+e.prenoms+'</div>'
+      +'<div style="font-size:10px;color:var(--dim);">'+e.matricule+'</div></div>'
+      +'<button class="btn btn-sm btn-success" style="font-size:10px;padding:3px 8px;" onclick="ptSimulerBadge(''+e.id+'')">Scan</button>'
+      +'</div>';
+  }).join('');
+}
+
+function ptRenderBadgeButtons() {
+  var el = document.getElementById('badge-buttons-grid');
+  if (!el) return;
+  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif'; });
+  el.innerHTML = actifs.map(function(e,i){
+    return '<button class="badge-btn-sim" onclick="ptSimulerBadge(''+e.id+'')" title="'+e.nom+' '+e.prenoms+'">'
+      +'<div style="font-size:10px;color:var(--or);font-weight:700;">'+e.matricule+'</div>'
+      +'<div style="font-size:11px;">'+e.nom.slice(0,12)+'</div>'
+      +'</button>';
+  }).join('');
+}
+
+async function ptSimulerBadge(empId) {
+  var emp = (DATA.employes||[]).find(function(e){ return e.id===empId; });
+  if (emp) await ptEnregistrerScanBadge(emp.matricule);
+}
+
+function ptViderLog() {
+  PT.scanLog = [];
+  ptRenderLog();
+}
+
+/* ── CAMÉRA QR (BarcodeDetector API) ── */
+async function ptDemarrerCamera() {
+  try {
+    if (!('BarcodeDetector' in window)) {
+      toast('⚠️ BarcodeDetector non supporté sur ce navigateur. Utilisez Chrome/Edge récent.','error');
+      return;
+    }
+    var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+    PT.scanStream = stream;
+    var video = document.getElementById('scan-video');
+    var msg   = document.getElementById('scan-camera-msg');
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('btn-start-cam').style.display='none';
+    document.getElementById('btn-stop-cam').style.display='';
+    if (msg) msg.textContent = '📷 Caméra active — Présentez le badge QR';
+
+    var detector = new BarcodeDetector({ formats:['qr_code','code_128','code_39','ean_13','ean_8','code_93'] });
+    var canvas = document.getElementById('scan-canvas');
+    var ctx = canvas.getContext('2d');
+    var lastScanned = '';
+    var lastScanTime = 0;
+
+    async function scan() {
+      if (!PT.scanStream) return;
+      if (video.readyState >= 2) {
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video,0,0);
+        try {
+          var codes = await detector.detect(video);
+          if (codes.length > 0) {
+            var val = codes[0].rawValue.trim().toUpperCase();
+            var now = Date.now();
+            /* Anti-double-scan : ignorer même code dans les 3s */
+            if (val !== lastScanned || (now - lastScanTime) > 3000) {
+              lastScanned = val;
+              lastScanTime = now;
+              if (msg) msg.textContent = '✅ Code détecté : '+val;
+              await ptEnregistrerScanBadge(val);
+            }
+          }
+        } catch(e) {}
+      }
+      PT.scanAnimFrame = requestAnimationFrame(scan);
+    }
+    PT.scanAnimFrame = requestAnimationFrame(scan);
+
+  } catch(e) {
+    toast('❌ Caméra : '+e.message,'error');
+  }
+}
+
+function ptArreterCamera() {
+  if (PT.scanStream) { PT.scanStream.getTracks().forEach(function(t){t.stop();}); PT.scanStream=null; }
+  if (PT.scanAnimFrame) { cancelAnimationFrame(PT.scanAnimFrame); PT.scanAnimFrame=null; }
+  var video=document.getElementById('scan-video');
+  if (video) { video.srcObject=null; }
+  document.getElementById('btn-start-cam').style.display='';
+  document.getElementById('btn-stop-cam').style.display='none';
+  var msg=document.getElementById('scan-camera-msg');
+  if (msg) msg.textContent='Caméra inactive';
+}
+
+/* ── Patch switchTab pour init scan tab ── */
+(function(){
+  var _origSwitch = switchTab;
+  switchTab = function(ctx, tab) {
+    _origSwitch(ctx, tab);
+    if (ctx==='pointage' && tab==='scan') ptInitScanTab();
+  };
+})();
+
+/* FIN MODULE POINTAGE v2 */
+</script>
 </head>
 <body>
 
@@ -4663,26 +5325,27 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="page-header">
           <div>
             <div class="page-title">Pointage & Présences</div>
-            <div class="page-subtitle">Présences · Absences · Retards · Heures sup · Impact paie automatique</div>
+            <div class="page-subtitle">Tableau rapide · Scan badge · Impact paie automatique</div>
           </div>
           <div class="spacer"></div>
           <input type="month" class="filter-select" id="pointage-mois" onchange="loadPointage()">
           <button class="btn btn-secondary btn-sm" onclick="genererPointageAuto()">⚡ Génération auto</button>
-          <button class="btn btn-primary" onclick="ouvrirSaisiePointage()">+ Saisir pointage</button>
+          <button class="btn btn-primary btn-sm" onclick="ouvrirSaisiePointage()">+ Saisie individuelle</button>
         </div>
 
         <div class="tab-nav" id="pointage-tabs">
-          <button class="tab-btn active" onclick="switchTab('pointage','journalier')">📅 Saisie journalière</button>
+          <button class="tab-btn active" onclick="switchTab('pointage','journalier')">📋 Tableau journalier</button>
+          <button class="tab-btn" onclick="switchTab('pointage','scan')">🎫 Scan Badge</button>
           <button class="tab-btn" onclick="switchTab('pointage','mensuel')">📊 Récapitulatif mensuel</button>
           <button class="tab-btn" onclick="switchTab('pointage','impact-paie')">💰 Impact sur la paie</button>
           <button class="tab-btn" onclick="switchTab('pointage','absences')">🚨 Absences & Retards</button>
         </div>
 
-        <!-- Pointage journalier -->
+        <!-- ── TABLEAU JOURNALIER RAPIDE ── -->
         <div class="tab-pane active" id="tab-pointage-journalier">
-          <div class="filters-bar" style="margin-bottom:14px;">
-            <input type="date" class="filter-select" id="pointage-jour" onchange="renderPointageJour()">
-            <select class="filter-select" id="pointage-filter-dept" onchange="renderPointageJour()">
+          <div class="filters-bar" style="margin-bottom:10px;">
+            <input type="date" class="filter-select" id="pointage-jour" onchange="renderPointageTableau()">
+            <select class="filter-select" id="pointage-filter-dept" onchange="renderPointageTableau()">
               <option value="">Tous départements</option>
               <option value="direction">Direction</option>
               <option value="commercial">Commercial</option>
@@ -4690,11 +5353,142 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="admin">Administration</option>
               <option value="comptabilite">Comptabilité</option>
             </select>
-            <div style="flex:1;"></div>
-            <div id="pointage-recap-jour" style="font-size:13px;color:var(--blanc-dim);"></div>
+            <button class="btn btn-success btn-sm" onclick="ptTousPresents()">✅ Tous Présents</button>
+            <button class="btn btn-secondary btn-sm" onclick="ptSauvegarderTableau()">💾 Sauvegarder tout</button>
+            <button class="btn btn-secondary btn-sm" onclick="ptExportJourCSV()">⬇ CSV</button>
+            <div class="spacer"></div>
+            <div id="pointage-recap-jour" style="font-size:12px;color:var(--dim);text-align:right;"></div>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;" id="pointage-cards-jour">
-            <div style="color:var(--blanc-dim);font-size:13px;padding:20px;">Chargement du pointage...</div>
+
+          <!-- KPIs rapides -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="pt-kpi-bar">
+            <span class="badge badge-vert" id="pt-kpi-p">✅ 0 présents</span>
+            <span class="badge badge-rouge" id="pt-kpi-a">❌ 0 absents</span>
+            <span class="badge badge-or" id="pt-kpi-r">⏰ 0 retards</span>
+            <span class="badge badge-violet" id="pt-kpi-c">🌴 0 congés</span>
+            <span class="badge badge-neutre" id="pt-kpi-ns">◌ 0 non saisi</span>
+          </div>
+
+          <!-- Tableau rapide inline-editable -->
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-wrap" style="border-radius:var(--r2);">
+              <table id="table-pointage-rapide" style="min-width:900px;">
+                <thead>
+                  <tr>
+                    <th style="width:32px;"><input type="checkbox" id="pt-check-all" onchange="ptToggleAll(this)" title="Tout sélectionner"></th>
+                    <th>Employé</th>
+                    <th style="width:70px;">Matricule</th>
+                    <th style="width:110px;">Statut</th>
+                    <th style="width:90px;">Entrée</th>
+                    <th style="width:90px;">Sortie</th>
+                    <th style="width:70px;">H.Supp</th>
+                    <th style="width:60px;">Pause</th>
+                    <th style="width:90px;">Heures</th>
+                    <th>Notes</th>
+                    <th style="width:50px;">💰</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-pointage-rapide">
+                  <tr><td colspan="11" style="text-align:center;color:var(--dim);padding:20px;">Chargement...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Barre action sélection -->
+          <div id="pt-selection-bar" style="display:none;position:sticky;bottom:8px;background:var(--blanc);border-radius:var(--r2);padding:10px 16px;box-shadow:var(--sh);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;z-index:10;">
+            <span id="pt-selection-count" style="font-size:13px;font-weight:600;color:#fff;"></span>
+            <button class="btn btn-success btn-sm" onclick="ptActionSelection('P')">✅ Marquer Présents</button>
+            <button class="btn btn-danger btn-sm" onclick="ptActionSelection('A')">❌ Marquer Absents</button>
+            <button class="btn btn-sm" style="background:rgba(184,115,51,0.2);color:var(--or);" onclick="ptActionSelection('R')">⏰ Retard</button>
+            <button class="btn btn-sm" style="background:rgba(138,82,224,0.2);color:var(--violet);" onclick="ptActionSelection('C')">🌴 Congé</button>
+            <button class="btn btn-secondary btn-sm" onclick="ptAnnulerSelection()">✕ Désélectionner</button>
+          </div>
+        </div>
+
+        <!-- ── SCAN BADGE ── -->
+        <div class="tab-pane" id="tab-pointage-scan">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="scan-grid">
+
+            <!-- Zone scan -->
+            <div class="card">
+              <div class="card-title">🎫 Scanner un Badge</div>
+
+              <!-- Mode clavier (douchette barcode) -->
+              <div style="margin-bottom:16px;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">📟 Douchette / Lecteur barcode (frappe automatique)</div>
+                <div style="display:flex;gap:8px;">
+                  <input class="form-control" id="scan-badge-input" placeholder="Pointer ici · scanner le badge · Entrée automatique"
+                    autofocus autocomplete="off" oninput="ptScanBadgeDebounce()"
+                    onkeydown="if(event.key==='Enter'){ptValiderScan();}"
+                    style="font-family:monospace;font-size:16px;letter-spacing:2px;flex:1;">
+                  <button class="btn btn-primary" onclick="ptValiderScan()">Valider</button>
+                </div>
+                <div style="font-size:11px;color:var(--dim);margin-top:6px;">Le matricule sert d'identifiant badge. Pointage horodaté automatiquement.</div>
+              </div>
+
+              <!-- Mode caméra QR -->
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">📷 Caméra QR code (BarcodeDetector)</div>
+                <div style="position:relative;background:#000;border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;max-height:240px;" id="scan-camera-box">
+                  <video id="scan-video" style="width:100%;height:100%;object-fit:cover;" playsinline muted></video>
+                  <canvas id="scan-canvas" style="display:none;"></canvas>
+                  <!-- Viseur -->
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                    <div style="width:160px;height:160px;border:3px solid var(--or);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.35);"></div>
+                  </div>
+                  <div id="scan-camera-msg" style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:12px;color:#fff;background:rgba(0,0,0,0.5);padding:4px;">Caméra inactive</div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                  <button class="btn btn-bleu btn-sm" id="btn-start-cam" onclick="ptDemarrerCamera()">📷 Activer caméra</button>
+                  <button class="btn btn-danger btn-sm" id="btn-stop-cam" onclick="ptArreterCamera()" style="display:none;">⏹ Arrêter</button>
+                </div>
+              </div>
+
+              <!-- Mode scan type (entrée / sortie) -->
+              <div style="margin-top:14px;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Type de pointage</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn btn-sm btn-success" id="btn-scan-entree" onclick="ptSetScanMode('entree')" style="flex:1;">▶ Entrée</button>
+                  <button class="btn btn-sm btn-secondary" id="btn-scan-sortie" onclick="ptSetScanMode('sortie')" style="flex:1;">⏹ Sortie</button>
+                </div>
+                <div style="margin-top:8px;font-size:12px;font-weight:700;color:var(--or);" id="scan-mode-label">Mode : ENTRÉE — <span id="scan-heure-auto"></span></div>
+              </div>
+            </div>
+
+            <!-- Log des scans -->
+            <div>
+              <div class="card" style="margin-bottom:12px;">
+                <div class="card-title">🕐 Journal des scans — <span id="scan-date-log"></span></div>
+                <div id="scan-log" style="max-height:260px;overflow-y:auto;">
+                  <div style="color:var(--dim);font-size:12px;padding:8px 0;">Aucun scan enregistré.</div>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:8px;">
+                  <button class="btn btn-secondary btn-sm" onclick="ptViderLog()">🗑 Vider log</button>
+                  <button class="btn btn-primary btn-sm" onclick="switchTab('pointage','journalier')">📋 Voir tableau</button>
+                </div>
+              </div>
+
+              <!-- Résultat dernier scan -->
+              <div class="card" id="scan-result-card" style="display:none;border-left:4px solid var(--vert);">
+                <div class="card-title">Dernier scan</div>
+                <div id="scan-result-content"></div>
+              </div>
+
+              <!-- Employés sans pointage -->
+              <div class="card">
+                <div class="card-title">⚠️ Non pointés aujourd'hui</div>
+                <div id="scan-non-pointes" style="max-height:180px;overflow-y:auto;">
+                  <div style="color:var(--dim);font-size:12px;">Chargement...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feuille de présence rapide (scan manuel) -->
+          <div class="card" style="margin-top:12px;">
+            <div class="card-title">📱 Émulation badge (test sans douchette)</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="badge-buttons-grid"></div>
           </div>
         </div>
 
@@ -4714,7 +5508,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               </table>
             </div>
           </div>
-          <!-- Calendrier visuel -->
           <div class="card" style="margin-top:16px;" id="calendrier-mois-box"></div>
         </div>
 
