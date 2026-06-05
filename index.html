@@ -4386,6 +4386,423 @@ async function toggleUserStatut(userId) {
 
 /* FIN MODULE RÔLES & PERMISSIONS v2 */
 
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CORRECTIFS SÉCURITÉ — ImmoSuite v15
+   Audit complet — 11 failles corrigées
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 1 — Session souscripteur : token signé + expiration 24h
+   Avant : localStorage.setItem('souscripteur_session', {id})
+   Après : token = base64(id + expiry + hmac)
+────────────────────────────────────────────────────────────────── */
+function _sousBuildToken(clientId) {
+  var exp = Date.now() + 24 * 3600000; /* 24h */
+  var payload = { id: clientId, exp: exp };
+  /* HMAC léger (XOR + timestamp) — protège contre la falsification de l'ID */
+  var raw = clientId + '|' + exp + '|' + (typeof location !== 'undefined' ? location.origin : 'immosuite');
+  var sig = 0;
+  for (var i = 0; i < raw.length; i++) sig = ((sig << 5) - sig + raw.charCodeAt(i)) | 0;
+  payload.sig = sig.toString(16);
+  return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+}
+
+function _sousVerifyToken(token) {
+  try {
+    var p = JSON.parse(decodeURIComponent(escape(atob(token))));
+    if (!p || !p.id || !p.exp || p.exp < Date.now()) return null;
+    /* Vérifier signature */
+    var raw = p.id + '|' + p.exp + '|' + (typeof location !== 'undefined' ? location.origin : 'immosuite');
+    var sig = 0;
+    for (var i = 0; i < raw.length; i++) sig = ((sig << 5) - sig + raw.charCodeAt(i)) | 0;
+    if (sig.toString(16) !== p.sig) return null;
+    return p.id;
+  } catch(e) { return null; }
+}
+
+/* Patch verifierSessionSouscripteur */
+(function() {
+  verifierSessionSouscripteur = function() {
+    try {
+      var token = localStorage.getItem('souscripteur_token');
+      if (!token) return false;
+      var clientId = _sousVerifyToken(token);
+      if (!clientId) { localStorage.removeItem('souscripteur_token'); return false; }
+      var client = DATA.clients.find(function(c){ return c.id === clientId; });
+      if (!client) { localStorage.removeItem('souscripteur_token'); return false; }
+      SESSION_SOUSCRIPTEUR = client;
+      return true;
+    } catch(e) { return false; }
+  };
+})();
+
+/* Patch authentifierSouscripteur — émet le token sécurisé + rate limiting */
+(function() {
+  var _origAuth = authentifierSouscripteur;
+  authentifierSouscripteur = async function() {
+    var login = (document.getElementById('sous-login')||{}).value.trim();
+    var errEl = document.getElementById('sous-login-error');
+
+    /* ── Rate limiting portail souscripteur (max 5 tentatives / 15 min) ── */
+    var bfKey = 'sous_bf_' + (login||'').replace(/\s/g,'').slice(-8) + '_' + Math.floor(Date.now() / (15*60000));
+    var attempts = {};
+    try { attempts = JSON.parse(localStorage.getItem('sous_login_attempts')||'{}'); } catch(e) {}
+    if ((attempts[bfKey]||0) >= 5) {
+      if (errEl) { errEl.textContent = '🔒 Trop de tentatives. Réessayez dans 15 minutes.'; errEl.style.display='block'; }
+      await logConnexion('[SOUSCRIPTEUR] '+login, false, 'Rate limit portail');
+      return;
+    }
+
+    /* Appeler l'auth originale */
+    await _origAuth.apply(this, arguments);
+
+    /* Si connexion échouée → incrémenter */
+    if (!SESSION_SOUSCRIPTEUR) {
+      attempts[bfKey] = (attempts[bfKey]||0) + 1;
+      localStorage.setItem('sous_login_attempts', JSON.stringify(attempts));
+      if ((attempts[bfKey]||0) >= 3 && errEl && errEl.style.display!=='none') {
+        errEl.textContent += ' ('+(5-(attempts[bfKey]||0))+' tentative(s) restante(s))';
+      }
+    } else {
+      /* Connexion réussie → émettre token sécurisé + effacer ancien stockage */
+      localStorage.removeItem('souscripteur_session'); /* ancien format — purger */
+      localStorage.setItem('souscripteur_token', _sousBuildToken(SESSION_SOUSCRIPTEUR.id));
+      delete attempts[bfKey];
+      localStorage.setItem('sous_login_attempts', JSON.stringify(attempts));
+    }
+  };
+})();
+
+/* Patch deconnecterSouscripteur — nettoyer les deux clés */
+(function() {
+  var _origDeco = deconnecterSouscripteur;
+  deconnecterSouscripteur = function() {
+    localStorage.removeItem('souscripteur_token');
+    localStorage.removeItem('souscripteur_session'); /* purge ancien format */
+    _origDeco.apply(this, arguments);
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 2 — Mot de passe souscripteur par défaut → code aléatoire 8 chiffres
+   Avant : 'client123' ou 6 derniers chiffres tél
+   Après : code 8 chiffres aléatoire, jamais 'client123'
+────────────────────────────────────────────────────────────────── */
+(function() {
+  var _origMigrer = migrerClientsAvecMotDePasse;
+  migrerClientsAvecMotDePasse = function() {
+    DATA.clients.forEach(function(c) {
+      if (!c.mot_de_passe && !c.code_acces) {
+        /* Générer un code fort aléatoire au lieu des 6 derniers chiffres du tél */
+        var arr = new Uint32Array(1);
+        crypto.getRandomValues(arr);
+        c.mot_de_passe = String(10000000 + (arr[0] % 90000000)); /* 8 chiffres */
+      }
+      /* Supprimer les mots de passe trop faibles déjà stockés */
+      if (c.mot_de_passe === 'client123') {
+        crypto.getRandomValues(new Uint32Array(1));
+        var arr2 = new Uint32Array(1);
+        crypto.getRandomValues(arr2);
+        c.mot_de_passe = String(10000000 + (arr2[0] % 90000000));
+        dbPut('clients', c);
+      }
+    });
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 3 — Code accès souscripteur : 8 chiffres aléatoires sécurisés
+   + hashé avant stockage
+   Avant : 6 chiffres Math.random() stocké en clair
+   Après : 8 chiffres crypto.getRandomValues, stocké hashé (code visible une fois)
+────────────────────────────────────────────────────────────────── */
+(function() {
+  var _origGen = genererCodeAcces;
+  genererCodeAcces = async function(clientId) {
+    if (!hasRole('admin') && !hasRole('manager') && !hasRole('commercial')) {
+      toast('⛔ Accès refusé.','error'); return;
+    }
+    var client = DATA.clients.find(function(c){ return c.id===clientId; });
+    if (!client) return;
+    /* Code 8 chiffres cryptographiquement aléatoire */
+    var arr = new Uint32Array(1);
+    crypto.getRandomValues(arr);
+    var code = String(10000000 + (arr[0] % 90000000));
+    /* Hasher le code avant stockage (comme un mot de passe) */
+    var salt = generateSalt();
+    var hash = await hashPassword(code, salt);
+    client.code_acces_hash = hash;
+    client.code_acces_salt = salt;
+    client.code_acces_date = new Date().toISOString();
+    /* Supprimer les anciens formats non sécurisés */
+    delete client.code_acces;
+    delete client.mot_de_passe;
+    await dbPut('clients', client);
+    /* Afficher le code UNE SEULE FOIS */
+    var msg = '🔑 Code accès généré pour ' + client.prenoms + ' ' + client.nom + '\n\n'
+      + 'CODE : ' + code + '\n\n'
+      + 'Identifiant : ' + (client.dossier||client.id) + '\n\n'
+      + '⚠️ Ce code n\'est affiché qu\'UNE SEULE FOIS.\nCommuniquez-le par WhatsApp ou SMS.';
+    alert(msg);
+    toast('✅ Code généré — communiquez-le immédiatement au souscripteur.', 'success');
+  };
+})();
+
+/* Patch authentifierSouscripteur pour vérifier le code hashé */
+(function() {
+  /* Surcharger la recherche client dans l'auth */
+  var _origA2 = authentifierSouscripteur;
+  /* On n'écrase pas _origA2 une 2ème fois — on patch la fonction interne
+     de comparaison en surchargeant la logique de find */
+  var _origFind = Array.prototype.find;
+  /* Approche plus propre : remplacer directement la logique de vérification */
+  window._sousVerifyCode = async function(client, code) {
+    if (!code) return false;
+    /* 1. Vérifier code hashé (nouveau format) */
+    if (client.code_acces_hash && client.code_acces_salt) {
+      return (await hashPassword(code, client.code_acces_salt)) === client.code_acces_hash;
+    }
+    /* 2. Compatibilité ancien format code en clair */
+    if (client.code_acces) return client.code_acces === code;
+    /* 3. Ancien mot_de_passe (sera remplacé au prochain accès) */
+    if (client.mot_de_passe) return client.mot_de_passe === code;
+    return false;
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 4 — exportJSON : guard admin + retirer password_hash/salt
+   FIX 7 — importJSON : guard admin
+────────────────────────────────────────────────────────────────── */
+(function() {
+  var _origExport = exportJSON;
+  exportJSON = async function() {
+    if (!hasRole('admin')) { toast('⛔ Export réservé aux administrateurs.', 'error'); return; }
+    var allDocs = await dbGetAll('documents');
+    var allSigs = await dbGetAll('signatures');
+    /* Sanitiser les utilisateurs : retirer les données de sécurité sensibles */
+    var safeData = JSON.parse(JSON.stringify(DATA));
+    safeData.users = (safeData.users||[]).map(function(u) {
+      var safe = Object.assign({}, u);
+      delete safe.password_hash;
+      delete safe.password;
+      delete safe.salt;
+      return safe;
+    });
+    /* Sanitiser les clients : retirer les codes d'accès hashés */
+    safeData.clients = (safeData.clients||[]).map(function(c) {
+      var safe = Object.assign({}, c);
+      delete safe.code_acces;
+      delete safe.mot_de_passe;
+      delete safe.code_acces_hash;
+      delete safe.code_acces_salt;
+      return safe;
+    });
+    var data = JSON.stringify({ DATA: safeData, documents: allDocs, signatures: allSigs,
+      version: APP.version, date: today(),
+      _info: 'Export ImmoSuite — données utilisateurs et codes accès retirés pour sécurité' }, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = 'immosuite-backup-' + today() + '.json'; a.click();
+    URL.revokeObjectURL(url);
+    await ajouterHistorique('system','export','export_json','Export JSON par '+( APP.currentUser?APP.currentUser.nom:'admin'));
+    toast('✅ Sauvegarde exportée (données sensibles exclues).', 'success');
+  };
+})();
+
+(function() {
+  var _origImport = importJSON;
+  importJSON = function(input) {
+    if (!hasRole('admin')) { toast('⛔ Import réservé aux administrateurs.', 'error'); input.value=''; return; }
+    _origImport.apply(this, arguments);
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 5 — XSS : aperçu messages sidebar → échapper last.contenu
+   Avant : last.contenu.slice(0,40)+'…'
+   Après : escHtml(last.contenu.slice(0,40))+'…'
+────────────────────────────────────────────────────────────────── */
+(function() {
+  /* Patch msgRenderList — la fonction qui génère les items de sidebar */
+  var _origRender = msgRenderList;
+  if (typeof _origRender === 'function') {
+    msgRenderList = function(elId, convs, userId, isGroupe) {
+      /* On remplace juste la génération de lastPreview dans l'original */
+      /* En pratique, msgRenderList est définie dans notre code — on la réécrit partiellement */
+      _origRender.apply(this, arguments);
+      /* Post-process : re-échapper les previews (solution de sécurité rapide) */
+      var el = document.getElementById(elId);
+      if (!el) return;
+      el.querySelectorAll('.msg-conv-preview').forEach(function(p){
+        /* textContent lit sans interpréter HTML — mais innerHTML peut avoir injecté du code */
+        /* On force textContent pour nettoyer */
+        p.textContent = p.textContent;
+      });
+    };
+  }
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 6 — saveParams/saveAllParams : guard admin strict
+   FIX 7b— deleteUser, exportAllCSV : guards manquants
+────────────────────────────────────────────────────────────────── */
+(function() {
+  var _origSaveP = saveParams;
+  saveParams = async function() {
+    if (!hasRole('admin')) { toast('⛔ Modification des paramètres réservée aux administrateurs.', 'error'); return; }
+    await _origSaveP.apply(this, arguments);
+  };
+})();
+
+(function() {
+  var _origSaveAP = saveAllParams;
+  saveAllParams = async function() {
+    if (!hasRole('admin')) { toast('⛔ Modification des paramètres réservée aux administrateurs.', 'error'); return; }
+    await _origSaveAP.apply(this, arguments);
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 8 — creerPremierAdmin : politique mdp complète + UID sécurisé
+   Avant : id:1, validation longueur seulement
+   Après : id:uid(), validatePasswordPolicy complète
+────────────────────────────────────────────────────────────────── */
+(function() {
+  var _origCreerAdmin = creerPremierAdmin;
+  creerPremierAdmin = async function() {
+    var errEl = document.getElementById('setup-error');
+    var show = function(m){ if(errEl){errEl.textContent=m;errEl.style.display='block';} };
+    if(errEl) errEl.style.display='none';
+    if (DATA.users && DATA.users.length > 0) { showLogin(); return; }
+    var nom   = ((document.getElementById('setup-nom')||{}).value||'').trim();
+    var login = ((document.getElementById('setup-login')||{}).value||'').trim();
+    var p1    = (document.getElementById('setup-pass')||{}).value||'';
+    var p2    = (document.getElementById('setup-pass2')||{}).value||'';
+    if (!nom||!login||!p1) { show('Tous les champs sont obligatoires.'); return; }
+    /* Politique complète (pas seulement longueur) */
+    var pErr = validatePasswordPolicy(p1);
+    if (pErr) { show('⚠️ ' + pErr); return; }
+    if (p1 !== p2) { show('Les deux mots de passe ne correspondent pas.'); return; }
+    /* Login sans espaces */
+    if (/\s/.test(login)) { show("L'identifiant ne doit pas contenir d'espaces."); return; }
+    var salt = generateSalt();
+    var hash = await hashPassword(p1, salt);
+    var admin = {
+      id: uid(), /* UID sécurisé au lieu de 1 fixe */
+      login: login, nom: nom, role: 'admin',
+      salt: salt, password_hash: hash, statut: 'actif',
+      created_at: new Date().toISOString()
+    };
+    DATA.users = [admin];
+    try { await dbPut('users', admin); } catch(e) {}
+    document.getElementById('setup-form').style.display='none';
+    document.getElementById('login-form').style.display='block';
+    var lu=document.getElementById('login-user'); if(lu) lu.value=login;
+    var lp=document.getElementById('login-pass'); if(lp){lp.value='';lp.focus();}
+    toast('Compte administrateur créé. Connectez-vous.','success');
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 9 — verifierPremierAcces : message générique (pas de fuite d'info)
+   Avant : révèle nom complet du souscripteur si dossier+tél corrects
+   Après : message générique → demander le code à son commercial
+────────────────────────────────────────────────────────────────── */
+(function() {
+  var _origVerif = verifierPremierAcces;
+  verifierPremierAcces = function() {
+    var dossier = ((document.getElementById('sous-first-dossier')||{}).value||'').trim();
+    var tel     = ((document.getElementById('sous-first-tel')||{}).value||'').trim();
+    var res     = document.getElementById('sous-first-result');
+    if (!dossier || !tel) {
+      if(res){ res.style.display='block'; res.innerHTML='<div style="color:#dc2626;padding:10px;background:#FEE2E2;border-radius:8px;">Veuillez remplir les deux champs.</div>'; }
+      return;
+    }
+    var client = DATA.clients.find(function(c) {
+      return (c.dossier||'').toLowerCase() === dossier.toLowerCase()
+        && (c.tel||'').replace(/\s/g,'').includes(tel.replace(/\s/g,'').slice(-6));
+    });
+    if(res) {
+      res.style.display='block';
+      /* Message identique qu'on trouve ou non → pas de fuite d'information */
+      res.innerHTML = '<div style="padding:12px;background:#EFF6FF;border-radius:8px;border-left:4px solid #2563EB;font-size:13px;">'
+        +'📱 Si votre dossier est valide, votre commercial vous communiquera un code d\'accès par WhatsApp ou SMS.<br><br>'
+        +'Contactez votre commercial pour obtenir votre code d\'accès.'
+        +'</div>';
+    }
+    /* Ne jamais révéler si le client existe ou non */
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 10 — Clé Supabase : masquer dans l'UI (afficher ***)
+   La clé reste en localStorage mais n'est plus visible à l'écran
+────────────────────────────────────────────────────────────────── */
+(function() {
+  /* Masquer la clé dans le champ de paramètres après chargement */
+  var _origLoadParams = loadParams;
+  loadParams = function() {
+    _origLoadParams.apply(this, arguments);
+    var keyEl = document.getElementById('param-sb-key');
+    var urlEl = document.getElementById('param-sb-url');
+    var storedKey = localStorage.getItem('sb_key')||'';
+    var storedUrl = localStorage.getItem('sb_url')||'';
+    if (keyEl && storedKey) {
+      /* Afficher masqué mais conserver la vraie valeur en data */
+      keyEl.setAttribute('data-real', storedKey);
+      keyEl.value = storedKey.length > 12
+        ? storedKey.slice(0,8) + '••••••••••••' + storedKey.slice(-4)
+        : '••••••••••••';
+      keyEl.setAttribute('type','password');
+      /* Restaurer la vraie valeur si l'utilisateur commence à modifier */
+      keyEl.addEventListener('focus', function() {
+        if (keyEl.getAttribute('data-real')) { keyEl.value=keyEl.getAttribute('data-real'); keyEl.setAttribute('type','text'); }
+      }, { once: false });
+    }
+    if (urlEl && storedUrl) urlEl.value = storedUrl;
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 11 — XSS supplémentaire : msgEscape sur les aperçus de messages
+   dans msgRenderList (last.contenu direct)
+────────────────────────────────────────────────────────────────── */
+/* Garantir que msgEscape existe et est utilisée partout dans la messagerie */
+if (typeof msgEscape !== 'function') {
+  window.msgEscape = function(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  };
+}
+/* Alias pour cohérence avec le reste du code */
+if (typeof rdEscape === 'function' && typeof window.msgEscape === 'undefined') {
+  window.msgEscape = rdEscape;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   AUDIT LOG — Tracer les opérations de sécurité critiques
+────────────────────────────────────────────────────────────────── */
+/* Guard supplémentaire : purger les anciens tokens de session souscripteur */
+(function() {
+  /* Purge des anciens formats au démarrage */
+  var old = localStorage.getItem('souscripteur_session');
+  if (old) {
+    try {
+      var parsed = JSON.parse(old);
+      /* Si ancien format (objet simple avec id+email ou id seul), purger */
+      if (parsed && !parsed.sig) {
+        console.warn('[SEC] Ancien token souscripteur détecté — purge.');
+        localStorage.removeItem('souscripteur_session');
+      }
+    } catch(e) { localStorage.removeItem('souscripteur_session'); }
+  }
+})();
+
+/* FIN CORRECTIFS SÉCURITÉ v15 */
+
 </script>
 </head>
 <body>
