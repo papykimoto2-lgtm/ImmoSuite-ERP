@@ -25748,96 +25748,9 @@ function renderConversations() {
   }).join('');
 }
 
-var _activeConvId = null;
-
-async function chargerConversation(convId) {
-  _activeConvId = convId;
-  var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
-  var conv=(DATA.conversations||[]).find(function(c){return c.id===convId;});
-  if(!conv) return;
-  var autres=conv.participants.filter(function(p){return p!==userId;});
-  var dest=DATA.users.find(function(u){return u.id===autres[0]})||{nom:autres[0]||'?'};
-  var entete=document.getElementById('conversation-entete');
-  if(entete) entete.textContent='💬 Conversation avec '+dest.nom+' ('+( dest.role||'utilisateur')+')';
-
-  var msgs=(DATA.messages||[]).filter(function(m){return m.conversation_id===convId;}).sort(function(a,b){return a.date.localeCompare(b.date);});
-
-  // Marquer comme lus
-  msgs.forEach(function(m){if(m.expediteur_id!==userId&&!m.lu){m.lu=true;dbPut('messages',m);}});
-
-  var html=msgs.length ? msgs.map(function(m){
-    var isMine=m.expediteur_id===userId;
-    var expediteur=isMine?(APP.currentUser?APP.currentUser.nom:'Moi'):(DATA.users.find(function(u){return u.id===m.expediteur_id;})||{nom:m.expediteur_id}).nom;
-    return '<div style="margin-bottom:12px;display:flex;justify-content:'+(isMine?'flex-end':'flex-start')+';gap:8px;">'
-      +(isMine?'':'<div style="width:30px;height:30px;border-radius:50%;background:var(--bleu);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">'+( dest.nom?dest.nom.charAt(0).toUpperCase():'?')+'</div>')
-      +'<div style="max-width:75%;">'
-        +'<div style="background:'+(isMine?'var(--or)':'var(--card2)')+';color:'+(isMine?'#1a1a1a':'var(--blanc)')+';padding:8px 12px;border-radius:'+(isMine?'12px 12px 2px 12px':'12px 12px 12px 2px')+';word-wrap:break-word;">'
-          +'<div style="font-size:13px;white-space:pre-wrap;">'+m.contenu+'</div>'
-        +'</div>'
-        +'<div style="font-size:10px;color:var(--blanc-dim);margin-top:3px;text-align:'+(isMine?'right':'left')+';">'+new Date(m.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+'</div>'
-      +'</div>'
-      +(isMine?'<div style="width:30px;height:30px;border-radius:50%;background:var(--or);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#1a1a1a;">'+(APP.currentUser?APP.currentUser.nom.charAt(0):'A')+'</div>':'')
-    +'</div>';
-  }).join('')
-  : '<div style="text-align:center;padding:32px;color:var(--blanc-dim);">Aucun message. Envoyez le premier !</div>';
-
-  var listeEl=document.getElementById('messages-liste');
-  if(listeEl){ listeEl.innerHTML=html; listeEl.scrollTop=listeEl.scrollHeight; }
-  document.getElementById('message-input').dataset.convId=convId;
-  updateBadgeMessages();
-  renderConversations();
-}
-
-async function envoyerMessage() {
-  var convId=document.getElementById('message-input').dataset.convId;
-  var contenu=document.getElementById('message-input').value.trim();
-  if(!convId){ toast('Sélectionnez une conversation.','error'); return; }
-  if(!contenu) return;
-  var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
-  var msg={id:uid(),conversation_id:convId,expediteur_id:userId,contenu:contenu,date:new Date().toISOString(),lu:false};
-  DATA.messages.push(msg);
-  await dbPut('messages',msg);
-  document.getElementById('message-input').value='';
-  chargerConversation(convId);
-  notifierTitre('📩 Nouveau message',{body:contenu.slice(0,60)});
-}
-
-async function ouvrirNouveauMessage() {
-  var sel=document.getElementById('msg-destinataire');
-  var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
-  sel.innerHTML='<option value="">— Choisir un utilisateur —</option>';
-  DATA.users.filter(function(u){return u.id!==userId;}).forEach(function(u){
-    var o=document.createElement('option'); o.value=u.id; o.textContent=u.nom+' ('+u.role+')'; sel.appendChild(o);
-  });
-  document.getElementById('msg-sujet').value='';
-  document.getElementById('msg-contenu').value='';
-  openModal('modal-nouveau-message');
-}
-
-async function envoyerNouveauMessage() {
-  var destId=document.getElementById('msg-destinataire').value;
-  var sujet=document.getElementById('msg-sujet').value.trim();
-  var contenu=document.getElementById('msg-contenu').value.trim();
-  if(!destId||!sujet||!contenu){ toast('Destinataire, sujet et message requis.','error'); return; }
-  var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
-  var participants=[userId,destId].sort();
-  var conv=(DATA.conversations||[]).find(function(c){
-    return Array.isArray(c.participants)&&c.participants.length===2&&c.participants.indexOf(userId)>=0&&c.participants.indexOf(destId)>=0;
-  });
-  if(!conv){
-    conv={id:uid(),participants:participants,date_creation:new Date().toISOString()};
-    DATA.conversations.push(conv);
-    await dbPut('conversations',conv);
-  }
-  var msg={id:uid(),conversation_id:conv.id,expediteur_id:userId,contenu:'['+sujet+']\n'+contenu,date:new Date().toISOString(),lu:false};
-  DATA.messages.push(msg);
-  await dbPut('messages',msg);
-  closeModal('modal-nouveau-message');
-  renderConversations();
-  chargerConversation(conv.id);
-  notifierTitre('📩 Message envoyé — '+sujet,{body:contenu.slice(0,60)});
-  toast('Message envoyé à '+(DATA.users.find(function(u){return u.id===destId;})||{nom:destId}).nom,'success');
-}
+/* ─── FIX v1.1 : fonctions dupliquées supprimées ici.
+   Les versions complètes (avec type:'direct', MSG.activeConvId, pièces jointes)
+   sont définies plus haut dans le bloc Messagerie principal. ─── */
 
 /* ─── Patch goTo ──────────────────────────────────────── */
 var _origGoToCollab = goTo;
