@@ -5311,6 +5311,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <input type="text" class="form-control" id="c-type-logement" readonly>
           </div>
           <div class="form-group">
+            <label>Mode de livraison</label>
+            <input type="text" class="form-control" id="c-mode-livraison" readonly
+              style="font-weight:700;cursor:default;">
+          </div>
+          <div class="form-group">
             <label>Standing</label>
             <select class="form-control" id="c-standing">
               <option value="economique">Économique</option>
@@ -5545,6 +5550,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </select>
           </div>
           <div class="form-group">
+            <label>Mode de livraison</label>
+            <select class="form-control" id="modele-mode-livraison">
+              <option value="gros_oeuvre">🧱 Gros œuvre</option>
+              <option value="cle_en_main">🔑 Clé en main</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>Description courte</label>
             <input type="text" class="form-control" id="modele-desc" placeholder="Ex: Vue jardin, terrasse...">
           </div>
@@ -5615,6 +5627,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <option value="economique">Économique</option>
             <option value="moyen">Moyen</option>
             <option value="haut">Haut de gamme</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Mode de livraison</label>
+          <select class="form-control" id="l-mode-livraison">
+            <option value="gros_oeuvre">🧱 Gros œuvre</option>
+            <option value="cle_en_main">🔑 Clé en main</option>
           </select>
         </div>
         <div class="form-group">
@@ -9011,7 +9030,14 @@ function fillClientForm(c) {
   setSelectValue('c-apporteur', c.apporteur_id || '');
   if (c.programme_id) {
     updateLotsByProgramme();
-    setTimeout(function() { setSelectValue('c-lot', c.lot_id); }, 50);
+    setTimeout(function() {
+      setSelectValue('c-lot', c.lot_id);
+      var modeLiv = c.mode_livraison || 'gros_oeuvre';
+      var modeLivEl = document.getElementById('c-mode-livraison');
+      modeLivEl.value = modeLiv === 'cle_en_main' ? '🔑 Clé en main' : '🧱 Gros œuvre';
+      modeLivEl.dataset.value = modeLiv;
+      modeLivEl.style.color = modeLiv === 'cle_en_main' ? 'var(--vert)' : 'var(--or)';
+    }, 50);
   }
   calcEcheancier();
 }
@@ -9066,6 +9092,7 @@ async function saveClient() {
     programme_id: document.getElementById('c-programme').value,
     lot_id: document.getElementById('c-lot').value,
     type_logement: document.getElementById('c-type-logement').value,
+    mode_livraison: (function(){ var el=document.getElementById('c-mode-livraison'); return el.dataset.value || 'gros_oeuvre'; })(),
     standing: document.getElementById('c-standing').value,
     montant_total: parseFloat(document.getElementById('c-montant-total').value) || 0,
     apport: parseFloat(document.getElementById('c-apport').value) || 0,
@@ -10157,17 +10184,22 @@ function renderModelesList(programmeId) {
     return;
   }
   var standingLabel = { economique: '💚 Économique', moyen: '💛 Moyen standing', haut: '🟠 Haut de gamme', prestige: '💎 Prestige' };
+  var livraisonLabel = { gros_oeuvre: '🧱 Gros œuvre', cle_en_main: '🔑 Clé en main' };
   var totalUnites = modeles.reduce(function(s, m) { return s + (m.nb_unites || 0); }, 0);
   container.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><strong style="color:var(--or);">' + modeles.length + ' type(s) — ' + totalUnites + ' unités prévues</strong></div>'
     + modeles.map(function(m) {
       var lotsExistants = (DATA.lots || []).filter(function(l) { return l.programme_id === m.programme_id && l.type === m.nom; }).length;
       var lotsVendus = (DATA.lots || []).filter(function(l) { return l.programme_id === m.programme_id && l.type === m.nom && l.statut === 'vendu'; }).length;
       var pct = m.nb_unites > 0 ? Math.round((lotsVendus / m.nb_unites) * 100) : 0;
+      var livBadgeColor = m.mode_livraison === 'cle_en_main' ? 'var(--vert)' : 'var(--or)';
       return '<div class="card" style="margin-bottom:10px;border-left:4px solid var(--or);">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">'
         + '<div style="flex:1;"><div style="font-weight:700;font-size:15px;color:var(--or);">🏠 ' + m.nom + '</div>'
         + '<div style="font-size:12px;color:var(--dim);margin-top:3px;">' + (m.pieces ? m.pieces + ' pièces' : '') + (m.surface ? ' · ' + m.surface + ' m²' : '') + (m.description ? ' · ' + m.description : '') + '</div>'
-        + '<div style="font-size:12px;margin-top:4px;">' + (standingLabel[m.standing] || m.standing) + '</div></div>'
+        + '<div style="font-size:12px;margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">'
+        + '<span>' + (standingLabel[m.standing] || m.standing) + '</span>'
+        + '<span style="font-weight:700;color:' + livBadgeColor + ';">' + (livraisonLabel[m.mode_livraison] || '🧱 Gros œuvre') + '</span>'
+        + '</div></div>'
         + '<div style="text-align:right;min-width:140px;">'
         + '<div style="font-weight:700;color:var(--vert);font-size:14px;">' + fcfa(m.prix_vente) + '</div>'
         + '<div style="font-size:11px;color:var(--dim);">Coût : ' + fcfa(m.cout_revient) + '</div>'
@@ -10193,6 +10225,7 @@ function editModele(id) {
   document.getElementById('modele-cout').value = m.cout_revient || '';
   document.getElementById('modele-desc').value = m.description || '';
   document.getElementById('modele-standing').value = m.standing || 'moyen';
+  document.getElementById('modele-mode-livraison').value = m.mode_livraison || 'gros_oeuvre';
   document.getElementById('modele-nom').scrollIntoView({ behavior: 'smooth' });
   document.getElementById('modele-nom').focus();
 }
@@ -10213,6 +10246,7 @@ async function saveModele() {
     prix_vente: parseFloat(document.getElementById('modele-prix').value) || 0,
     cout_revient: parseFloat(document.getElementById('modele-cout').value) || 0,
     standing: document.getElementById('modele-standing').value,
+    mode_livraison: document.getElementById('modele-mode-livraison').value,
     description: document.getElementById('modele-desc').value.trim(),
     created_at: APP.editingModeleId ? undefined : today()
   };
@@ -10261,6 +10295,7 @@ async function genererLotsDepuisModeles() {
         prix: m.prix_vente,
         cout_revient: m.cout_revient,
         standing: m.standing,
+        mode_livraison: m.mode_livraison || 'gros_oeuvre',
         statut: 'disponible',
         notes: m.description || '',
         created_at: today()
@@ -10299,6 +10334,7 @@ function openLotModal(id) {
     document.getElementById('l-notes').value = l.notes || '';
     setSelectValue('l-standing', l.standing);
     setSelectValue('l-statut', l.statut);
+    setSelectValue('l-mode-livraison', l.mode_livraison || 'gros_oeuvre');
   } else {
     document.getElementById('modal-lot-title').textContent = 'Nouveau Lot';
   }
@@ -10310,6 +10346,7 @@ function clearLotForm() {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
+  document.getElementById('l-mode-livraison').value = 'gros_oeuvre';
 }
 
 async function saveLot() {
@@ -10327,6 +10364,7 @@ async function saveLot() {
     prix: parseFloat(document.getElementById('l-prix').value) || 0,
     cout_revient: parseFloat(document.getElementById('l-cout-revient').value) || 0,
     standing: document.getElementById('l-standing').value,
+    mode_livraison: document.getElementById('l-mode-livraison').value,
     statut: document.getElementById('l-statut').value,
     notes: document.getElementById('l-notes').value,
     created_at: APP.editingId ? undefined : today()
@@ -10367,11 +10405,13 @@ function renderLots() {
   var statutLabels = { disponible: '🟢 Disponible', reserve: '🟡 Réservé', vendu: '🔴 Vendu' };
   grid.innerHTML = list.map(function(l) {
     var prog = DATA.programmes.find(function(p) { return p.id === l.programme_id; });
+    var livBadge = l.mode_livraison === 'cle_en_main' ? '<div style="font-size:10px;color:var(--vert);font-weight:700;">🔑 Clé en main</div>' : '<div style="font-size:10px;color:var(--or);">🧱 Gros œuvre</div>';
     return '<div class="lot-card ' + l.statut + '" onclick="openLotModal(\'' + l.id + '\')">'
       + '<div class="lot-num">Lot ' + l.numero + '</div>'
       + '<div class="lot-type">' + (l.type || 'N/A') + (l.ilot ? ' — Îlot ' + l.ilot : '') + '</div>'
       + '<div style="font-size:11px;color:var(--blanc-dim);margin:2px 0;">' + (prog ? prog.nom : '—') + '</div>'
       + (l.surface ? '<div style="font-size:11px;color:var(--blanc-dim);">' + l.surface + ' m²</div>' : '')
+      + livBadge
       + '<div class="lot-prix">' + fcfa(l.prix) + '</div>'
       + '<div style="font-size:11px;margin-top:4px;">' + (statutLabels[l.statut] || l.statut) + '</div>'
       + '</div>';
@@ -11223,6 +11263,7 @@ function printContrat(clientId) {
     + '<table><tr><td><strong>Programme</strong></td><td>' + (prog ? prog.nom : 'N/A') + '</td></tr>'
     + '<tr><td><strong>Lot</strong></td><td>' + (lot ? 'Lot ' + lot.numero + (lot.ilot ? ', Îlot ' + lot.ilot : '') : 'N/A') + '</td></tr>'
     + '<tr><td><strong>Type</strong></td><td>' + (lot ? lot.type || 'N/A' : 'N/A') + '</td></tr>'
+    + '<tr><td><strong>Mode de livraison</strong></td><td><strong>' + (client.mode_livraison === 'cle_en_main' ? '🔑 Clé en main' : '🧱 Gros œuvre') + '</strong></td></tr>'
     + '<tr><td><strong>Surface</strong></td><td>' + (lot ? (lot.surface || 'N/A') + ' m²' : 'N/A') + '</td></tr></table>'
     + '<h4>CONDITIONS FINANCIÈRES</h4>'
     + '<div class="amount">PRIX DE VENTE : ' + new Intl.NumberFormat('fr-FR').format(client.montant_total) + ' FCFA</div>'
@@ -12168,12 +12209,17 @@ function updateLotsByProgramme() {
   lotSelect.innerHTML = '<option value="">— Choisir —</option>'
     + lotsDispo.map(function(l) { return '<option value="' + l.id + '">' + 'Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + ' — ' + l.type + ' — ' + new Intl.NumberFormat('fr-FR').format(l.prix) + ' FCFA</option>'; }).join('');
 
-  // Sync prix et type logement
+  // Sync prix, type logement et mode livraison
   lotSelect.onchange = function() {
     var lot = DATA.lots.find(function(l) { return l.id === lotSelect.value; });
     if (lot) {
       document.getElementById('c-montant-total').value = lot.prix || '';
       document.getElementById('c-type-logement').value = lot.type || '';
+      var modeLiv = lot.mode_livraison || 'gros_oeuvre';
+      var modeLivEl = document.getElementById('c-mode-livraison');
+      modeLivEl.value = modeLiv === 'cle_en_main' ? '🔑 Clé en main' : '🧱 Gros œuvre';
+      modeLivEl.dataset.value = modeLiv;
+      modeLivEl.style.color = modeLiv === 'cle_en_main' ? 'var(--vert)' : 'var(--or)';
       calcEcheancier();
     }
   };
@@ -18075,6 +18121,7 @@ function chargerPortailSouscripteur() {
         ['Programme',        prog?prog.nom:'—'],
         ['Lot / Parcelle',   lot?'Lot '+lot.numero:'—'],
         ['Type de logement', c.type_logement||(lot?lot.type:'—')],
+        ['Mode de livraison', c.mode_livraison==='cle_en_main'?'🔑 Clé en main':'🧱 Gros œuvre'],
         ['Date souscription',dateShort(c.date_debut)],
         ['Durée',            (c.duree||'—')+' mensualités'],
         ['Mensualité',       fmtF(c.mensualite||0)+' FCFA'],
