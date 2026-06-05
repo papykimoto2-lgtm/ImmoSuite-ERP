@@ -1316,6 +1316,282 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .phase-bar-track { flex: 1; height: 8px; background: var(--bord); border-radius: 4px; overflow: hidden; }
 .phase-bar-fill  { height: 100%; border-radius: 4px; transition: width .5s ease; }
 .phase-bar-pct   { font-size: 11px; font-weight: 700; min-width: 36px; text-align: right; }
+
+/* ═══════════════════════════════════════════════
+   MESSAGERIE INTERNE v2 — ImmoSuite v15
+   Layout : Slack-like · Groupes · Pièces jointes
+═══════════════════════════════════════════════ */
+
+/* Layout global */
+.msg-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  height: calc(100vh - 180px);
+  min-height: 500px;
+  background: var(--card);
+  border: 1px solid var(--bord);
+  border-radius: var(--r2);
+  overflow: hidden;
+  box-shadow: var(--sh);
+}
+
+/* ── Sidebar ── */
+.msg-sidebar {
+  border-right: 1px solid var(--bord);
+  display: flex; flex-direction: column;
+  background: var(--card);
+  overflow: hidden;
+}
+.msg-search-bar {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--bord);
+  background: var(--card2);
+}
+.msg-search-input {
+  width: 100%; padding: 8px 12px;
+  background: var(--card); border: 1px solid var(--bord);
+  border-radius: 20px; font-size: 13px; color: var(--blanc);
+  outline: none;
+  -webkit-appearance: none;
+}
+.msg-search-input:focus { border-color: var(--or); }
+
+.msg-tabs {
+  display: flex; border-bottom: 1px solid var(--bord);
+}
+.msg-tab {
+  flex: 1; padding: 10px 8px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; background: none;
+  color: var(--dim); transition: all var(--tr); font-family: var(--fb);
+  border-bottom: 2px solid transparent;
+}
+.msg-tab.active { color: var(--or); border-bottom-color: var(--or); }
+.msg-tab:hover  { background: var(--card2); }
+
+.msg-list { flex: 1; overflow-y: auto; }
+.msg-list::-webkit-scrollbar { width: 3px; }
+.msg-list::-webkit-scrollbar-thumb { background: var(--bord2); border-radius: 2px; }
+
+.msg-empty {
+  padding: 24px 16px; text-align: center;
+  color: var(--dim); font-size: 12px; line-height: 1.6;
+}
+
+/* Item conversation/groupe dans la liste */
+.msg-conv-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer;
+  border-bottom: 1px solid var(--bord);
+  transition: background var(--tr);
+  position: relative;
+}
+.msg-conv-item:hover  { background: var(--card2); }
+.msg-conv-item.active { background: rgba(184,115,51,0.10); border-left: 3px solid var(--or); }
+.msg-conv-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.msg-conv-avatar.groupe { border-radius: 10px; }
+.msg-conv-info    { flex: 1; min-width: 0; }
+.msg-conv-nom     { font-size: 13px; font-weight: 600; color: var(--blanc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-conv-preview { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.msg-conv-time    { font-size: 10px; color: var(--dim); white-space: nowrap; }
+.msg-unread-badge {
+  background: var(--rouge); color: #fff;
+  font-size: 9px; font-weight: 700; padding: 1px 5px;
+  border-radius: 10px; min-width: 16px; text-align: center; flex-shrink: 0;
+}
+
+/* ── Zone chat ── */
+.msg-chat {
+  display: flex; flex-direction: column;
+  background: #F8F9FC; overflow: hidden;
+}
+.msg-chat-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--dim); text-align: center; padding: 24px;
+}
+
+/* Entête chat */
+.msg-entete {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--card);
+  border-bottom: 1px solid var(--bord);
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  flex-shrink: 0;
+}
+.msg-entete-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--or), var(--or-dark));
+}
+.msg-entete-avatar.groupe { border-radius: 9px; }
+.msg-entete-nom { font-size: 14px; font-weight: 700; color: var(--blanc); }
+.msg-entete-sub { font-size: 11px; color: var(--dim); }
+
+/* Zone messages */
+.msg-messages {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.msg-messages::-webkit-scrollbar { width: 4px; }
+.msg-messages::-webkit-scrollbar-thumb { background: var(--bord2); border-radius: 2px; }
+
+/* Bulle de message */
+.msg-bubble-wrap {
+  display: flex; gap: 8px; align-items: flex-end;
+  animation: fadeInUp 180ms ease both;
+}
+.msg-bubble-wrap.mine { flex-direction: row-reverse; }
+.msg-bubble-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.msg-bubble {
+  max-width: 70%; padding: 8px 12px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--card); border: 1px solid var(--bord);
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
+}
+.msg-bubble-wrap.mine .msg-bubble {
+  border-radius: 16px 16px 4px 16px;
+  background: linear-gradient(135deg, var(--or), var(--or-dark));
+  color: #fff; border: none;
+}
+.msg-bubble-sender {
+  font-size: 10px; font-weight: 700; color: var(--bleu);
+  margin-bottom: 3px; display: block;
+}
+.msg-bubble-wrap.mine .msg-bubble-sender { display: none; }
+.msg-bubble-text {
+  font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.msg-bubble-wrap.mine .msg-bubble-text { color: #fff; }
+.msg-bubble-time {
+  font-size: 10px; color: var(--dim); margin-top: 4px;
+}
+.msg-bubble-wrap.mine .msg-bubble-time { text-align: right; color: rgba(255,255,255,0.7); }
+
+/* Séparateur de date */
+.msg-date-sep {
+  text-align: center; font-size: 11px; color: var(--dim);
+  margin: 8px 0; display: flex; align-items: center; gap: 8px;
+}
+.msg-date-sep::before, .msg-date-sep::after {
+  content: ''; flex: 1; height: 1px; background: var(--bord);
+}
+
+/* Pièce jointe dans bulle */
+.msg-attach-item {
+  margin-top: 6px; border-radius: 8px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.25);
+  max-width: 240px;
+}
+.msg-attach-img {
+  width: 100%; max-height: 200px; object-fit: cover;
+  display: block; cursor: pointer;
+  transition: transform .2s;
+}
+.msg-attach-img:hover { transform: scale(1.02); }
+.msg-attach-file {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.08);
+}
+.msg-attach-file-icon { font-size: 20px; flex-shrink: 0; }
+.msg-attach-file-info { flex: 1; min-width: 0; }
+.msg-attach-file-nom  { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-attach-file-size { font-size: 10px; opacity: .7; }
+
+/* Barre de composition */
+.msg-attach-preview {
+  background: var(--card); border-top: 1px solid var(--bord);
+  padding: 8px 14px; display: flex; gap: 8px; flex-wrap: wrap;
+}
+.msg-attach-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; background: var(--card2); border: 1px solid var(--bord);
+  border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.msg-attach-chip .chip-del { cursor: pointer; color: var(--dim); margin-left: 2px; font-size: 14px; }
+.msg-attach-chip .chip-del:hover { color: var(--rouge); }
+
+.msg-composer {
+  background: var(--card); border-top: 1px solid var(--bord);
+  padding: 10px 12px; flex-shrink: 0; position: relative;
+}
+.msg-drop-hint {
+  position: absolute; inset: 0; background: rgba(184,115,51,0.12);
+  border: 2px dashed var(--or); border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: var(--or);
+  pointer-events: none; z-index: 2;
+}
+.msg-composer-inner {
+  display: flex; gap: 8px; align-items: flex-end;
+}
+.msg-action-btn {
+  width: 38px; height: 38px; border: 1px solid var(--bord);
+  background: var(--card2); border-radius: 50%; cursor: pointer;
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: all var(--tr); flex-shrink: 0;
+}
+.msg-action-btn:hover { border-color: var(--or); background: var(--or-glow); }
+.msg-textarea {
+  flex: 1; padding: 8px 12px; border: 1px solid var(--bord);
+  border-radius: 20px; resize: none; font-family: var(--fb); font-size: 13px;
+  color: var(--blanc); background: var(--card2); outline: none;
+  min-height: 38px; max-height: 120px; overflow-y: auto;
+  transition: border-color var(--tr);
+  -webkit-appearance: none;
+}
+.msg-textarea:focus { border-color: var(--or); background: #fff; }
+.msg-send-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  padding: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0; min-height: 0;
+}
+
+/* Panneau infos */
+.msg-info-panel {
+  width: 260px; border-left: 1px solid var(--bord);
+  background: var(--card); overflow-y: auto;
+  flex-shrink: 0;
+}
+.msg-info-header {
+  padding: 12px 14px; border-bottom: 1px solid var(--bord);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* Membres groupe (modal) */
+.grp-membre-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: var(--r);
+  cursor: pointer; transition: background var(--tr);
+}
+.grp-membre-item:hover { background: var(--card); }
+.grp-membre-item.selected { background: rgba(184,115,51,0.10); }
+.grp-membre-check { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--bord); background: #fff; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.grp-membre-item.selected .grp-membre-check { background: var(--or); border-color: var(--or); }
+.grp-membre-check::after { content:'✓'; color:#fff; font-size:11px; font-weight:700; display:none; }
+.grp-membre-item.selected .grp-membre-check::after { display:block; }
+.grp-membre-avatar { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0; }
+.grp-membre-nom   { font-size:13px;font-weight:600; }
+.grp-membre-role  { font-size:10px;color:var(--dim); }
+
+/* Responsive mobile */
+@media (max-width:767px) {
+  .msg-layout { grid-template-columns: 1fr; height: auto; min-height: 600px; }
+  .msg-sidebar { max-height: 220px; border-right:none; border-bottom:1px solid var(--bord); }
+  .msg-chat   { min-height: 380px; }
+  .msg-bubble { max-width: 85%; }
+  .msg-info-panel { display: none; }
+}
 </style>
 <!-- EmailJS SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
@@ -3014,6 +3290,679 @@ function portalOuvrirGalerie(startIdx) {
 }
 
 /* FIN MODULE PHOTOS CHANTIER */
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MESSAGERIE INTERNE v2 — ImmoSuite v15
+   Conversations directes · Groupes · Pièces jointes · Drag & Drop
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Constantes ── */
+var MSG_AVATARS  = ['#2563EB','#16A34A','#DC2626','#7C3AED','#D97706','#0891B2','#BE185D','#65A30D'];
+var MSG_MAX_FILE = 5 * 1024 * 1024; /* 5 Mo */
+
+/* ── État local ── */
+var MSG = {
+  activeConvId: null,
+  activeTab: 'direct',  /* 'direct' | 'groupes' */
+  pendingFiles: [],     /* fichiers en attente d'envoi */
+  selectedGroupMembers: new Set(),
+  modalFiles: []        /* fichiers dans modal nouveau message */
+};
+
+/* ── Palettes avatar (hash stable par ID) ── */
+function msgAvatarColor(id) {
+  var h = 0;
+  for (var i=0; i<(id||'').length; i++) h = (h*31 + (id||'').charCodeAt(i)) & 0xFFFFFF;
+  return MSG_AVATARS[Math.abs(h) % MSG_AVATARS.length];
+}
+function msgAvatarInitiales(nom) {
+  var parts = (nom||'?').trim().split(' ');
+  return parts.length>=2 ? parts[0].charAt(0)+parts[1].charAt(0) : (nom||'?').charAt(0).toUpperCase();
+}
+
+/* ────────────────────────────────────────────
+   ONGLETS SIDEBAR
+──────────────────────────────────────────────── */
+function msgSwitchTab(tab) {
+  MSG.activeTab = tab;
+  ['direct','groupes'].forEach(function(t){
+    document.getElementById('msgtab-'+t).classList.toggle('active', t===tab);
+    var list = document.getElementById('msg-list-'+t);
+    if (list) list.style.display = t===tab ? '' : 'none';
+  });
+  renderConversations();
+}
+
+/* ────────────────────────────────────────────
+   RENDER CONVERSATIONS & GROUPES
+──────────────────────────────────────────────── */
+function renderConversations() {
+  var userId = (APP.currentUser && APP.currentUser.id) || 'admin';
+
+  /* ── Conversations directes ── */
+  var directs = (DATA.conversations||[]).filter(function(c){
+    return (!c.type || c.type==='direct') && Array.isArray(c.participants) && c.participants.indexOf(userId)>=0;
+  });
+  msgRenderList('msg-list-direct', directs, userId, false);
+
+  /* ── Groupes ── */
+  var groupes = (DATA.conversations||[]).filter(function(c){
+    return c.type==='groupe' && Array.isArray(c.participants) && c.participants.indexOf(userId)>=0;
+  });
+  msgRenderList('msg-list-groupes', groupes, userId, true);
+
+  updateBadgeMessages();
+}
+
+function msgRenderList(elId, convs, userId, isGroupe) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var q = ((document.getElementById('msg-search')||{}).value||'').toLowerCase();
+
+  /* Trier par dernier message */
+  convs = convs.slice().sort(function(a,b){
+    var la = (DATA.messages||[]).filter(function(m){return m.conversation_id===a.id;}).sort(function(x,y){return y.date.localeCompare(x.date);})[0];
+    var lb = (DATA.messages||[]).filter(function(m){return m.conversation_id===b.id;}).sort(function(x,y){return y.date.localeCompare(x.date);})[0];
+    return ((lb?lb.date:b.date_creation)||'').localeCompare((la?la.date:a.date_creation)||'');
+  });
+
+  if (!convs.length) {
+    el.innerHTML = '<div class="msg-empty">'+(isGroupe?'Aucun groupe.<br><small>Créez un groupe de discussion</small>':'Aucune conversation.<br><small>Envoyez un premier message</small>')+'</div>';
+    return;
+  }
+
+  el.innerHTML = convs.map(function(c) {
+    /* Nom à afficher */
+    var nom, avatarContent, avatarColor;
+    if (isGroupe) {
+      nom = c.nom || 'Groupe sans nom';
+      avatarContent = c.emoji || '👥';
+      avatarColor = msgAvatarColor(c.id);
+    } else {
+      var autreId = (c.participants||[]).filter(function(p){return p!==userId;})[0]||'';
+      var dest = (DATA.users||[]).find(function(u){return u.id===autreId;})||{nom:autreId||'?'};
+      nom = dest.nom||autreId||'?';
+      avatarContent = msgAvatarInitiales(nom);
+      avatarColor = msgAvatarColor(autreId);
+    }
+    if (q && !nom.toLowerCase().includes(q)) return '';
+
+    var msgs = (DATA.messages||[]).filter(function(m){return m.conversation_id===c.id;}).sort(function(a,b){return b.date.localeCompare(a.date);});
+    var last = msgs[0];
+    var nonLus = msgs.filter(function(m){return !m.lu&&m.expediteur_id!==userId;}).length;
+    var isActive = MSG.activeConvId === c.id;
+    var lastPreview = last
+      ? (last.fichiers&&last.fichiers.length ? '📎 '+last.fichiers[0].nom : last.contenu.slice(0,38)+(last.contenu.length>38?'…':''))
+      : (isGroupe ? 'Groupe créé' : 'Nouvelle conversation');
+    var lastTime = last ? msgFormatTime(last.date) : '';
+
+    return '<div class="msg-conv-item'+(isActive?' active':'')+'" onclick="chargerConversation(\''+c.id+'\')">'
+      +'<div class="msg-conv-avatar'+(isGroupe?' groupe':'')+'" style="background:'+avatarColor+';">'+avatarContent+'</div>'
+      +'<div class="msg-conv-info">'
+        +'<div class="msg-conv-nom">'+(nonLus>0?'<strong>'+nom+'</strong>':nom)+'</div>'
+        +'<div class="msg-conv-preview">'+(nonLus>0?'<strong>'+lastPreview+'</strong>':lastPreview)+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+        +lastTime
+        +(nonLus>0?'<span class="msg-unread-badge">'+nonLus+'</span>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function msgFiltrerConversations() { renderConversations(); }
+
+function msgFormatTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  var now = new Date();
+  var sameDay = d.toDateString()===now.toDateString();
+  if (sameDay) return '<div class="msg-conv-time">'+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+'</div>';
+  return '<div class="msg-conv-time">'+d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+'</div>';
+}
+
+/* ────────────────────────────────────────────
+   CHARGER & AFFICHER UNE CONVERSATION
+──────────────────────────────────────────────── */
+async function chargerConversation(convId) {
+  MSG.activeConvId = convId;
+  var userId = (APP.currentUser && APP.currentUser.id) || 'admin';
+  var conv = (DATA.conversations||[]).find(function(c){return c.id===convId;});
+  if (!conv) return;
+
+  /* Afficher les éléments UI */
+  document.getElementById('msg-empty-state').style.display = 'none';
+  document.getElementById('msg-entete').style.display = 'flex';
+  document.getElementById('messages-liste').style.display = 'flex';
+  document.getElementById('msg-composer').style.display = 'block';
+
+  /* Entête */
+  var isGroupe = conv.type === 'groupe';
+  var nom, avatarContent, avatarColor, sub;
+  if (isGroupe) {
+    nom = conv.nom||'Groupe';
+    avatarContent = conv.emoji||'👥';
+    avatarColor = msgAvatarColor(conv.id);
+    sub = (conv.participants||[]).length+' membres · '+(conv.description||'');
+    document.getElementById('msg-entete-avatar').classList.add('groupe');
+  } else {
+    var autreId = (conv.participants||[]).filter(function(p){return p!==userId;})[0]||'';
+    var dest = (DATA.users||[]).find(function(u){return u.id===autreId;})||{nom:autreId||'?',role:''};
+    nom = dest.nom||autreId||'?';
+    avatarContent = msgAvatarInitiales(nom);
+    avatarColor = msgAvatarColor(autreId);
+    sub = dest.role||'Utilisateur';
+    document.getElementById('msg-entete-avatar').classList.remove('groupe');
+  }
+  document.getElementById('msg-entete-avatar').textContent = avatarContent;
+  document.getElementById('msg-entete-avatar').style.background = avatarColor;
+  document.getElementById('msg-entete-nom').textContent = nom;
+  document.getElementById('msg-entete-sub').textContent = sub;
+
+  /* Marquer messages comme lus */
+  var msgs = (DATA.messages||[]).filter(function(m){return m.conversation_id===convId;});
+  msgs.forEach(function(m){ if(!m.lu&&m.expediteur_id!==userId){ m.lu=true; dbPut('messages',m); } });
+
+  /* Rendre messages */
+  msgRenderMessages(convId, userId, isGroupe, conv);
+
+  /* Input */
+  var inp = document.getElementById('message-input');
+  if (inp) { inp.dataset.convId = convId; inp.focus(); }
+
+  updateBadgeMessages();
+  renderConversations();
+}
+
+function msgRenderMessages(convId, userId, isGroupe, conv) {
+  var msgs = (DATA.messages||[]).filter(function(m){return m.conversation_id===convId;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+  var el = document.getElementById('messages-liste');
+  if (!el) return;
+
+  if (!msgs.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--dim);">Aucun message. Envoyez le premier ! 👋</div>';
+    return;
+  }
+
+  var html = '';
+  var lastDate = '';
+  msgs.forEach(function(m) {
+    var isMine = m.expediteur_id === userId;
+    /* Séparateur de date */
+    var msgDate = m.date ? m.date.slice(0,10) : '';
+    if (msgDate !== lastDate) {
+      var dObj = new Date(m.date);
+      var now = new Date();
+      var sep = msgDate === now.toISOString().slice(0,10) ? "Aujourd'hui"
+        : msgDate === new Date(now-86400000).toISOString().slice(0,10) ? 'Hier'
+        : dObj.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+      html += '<div class="msg-date-sep">'+sep+'</div>';
+      lastDate = msgDate;
+    }
+    /* Expéditeur */
+    var exp = isMine
+      ? (APP.currentUser ? APP.currentUser.nom : 'Moi')
+      : ((DATA.users||[]).find(function(u){return u.id===m.expediteur_id;})||{nom:m.expediteur_id}).nom || m.expediteur_id;
+    var expColor = msgAvatarColor(m.expediteur_id);
+    var timeStr = new Date(m.date).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+
+    /* Fichiers joints */
+    var fichiersHtml = '';
+    if (m.fichiers && m.fichiers.length) {
+      fichiersHtml = m.fichiers.map(function(f) {
+        if (f.type && f.type.startsWith('image/')) {
+          return '<div class="msg-attach-item">'
+            +'<img class="msg-attach-img" src="'+f.data+'" alt="'+f.nom+'"'
+            +' onclick="msgOuvrirImageLb(\''+f.id+'\',\''+m.id+'\')" loading="lazy">'
+            +'</div>';
+        }
+        var icone = f.type==='application/pdf'?'📕':f.type&&f.type.includes('word')?'📘':f.type&&f.type.includes('excel')?'📗':'📎';
+        var taille = f.taille>1048576?(f.taille/1048576).toFixed(1)+' Mo':Math.round((f.taille||0)/1024)+' Ko';
+        return '<div class="msg-attach-item">'
+          +'<div class="msg-attach-file">'
+          +'<span class="msg-attach-file-icon">'+icone+'</span>'
+          +'<div class="msg-attach-file-info">'
+            +'<div class="msg-attach-file-nom">'+f.nom+'</div>'
+            +'<div class="msg-attach-file-size">'+taille+'</div>'
+          +'</div>'
+          +'<a href="'+f.data+'" download="'+f.nom+'" class="btn btn-secondary btn-sm btn-icon" style="font-size:11px;flex-shrink:0;">⬇</a>'
+          +'</div></div>';
+      }).join('');
+    }
+
+    html += '<div class="msg-bubble-wrap'+(isMine?' mine':'')+'">'
+      +(isMine?''
+        :'<div class="msg-bubble-avatar" style="background:'+expColor+';">'+msgAvatarInitiales(exp)+'</div>')
+      +'<div>'
+      +'<div class="msg-bubble">'
+      +(isGroupe&&!isMine?'<span class="msg-bubble-sender">'+exp+'</span>':'')
+      +(m.contenu?'<div class="msg-bubble-text">'+msgEscape(m.contenu)+'</div>':'')
+      +fichiersHtml
+      +'</div>'
+      +'<div class="msg-bubble-time">'+(isMine?'✓ ':'')+timeStr+'</div>'
+      +'</div>'
+      +(isMine
+        ?'<div class="msg-bubble-avatar" style="background:'+expColor+';">'+msgAvatarInitiales(exp)+'</div>'
+        :'')
+      +'</div>';
+  });
+
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+function msgEscape(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ────────────────────────────────────────────
+   ENVOI DE MESSAGE (remplace la fonction existante)
+──────────────────────────────────────────────── */
+async function envoyerMessage() {
+  var convId = (document.getElementById('message-input')||{}).dataset.convId || MSG.activeConvId;
+  var contenu = (document.getElementById('message-input').value||'').trim();
+  if (!convId) { toast('Sélectionnez une conversation.','error'); return; }
+  if (!contenu && !MSG.pendingFiles.length) return;
+
+  var userId = (APP.currentUser && APP.currentUser.id) || 'admin';
+  var msg = {
+    id: uid(),
+    conversation_id: convId,
+    expediteur_id: userId,
+    contenu: contenu,
+    date: new Date().toISOString(),
+    lu: false,
+    fichiers: JSON.parse(JSON.stringify(MSG.pendingFiles))
+  };
+
+  DATA.messages.push(msg);
+  await dbPut('messages', msg);
+  document.getElementById('message-input').value = '';
+  document.getElementById('message-input').style.height = '';
+  MSG.pendingFiles = [];
+  msgRenderAttachPreview();
+
+  var conv = (DATA.conversations||[]).find(function(c){return c.id===convId;});
+  msgRenderMessages(convId, userId, conv&&conv.type==='groupe', conv);
+  renderConversations();
+  notifierTitre('📩 Nouveau message', {body:(contenu||'📎 Fichier').slice(0,60)});
+}
+
+/* ────────────────────────────────────────────
+   PIÈCES JOINTES — ZONE DE COMPOSITION
+──────────────────────────────────────────────── */
+function msgAjouterFichiers(input) {
+  msgTraiterFichiers(Array.from(input.files));
+  input.value = '';
+}
+
+function msgDragOver(e) {
+  e.preventDefault();
+  var h = document.getElementById('msg-drop-hint');
+  if (h) h.style.display = 'flex';
+}
+function msgDragLeave(e) {
+  var h = document.getElementById('msg-drop-hint');
+  if (h) h.style.display = 'none';
+}
+function msgDropFichiers(e) {
+  e.preventDefault();
+  var h = document.getElementById('msg-drop-hint');
+  if (h) h.style.display = 'none';
+  msgTraiterFichiers(Array.from(e.dataTransfer.files));
+}
+
+function msgTraiterFichiers(files) {
+  if (!MSG.activeConvId) { toast('Ouvrez une conversation d\'abord.','error'); return; }
+  files.forEach(function(file) {
+    if (file.size > MSG_MAX_FILE) { toast('❌ '+file.name+' dépasse 5 Mo.','error'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      MSG.pendingFiles.push({
+        id: 'f_'+Date.now()+'_'+Math.random().toString(36).substr(2,4),
+        nom: file.name, type: file.type, taille: file.size, data: e.target.result
+      });
+      msgRenderAttachPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function msgRenderAttachPreview() {
+  var el = document.getElementById('msg-attach-preview');
+  if (!el) return;
+  if (!MSG.pendingFiles.length) { el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display = 'flex';
+  el.innerHTML = MSG.pendingFiles.map(function(f) {
+    var isImg = f.type && f.type.startsWith('image/');
+    var icone = isImg ? '🖼️' : (f.type==='application/pdf'?'📕':'📎');
+    var taille = f.taille>1048576?(f.taille/1048576).toFixed(1)+' Mo':Math.round(f.taille/1024)+' Ko';
+    return '<div class="msg-attach-chip">'
+      +(isImg?'<img src="'+f.data+'" style="width:24px;height:24px;border-radius:3px;object-fit:cover;">':icone)
+      +'<span style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+f.nom+'</span>'
+      +'<span style="color:var(--dim);font-size:9px;">'+taille+'</span>'
+      +'<span class="chip-del" onclick="msgRetirerFichier(\''+f.id+'\')">×</span>'
+      +'</div>';
+  }).join('');
+}
+
+function msgRetirerFichier(id) {
+  MSG.pendingFiles = MSG.pendingFiles.filter(function(f){ return f.id!==id; });
+  msgRenderAttachPreview();
+}
+
+/* ── Modal nouveau message ── */
+function msgModalAjouterFichiers(input) {
+  Array.from(input.files).forEach(function(file) {
+    if (file.size > MSG_MAX_FILE) { toast('❌ '+file.name+' dépasse 5 Mo.','error'); return; }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      MSG.modalFiles.push({ id:'mf_'+Date.now(), nom:file.name, type:file.type, taille:file.size, data:e.target.result });
+      msgRenderModalFiles();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+function msgRenderModalFiles() {
+  var el = document.getElementById('modal-msg-attach-list');
+  if (!el) return;
+  el.innerHTML = MSG.modalFiles.map(function(f){
+    var icone = f.type&&f.type.startsWith('image/')?'🖼️':(f.type==='application/pdf'?'📕':'📎');
+    return '<div class="msg-attach-chip">'+icone+'<span>'+f.nom+'</span>'
+      +'<span class="chip-del" onclick="MSG.modalFiles=MSG.modalFiles.filter(function(x){return x.id!==\''+f.id+'\';});msgRenderModalFiles();">×</span></div>';
+  }).join('');
+}
+
+/* ── Auto-resize textarea ── */
+function msgAutoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+/* ────────────────────────────────────────────
+   NOUVEAU MESSAGE DIRECT (remplace la fonction existante)
+──────────────────────────────────────────────── */
+async function ouvrirNouveauMessage() {
+  MSG.modalFiles = [];
+  msgRenderModalFiles();
+  var sel = document.getElementById('msg-destinataire');
+  var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+  sel.innerHTML = '<option value="">— Choisir un utilisateur —</option>';
+  (DATA.users||[]).filter(function(u){return u.id!==userId;}).forEach(function(u){
+    var o=document.createElement('option'); o.value=u.id; o.textContent=u.nom+' ('+u.role+')'; sel.appendChild(o);
+  });
+  document.getElementById('msg-sujet').value = '';
+  document.getElementById('msg-contenu').value = '';
+  openModal('modal-nouveau-message');
+}
+
+async function envoyerNouveauMessage() {
+  var destId  = document.getElementById('msg-destinataire').value;
+  var sujet   = document.getElementById('msg-sujet').value.trim();
+  var contenu = document.getElementById('msg-contenu').value.trim();
+  if (!destId||!sujet||!contenu) { toast('Destinataire, sujet et message requis.','error'); return; }
+
+  var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+  var participants = [userId,destId].sort();
+  var conv = (DATA.conversations||[]).find(function(c){
+    return (!c.type||c.type==='direct') && Array.isArray(c.participants)
+      && c.participants.length===2
+      && c.participants.indexOf(userId)>=0 && c.participants.indexOf(destId)>=0;
+  });
+  if (!conv) {
+    conv = { id:uid(), type:'direct', participants:participants, date_creation:new Date().toISOString() };
+    DATA.conversations.push(conv);
+    await dbPut('conversations', conv);
+  }
+
+  var msg = {
+    id:uid(), conversation_id:conv.id, expediteur_id:userId,
+    contenu:'['+sujet+']\n'+contenu,
+    date:new Date().toISOString(), lu:false,
+    fichiers: JSON.parse(JSON.stringify(MSG.modalFiles))
+  };
+  DATA.messages.push(msg);
+  await dbPut('messages', msg);
+
+  MSG.modalFiles = [];
+  closeModal('modal-nouveau-message');
+  renderConversations();
+  chargerConversation(conv.id);
+  toast('✅ Message envoyé.','success');
+}
+
+/* ────────────────────────────────────────────
+   GROUPES DE DISCUSSION
+──────────────────────────────────────────────── */
+function msgOuvrirNouveauGroupe(groupeId) {
+  MSG.selectedGroupMembers = new Set();
+  var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+  var isEdit = !!groupeId;
+  var groupe = isEdit ? (DATA.conversations||[]).find(function(c){return c.id===groupeId;}) : null;
+
+  document.getElementById('grp-modal-title').textContent = isEdit ? '✏️ Modifier le groupe' : '👥 Nouveau groupe';
+  document.getElementById('grp-nom').value        = groupe ? groupe.nom||'' : '';
+  document.getElementById('grp-emoji').value      = groupe ? groupe.emoji||'👥' : '👥';
+  document.getElementById('grp-description').value= groupe ? groupe.description||'' : '';
+
+  /* Présélectionner membres si édition */
+  if (groupe && groupe.participants) {
+    groupe.participants.forEach(function(p){ if(p!==userId) MSG.selectedGroupMembers.add(p); });
+  }
+
+  /* Lister utilisateurs */
+  var listEl = document.getElementById('grp-membres-list');
+  listEl.innerHTML = (DATA.users||[]).filter(function(u){return u.id!==userId;}).map(function(u,i){
+    var selected = MSG.selectedGroupMembers.has(u.id);
+    var color = msgAvatarColor(u.id);
+    return '<div class="grp-membre-item'+(selected?' selected':'')+'" onclick="msgToggleMembre(\''+u.id+'\')" id="gmb-'+u.id+'">'
+      +'<div class="grp-membre-check"></div>'
+      +'<div class="grp-membre-avatar" style="background:'+color+';">'+msgAvatarInitiales(u.nom)+'</div>'
+      +'<div><div class="grp-membre-nom">'+u.nom+'</div><div class="grp-membre-role">'+u.role+'</div></div>'
+      +'</div>';
+  }).join('') || '<div style="color:var(--dim);font-size:13px;padding:10px;">Aucun utilisateur disponible.</div>';
+
+  msgMajChipsGroupeMembres();
+  document.getElementById('grp-modal-title').dataset.editId = groupeId || '';
+  openModal('modal-nouveau-groupe');
+}
+
+function msgToggleMembre(userId) {
+  if (MSG.selectedGroupMembers.has(userId)) MSG.selectedGroupMembers.delete(userId);
+  else MSG.selectedGroupMembers.add(userId);
+  var item = document.getElementById('gmb-'+userId);
+  if (item) item.classList.toggle('selected', MSG.selectedGroupMembers.has(userId));
+  msgMajChipsGroupeMembres();
+}
+
+function msgMajChipsGroupeMembres() {
+  var n = MSG.selectedGroupMembers.size;
+  var nbEl = document.getElementById('grp-nb-membres');
+  if (nbEl) nbEl.textContent = n > 0 ? '('+n+' sélectionné'+(n>1?'s':'')+')' : '';
+  var chips = document.getElementById('grp-membres-chips');
+  if (!chips) return;
+  chips.innerHTML = Array.from(MSG.selectedGroupMembers).map(function(uid) {
+    var u = (DATA.users||[]).find(function(x){return x.id===uid;})||{nom:uid};
+    return '<div class="msg-attach-chip">'
+      +'<div class="grp-membre-avatar" style="background:'+msgAvatarColor(uid)+';width:18px;height:18px;font-size:9px;">'+msgAvatarInitiales(u.nom)+'</div>'
+      +u.nom
+      +'<span class="chip-del" onclick="msgToggleMembre(\''+uid+'\')">×</span>'
+      +'</div>';
+  }).join('') || '<span style="color:var(--dim);font-size:12px;">Aucun membre sélectionné</span>';
+}
+
+async function msgCreerGroupe() {
+  var nom  = document.getElementById('grp-nom').value.trim();
+  var desc = document.getElementById('grp-description').value.trim();
+  var emoji= document.getElementById('grp-emoji').value.trim()||'👥';
+  if (!nom) { toast('Nom du groupe obligatoire.','error'); return; }
+  if (MSG.selectedGroupMembers.size === 0) { toast('Ajouter au moins un membre.','error'); return; }
+
+  var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+  var membres = [userId].concat(Array.from(MSG.selectedGroupMembers));
+  var editId  = document.getElementById('grp-modal-title').dataset.editId;
+
+  if (editId) {
+    /* Modifier groupe existant */
+    var g = (DATA.conversations||[]).find(function(c){return c.id===editId;});
+    if (g) {
+      g.nom=nom; g.emoji=emoji; g.description=desc; g.participants=membres;
+      await dbPut('conversations', g);
+      toast('✅ Groupe modifié.','success');
+    }
+  } else {
+    /* Créer nouveau groupe */
+    var groupe = {
+      id: uid(), type:'groupe', nom:nom, emoji:emoji, description:desc,
+      participants: membres, admin_id: userId,
+      date_creation: new Date().toISOString()
+    };
+    DATA.conversations.push(groupe);
+    await dbPut('conversations', groupe);
+    /* Message système */
+    var sysmsg = {
+      id:uid(), conversation_id:groupe.id, expediteur_id:'system',
+      contenu:'👥 Groupe "'+nom+'" créé par '+(APP.currentUser?APP.currentUser.nom:'Admin')+' avec '+membres.length+' membres.',
+      date:new Date().toISOString(), lu:false, fichiers:[]
+    };
+    DATA.messages.push(sysmsg);
+    await dbPut('messages', sysmsg);
+    closeModal('modal-nouveau-groupe');
+    MSG.activeTab='groupes';
+    msgSwitchTab('groupes');
+    chargerConversation(groupe.id);
+    toast('✅ Groupe "'+nom+'" créé !','success');
+    return;
+  }
+  closeModal('modal-nouveau-groupe');
+  renderConversations();
+}
+
+/* ── Infos conversation / groupe ── */
+function msgVoirInfos() {
+  if (!MSG.activeConvId) return;
+  var conv = (DATA.conversations||[]).find(function(c){return c.id===MSG.activeConvId;});
+  if (!conv) return;
+  var panel = document.getElementById('msg-info-panel');
+  var content= document.getElementById('msg-info-content');
+  var titre  = document.getElementById('msg-info-titre');
+  if (!panel||!content) return;
+  panel.style.display = panel.style.display==='none'?'flex':'none';
+  if (panel.style.display==='none') return;
+
+  var isGroupe = conv.type==='groupe';
+  if (isGroupe) {
+    titre.textContent = '👥 '+conv.nom;
+    var membres = (conv.participants||[]).map(function(uid){
+      var u = (DATA.users||[]).find(function(x){return x.id===uid;})||{nom:uid,role:''};
+      var isAdmin = uid===conv.admin_id;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--bord);">'
+        +'<div class="grp-membre-avatar" style="background:'+msgAvatarColor(uid)+';">'+msgAvatarInitiales(u.nom)+'</div>'
+        +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+u.nom+'</div>'
+        +'<div style="font-size:10px;color:var(--dim);">'+u.role+(isAdmin?' · Admin':'')+'</div></div>'
+        +'</div>';
+    }).join('');
+    content.innerHTML = '<div style="padding:12px 14px;border-bottom:1px solid var(--bord);">'
+      +'<div style="font-size:13px;color:var(--dim);">'+( conv.description||'Aucune description')+'</div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="msgOuvrirNouveauGroupe(\''+conv.id+'\')">✏️ Modifier</button>'
+      +'</div></div>'
+      +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);padding:10px 14px 4px;font-weight:700;">'+(conv.participants||[]).length+' Membres</div>'
+      +membres;
+  } else {
+    var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+    var autreId = (conv.participants||[]).filter(function(p){return p!==userId;})[0]||'';
+    var dest = (DATA.users||[]).find(function(u){return u.id===autreId;})||{nom:autreId,role:'',email:''};
+    titre.textContent = 'ℹ️ '+dest.nom;
+    content.innerHTML = '<div style="text-align:center;padding:20px;">'
+      +'<div class="grp-membre-avatar" style="background:'+msgAvatarColor(autreId)+';width:56px;height:56px;font-size:22px;margin:0 auto 10px;">'+msgAvatarInitiales(dest.nom)+'</div>'
+      +'<div style="font-weight:700;font-size:16px;">'+dest.nom+'</div>'
+      +'<div style="color:var(--dim);font-size:13px;margin-top:4px;">'+dest.role+'</div>'
+      +(dest.email?'<div style="color:var(--bleu);font-size:12px;margin-top:4px;">'+dest.email+'</div>':'')
+      +'</div>'
+      +'<div style="padding:0 14px;"><button class="btn btn-danger btn-sm" onclick="msgSupprimerConversation(\''+conv.id+'\')">🗑 Supprimer la conversation</button></div>';
+  }
+}
+
+function msgFermerInfos() {
+  var p = document.getElementById('msg-info-panel');
+  if (p) p.style.display='none';
+}
+
+async function msgQuitterGroupe() {
+  if (!MSG.activeConvId) return;
+  if (!confirm('Quitter ce groupe ?')) return;
+  var conv = (DATA.conversations||[]).find(function(c){return c.id===MSG.activeConvId;});
+  if (!conv) return;
+  var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+  conv.participants = (conv.participants||[]).filter(function(p){return p!==userId;});
+  await dbPut('conversations',conv);
+  MSG.activeConvId=null;
+  closeModal('modal-groupe-info');
+  msgResetChat();
+  renderConversations();
+  toast('Vous avez quitté le groupe.','info');
+}
+
+async function msgSupprimerConversation(convId) {
+  if (!confirm('Supprimer cette conversation et tous ses messages ?')) return;
+  DATA.conversations = (DATA.conversations||[]).filter(function(c){return c.id!==convId;});
+  DATA.messages = (DATA.messages||[]).filter(function(m){return m.conversation_id!==convId;});
+  await dbDelete('conversations',convId);
+  MSG.activeConvId=null;
+  msgResetChat();
+  renderConversations();
+  toast('Conversation supprimée.','info');
+}
+
+function msgResetChat() {
+  document.getElementById('msg-empty-state').style.display='flex';
+  document.getElementById('msg-entete').style.display='none';
+  document.getElementById('messages-liste').style.display='none';
+  document.getElementById('msg-composer').style.display='none';
+  document.getElementById('msg-attach-preview').style.display='none';
+  document.getElementById('msg-info-panel').style.display='none';
+  MSG.pendingFiles=[];
+}
+
+/* ── Lightbox image dans chat ── */
+function msgOuvrirImageLb(fileId, msgId) {
+  var m = (DATA.messages||[]).find(function(x){return x.id===msgId;});
+  if (!m||!m.fichiers) return;
+  var imgs = m.fichiers.filter(function(f){ return f.type&&f.type.startsWith('image/'); });
+  var idx  = imgs.findIndex(function(f){ return f.id===fileId; });
+  PLAN_STATE._lbVues = imgs.map(function(f){ return { data:f.data, type:f.type, angle_id:'general', label_custom:f.nom }; });
+  PLAN_STATE.lbIdx = Math.max(0,idx);
+  var lb = document.getElementById('plan-lightbox');
+  if (lb) { lb.style.display='flex'; lb.classList.add('open'); }
+  planUpdateLightbox();
+  document.addEventListener('keydown', planLbKeyHandler);
+}
+
+/* ────────────────────────────────────────────
+   OVERRIDE chargerMessages + updateBadgeMessages
+──────────────────────────────────────────────── */
+async function chargerMessages() {
+  try {
+    var msgs = await dbGetAll('messages');
+    if (msgs&&msgs.length) DATA.messages=msgs; else DATA.messages=DATA.messages||[];
+    var convs = await dbGetAll('conversations');
+    if (convs&&convs.length) DATA.conversations=convs; else DATA.conversations=DATA.conversations||[];
+  } catch(e) { DATA.messages=DATA.messages||[]; DATA.conversations=DATA.conversations||[]; }
+  updateBadgeMessages();
+}
+
+function updateBadgeMessages() {
+  var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
+  var nonLus = (DATA.messages||[]).filter(function(m){ return !m.lu&&m.expediteur_id!==userId; }).length;
+  var badge = document.getElementById('badge-messages');
+  if (badge) { badge.textContent=nonLus; badge.style.display=nonLus>0?'inline-flex':'none'; }
+}
+
+/* FIN MODULE MESSAGERIE v2 */
 
 </script>
 </head>
@@ -7357,36 +8306,108 @@ function portalOuvrirGalerie(startIdx) {
 
       <!-- ══ MESSAGERIE INTERNE ══════════════════════════ -->
       <div class="page" id="page-messagerie">
-        <div class="page-header">
+        <div class="page-header" style="margin-bottom:12px;">
           <div>
             <div class="page-title">Messagerie interne</div>
-            <div class="page-subtitle">Échanges entre commerciaux et administration</div>
+            <div class="page-subtitle">Conversations directes · Groupes · Pièces jointes</div>
           </div>
           <div class="spacer"></div>
-          <button class="btn btn-primary btn-sm" onclick="ouvrirNouveauMessage()">✉️ Nouveau message</button>
+          <button class="btn btn-secondary btn-sm" onclick="msgOuvrirNouveauGroupe()">👥 Nouveau groupe</button>
+          <button class="btn btn-primary btn-sm" onclick="ouvrirNouveauMessage()">✉️ Message direct</button>
         </div>
 
-        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:500px;">
-          <!-- Liste des conversations -->
-          <div class="card" style="overflow-y:auto;max-height:70vh;padding:0;">
-            <div style="padding:12px 16px;font-weight:700;font-size:13px;border-bottom:1px solid var(--bord);">💬 Conversations</div>
-            <div id="liste-conversations">
-              <div style="padding:16px;color:var(--blanc-dim);font-size:13px;">Aucune conversation.</div>
+        <div class="msg-layout" id="msg-layout">
+
+          <!-- ── Sidebar ── -->
+          <div class="msg-sidebar" id="msg-sidebar">
+
+            <!-- Barre de recherche -->
+            <div class="msg-search-bar">
+              <input class="msg-search-input" id="msg-search" placeholder="🔍 Rechercher..." oninput="msgFiltrerConversations()">
+            </div>
+
+            <!-- Onglets Direct / Groupes -->
+            <div class="msg-tabs">
+              <button class="msg-tab active" id="msgtab-direct" onclick="msgSwitchTab('direct')">💬 Direct</button>
+              <button class="msg-tab" id="msgtab-groupes" onclick="msgSwitchTab('groupes')">👥 Groupes</button>
+            </div>
+
+            <!-- Liste conversations directes -->
+            <div id="msg-list-direct" class="msg-list">
+              <div class="msg-empty">Aucune conversation.<br><small>Cliquez sur ✉️ Message direct</small></div>
+            </div>
+
+            <!-- Liste groupes -->
+            <div id="msg-list-groupes" class="msg-list" style="display:none;">
+              <div class="msg-empty">Aucun groupe.<br><small>Cliquez sur 👥 Nouveau groupe</small></div>
             </div>
           </div>
 
-          <!-- Zone de conversation active -->
-          <div class="card" style="display:flex;flex-direction:column;padding:0;">
-            <div id="conversation-entete" style="padding:12px 16px;font-weight:700;font-size:13px;border-bottom:1px solid var(--bord);color:var(--or);">
-              Sélectionnez une conversation
+          <!-- ── Zone chat ── -->
+          <div class="msg-chat" id="msg-chat">
+
+            <!-- État vide -->
+            <div id="msg-empty-state" class="msg-chat-empty">
+              <div style="font-size:48px;margin-bottom:12px;">💬</div>
+              <div style="font-size:16px;font-weight:700;color:var(--blanc);">Sélectionnez une conversation</div>
+              <div style="font-size:13px;color:var(--dim);margin-top:6px;">ou créez un nouveau message</div>
+              <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+                <button class="btn btn-secondary btn-sm" onclick="msgOuvrirNouveauGroupe()">👥 Nouveau groupe</button>
+                <button class="btn btn-primary btn-sm" onclick="ouvrirNouveauMessage()">✉️ Message direct</button>
+              </div>
             </div>
-            <div id="messages-liste" style="flex:1;overflow-y:auto;max-height:420px;padding:16px;"></div>
-            <div style="padding:12px 16px;border-top:1px solid var(--bord);display:flex;gap:8px;align-items:flex-end;">
-              <textarea id="message-input" class="form-control" rows="2" placeholder="Écrivez votre message... (Entrée pour envoyer)" style="flex:1;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMessage();}"></textarea>
-              <button class="btn btn-primary" onclick="envoyerMessage()">📨</button>
+
+            <!-- Entête conversation active -->
+            <div id="msg-entete" class="msg-entete" style="display:none;">
+              <div class="msg-entete-avatar" id="msg-entete-avatar">?</div>
+              <div class="msg-entete-info">
+                <div class="msg-entete-nom" id="msg-entete-nom">—</div>
+                <div class="msg-entete-sub" id="msg-entete-sub">—</div>
+              </div>
+              <div class="spacer"></div>
+              <button class="btn btn-secondary btn-sm btn-icon" id="msg-btn-info" onclick="msgVoirInfos()" title="Infos">ℹ️</button>
+            </div>
+
+            <!-- Zone messages -->
+            <div id="messages-liste" class="msg-messages" style="display:none;"></div>
+
+            <!-- Prévisualisation pièces jointes en attente -->
+            <div id="msg-attach-preview" class="msg-attach-preview" style="display:none;"></div>
+
+            <!-- Barre de composition -->
+            <div id="msg-composer" class="msg-composer" style="display:none;">
+              <!-- Dropzone invisible sur tout le chat -->
+              <div id="msg-drop-hint" class="msg-drop-hint" style="display:none;">📂 Déposez vos fichiers ici</div>
+
+              <div class="msg-composer-inner">
+                <button class="msg-action-btn" onclick="document.getElementById('msg-file-input').click()" title="Joindre un fichier">📎</button>
+                <input type="file" id="msg-file-input" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.dwg,.svg"
+                  style="display:none;" onchange="msgAjouterFichiers(this)">
+
+                <textarea id="message-input" class="msg-textarea"
+                  placeholder="Écrivez votre message... (Entrée = envoyer, Maj+Entrée = saut de ligne)"
+                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMessage();}"
+                  oninput="msgAutoResize(this)"
+                  ondragover="msgDragOver(event)" ondragleave="msgDragLeave(event)" ondrop="msgDropFichiers(event)">
+                </textarea>
+
+                <button class="btn btn-primary msg-send-btn" onclick="envoyerMessage()" title="Envoyer">
+                  <span>📨</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+
+          <!-- ── Panneau infos (groupe/direct) ── -->
+          <div class="msg-info-panel" id="msg-info-panel" style="display:none;">
+            <div class="msg-info-header">
+              <div style="font-weight:700;font-size:14px;" id="msg-info-titre">Informations</div>
+              <button class="btn btn-secondary btn-sm btn-icon" onclick="msgFermerInfos()">✕</button>
+            </div>
+            <div id="msg-info-content"></div>
+          </div>
+
+        </div><!-- /msg-layout -->
       </div>
 
 
@@ -10827,28 +11848,90 @@ function portalOuvrirGalerie(startIdx) {
 <!-- ══ Modal Nouveau Message ═════════════════════════ -->
 <div class="modal-overlay" id="modal-nouveau-message">
   <div class="modal">
+    <div class="modal-handle"></div>
     <div class="modal-header">
-      <h3>✉️ Nouveau message</h3>
+      <h3>✉️ Nouveau message direct</h3>
       <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-nouveau-message')">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label>Destinataire *</label>
+        <div class="form-group span-2"><label>Destinataire *</label>
           <select id="msg-destinataire" class="form-control">
             <option value="">— Choisir un utilisateur —</option>
           </select>
         </div>
-        <div class="form-group"><label>Sujet *</label>
+        <div class="form-group span-2"><label>Sujet *</label>
           <input type="text" id="msg-sujet" class="form-control" placeholder="Objet du message">
         </div>
         <div class="form-group span-2"><label>Message *</label>
-          <textarea id="msg-contenu" class="form-control" rows="5" placeholder="Votre message..."></textarea>
+          <textarea id="msg-contenu" class="form-control" rows="4" placeholder="Votre message..."></textarea>
+        </div>
+        <div class="form-group span-2">
+          <label>Pièces jointes</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-msg-file').click()">📎 Joindre fichier</button>
+            <input type="file" id="modal-msg-file" multiple style="display:none;" onchange="msgModalAjouterFichiers(this)">
+            <span style="font-size:11px;color:var(--dim);">max 5 Mo par fichier</span>
+          </div>
+          <div id="modal-msg-attach-list" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;"></div>
         </div>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-nouveau-message')">Annuler</button>
-      <button class="btn btn-primary" onclick="envoyerNouveauMessage()">✉️ Envoyer</button>
+      <button class="btn btn-primary" onclick="envoyerNouveauMessage()">📨 Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nouveau Groupe -->
+<div class="modal-overlay" id="modal-nouveau-groupe">
+  <div class="modal modal-lg">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="grp-modal-title">👥 Nouveau groupe de discussion</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-nouveau-groupe')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Nom du groupe *</label>
+          <input class="form-control" id="grp-nom" placeholder="ex: Équipe commerciale, Direction...">
+        </div>
+        <div class="form-group"><label>Icône / Emoji</label>
+          <input class="form-control" id="grp-emoji" placeholder="👥" maxlength="4" style="font-size:20px;text-align:center;">
+        </div>
+        <div class="form-group span-2"><label>Description</label>
+          <input class="form-control" id="grp-description" placeholder="Objet du groupe, règles...">
+        </div>
+        <div class="form-group span-2">
+          <label>Membres * <span id="grp-nb-membres" style="color:var(--bleu);font-weight:700;"></span></label>
+          <div id="grp-membres-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;background:var(--card2);border:1px solid var(--bord);border-radius:var(--r);padding:8px;"></div>
+        </div>
+        <div class="form-group span-2">
+          <label>Membres sélectionnés</label>
+          <div id="grp-membres-chips" style="display:flex;gap:6px;flex-wrap:wrap;min-height:30px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-nouveau-groupe')">Annuler</button>
+      <button class="btn btn-primary" onclick="msgCreerGroupe()">👥 Créer le groupe</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Gestion Groupe (info + membres + quitter) -->
+<div class="modal-overlay" id="modal-groupe-info">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="grp-info-titre">ℹ️ Infos du groupe</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-groupe-info')">✕</button>
+    </div>
+    <div class="modal-body" id="grp-info-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-groupe-info')">Fermer</button>
+      <button class="btn btn-danger btn-sm" id="btn-quitter-groupe" onclick="msgQuitterGroupe()">🚪 Quitter le groupe</button>
     </div>
   </div>
 </div>
