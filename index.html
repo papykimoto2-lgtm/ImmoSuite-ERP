@@ -914,6 +914,111 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 @media (max-width: 460px) {
   #dash-stepper { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ═══════════════════════════════════════════════════
+   MODULE RÉUNIONS DIRECTION — ImmoSuite v14
+   Charte : dark sidebar · or accent · light cards
+═══════════════════════════════════════════════════ */
+
+/* Chips thèmes 360° */
+.rd-chip {
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;
+  background:#F4F6F9;border:1px solid var(--bord);color:var(--dim);
+  transition:all var(--tr);
+}
+.rd-chip.selected, .rd-chip:hover { background:var(--or-glow);border-color:var(--or);color:var(--or); }
+.rd-chip.selected { box-shadow:0 0 0 2px var(--or); }
+
+/* Participant chip */
+.rd-participant-chip {
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px 5px 5px;background:#F4F6F9;
+  border:1px solid var(--bord);border-radius:20px;font-size:12px;
+}
+.rd-participant-chip .rd-avatar {
+  width:22px;height:22px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.rd-remove { margin-left:4px;cursor:pointer;color:var(--dim);font-size:14px;line-height:1; }
+.rd-remove:hover { color:var(--rouge); }
+
+/* Carte réunion */
+.rd-reunion-card {
+  background:var(--card);border:1px solid var(--bord);border-radius:var(--r2);
+  padding:14px 16px;margin-bottom:10px;border-left:4px solid var(--or);
+  cursor:pointer;transition:all var(--tr);box-shadow:0 1px 4px rgba(0,0,0,0.05);
+}
+.rd-reunion-card:hover { transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.10); }
+.rd-reunion-card.planifiee { border-left-color:var(--bleu); }
+.rd-reunion-card.tenue     { border-left-color:var(--vert); }
+.rd-reunion-card.annulee   { border-left-color:var(--rouge); }
+.rd-reunion-card.en_cours  { border-left-color:var(--or);animation:pulse 2s infinite; }
+.rd-reunion-icon {
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--or),var(--or-dark));
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;
+}
+.rd-reunion-title { font-weight:700;font-size:14px;color:#1C1C2E;line-height:1.3; }
+.rd-reunion-meta  { font-size:11px;color:var(--dim);margin-top:2px; }
+.rd-reunion-footer { display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap; }
+
+/* Action item */
+.rd-action-item {
+  background:#F4F6F9;border:1px solid var(--bord);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:8px;border-left:3px solid var(--bleu);
+}
+.rd-action-item.done   { border-left-color:var(--vert);opacity:.85; }
+.rd-action-item.retard { border-left-color:var(--rouge); }
+.rd-action-meta { display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center; }
+.rd-meta-pill {
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;
+  padding:2px 8px;border-radius:10px;background:#fff;border:1px solid var(--bord);
+}
+
+/* PV document */
+.rd-pv-section-title {
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;
+  color:var(--or);border-bottom:1px solid rgba(184,115,51,0.2);
+  padding-bottom:5px;margin:16px 0 10px;
+}
+.rd-pv-row { display:flex;gap:8px;margin-bottom:6px;font-size:13px; }
+.rd-pv-label { font-weight:600;min-width:120px;color:var(--dim); }
+.rd-pv-val   { flex:1;color:#1C1C2E; }
+.rd-pv-table { width:100%;border-collapse:collapse;font-size:12px; }
+.rd-pv-table th { background:#F4F6F9;padding:8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim); }
+.rd-pv-table td { padding:8px;border-bottom:1px solid var(--bord);vertical-align:top; }
+.rd-pv-sigs { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px;padding-top:16px;border-top:1px solid var(--bord); }
+.rd-pv-sig-line { height:1px;background:var(--bord2);margin:28px 0 6px; }
+.rd-pv-sig-label { font-size:11px;color:var(--dim);text-align:center; }
+
+/* Analyse 360 */
+.rd-a360-card {
+  background:var(--card);border:1px solid var(--bord);border-radius:var(--r2);
+  padding:12px;text-align:center;cursor:pointer;transition:all var(--tr);
+}
+.rd-a360-card:hover { border-color:var(--or);transform:translateY(-2px); }
+.rd-a360-card.alerte-rouge { border-top:3px solid var(--rouge); }
+.rd-a360-card.alerte-or    { border-top:3px solid var(--or); }
+.rd-a360-card.alerte-vert  { border-top:3px solid var(--vert); }
+
+/* Diffusion item */
+.rd-diff-item {
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:#F4F6F9;border:1px solid var(--bord);border-radius:var(--r);margin-bottom:6px;
+}
+.rd-diff-avatar {
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#fff;flex-shrink:0;
+}
+
+/* btn-bleu (si non défini dans ImmoSuite) */
+.btn-bleu { background:rgba(74,148,224,0.12);color:var(--bleu);border:1px solid rgba(74,148,224,0.3); }
+.btn-bleu:active { background:rgba(74,148,224,0.25); }
+.btn-success { background:rgba(74,196,122,0.12);color:var(--vert);border:1px solid rgba(74,196,122,0.3); }
+.btn-success:active { background:rgba(74,196,122,0.25); }
 </style>
 <!-- EmailJS SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -1168,6 +1273,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('messagerie')" data-page="messagerie">
         <span class="nav-icon">💬</span><span>Messagerie interne</span>
         <span class="nav-badge" id="badge-messages" style="display:none;">0</span>
+      </div>
+      <div class="nav-item" onclick="goTo('reunion-direction')" data-page="reunion-direction">
+        <span class="nav-icon">🏛️</span><span>Réunions Direction</span>
+        <span class="nav-badge" id="badge-reunions-retard" style="display:none;">0</span>
       </div>
 
       <div class="nav-section"><span class="nav-step">⚙</span><span>Système</span></div>
@@ -5426,6 +5535,436 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
       </div>
 
+      <!-- ══════════════════════════════════════════════════
+           PAGE : RÉUNIONS DIRECTION
+           Module : Planification 360° · PV · Plan d'action
+      ═══════════════════════════════════════════════════ -->
+      <div class="page" id="page-reunion-direction">
+
+        <!-- ── EN-TÊTE ── -->
+        <div class="page-header">
+          <div>
+            <div class="step-badge">🏛️ Direction</div>
+            <div class="page-title">Réunions de Direction</div>
+            <div class="page-subtitle">Planification 360° · PV officiel · Plan d'action · Diffusion</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-primary btn-sm" onclick="rdOpenPlanModal()">+ Nouvelle Réunion</button>
+        </div>
+
+        <!-- ── ONGLETS PRINCIPAUX ── -->
+        <div class="tab-nav" id="rd-main-tabnav">
+          <button class="tab-btn active" onclick="switchTab('rd','dashboard')">📊 Tableau de bord</button>
+          <button class="tab-btn" onclick="switchTab('rd','planifier')">📅 Planifier</button>
+          <button class="tab-btn" onclick="switchTab('rd','convocation')">📨 Convocations</button>
+          <button class="tab-btn" onclick="switchTab('rd','preparation')">📋 Préparation</button>
+          <button class="tab-btn" onclick="switchTab('rd','realisation')">🎙️ Réunion</button>
+          <button class="tab-btn" onclick="switchTab('rd','pv')">📄 PV & Actions</button>
+          <button class="tab-btn" onclick="switchTab('rd','diffusion')">📤 Diffusion</button>
+          <button class="tab-btn" onclick="switchTab('rd','suivi')">✅ Suivi Actions</button>
+          <button class="tab-btn" onclick="switchTab('rd','analyse360')">🔍 Analyse 360°</button>
+        </div>
+
+        <!-- ════════ TAB : DASHBOARD ════════ -->
+        <div class="tab-pane active" id="tab-rd-dashboard">
+          <div class="kpi-grid">
+            <div class="kpi-card kpi-blue" data-icon="📅"><div class="kpi-label">Planifiées</div><div class="kpi-value" id="rd-kpi-planifiees">0</div><div class="kpi-delta">Ce mois</div></div>
+            <div class="kpi-card kpi-green" data-icon="✅"><div class="kpi-label">Tenues</div><div class="kpi-value" id="rd-kpi-tenues">0</div><div class="kpi-delta">Ce mois</div></div>
+            <div class="kpi-card" data-icon="⚡"><div class="kpi-label">Actions en cours</div><div class="kpi-value" id="rd-kpi-en-cours">0</div><div class="kpi-delta">Plan d'action global</div></div>
+            <div class="kpi-card kpi-red" data-icon="🔴"><div class="kpi-label">Actions en retard</div><div class="kpi-value" id="rd-kpi-retard">0</div><div class="kpi-delta">Délai dépassé</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">📅 Prochaines Réunions</div>
+            <div id="rd-list-prochaines"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">✅ Dernières Réunions Tenues</div>
+            <div id="rd-list-tenues"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔴 Actions Critiques en Retard</div>
+            <div id="rd-list-critiques"></div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : PLANIFIER ════════ -->
+        <div class="tab-pane" id="tab-rd-planifier">
+          <div class="workflow-stepper">
+            <div class="workflow-step active">1. Planification</div>
+            <div class="workflow-step">2. Convocation</div>
+            <div class="workflow-step">3. Préparation</div>
+            <div class="workflow-step">4. Réunion</div>
+            <div class="workflow-step">5. PV & Diffusion</div>
+          </div>
+          <div class="card">
+            <div class="form-section-title">Informations Générales</div>
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Intitulé *</label><input class="form-control" id="rd-pl-titre" placeholder="ex: Réunion Direction Mensuelle — Juin 2025"></div>
+              <div class="form-group"><label>Type *</label>
+                <select class="form-control" id="rd-pl-type">
+                  <option value="mensuelle">Mensuelle</option>
+                  <option value="hebdomadaire">Hebdomadaire</option>
+                  <option value="trimestrielle">Trimestrielle</option>
+                  <option value="urgence">Urgence / Crise</option>
+                  <option value="bilan">Bilan Annuel</option>
+                  <option value="autre">Autre</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Périodicité</label>
+                <select class="form-control" id="rd-pl-periodicite">
+                  <option value="ponctuelle">Ponctuelle</option>
+                  <option value="hebdo">Hebdomadaire</option>
+                  <option value="mensuelle">Mensuelle</option>
+                  <option value="trimestrielle">Trimestrielle</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Date & Heure *</label><input class="form-control" id="rd-pl-date" type="datetime-local"></div>
+              <div class="form-group"><label>Durée estimée (min)</label><input class="form-control" id="rd-pl-duree" type="number" value="90" min="15" step="15"></div>
+              <div class="form-group"><label>Lieu / Salle</label><input class="form-control" id="rd-pl-lieu" placeholder="Salle de réunion Direction"></div>
+              <div class="form-group"><label>Animateur / Président *</label><input class="form-control" id="rd-pl-animateur" placeholder="Nom de l'animateur"></div>
+              <div class="form-group span-2"><label>Objectifs</label><textarea class="form-control" id="rd-pl-objectifs" placeholder="Objectifs principaux de cette réunion..."></textarea></div>
+            </div>
+
+            <div class="form-section-title">🔍 Thèmes — Analyse 360° ImmoSuite</div>
+            <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">Sélectionnez les domaines à aborder. Les alertes sont remontées automatiquement depuis les modules.</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;" id="rd-theme-chips">
+              <span class="rd-chip" data-theme="foncier" onclick="rdToggleTheme(this)">🗺️ Foncier</span>
+              <span class="rd-chip" data-theme="juridique" onclick="rdToggleTheme(this)">⚖️ Juridique</span>
+              <span class="rd-chip" data-theme="programmes" onclick="rdToggleTheme(this)">🏗️ Programmes</span>
+              <span class="rd-chip" data-theme="travaux" onclick="rdToggleTheme(this)">👷 Travaux</span>
+              <span class="rd-chip" data-theme="commercial" onclick="rdToggleTheme(this)">🤝 Commercial</span>
+              <span class="rd-chip" data-theme="recouvrement" onclick="rdToggleTheme(this)">💳 Recouvrement</span>
+              <span class="rd-chip" data-theme="finance" onclick="rdToggleTheme(this)">💰 Finance</span>
+              <span class="rd-chip" data-theme="rh" onclick="rdToggleTheme(this)">👥 Ressources Hum.</span>
+              <span class="rd-chip" data-theme="informatique" onclick="rdToggleTheme(this)">💻 Informatique</span>
+              <span class="rd-chip" data-theme="autre" onclick="rdToggleTheme(this)">📌 Autre</span>
+            </div>
+
+            <div class="form-section-title">Participants</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+              <input class="form-control" id="rd-pl-p-nom" placeholder="Nom du participant" style="flex:1;min-width:140px;">
+              <input class="form-control" id="rd-pl-p-role" placeholder="Fonction / Rôle" style="flex:1;min-width:140px;">
+              <input class="form-control" id="rd-pl-p-contact" placeholder="Tél / WhatsApp" style="flex:1;max-width:180px;">
+              <button class="btn btn-secondary btn-sm" onclick="rdAjouterParticipant()">+ Ajouter</button>
+            </div>
+            <div id="rd-participant-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
+
+            <div class="form-section-title">Documents Préparatoires</div>
+            <textarea class="form-control" id="rd-pl-docs" placeholder="Liste des documents à préparer (rapports, tableaux de bord, états financiers...)"></textarea>
+
+            <div class="modal-footer" style="border:none;padding:16px 0 0;justify-content:flex-end;">
+              <button class="btn btn-secondary" onclick="rdResetPlanForm()">Effacer</button>
+              <button class="btn btn-primary" onclick="rdSauvegarderReunion()">💾 Enregistrer & Convoquer →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : CONVOCATIONS ════════ -->
+        <div class="tab-pane" id="tab-rd-convocation">
+          <div class="workflow-stepper">
+            <div class="workflow-step done">1. Planification</div>
+            <div class="workflow-step active">2. Convocation</div>
+            <div class="workflow-step">3. Préparation</div>
+            <div class="workflow-step">4. Réunion</div>
+            <div class="workflow-step">5. PV & Diffusion</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sélectionner la Réunion</div>
+            <select class="form-control" id="rd-cv-select" onchange="rdChargerConvocation()">
+              <option value="">— Choisir une réunion —</option>
+            </select>
+          </div>
+          <div id="rd-cv-content" style="display:none;">
+            <div class="card">
+              <div class="card-title">📱 Message de Convocation WhatsApp / SMS</div>
+              <textarea class="form-control" id="rd-cv-message" style="min-height:180px;font-family:monospace;font-size:12px;"></textarea>
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                <button class="btn btn-success btn-sm" onclick="rdEnvoyerWhatsApp('rd-cv-message')">📱 WhatsApp</button>
+                <button class="btn btn-bleu btn-sm" onclick="rdCopier('rd-cv-message')">📋 Copier</button>
+                <button class="btn btn-secondary btn-sm" onclick="rdRelancerAbsents()">🔔 Relancer absents</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">👥 Participants — Confirmations</div>
+              <div id="rd-cv-participants"></div>
+              <div style="margin-top:10px;">
+                <button class="btn btn-primary btn-sm" onclick="rdTousConfirmes()">✅ Tous confirmés</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : PRÉPARATION ════════ -->
+        <div class="tab-pane" id="tab-rd-preparation">
+          <div class="workflow-stepper">
+            <div class="workflow-step done">1. Planification</div>
+            <div class="workflow-step done">2. Convocation</div>
+            <div class="workflow-step active">3. Préparation</div>
+            <div class="workflow-step">4. Réunion</div>
+            <div class="workflow-step">5. PV & Diffusion</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sélectionner la Réunion</div>
+            <select class="form-control" id="rd-prep-select" onchange="rdChargerPreparation()">
+              <option value="">— Choisir une réunion —</option>
+            </select>
+          </div>
+          <div id="rd-prep-content" style="display:none;">
+            <div class="card">
+              <div class="card-title">📋 Ordre du Jour</div>
+              <div id="rd-odj-list" style="margin-bottom:10px;"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input class="form-control" id="rd-odj-input" placeholder="Ajouter un point à l'ordre du jour..." style="flex:1;min-width:180px;">
+                <input class="form-control" id="rd-odj-duree" type="number" placeholder="min" style="width:70px;">
+                <select class="form-control" id="rd-odj-resp" style="max-width:200px;"><option value="">Responsable</option></select>
+                <button class="btn btn-secondary btn-sm" onclick="rdAjouterODJ()">+ Ajouter</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">📊 Indicateurs 360° à Présenter</div>
+              <div id="rd-prep-indicateurs"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">📁 Documents & Notes de Préparation</div>
+              <textarea class="form-control" id="rd-prep-docs" placeholder="Documents à préparer, rapports, états financiers..." style="margin-bottom:10px;"></textarea>
+              <label style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;">Notes de préparation</label>
+              <textarea class="form-control" id="rd-prep-notes" placeholder="Points sensibles, contexte à partager..."></textarea>
+              <div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="rdSauvegarderPreparation()">💾 Sauvegarder préparation</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : RÉALISATION ════════ -->
+        <div class="tab-pane" id="tab-rd-realisation">
+          <div class="workflow-stepper">
+            <div class="workflow-step done">1. Planification</div>
+            <div class="workflow-step done">2. Convocation</div>
+            <div class="workflow-step done">3. Préparation</div>
+            <div class="workflow-step active">4. Réunion</div>
+            <div class="workflow-step">5. PV & Diffusion</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sélectionner la Réunion</div>
+            <select class="form-control" id="rd-real-select" onchange="rdChargerRealisation()">
+              <option value="">— Choisir une réunion —</option>
+            </select>
+          </div>
+          <div id="rd-real-content" style="display:none;">
+            <div class="card" style="border-left:4px solid var(--bleu);margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                <div style="font-size:30px;font-weight:700;font-family:monospace;color:var(--bleu);" id="rd-chrono">00:00:00</div>
+                <button class="btn btn-bleu btn-sm" id="rd-btn-start" onclick="rdDemarrerChrono()">▶ Démarrer</button>
+                <button class="btn btn-secondary btn-sm" id="rd-btn-stop" onclick="rdArreterChrono()" style="display:none;">⏹ Arrêter</button>
+                <div class="spacer"></div>
+                <button class="btn btn-success btn-sm" onclick="rdOuvrirSeance()">🔔 Ouvrir Séance</button>
+              </div>
+            </div>
+            <div class="tab-nav">
+              <button class="tab-btn active" onclick="switchTab('rdreal','presence')">👥 Présence</button>
+              <button class="tab-btn" onclick="switchTab('rdreal','odj')">📋 ODJ</button>
+              <button class="tab-btn" onclick="switchTab('rdreal','notes')">📝 Notes</button>
+              <button class="tab-btn" onclick="switchTab('rdreal','actions-live')">⚡ Actions</button>
+            </div>
+            <div class="tab-pane active" id="tab-rdreal-presence">
+              <div class="card"><div class="card-title">Feuille de Présence</div><div id="rd-real-presence"></div><div style="margin-top:8px;font-size:12px;color:var(--dim);" id="rd-presence-count">0/0 présents</div></div>
+            </div>
+            <div class="tab-pane" id="tab-rdreal-odj">
+              <div class="card"><div class="card-title">Traitement des Points</div><div id="rd-real-odj"></div></div>
+            </div>
+            <div class="tab-pane" id="tab-rdreal-notes">
+              <div class="card">
+                <div class="card-title">📝 Notes de Séance</div>
+                <textarea class="form-control" id="rd-notes-seance" style="min-height:200px;" placeholder="Discussions, décisions, points importants..."></textarea>
+                <div class="form-section-title">Décisions Prises</div>
+                <div id="rd-decisions-live" style="margin-bottom:8px;"></div>
+                <div style="display:flex;gap:8px;"><input class="form-control" id="rd-decision-input" placeholder="Saisir une décision..." style="flex:1;"><button class="btn btn-secondary btn-sm" onclick="rdAjouterDecision()">+ Décision</button></div>
+              </div>
+            </div>
+            <div class="tab-pane" id="tab-rdreal-actions-live">
+              <div class="card">
+                <div class="card-title">⚡ Actions Identifiées en Séance</div>
+                <div id="rd-actions-live" style="margin-bottom:10px;"></div>
+                <div class="form-grid">
+                  <div class="form-group span-2"><input class="form-control" id="rd-act-titre" placeholder="Description de l'action *"></div>
+                  <div class="form-group"><select class="form-control" id="rd-act-resp"><option value="">Responsable *</option></select></div>
+                  <div class="form-group"><input class="form-control" id="rd-act-delai" type="date"></div>
+                  <div class="form-group span-2"><input class="form-control" id="rd-act-obs" placeholder="Observations / Contexte"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="rdAjouterActionLive()">+ Ajouter Action</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+              <button class="btn btn-danger btn-sm" onclick="rdCloturerSeance()">🔒 Clôturer & Générer PV</button>
+              <button class="btn btn-secondary btn-sm" onclick="rdSauvegarderNotes()">💾 Sauvegarder Notes</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : PV & ACTIONS ════════ -->
+        <div class="tab-pane" id="tab-rd-pv">
+          <div class="workflow-stepper">
+            <div class="workflow-step done">1. Planification</div>
+            <div class="workflow-step done">2. Convocation</div>
+            <div class="workflow-step done">3. Préparation</div>
+            <div class="workflow-step done">4. Réunion</div>
+            <div class="workflow-step active">5. PV & Diffusion</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Sélectionner la Réunion Tenue</div>
+            <select class="form-control" id="rd-pv-select" onchange="rdChargerPV()">
+              <option value="">— Choisir une réunion tenue —</option>
+            </select>
+          </div>
+          <div id="rd-pv-content" style="display:none;">
+            <div class="tab-nav">
+              <button class="tab-btn active" onclick="switchTab('rdpv','redaction')">✍️ Rédaction</button>
+              <button class="tab-btn" onclick="switchTab('rdpv','actions')">📋 Plan d'Action</button>
+              <button class="tab-btn" onclick="switchTab('rdpv','apercu')">👁️ Aperçu PV</button>
+              <button class="tab-btn" onclick="switchTab('rdpv','prochaine')">📅 Prochaine Réunion</button>
+            </div>
+            <div class="tab-pane active" id="tab-rdpv-redaction">
+              <div class="card">
+                <div class="form-section-title">En-tête du PV</div>
+                <div class="form-grid">
+                  <div class="form-group"><label>N° PV</label><input class="form-control" id="rd-pv-numero" placeholder="PV-2025-001"></div>
+                  <div class="form-group"><label>Date de Rédaction</label><input class="form-control" id="rd-pv-date" type="date"></div>
+                  <div class="form-group span-2"><label>Objet</label><input class="form-control" id="rd-pv-objet"></div>
+                </div>
+                <div class="form-section-title">Présents / Absents</div>
+                <div id="rd-pv-presence"></div>
+                <div class="form-section-title">Résumé des Discussions</div>
+                <textarea class="form-control" id="rd-pv-resume" style="min-height:160px;" placeholder="Résumé structuré par point ODJ..."></textarea>
+                <div class="form-section-title">Décisions Officielles</div>
+                <div id="rd-pv-decisions" style="margin-bottom:8px;"></div>
+                <div style="display:flex;gap:8px;"><input class="form-control" id="rd-pv-decision-input" placeholder="Ajouter décision officielle..." style="flex:1;"><button class="btn btn-secondary btn-sm" onclick="rdAjouterDecisionPV()">+ Ajouter</button></div>
+                <div style="margin-top:14px;"><button class="btn btn-primary btn-sm" onclick="rdSauvegarderPV()">💾 Sauvegarder PV</button></div>
+              </div>
+            </div>
+            <div class="tab-pane" id="tab-rdpv-actions">
+              <div class="card">
+                <div class="card-title">📋 Plan d'Action Officiel</div>
+                <div id="rd-plan-action"></div>
+                <div class="form-section-title">Ajouter une Action</div>
+                <div class="form-grid">
+                  <div class="form-group span-2"><input class="form-control" id="rd-pva-titre" placeholder="Description précise *"></div>
+                  <div class="form-group"><select class="form-control" id="rd-pva-resp"><option value="">Responsable *</option></select></div>
+                  <div class="form-group"><input class="form-control" id="rd-pva-delai" type="date"></div>
+                  <div class="form-group"><select class="form-control" id="rd-pva-theme">
+                    <option value="foncier">🗺️ Foncier</option><option value="juridique">⚖️ Juridique</option>
+                    <option value="programmes">🏗️ Programmes</option><option value="travaux">👷 Travaux</option>
+                    <option value="commercial">🤝 Commercial</option><option value="recouvrement">💳 Recouvrement</option>
+                    <option value="finance">💰 Finance</option><option value="rh">👥 RH</option>
+                    <option value="informatique">💻 IT</option><option value="autre">📌 Autre</option>
+                  </select></div>
+                  <div class="form-group"><select class="form-control" id="rd-pva-priorite">
+                    <option value="haute">🔴 Haute</option><option value="moyenne">🟡 Moyenne</option><option value="basse">🟢 Basse</option>
+                  </select></div>
+                  <div class="form-group span-2"><textarea class="form-control" id="rd-pva-obs" placeholder="Observations / Ressources" style="min-height:70px;"></textarea></div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="rdAjouterActionPV()">+ Ajouter au Plan</button>
+              </div>
+            </div>
+            <div class="tab-pane" id="tab-rdpv-apercu">
+              <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Imprimer PV</button>
+                <button class="btn btn-secondary btn-sm" onclick="rdCopierPV()">📋 Copier texte</button>
+              </div>
+              <div style="background:#fff;border:1px solid var(--bord);border-radius:var(--r2);padding:24px;box-shadow:var(--sh);" id="rd-pv-apercu">
+                <div style="text-align:center;border-bottom:2px solid var(--or);padding-bottom:16px;margin-bottom:20px;">
+                  <div style="font-family:var(--fh);font-size:20px;font-weight:700;color:#1C1C2E;" id="rd-pv-societe-header">ImmoSuite ERP</div>
+                  <div style="font-size:13px;color:var(--dim);margin-top:4px;">PROCÈS-VERBAL DE RÉUNION DE DIRECTION</div>
+                </div>
+                <div id="rd-pv-apercu-content"><div style="color:var(--dim);font-size:13px;">Sélectionner une réunion tenue et sauvegarder le PV pour afficher l'aperçu.</div></div>
+              </div>
+            </div>
+            <div class="tab-pane" id="tab-rdpv-prochaine">
+              <div class="card">
+                <div class="card-title">📅 Planifier la Prochaine Réunion</div>
+                <div class="alert alert-info">📌 La prochaine date sera intégrée au PV et une convocation pré-remplie sera créée automatiquement.</div>
+                <div class="form-grid">
+                  <div class="form-group"><label>Date & Heure</label><input class="form-control" id="rd-proch-date" type="datetime-local"></div>
+                  <div class="form-group"><label>Lieu</label><input class="form-control" id="rd-proch-lieu" placeholder="Salle de réunion Direction"></div>
+                  <div class="form-group span-2"><label>Thèmes prévisionnels</label><input class="form-control" id="rd-proch-themes" placeholder="ex: Bilan financier, Suivi actions, Avancement chantiers..."></div>
+                  <div class="form-group span-2"><label>Notes</label><textarea class="form-control" id="rd-proch-notes" placeholder="Points à préparer pour la prochaine réunion..."></textarea></div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="rdPlanifierProchaine()">📅 Créer & Planifier →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : DIFFUSION ════════ -->
+        <div class="tab-pane" id="tab-rd-diffusion">
+          <div class="card">
+            <div class="card-title">Sélectionner la Réunion</div>
+            <select class="form-control" id="rd-diff-select" onchange="rdChargerDiffusion()">
+              <option value="">— Choisir une réunion tenue —</option>
+            </select>
+          </div>
+          <div id="rd-diff-content" style="display:none;">
+            <div class="card">
+              <div class="card-title">📱 Plan d'Action — Diffusion WhatsApp</div>
+              <textarea class="form-control" id="rd-diff-message" style="min-height:200px;font-family:monospace;font-size:12px;"></textarea>
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                <button class="btn btn-success btn-sm" onclick="rdEnvoyerWhatsApp('rd-diff-message')">📱 Diffuser WhatsApp</button>
+                <button class="btn btn-bleu btn-sm" onclick="rdCopier('rd-diff-message')">📋 Copier</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">✅ Confirmation de Réception PV</div>
+              <div id="rd-diff-participants"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">📋 Actions par Responsable</div>
+              <div id="rd-diff-par-resp"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════ TAB : SUIVI ACTIONS ════════ -->
+        <div class="tab-pane" id="tab-rd-suivi">
+          <div class="kpi-grid">
+            <div class="kpi-card kpi-blue" data-icon="📋"><div class="kpi-label">Total</div><div class="kpi-value" id="rd-sa-total">0</div></div>
+            <div class="kpi-card kpi-green" data-icon="✅"><div class="kpi-label">Réalisées</div><div class="kpi-value" id="rd-sa-done">0</div></div>
+            <div class="kpi-card" data-icon="⏳"><div class="kpi-label">En cours</div><div class="kpi-value" id="rd-sa-encours">0</div></div>
+            <div class="kpi-card kpi-red" data-icon="🔴"><div class="kpi-label">En retard</div><div class="kpi-value" id="rd-sa-retard">0</div></div>
+          </div>
+          <div class="filters-bar">
+            <select class="filter-select" id="rd-sa-filtre-statut" onchange="rdRenderSuivi()">
+              <option value="">Tous statuts</option>
+              <option value="en_cours">En cours</option>
+              <option value="done">Réalisée</option>
+              <option value="retard">En retard</option>
+            </select>
+            <select class="filter-select" id="rd-sa-filtre-theme" onchange="rdRenderSuivi()">
+              <option value="">Tous thèmes</option>
+              <option value="foncier">Foncier</option><option value="juridique">Juridique</option>
+              <option value="programmes">Programmes</option><option value="travaux">Travaux</option>
+              <option value="commercial">Commercial</option><option value="recouvrement">Recouvrement</option>
+              <option value="finance">Finance</option><option value="rh">RH</option>
+              <option value="informatique">IT</option><option value="autre">Autre</option>
+            </select>
+            <input class="search-input" id="rd-sa-search" placeholder="🔍 Rechercher..." oninput="rdRenderSuivi()" style="flex:1;min-width:160px;">
+          </div>
+          <div id="rd-sa-list"></div>
+        </div>
+
+        <!-- ════════ TAB : ANALYSE 360° ════════ -->
+        <div class="tab-pane" id="tab-rd-analyse360">
+          <div class="alert alert-info" style="margin-bottom:14px;">🔍 Indicateurs remontés depuis les modules ImmoSuite. Thèmes suggérés automatiquement pour la prochaine réunion.</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px;" id="rd-analyse-grid"></div>
+          <div class="card">
+            <div class="card-title">📊 Thèmes Suggérés — Prochaine Réunion</div>
+            <div id="rd-themes-suggeres"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">📈 Historique des Réunions</div>
+            <div id="rd-historique"></div>
+          </div>
+        </div>
+
+      </div><!-- /page-reunion-direction -->
+
     </main>
   </div>
 </div>
@@ -7304,6 +7843,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     <button class="more-menu-item" onclick="goTo('rh-paie');closeMoreMenu()"><span class="mm-icon">💼</span>Paie</button>
     <button class="more-menu-item" onclick="goTo('rh-employes');closeMoreMenu()"><span class="mm-icon">👤</span>Employés</button>
     <button class="more-menu-item" onclick="goTo('parametres');closeMoreMenu()"><span class="mm-icon">⚙️</span>Paramètres</button>
+
+    <div style="font-size:10px;color:rgba(184,115,51,0.6);letter-spacing:1.5px;text-transform:uppercase;padding:6px 8px 2px;grid-column:span 2;font-weight:700;">🤝 Collaboration</div>
+    <button class="more-menu-item" onclick="goTo('reunion-direction');closeMoreMenu()"><span class="mm-icon">🏛️</span>Réunions</button>
+    <button class="more-menu-item" onclick="goTo('calendrier');closeMoreMenu()"><span class="mm-icon">📅</span>Calendrier</button>
   </div>
 </div>
 
@@ -8222,14 +8765,17 @@ var DATA = {
   amenageurs: [],
   conventions_amenagement: [],
   situations_amenagement: [],
-  avenants_amenagement: []
+  avenants_amenagement: [],
+  /* v108 — Module Reunions Direction */
+  reunions_direction: [],
+  actions_reunion: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 107; /* v107: stores aménagement foncier. Incrémenter UNIQUEMENT pour ajouter des stores (migration non destructive) */
+var DB_VERSION = 108; /* v108: stores reunions_direction, actions_reunion (migration additive, non destructive) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -8259,7 +8805,10 @@ var ALL_STORES = [
   'amenageurs',
   'conventions_amenagement',
   'situations_amenagement',
-  'avenants_amenagement'
+  'avenants_amenagement',
+  /* v108 — Module Reunions Direction */
+  'reunions_direction',
+  'actions_reunion'
 ];
 
 function initDB() {
@@ -8370,7 +8919,9 @@ async function loadAllData() {
   'historique_actions','workflow_configs',
   'evenements_calendrier','messages','conversations',
   'apporteurs','commissions',
-  'nomenclatures','prix_unitaire','devis_fournisseurs'
+  'nomenclatures','prix_unitaire','devis_fournisseurs',
+  /* v108 */
+  'reunions_direction','actions_reunion'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -25342,6 +25893,1140 @@ async function deleteConvAgr(id) {
   toast('Convention supprimee.', 'success');
 }
 /* FIN MODULE CONVENTIONS AGREMENT */
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODULE RÉUNIONS DIRECTION — ImmoSuite v14
+   Intégration complète : 5 étapes · PV · Plan d'action · 360°
+═══════════════════════════════════════════════════════════════════ */
+
+/* Stores v108 deja declares dans ALL_STORES et DATA — aucun patch necessaire */
+
+/* ── Constantes ── */
+var RD_AVATARS = ['#2563EB','#16A34A','#DC2626','#7C3AED','#D97706','#0891B2','#BE185D','#65A30D'];
+
+var RD_THEMES = {
+  foncier:       { label:'Foncier',         icon:'🗺️' },
+  juridique:     { label:'Juridique',       icon:'⚖️' },
+  programmes:    { label:'Programmes',      icon:'🏗️' },
+  travaux:       { label:'Travaux',         icon:'👷' },
+  commercial:    { label:'Commercial',      icon:'🤝' },
+  recouvrement:  { label:'Recouvrement',    icon:'💳' },
+  finance:       { label:'Finance',         icon:'💰' },
+  rh:            { label:'Ressources Hum.', icon:'👥' },
+  informatique:  { label:'IT',              icon:'💻' },
+  autre:         { label:'Autre',           icon:'📌' }
+};
+
+/* Indicateurs remontés depuis les modules ImmoSuite */
+function rdGetIndicateurs360() {
+  var ind = {};
+  /* Foncier */
+  var parcelles = DATA.parcelles || [];
+  var titres = parcelles.filter(function(p){ return p.statut === 'titre_foncier'; }).length;
+  ind.foncier = [
+    { label:'Parcelles', val:parcelles.length, alert: parcelles.length > 0 ? 'vert' : 'or' },
+    { label:'Avec TF', val:titres, alert: titres === parcelles.length ? 'vert' : 'or' },
+    { label:'Dossiers jur.', val:(DATA.dossiersJuridiques||[]).length, alert:'vert' }
+  ];
+  /* Commercial */
+  var leads = DATA.leads || [];
+  var leadsActifs = leads.filter(function(l){ return l.statut !== 'perdu'; }).length;
+  ind.commercial = [
+    { label:'Leads actifs', val:leadsActifs, alert: leadsActifs > 0 ? 'vert' : 'or' },
+    { label:'Total leads', val:leads.length, alert:'vert' },
+    { label:'Programmes', val:(DATA.programmes||[]).length, alert:'vert' }
+  ];
+  /* Recouvrement */
+  var versements = DATA.versements || [];
+  var impayesCount = (DATA.relances||[]).filter(function(r){ return r.statut !== 'regle'; }).length;
+  ind.recouvrement = [
+    { label:'Versements', val:versements.length, alert:'vert' },
+    { label:'Relances ouvertes', val:impayesCount, alert: impayesCount > 0 ? 'rouge' : 'vert' }
+  ];
+  /* Finance */
+  var ecritures = DATA.ecritures || [];
+  ind.finance = [
+    { label:'Écritures', val:ecritures.length, alert:'vert' },
+    { label:'Constructeurs', val:(DATA.constructeurs||[]).length, alert:'vert' }
+  ];
+  /* RH */
+  var employes = DATA.employes || [];
+  var pointages = DATA.pointages || [];
+  ind.rh = [
+    { label:'Employés actifs', val:employes.filter(function(e){ return e.statut !== 'inactif'; }).length, alert:'vert' },
+    { label:'Pointages (mois)', val:pointages.length, alert:'vert' }
+  ];
+  /* Travaux */
+  var chantiers = DATA.rapports_chantier || [];
+  ind.travaux = [
+    { label:'Rapports chantier', val:chantiers.length, alert: chantiers.length > 0 ? 'vert' : 'or' },
+    { label:'Conventions', val:(DATA.conventions||[]).length, alert:'vert' }
+  ];
+  /* Programmes */
+  var progs = DATA.programmes || [];
+  ind.programmes = [
+    { label:'Programmes actifs', val:progs.length, alert: progs.length > 0 ? 'vert' : 'or' },
+    { label:'Lots', val:(DATA.lots||[]).length, alert:'vert' }
+  ];
+  /* Juridique */
+  var dosj = DATA.dossiersJuridiques || [];
+  ind.juridique = [
+    { label:'Dossiers', val:dosj.length, alert:'vert' },
+    { label:'Agréments', val:(DATA.agrement_promoteur||[]).length, alert: (DATA.agrement_promoteur||[]).length > 0 ? 'vert' : 'or' }
+  ];
+  /* IT */
+  ind.informatique = [{ label:'Utilisateurs', val:(DATA.users||[]).length, alert:'vert' }];
+  ind.autre = [{ label:'Paramètres', val:'—', alert:'vert' }];
+  return ind;
+}
+
+/* ── État local module ── */
+var RD_STATE = {
+  selectedThemes: [],
+  currentParticipants: [],
+  currentODJ: [],
+  currentDecisions: [],
+  currentActionsLive: [],
+  chronoInterval: null,
+  chronoStart: null,
+  chronoTotal: 0
+};
+
+/* ─────────────────────────────────────────────────
+   UTILS LOCAUX (réutilisent uid/today/toast d'ImmoSuite)
+──────────────────────────────────────────────────── */
+function rdNow() { return new Date().toISOString(); }
+function rdDateShort(d) { if (!d) return '—'; var p = (d.split('T')[0]||d).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function rdDateHeure(d) {
+  if (!d) return '—';
+  try {
+    var dt = new Date(d);
+    return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+           + ' à ' + dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) { return d; }
+}
+function rdFmtDuree(min) { if (!min) return '—'; var h=Math.floor(min/60),m=min%60; return h>0?h+'h'+String(m).padStart(2,'0'):m+' min'; }
+function rdIsRetard(delai) { return delai && delai < today(); }
+function rdEscape(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ─────────────────────────────────────────────────
+   LOAD DATA
+──────────────────────────────────────────────────── */
+async function rdLoadData() {
+  try {
+    var r = await dbGetAll('reunions_direction');
+    DATA.reunions_direction = r && r.length ? r : [];
+    var a = await dbGetAll('actions_reunion');
+    DATA.actions_reunion = a && a.length ? a : [];
+  } catch(e) {
+    DATA.reunions_direction = DATA.reunions_direction || [];
+    DATA.actions_reunion    = DATA.actions_reunion    || [];
+  }
+  rdUpdateBadge();
+}
+
+function rdUpdateBadge() {
+  var retard = (DATA.actions_reunion||[]).filter(function(a){ return a.statut !== 'done' && rdIsRetard(a.delai); }).length;
+  var badge = document.getElementById('badge-reunions-retard');
+  if (badge) { badge.textContent = retard; badge.style.display = retard > 0 ? '' : 'none'; }
+}
+
+/* ─────────────────────────────────────────────────
+   NAVIGATION / INIT PAGE
+──────────────────────────────────────────────────── */
+/* Patch goTo pour charger le module */
+(function() {
+  var _orig = goTo;
+  goTo = function(page) {
+    _orig(page);
+    if (page === 'reunion-direction') rdInitPage();
+  };
+})();
+
+/* Patch switchTab pour les sous-onglets du module */
+(function() {
+  var _orig = switchTab;
+  switchTab = function(ctx, tab) {
+    if (ctx === 'rd') { rdSwitchMainTab(tab); return; }
+    if (ctx === 'rdreal') { rdSwitchSubTab('rdreal', tab); return; }
+    if (ctx === 'rdpv')   { rdSwitchSubTab('rdpv', tab); return; }
+    _orig(ctx, tab);
+  };
+})();
+
+function rdSwitchMainTab(tab) {
+  document.querySelectorAll('#rd-main-tabnav .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('#page-reunion-direction > .tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  var btn = document.querySelector('#rd-main-tabnav .tab-btn[onclick*="\'' + tab + '\'"]');
+  if (btn) btn.classList.add('active');
+  var pane = document.getElementById('tab-rd-' + tab);
+  if (pane) pane.classList.add('active');
+  if (tab === 'dashboard')   rdRenderDashboard();
+  if (tab === 'convocation') rdPeuplerSelect('rd-cv-select');
+  if (tab === 'preparation') rdPeuplerSelect('rd-prep-select');
+  if (tab === 'realisation') rdPeuplerSelect('rd-real-select');
+  if (tab === 'pv')          rdPeuplerSelect('rd-pv-select', true);
+  if (tab === 'diffusion')   rdPeuplerSelect('rd-diff-select', true);
+  if (tab === 'suivi')       rdRenderSuivi();
+  if (tab === 'analyse360')  rdRenderAnalyse360();
+}
+
+function rdSwitchSubTab(prefix, tab) {
+  var container = prefix === 'rdreal' ? document.getElementById('rd-real-content') : document.getElementById('rd-pv-content');
+  if (!container) return;
+  container.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  container.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('active'); });
+  var pane = document.getElementById('tab-' + prefix + '-' + tab);
+  if (pane) pane.classList.add('active');
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+  if (prefix === 'rdpv' && tab === 'apercu') {
+    var id = document.getElementById('rd-pv-select').value;
+    var r = (DATA.reunions_direction||[]).find(function(x){ return x.id === id; });
+    if (r) rdGenererApercu(r);
+  }
+}
+
+async function rdInitPage() {
+  await rdLoadData();
+  rdRenderDashboard();
+  var pl = document.getElementById('rd-pl-animateur');
+  if (pl && !pl.value && DATA.params && DATA.params.societe) {
+    /* pré-remplir société */
+  }
+}
+
+/* ─────────────────────────────────────────────────
+   DASHBOARD
+──────────────────────────────────────────────────── */
+function rdRenderDashboard() {
+  var reunions = DATA.reunions_direction || [];
+  var actions  = DATA.actions_reunion   || [];
+  var planif  = reunions.filter(function(r){ return r.statut === 'planifiee'; }).length;
+  var tenues  = reunions.filter(function(r){ return r.statut === 'tenue'; }).length;
+  var encours = actions.filter(function(a){ return a.statut !== 'done' && !rdIsRetard(a.delai); }).length;
+  var retard  = actions.filter(function(a){ return a.statut !== 'done' && rdIsRetard(a.delai); }).length;
+  document.getElementById('rd-kpi-planifiees').textContent = planif;
+  document.getElementById('rd-kpi-tenues').textContent     = tenues;
+  document.getElementById('rd-kpi-en-cours').textContent   = encours;
+  document.getElementById('rd-kpi-retard').textContent     = retard;
+
+  /* Prochaines */
+  var el1 = document.getElementById('rd-list-prochaines');
+  var proch = reunions.filter(function(r){ return r.statut==='planifiee'; }).sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); }).slice(0,4);
+  el1.innerHTML = proch.length ? proch.map(function(r){
+    return '<div class="rd-reunion-card planifiee" onclick="goTo(\'reunion-direction\')">'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">'
+      +'<div class="rd-reunion-icon">📅</div>'
+      +'<div><div class="rd-reunion-title">'+rdEscape(r.titre)+'</div>'
+      +'<div class="rd-reunion-meta">'+rdDateHeure(r.date)+' · '+(r.lieu||'—')+' · 🎙 '+rdEscape(r.animateur)+'</div></div></div>'
+      +'<div class="rd-reunion-footer">'
+      +(r.themes||[]).slice(0,4).map(function(t){ return RD_THEMES[t]?'<span class="badge badge-bleu">'+RD_THEMES[t].icon+' '+RD_THEMES[t].label+'</span>':''; }).join('')
+      +'<span class="badge badge-neutre" style="margin-left:auto;">'+(r.participants||[]).length+' participants</span>'
+      +'</div></div>';
+  }).join('') : '<div style="color:var(--dim);font-size:13px;padding:10px 0;">Aucune réunion planifiée. <button class="btn btn-sm btn-secondary" onclick="switchTab(\'rd\',\'planifier\')" style="margin-left:8px;">Planifier →</button></div>';
+
+  /* Tenues */
+  var el2 = document.getElementById('rd-list-tenues');
+  var ten = reunions.filter(function(r){ return r.statut==='tenue'; }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); }).slice(0,3);
+  el2.innerHTML = ten.length ? ten.map(function(r){
+    var ac = (r.actions||[]).length, doneC = (r.actions||[]).filter(function(a){ return a.statut==='done'; }).length;
+    return '<div class="rd-reunion-card tenue">'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">'
+      +'<div class="rd-reunion-icon" style="background:linear-gradient(135deg,var(--vert),#16A34A);">✅</div>'
+      +'<div><div class="rd-reunion-title">'+rdEscape(r.titre)+'</div>'
+      +'<div class="rd-reunion-meta">'+rdDateHeure(r.date)+' · '+(r.pv_numero||'PV à générer')+'</div></div></div>'
+      +'<div class="rd-reunion-footer"><span class="badge badge-vert">'+doneC+'/'+ac+' actions réalisées</span>'
+      +(r.prochaine_date?'<span class="badge badge-bleu" style="margin-left:auto;">Prochain '+rdDateShort(r.prochaine_date)+'</span>':'')
+      +'</div></div>';
+  }).join('') : '<div style="color:var(--dim);font-size:13px;padding:10px 0;">Aucune réunion tenue.</div>';
+
+  /* Critiques */
+  var el3 = document.getElementById('rd-list-critiques');
+  var crit = actions.filter(function(a){ return a.statut!=='done'&&rdIsRetard(a.delai); }).sort(function(a,b){ return (a.delai||'').localeCompare(b.delai||''); }).slice(0,5);
+  el3.innerHTML = crit.length ? crit.map(function(a){
+    return '<div class="rd-action-item retard">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="font-size:16px;flex-shrink:0;">🔴</span>'
+      +'<span style="flex:1;font-size:13px;">'+rdEscape(a.titre)+'</span></div>'
+      +'<div class="rd-action-meta"><span class="rd-meta-pill">👤 '+rdEscape(a.responsable)+'</span>'
+      +'<span class="rd-meta-pill" style="border-color:var(--rouge);color:var(--rouge);">📅 Échu '+rdDateShort(a.delai)+'</span>'
+      +(RD_THEMES[a.theme]?'<span class="rd-meta-pill">'+RD_THEMES[a.theme].icon+' '+RD_THEMES[a.theme].label+'</span>':'')
+      +'</div></div>';
+  }).join('') : '<div style="color:var(--dim);font-size:13px;padding:10px 0;">✅ Aucune action en retard.</div>';
+
+  rdUpdateBadge();
+}
+
+/* ─────────────────────────────────────────────────
+   PLANIFICATION
+──────────────────────────────────────────────────── */
+function rdOpenPlanModal() { switchTab('rd','planifier'); }
+
+function rdToggleTheme(el) {
+  var t = el.dataset.theme;
+  var idx = RD_STATE.selectedThemes.indexOf(t);
+  if (idx >= 0) { RD_STATE.selectedThemes.splice(idx,1); el.classList.remove('selected'); }
+  else           { RD_STATE.selectedThemes.push(t);       el.classList.add('selected'); }
+}
+
+function rdAjouterParticipant() {
+  var nom = document.getElementById('rd-pl-p-nom').value.trim();
+  var role = document.getElementById('rd-pl-p-role').value.trim();
+  var contact = document.getElementById('rd-pl-p-contact').value.trim();
+  if (!nom) { toast('Saisir le nom du participant.','error'); return; }
+  RD_STATE.currentParticipants.push({ id:uid(), nom:nom, role:role||'Participant', contact:contact, confirme:false, present:false });
+  rdRenderParticipantChips();
+  ['rd-pl-p-nom','rd-pl-p-role','rd-pl-p-contact'].forEach(function(id){ document.getElementById(id).value=''; });
+}
+
+function rdRenderParticipantChips() {
+  var el = document.getElementById('rd-participant-chips');
+  if (!el) return;
+  el.innerHTML = RD_STATE.currentParticipants.map(function(p,i){
+    return '<span class="rd-participant-chip">'
+      +'<span class="rd-avatar" style="background:'+RD_AVATARS[i%RD_AVATARS.length]+';">'+p.nom.charAt(0).toUpperCase()+'</span>'
+      +rdEscape(p.nom)+' <small style="color:var(--dim);">· '+rdEscape(p.role)+'</small>'
+      +'<span class="rd-remove" onclick="rdRetirerParticipant(\''+p.id+'\')">×</span>'
+      +'</span>';
+  }).join('');
+}
+
+function rdRetirerParticipant(id) {
+  RD_STATE.currentParticipants = RD_STATE.currentParticipants.filter(function(p){ return p.id !== id; });
+  rdRenderParticipantChips();
+}
+
+async function rdSauvegarderReunion() {
+  var titre = document.getElementById('rd-pl-titre').value.trim();
+  var date  = document.getElementById('rd-pl-date').value;
+  var anim  = document.getElementById('rd-pl-animateur').value.trim();
+  if (!titre || !date || !anim) { toast('Titre, date et animateur obligatoires.','error'); return; }
+  if (!RD_STATE.currentParticipants.length) { toast('Ajouter au moins un participant.','error'); return; }
+  if (!RD_STATE.selectedThemes.length) { toast('Sélectionner au moins un thème 360°.','error'); return; }
+
+  var r = {
+    id: uid(),
+    titre: titre,
+    type: document.getElementById('rd-pl-type').value,
+    periodicite: document.getElementById('rd-pl-periodicite').value,
+    date: date,
+    duree: parseInt(document.getElementById('rd-pl-duree').value)||90,
+    lieu: document.getElementById('rd-pl-lieu').value.trim(),
+    animateur: anim,
+    objectifs: document.getElementById('rd-pl-objectifs').value.trim(),
+    themes: RD_STATE.selectedThemes.slice(),
+    participants: JSON.parse(JSON.stringify(RD_STATE.currentParticipants)),
+    docs_prepa: document.getElementById('rd-pl-docs').value.trim(),
+    statut: 'planifiee',
+    odj: [], decisions: [], actions: [],
+    created_at: rdNow()
+  };
+
+  DATA.reunions_direction.push(r);
+  await dbPut('reunions_direction', r);
+
+  rdResetPlanForm();
+  rdUpdateBadge();
+  toast('✅ Réunion planifiée ! Générer la convocation.','success');
+  rdPeuplerSelect('rd-cv-select');
+  switchTab('rd','convocation');
+  document.getElementById('rd-cv-select').value = r.id;
+  rdChargerConvocation();
+}
+
+function rdResetPlanForm() {
+  RD_STATE.currentParticipants = [];
+  RD_STATE.selectedThemes = [];
+  document.getElementById('rd-participant-chips').innerHTML = '';
+  document.querySelectorAll('#rd-theme-chips .rd-chip').forEach(function(c){ c.classList.remove('selected'); });
+  ['rd-pl-titre','rd-pl-date','rd-pl-animateur','rd-pl-objectifs','rd-pl-docs','rd-pl-lieu'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
+  });
+  var du = document.getElementById('rd-pl-duree'); if(du) du.value = 90;
+}
+
+/* ─────────────────────────────────────────────────
+   CONVOCATION
+──────────────────────────────────────────────────── */
+function rdPeuplerSelect(selectId, tenueSeulement) {
+  var el = document.getElementById(selectId);
+  if (!el) return;
+  var list = tenueSeulement
+    ? (DATA.reunions_direction||[]).filter(function(r){ return r.statut==='tenue'; })
+    : (DATA.reunions_direction||[]);
+  list = list.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  el.innerHTML = '<option value="">— Choisir une réunion —</option>'
+    + list.map(function(r){
+        return '<option value="'+r.id+'">'+rdDateHeure(r.date)+' · '+rdEscape(r.titre)+' ['+r.statut+']</option>';
+      }).join('');
+}
+
+function rdGenererMsgConvocation(r) {
+  var themes = (r.themes||[]).map(function(t){ return RD_THEMES[t]?RD_THEMES[t].icon+' '+RD_THEMES[t].label:t; }).join(', ');
+  var societe = (DATA.params && DATA.params.societe) || 'ImmoSuite';
+  return '🏢 *'+societe+' — Réunion de Direction*\n\n'
+    +'📋 *CONVOCATION*\n\n'
+    +'📌 *Objet :* '+r.titre+'\n'
+    +'📅 *Date :* '+rdDateHeure(r.date)+'\n'
+    +'⏱ *Durée :* '+rdFmtDuree(r.duree)+'\n'
+    +'📍 *Lieu :* '+(r.lieu||'Salle de réunion Direction')+'\n'
+    +'🎙 *Président :* '+r.animateur+'\n\n'
+    +'🔍 *Ordre du jour (thèmes) :*\n'
+    +(r.themes||[]).map(function(t){ return RD_THEMES[t]?'• '+RD_THEMES[t].icon+' '+RD_THEMES[t].label:'• '+t; }).join('\n')+'\n\n'
+    +'👥 *Participants convoqués :*\n'
+    +(r.participants||[]).map(function(p){ return '• '+p.nom+' ('+p.role+')'+(p.contact?' — '+p.contact:''); }).join('\n')+'\n\n'
+    +'📎 Merci de confirmer votre présence par retour de message.\n'
+    +'_— Direction Générale '+societe+'_';
+}
+
+function rdChargerConvocation() {
+  var id = document.getElementById('rd-cv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id === id; });
+  document.getElementById('rd-cv-content').style.display = r ? '' : 'none';
+  if (!r) return;
+  document.getElementById('rd-cv-message').value = rdGenererMsgConvocation(r);
+  rdRenderParticipantsConvoc(r);
+}
+
+function rdRenderParticipantsConvoc(r) {
+  var el = document.getElementById('rd-cv-participants');
+  el.innerHTML = (r.participants||[]).map(function(p,i){
+    return '<div class="rd-diff-item">'
+      +'<div class="rd-diff-avatar" style="background:'+RD_AVATARS[i%RD_AVATARS.length]+';">'+p.nom.charAt(0)+'</div>'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+rdEscape(p.nom)+'</div>'
+      +'<div style="font-size:11px;color:var(--dim);">'+rdEscape(p.role)+(p.contact?' · '+rdEscape(p.contact):'')+'</div></div>'
+      +'<button class="btn btn-sm '+(p.confirme?'btn-success':'btn-secondary')+'" onclick="rdToggleConfirmation(\''+r.id+'\',\''+p.id+'\');">'
+      +(p.confirme?'✅ Confirmé':'⏳ En attente')+'</button></div>';
+  }).join('');
+}
+
+async function rdToggleConfirmation(reunionId, participantId) {
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===reunionId; });
+  if (!r) return;
+  var p = (r.participants||[]).find(function(x){ return x.id===participantId; });
+  if (!p) return;
+  p.confirme = !p.confirme;
+  await dbPut('reunions_direction', r);
+  rdRenderParticipantsConvoc(r);
+  toast(p.confirme?'✅ '+p.nom+' confirmé':p.nom+' : en attente','info');
+}
+
+async function rdTousConfirmes() {
+  var id = document.getElementById('rd-cv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  (r.participants||[]).forEach(function(p){ p.confirme=true; });
+  await dbPut('reunions_direction', r);
+  rdRenderParticipantsConvoc(r);
+  toast('✅ Tous participants confirmés','success');
+}
+
+async function rdRelancerAbsents() {
+  var id = document.getElementById('rd-cv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  var absents = (r.participants||[]).filter(function(p){ return !p.confirme; });
+  if (!absents.length) { toast('Tous ont confirmé !','success'); return; }
+  var societe = (DATA.params&&DATA.params.societe)||'ImmoSuite';
+  var msg = '🔔 *RELANCE — Réunion Direction*\n_'+societe+'_\n\n'
+    +'La réunion _'+r.titre+'_ est prévue le '+rdDateHeure(r.date)+'.\n\n'
+    +'Merci de confirmer votre présence :\n'
+    +absents.map(function(p){ return '• '+p.nom+(p.contact?' ('+p.contact+')':''); }).join('\n')
+    +'\n\n_— Direction Générale_';
+  document.getElementById('rd-cv-message').value = msg;
+  toast('📱 Message relance généré','info');
+}
+
+function rdEnvoyerWhatsApp(fieldId) {
+  var msg = document.getElementById(fieldId).value;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function rdCopier(fieldId) {
+  var msg = document.getElementById(fieldId).value;
+  navigator.clipboard && navigator.clipboard.writeText(msg).then(function(){ toast('✅ Copié !','success'); });
+}
+
+/* ─────────────────────────────────────────────────
+   PRÉPARATION
+──────────────────────────────────────────────────── */
+function rdChargerPreparation() {
+  var id = document.getElementById('rd-prep-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  document.getElementById('rd-prep-content').style.display = r ? '' : 'none';
+  if (!r) return;
+  RD_STATE.currentODJ = r.odj ? JSON.parse(JSON.stringify(r.odj)) : [];
+  /* Responsables */
+  var sel = document.getElementById('rd-odj-resp');
+  sel.innerHTML = '<option value="">Responsable</option>'
+    +(r.participants||[]).map(function(p){ return '<option value="'+p.id+'">'+rdEscape(p.nom)+'</option>'; }).join('');
+  rdRenderODJ();
+  /* Indicateurs */
+  var ind360 = rdGetIndicateurs360();
+  var indEl = document.getElementById('rd-prep-indicateurs');
+  indEl.innerHTML = (r.themes||[]).map(function(t){
+    var inds = ind360[t] || [];
+    return '<div style="margin-bottom:12px;">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;margin-bottom:6px;">'
+      +(RD_THEMES[t]?RD_THEMES[t].icon+' '+RD_THEMES[t].label:t)+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      +inds.map(function(ind){
+          var c = ind.alert==='rouge'?'var(--rouge)':ind.alert==='or'?'var(--or)':'var(--vert)';
+          return '<div style="background:#F4F6F9;border:1px solid var(--bord);border-left:3px solid '+c+';border-radius:8px;padding:8px 12px;min-width:90px;">'
+            +'<div style="font-size:10px;color:var(--dim);">'+rdEscape(ind.label)+'</div>'
+            +'<div style="font-size:15px;font-weight:700;color:'+c+';">'+ind.val+'</div></div>';
+        }).join('')+'</div></div>';
+  }).join('') || '<div style="color:var(--dim);font-size:12px;">Aucun thème sélectionné.</div>';
+  if (r.docs_prepa) document.getElementById('rd-prep-docs').value = r.docs_prepa;
+  if (r.notes_prepa) document.getElementById('rd-prep-notes').value = r.notes_prepa;
+}
+
+function rdAjouterODJ() {
+  var txt = document.getElementById('rd-odj-input').value.trim();
+  if (!txt) return;
+  var duree = parseInt(document.getElementById('rd-odj-duree').value)||15;
+  var sel = document.getElementById('rd-odj-resp');
+  var respId=sel.value, respNom=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'';
+  RD_STATE.currentODJ.push({ id:uid(), titre:txt, duree:duree, responsable_id:respId, responsable:respNom, traite:false });
+  document.getElementById('rd-odj-input').value='';
+  document.getElementById('rd-odj-duree').value='';
+  rdRenderODJ();
+}
+
+function rdRenderODJ() {
+  var el = document.getElementById('rd-odj-list');
+  if (!el) return;
+  el.innerHTML = RD_STATE.currentODJ.length
+    ? RD_STATE.currentODJ.map(function(p,i){
+        return '<div class="rd-action-item" style="border-left-color:var(--bleu);">'
+          +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+          +'<span style="font-size:10px;font-weight:700;color:var(--or);min-width:22px;">'+(i+1)+'.</span>'
+          +'<span style="flex:1;font-size:13px;">'+rdEscape(p.titre)+'</span>'
+          +'<button class="btn btn-sm btn-danger btn-icon" onclick="RD_STATE.currentODJ.splice('+i+',1);rdRenderODJ();">×</button></div>'
+          +'<div class="rd-action-meta"><span class="rd-meta-pill">⏱ '+p.duree+' min</span>'
+          +(p.responsable?'<span class="rd-meta-pill">👤 '+rdEscape(p.responsable)+'</span>':'')+'</div></div>';
+      }).join('')
+    : '<div style="color:var(--dim);font-size:12px;padding:6px 0;">Aucun point ajouté.</div>';
+}
+
+async function rdSauvegarderPreparation() {
+  var id = document.getElementById('rd-prep-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  r.odj = JSON.parse(JSON.stringify(RD_STATE.currentODJ));
+  r.docs_prepa = document.getElementById('rd-prep-docs').value;
+  r.notes_prepa = document.getElementById('rd-prep-notes').value;
+  await dbPut('reunions_direction', r);
+  toast('✅ Préparation sauvegardée','success');
+}
+
+/* ─────────────────────────────────────────────────
+   RÉALISATION
+──────────────────────────────────────────────────── */
+function rdChargerRealisation() {
+  var id = document.getElementById('rd-real-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  document.getElementById('rd-real-content').style.display = r ? '' : 'none';
+  if (!r) return;
+  RD_STATE.currentDecisions   = r.decisions   ? JSON.parse(JSON.stringify(r.decisions))   : [];
+  RD_STATE.currentActionsLive = r.actions ? JSON.parse(JSON.stringify(r.actions)) : [];
+  /* Présence */
+  rdRenderPresence(r);
+  /* ODJ */
+  var odpEl = document.getElementById('rd-real-odj');
+  odpEl.innerHTML = (r.odj||[]).length
+    ? (r.odj||[]).map(function(p,i){
+        return '<div class="rd-action-item" style="border-left-color:'+(p.traite?'var(--vert)':'var(--bleu)')+';">'
+          +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+          +'<span style="font-size:10px;font-weight:700;color:var(--or);min-width:22px;">'+(i+1)+'.</span>'
+          +'<span style="flex:1;font-size:13px;">'+rdEscape(p.titre)+'</span>'
+          +'<button class="btn btn-sm '+(p.traite?'btn-success':'btn-secondary')+'" onclick="rdMarquerTraite(\''+id+'\',\''+p.id+'\')">'
+          +(p.traite?'✅ Traité':'Marquer Traité')+'</button></div>'
+          +'<div class="rd-action-meta"><span class="rd-meta-pill">⏱ '+p.duree+' min</span>'
+          +(p.responsable?'<span class="rd-meta-pill">👤 '+rdEscape(p.responsable)+'</span>':'')+'</div></div>';
+      }).join('')
+    : '<div style="color:var(--dim);font-size:12px;">Aucun point ODJ. Compléter la préparation d\'abord.</div>';
+  /* Notes */
+  if (r.notes_seance) document.getElementById('rd-notes-seance').value = r.notes_seance;
+  rdRenderDecisionsLive();
+  rdRenderActionsLive();
+  /* Responsables select */
+  var sel = document.getElementById('rd-act-resp');
+  sel.innerHTML='<option value="">Responsable *</option>'
+    +(r.participants||[]).map(function(p){ return '<option value="'+p.id+'">'+rdEscape(p.nom)+'</option>'; }).join('');
+}
+
+function rdRenderPresence(r) {
+  var el = document.getElementById('rd-real-presence');
+  el.innerHTML = (r.participants||[]).map(function(p,i){
+    return '<div class="rd-diff-item" style="margin-bottom:4px;">'
+      +'<div class="rd-diff-avatar" style="background:'+RD_AVATARS[i%RD_AVATARS.length]+';">'+p.nom.charAt(0)+'</div>'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+rdEscape(p.nom)+'</div>'
+      +'<div style="font-size:11px;color:var(--dim);">'+rdEscape(p.role)+'</div></div>'
+      +'<button class="btn btn-sm '+(p.present?'btn-success':'btn-secondary')+'" onclick="rdTogglePresence(\''+r.id+'\',\''+p.id+'\')">'
+      +(p.present?'✅ Présent':'⬜ Absent')+'</button></div>';
+  }).join('');
+  var total = (r.participants||[]).length;
+  var pres = (r.participants||[]).filter(function(p){ return p.present; }).length;
+  document.getElementById('rd-presence-count').textContent = pres+'/'+total+' présents';
+}
+
+async function rdTogglePresence(reunionId, participantId) {
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===reunionId; });
+  if (!r) return;
+  var p = (r.participants||[]).find(function(x){ return x.id===participantId; });
+  if (!p) return;
+  p.present = !p.present;
+  await dbPut('reunions_direction', r);
+  rdRenderPresence(r);
+}
+
+async function rdMarquerTraite(reunionId, pointId) {
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===reunionId; });
+  if (!r) return;
+  var p = (r.odj||[]).find(function(x){ return x.id===pointId; });
+  if (p) p.traite = !p.traite;
+  await dbPut('reunions_direction', r);
+  rdChargerRealisation();
+}
+
+/* Chrono */
+function rdDemarrerChrono() {
+  RD_STATE.chronoStart = Date.now() - RD_STATE.chronoTotal;
+  RD_STATE.chronoInterval = setInterval(function(){
+    RD_STATE.chronoTotal = Date.now() - RD_STATE.chronoStart;
+    var s=Math.floor(RD_STATE.chronoTotal/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;
+    document.getElementById('rd-chrono').textContent = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(sc).padStart(2,'0');
+  },1000);
+  document.getElementById('rd-btn-start').style.display='none';
+  document.getElementById('rd-btn-stop').style.display='';
+}
+function rdArreterChrono() {
+  clearInterval(RD_STATE.chronoInterval);
+  document.getElementById('rd-btn-start').style.display='';
+  document.getElementById('rd-btn-stop').style.display='none';
+}
+
+async function rdOuvrirSeance() {
+  var id = document.getElementById('rd-real-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  r.statut = 'en_cours';
+  r.heure_ouverture = rdNow();
+  await dbPut('reunions_direction', r);
+  toast('🔔 Séance ouverte — '+rdDateHeure(r.heure_ouverture),'success');
+}
+
+function rdAjouterDecision() {
+  var txt = document.getElementById('rd-decision-input').value.trim();
+  if (!txt) return;
+  RD_STATE.currentDecisions.push({ id:uid(), texte:txt, created_at:rdNow() });
+  document.getElementById('rd-decision-input').value='';
+  rdRenderDecisionsLive();
+}
+
+function rdRenderDecisionsLive() {
+  var el = document.getElementById('rd-decisions-live');
+  if (!el) return;
+  el.innerHTML = RD_STATE.currentDecisions.map(function(d,i){
+    return '<div class="rd-action-item" style="border-left-color:var(--violet);margin-bottom:6px;">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="font-size:10px;font-weight:700;color:var(--violet);">D'+(i+1)+'</span>'
+      +'<span style="flex:1;font-size:13px;">'+rdEscape(d.texte)+'</span>'
+      +'<button class="btn btn-sm btn-danger btn-icon" onclick="RD_STATE.currentDecisions.splice('+i+',1);rdRenderDecisionsLive();">×</button>'
+      +'</div></div>';
+  }).join('') || '<div style="color:var(--dim);font-size:12px;padding:6px 0;">Aucune décision.</div>';
+}
+
+function rdAjouterActionLive() {
+  var titre = document.getElementById('rd-act-titre').value.trim();
+  var sel = document.getElementById('rd-act-resp');
+  var respId=sel.value, respNom=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'';
+  var delai = document.getElementById('rd-act-delai').value;
+  var obs   = document.getElementById('rd-act-obs').value.trim();
+  if (!titre||!respId) { toast('Titre et responsable obligatoires.','error'); return; }
+  RD_STATE.currentActionsLive.push({ id:uid(),titre:titre,responsable_id:respId,responsable:respNom,delai:delai,observations:obs,statut:'en_cours',theme:'autre',priorite:'moyenne',created_at:rdNow() });
+  ['rd-act-titre','rd-act-delai','rd-act-obs'].forEach(function(id){ document.getElementById(id).value=''; }); sel.value='';
+  rdRenderActionsLive();
+  toast('⚡ Action ajoutée','success');
+}
+
+function rdRenderActionsLive() {
+  var el = document.getElementById('rd-actions-live');
+  if (!el) return;
+  el.innerHTML = RD_STATE.currentActionsLive.map(function(a,i){
+    return '<div class="rd-action-item" style="margin-bottom:6px;">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="font-size:10px;font-weight:700;color:var(--or);">A'+(i+1)+'</span>'
+      +'<span style="flex:1;font-size:13px;">'+rdEscape(a.titre)+'</span>'
+      +'<button class="btn btn-sm btn-danger btn-icon" onclick="RD_STATE.currentActionsLive.splice('+i+',1);rdRenderActionsLive();">×</button></div>'
+      +'<div class="rd-action-meta"><span class="rd-meta-pill">👤 '+rdEscape(a.responsable)+'</span>'
+      +(a.delai?'<span class="rd-meta-pill">📅 '+rdDateShort(a.delai)+'</span>':'')+'</div></div>';
+  }).join('') || '<div style="color:var(--dim);font-size:12px;padding:6px 0;">Aucune action.</div>';
+}
+
+async function rdSauvegarderNotes() {
+  var id = document.getElementById('rd-real-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  r.notes_seance = document.getElementById('rd-notes-seance').value;
+  r.decisions = JSON.parse(JSON.stringify(RD_STATE.currentDecisions));
+  r.actions   = JSON.parse(JSON.stringify(RD_STATE.currentActionsLive));
+  await dbPut('reunions_direction', r);
+  toast('✅ Notes sauvegardées','success');
+}
+
+async function rdCloturerSeance() {
+  var id = document.getElementById('rd-real-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  if (!confirm('Clôturer la séance et générer le PV ?')) return;
+  rdArreterChrono();
+  r.statut = 'tenue';
+  r.heure_cloture = rdNow();
+  r.notes_seance = document.getElementById('rd-notes-seance').value;
+  r.decisions = JSON.parse(JSON.stringify(RD_STATE.currentDecisions));
+  r.actions   = JSON.parse(JSON.stringify(RD_STATE.currentActionsLive));
+  await dbPut('reunions_direction', r);
+  /* Persister actions dans store global */
+  for (var i=0;i<RD_STATE.currentActionsLive.length;i++) {
+    var a = Object.assign({}, RD_STATE.currentActionsLive[i], { reunion_id:id, reunion_titre:r.titre });
+    var idx2 = DATA.actions_reunion.findIndex(function(x){ return x.id===a.id; });
+    if (idx2>=0) DATA.actions_reunion[idx2]=a; else DATA.actions_reunion.push(a);
+    await dbPut('actions_reunion', a);
+  }
+  rdUpdateBadge();
+  toast('🔒 Séance clôturée ! PV généré.','success');
+  rdPeuplerSelect('rd-pv-select', true);
+  switchTab('rd','pv');
+  document.getElementById('rd-pv-select').value = id;
+  rdChargerPV();
+}
+
+/* ─────────────────────────────────────────────────
+   PV
+──────────────────────────────────────────────────── */
+function rdChargerPV() {
+  var id = document.getElementById('rd-pv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  document.getElementById('rd-pv-content').style.display = r ? '' : 'none';
+  if (!r) return;
+  /* Numéro auto */
+  if (!document.getElementById('rd-pv-numero').value) {
+    var n = String((DATA.reunions_direction||[]).filter(function(x){ return x.statut==='tenue'; }).length).padStart(3,'0');
+    document.getElementById('rd-pv-numero').value = 'PV-'+new Date().getFullYear()+'-'+n;
+  }
+  document.getElementById('rd-pv-date').value = today();
+  document.getElementById('rd-pv-objet').value = r.titre;
+  if (r.notes_seance) document.getElementById('rd-pv-resume').value = r.notes_seance;
+  /* Présence */
+  var pres = (r.participants||[]).filter(function(p){ return p.present; });
+  var abs  = (r.participants||[]).filter(function(p){ return !p.present; });
+  var presEl = document.getElementById('rd-pv-presence');
+  presEl.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +'<div><div style="font-size:11px;font-weight:700;color:var(--vert);margin-bottom:6px;">✅ PRÉSENTS ('+pres.length+')</div>'
+    +pres.map(function(p,i){ return '<div class="rd-diff-item" style="margin-bottom:4px;"><div class="rd-diff-avatar" style="background:var(--vert);font-size:11px;">✓</div><div><div style="font-size:13px;font-weight:600;">'+rdEscape(p.nom)+'</div><div style="font-size:11px;color:var(--dim);">'+rdEscape(p.role)+'</div></div></div>'; }).join('')+'</div>'
+    +'<div><div style="font-size:11px;font-weight:700;color:var(--rouge);margin-bottom:6px;">❌ ABSENTS ('+abs.length+')</div>'
+    +abs.map(function(p,i){ return '<div class="rd-diff-item" style="margin-bottom:4px;"><div class="rd-diff-avatar" style="background:var(--rouge);font-size:11px;">✗</div><div><div style="font-size:13px;font-weight:600;">'+rdEscape(p.nom)+'</div><div style="font-size:11px;color:var(--dim);">'+rdEscape(p.role)+'</div></div></div>'; }).join('')+'</div>'
+    +'</div>';
+  /* Décisions */
+  rdRenderDecisionsPV(r);
+  /* Plan action */
+  rdRenderPlanActionPV(r);
+  /* Responsables */
+  var sel = document.getElementById('rd-pva-resp');
+  sel.innerHTML='<option value="">Responsable *</option>'
+    +(r.participants||[]).map(function(p){ return '<option value="'+p.id+'">'+rdEscape(p.nom)+'</option>'; }).join('');
+  /* Aperçu */
+  rdGenererApercu(r);
+}
+
+function rdRenderDecisionsPV(r) {
+  var el = document.getElementById('rd-pv-decisions');
+  if (!el) return;
+  var decis = r.decisions||[];
+  el.innerHTML = decis.length
+    ? decis.map(function(d,i){
+        return '<div class="rd-action-item" style="border-left-color:var(--violet);margin-bottom:6px;">'
+          +'<div style="display:flex;gap:8px;"><span style="font-size:10px;font-weight:700;color:var(--violet);">D'+(i+1)+'</span>'
+          +'<span style="font-size:13px;">'+rdEscape(d.texte)+'</span></div></div>';
+      }).join('')
+    : '<div style="color:var(--dim);font-size:12px;padding:6px 0;">Aucune décision. Ajouter ci-dessous.</div>';
+}
+
+function rdAjouterDecisionPV() {
+  var id = document.getElementById('rd-pv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  var txt = document.getElementById('rd-pv-decision-input').value.trim();
+  if (!txt) return;
+  if (!r.decisions) r.decisions=[];
+  r.decisions.push({ id:uid(), texte:txt, created_at:rdNow() });
+  document.getElementById('rd-pv-decision-input').value='';
+  dbPut('reunions_direction', r);
+  rdRenderDecisionsPV(r);
+}
+
+function rdRenderPlanActionPV(r) {
+  var el = document.getElementById('rd-plan-action');
+  if (!el) return;
+  var actions = r.actions||[];
+  if (!actions.length) { el.innerHTML='<div style="color:var(--dim);font-size:12px;padding:8px 0;">Aucune action. Ajouter ci-dessous.</div>'; return; }
+  el.innerHTML = actions.map(function(a,i){
+    var ret = a.statut!=='done'&&rdIsRetard(a.delai);
+    var pCls = a.priorite==='haute'?'badge-rouge':a.priorite==='basse'?'badge-vert':'badge-or';
+    return '<div class="rd-action-item '+(a.statut==='done'?'done':ret?'retard':'')+'">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="font-size:10px;font-weight:700;color:var(--or);min-width:22px;">A'+(i+1)+'</span>'
+      +'<div style="flex:1;"><strong>'+rdEscape(a.titre)+'</strong></div>'
+      +'<select onchange="rdChangerStatutAction(\''+r.id+'\',\''+a.id+'\',this.value)" class="form-control" style="width:120px;padding:4px 8px;font-size:11px;min-height:30px;">'
+      +'<option value="en_cours"'+(a.statut==='en_cours'?' selected':'')+'>⏳ En cours</option>'
+      +'<option value="done"'+(a.statut==='done'?' selected':'')+'>✅ Réalisée</option>'
+      +'<option value="retard"'+(a.statut==='retard'?' selected':'')+'>🔴 Retard</option>'
+      +'</select></div>'
+      +'<div class="rd-action-meta">'
+      +'<span class="rd-meta-pill">👤 '+rdEscape(a.responsable||'—')+'</span>'
+      +(a.delai?'<span class="rd-meta-pill" style="'+(ret?'border-color:var(--rouge);color:var(--rouge);':'')+'">📅 '+rdDateShort(a.delai)+'</span>':'')
+      +(RD_THEMES[a.theme]?'<span class="rd-meta-pill">'+RD_THEMES[a.theme].icon+' '+RD_THEMES[a.theme].label+'</span>':'')
+      +'<span class="badge '+pCls+'" style="font-size:9px;">'+(a.priorite||'—')+'</span>'
+      +'</div>'
+      +(a.observations?'<div style="font-size:11px;color:var(--dim);margin-top:4px;border-top:1px solid var(--bord);padding-top:4px;">'+rdEscape(a.observations)+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+async function rdChangerStatutAction(reunionId, actionId, statut) {
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===reunionId; });
+  if (!r) return;
+  var a = (r.actions||[]).find(function(x){ return x.id===actionId; });
+  if (a) { a.statut=statut; await dbPut('reunions_direction', r); }
+  var ga = (DATA.actions_reunion||[]).find(function(x){ return x.id===actionId; });
+  if (ga) { ga.statut=statut; await dbPut('actions_reunion', ga); }
+  rdUpdateBadge();
+}
+
+async function rdAjouterActionPV() {
+  var id = document.getElementById('rd-pv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  var titre = document.getElementById('rd-pva-titre').value.trim();
+  var sel = document.getElementById('rd-pva-resp');
+  var respId=sel.value, respNom=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:'';
+  if (!titre||!respId) { toast('Titre et responsable obligatoires.','error'); return; }
+  var a = {
+    id:uid(), titre:titre, responsable_id:respId, responsable:respNom,
+    delai:document.getElementById('rd-pva-delai').value,
+    theme:document.getElementById('rd-pva-theme').value,
+    priorite:document.getElementById('rd-pva-priorite').value,
+    observations:document.getElementById('rd-pva-obs').value.trim(),
+    statut:'en_cours', reunion_id:id, reunion_titre:r.titre, created_at:rdNow()
+  };
+  if (!r.actions) r.actions=[];
+  r.actions.push(a);
+  DATA.actions_reunion.push(a);
+  await dbPut('reunions_direction', r);
+  await dbPut('actions_reunion', a);
+  ['rd-pva-titre','rd-pva-delai','rd-pva-obs'].forEach(function(fid){ document.getElementById(fid).value=''; });
+  rdRenderPlanActionPV(r);
+  rdUpdateBadge();
+  toast('✅ Action ajoutée au plan.','success');
+}
+
+async function rdSauvegarderPV() {
+  var id = document.getElementById('rd-pv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  r.pv_numero = document.getElementById('rd-pv-numero').value;
+  r.pv_date   = document.getElementById('rd-pv-date').value;
+  r.pv_resume = document.getElementById('rd-pv-resume').value;
+  await dbPut('reunions_direction', r);
+  rdGenererApercu(r);
+  toast('✅ PV sauvegardé.','success');
+}
+
+function rdGenererApercu(r) {
+  var societe = (DATA.params&&DATA.params.societe)||'ImmoSuite ERP';
+  document.getElementById('rd-pv-societe-header').textContent = societe;
+  var pres = (r.participants||[]).filter(function(p){ return p.present; });
+  var abs  = (r.participants||[]).filter(function(p){ return !p.present; });
+  var html = '';
+  html += '<div class="rd-pv-section-title">Informations Générales</div>';
+  html += '<div class="rd-pv-row"><div class="rd-pv-label">N° PV :</div><div class="rd-pv-val">'+(r.pv_numero||document.getElementById('rd-pv-numero').value||'—')+'</div></div>';
+  html += '<div class="rd-pv-row"><div class="rd-pv-label">Date réunion :</div><div class="rd-pv-val">'+rdDateHeure(r.date)+'</div></div>';
+  html += '<div class="rd-pv-row"><div class="rd-pv-label">Lieu :</div><div class="rd-pv-val">'+(r.lieu||'—')+'</div></div>';
+  html += '<div class="rd-pv-row"><div class="rd-pv-label">Président :</div><div class="rd-pv-val">'+rdEscape(r.animateur)+'</div></div>';
+  html += '<div class="rd-pv-row"><div class="rd-pv-label">Thèmes :</div><div class="rd-pv-val">'+(r.themes||[]).map(function(t){ return RD_THEMES[t]?RD_THEMES[t].icon+' '+RD_THEMES[t].label:t; }).join(' · ')+'</div></div>';
+  html += '<div class="rd-pv-section-title">Présents ('+pres.length+')</div>';
+  html += '<table class="rd-pv-table"><thead><tr><th>Nom</th><th>Fonction</th></tr></thead><tbody>';
+  pres.forEach(function(p){ html+='<tr><td>'+rdEscape(p.nom)+'</td><td>'+rdEscape(p.role)+'</td></tr>'; });
+  html += '</tbody></table>';
+  if (abs.length) html += '<div style="margin-top:6px;font-size:12px;color:var(--rouge);">Absents : '+abs.map(function(p){ return rdEscape(p.nom); }).join(', ')+'</div>';
+  var resume = r.pv_resume || document.getElementById('rd-pv-resume').value || '';
+  if (resume) { html+='<div class="rd-pv-section-title">Résumé des Discussions</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">'+rdEscape(resume)+'</div>'; }
+  if ((r.decisions||[]).length) {
+    html += '<div class="rd-pv-section-title">Décisions Prises</div><ol style="padding-left:18px;">';
+    r.decisions.forEach(function(d){ html+='<li style="font-size:13px;margin-bottom:4px;">'+rdEscape(d.texte)+'</li>'; });
+    html += '</ol>';
+  }
+  if ((r.actions||[]).length) {
+    html += '<div class="rd-pv-section-title">Plan d\'Action</div>';
+    html += '<table class="rd-pv-table"><thead><tr><th>#</th><th>Action</th><th>Responsable</th><th>Délai</th><th>Priorité</th><th>Statut</th></tr></thead><tbody>';
+    (r.actions||[]).forEach(function(a,i){
+      html+='<tr><td style="font-weight:700;">A'+(i+1)+'</td>'
+        +'<td>'+rdEscape(a.titre)+'<br><small style="color:var(--dim);">'+rdEscape(a.observations||'')+'</small></td>'
+        +'<td>'+rdEscape(a.responsable||'—')+'</td>'
+        +'<td style="'+(rdIsRetard(a.delai)&&a.statut!=='done'?'color:var(--rouge);':'')+'white-space:nowrap;">'+rdDateShort(a.delai)+'</td>'
+        +'<td>'+rdEscape(a.priorite||'—')+'</td>'
+        +'<td>'+(a.statut==='done'?'✅':rdIsRetard(a.delai)?'🔴':'⏳')+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  if (r.prochaine_date) {
+    html += '<div class="rd-pv-section-title">Prochaine Réunion</div>';
+    html += '<div class="rd-pv-row"><div class="rd-pv-label">Date :</div><div class="rd-pv-val">'+rdDateHeure(r.prochaine_date)+'</div></div>';
+    if (r.prochaine_lieu) html+='<div class="rd-pv-row"><div class="rd-pv-label">Lieu :</div><div class="rd-pv-val">'+rdEscape(r.prochaine_lieu)+'</div></div>';
+  }
+  html += '<div class="rd-pv-sigs">';
+  html += '<div><div class="rd-pv-sig-line"></div><div class="rd-pv-sig-label">'+rdEscape(r.animateur)+'<br>Président de séance</div></div>';
+  html += '<div><div class="rd-pv-sig-line"></div><div class="rd-pv-sig-label">Secrétaire de séance</div></div>';
+  html += '</div>';
+  document.getElementById('rd-pv-apercu-content').innerHTML = html;
+}
+
+function rdCopierPV() {
+  var el = document.getElementById('rd-pv-apercu-content');
+  navigator.clipboard && navigator.clipboard.writeText(el.innerText).then(function(){ toast('✅ PV copié !','success'); });
+}
+
+async function rdPlanifierProchaine() {
+  var id = document.getElementById('rd-pv-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  var date = document.getElementById('rd-proch-date').value;
+  if (!date) { toast('Saisir la date de la prochaine réunion.','error'); return; }
+  r.prochaine_date   = date;
+  r.prochaine_lieu   = document.getElementById('rd-proch-lieu').value;
+  r.prochaine_themes = document.getElementById('rd-proch-themes').value;
+  r.prochaine_notes  = document.getElementById('rd-proch-notes').value;
+  await dbPut('reunions_direction', r);
+  /* Créer automatiquement la prochaine */
+  var suivante = {
+    id:uid(), titre:r.titre+' — Suivante',
+    type:r.type, periodicite:r.periodicite,
+    date:date, duree:r.duree,
+    lieu:document.getElementById('rd-proch-lieu').value||r.lieu,
+    animateur:r.animateur,
+    objectifs:document.getElementById('rd-proch-notes').value,
+    themes:r.themes||[],
+    participants:JSON.parse(JSON.stringify(r.participants||[])),
+    docs_prepa:'', statut:'planifiee',
+    odj:[], decisions:[], actions:[],
+    source_reunion_id:id, created_at:rdNow()
+  };
+  DATA.reunions_direction.push(suivante);
+  await dbPut('reunions_direction', suivante);
+  rdGenererApercu(r);
+  rdUpdateBadge();
+  toast('📅 Prochaine réunion planifiée : '+rdDateHeure(date),'success');
+}
+
+/* ─────────────────────────────────────────────────
+   DIFFUSION
+──────────────────────────────────────────────────── */
+function rdChargerDiffusion() {
+  var id = document.getElementById('rd-diff-select').value;
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
+  document.getElementById('rd-diff-content').style.display = r ? '' : 'none';
+  if (!r) return;
+  var societe = (DATA.params&&DATA.params.societe)||'ImmoSuite ERP';
+  var actions = r.actions||[];
+  var msg = '🏢 *'+societe+' — Plan d\'Action Réunion Direction*\n\n'
+    +'📋 *Réunion :* '+r.titre+'\n'
+    +'📅 *Tenue le :* '+rdDateHeure(r.date)+'\n'
+    +'🎙 *Président :* '+r.animateur+'\n'
+    +(r.pv_numero?'📄 *N° PV :* '+r.pv_numero+'\n':'')+'\n'
+    +'*PLAN D\'ACTION :*\n\n'
+    +actions.map(function(a,i){
+        return '*('+String(i+1)+')* '+a.titre+'\n'
+          +'   👤 Resp. : '+a.responsable+'\n'
+          +'   📅 Délai : '+rdDateShort(a.delai)+'\n'
+          +'   🎯 Priorité : '+a.priorite+'\n'
+          +(a.observations?'   📝 '+a.observations+'\n':'')
+          +'   Status : '+(a.statut==='done'?'✅ Réalisée':'⏳ En cours')+'\n';
+      }).join('\n')
+    +(r.prochaine_date?'\n📅 *Prochaine réunion :* '+rdDateHeure(r.prochaine_date)+(r.prochaine_lieu?' — '+r.prochaine_lieu:'')+'\n':'')
+    +'\n_Diffusé par la Direction — '+rdDateShort(today())+'_';
+  document.getElementById('rd-diff-message').value = msg;
+  /* Participants */
+  var el = document.getElementById('rd-diff-participants');
+  el.innerHTML = (r.participants||[]).map(function(p,i){
+    return '<div class="rd-diff-item">'
+      +'<div class="rd-diff-avatar" style="background:'+RD_AVATARS[i%RD_AVATARS.length]+';">'+p.nom.charAt(0)+'</div>'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+rdEscape(p.nom)+'</div>'
+      +'<div style="font-size:11px;color:var(--dim);">'+rdEscape(p.role)+'</div></div>'
+      +'<button class="btn btn-sm '+(p.pv_recu?'btn-success':'btn-secondary')+'" onclick="rdTogglePVRecu(\''+r.id+'\',\''+p.id+'\')">'
+      +(p.pv_recu?'✅ Reçu':'📤 Envoyer')+'</button></div>';
+  }).join('');
+  /* Par responsable */
+  var byResp = {};
+  actions.forEach(function(a){ if(!byResp[a.responsable]) byResp[a.responsable]=[]; byResp[a.responsable].push(a); });
+  var aprEl = document.getElementById('rd-diff-par-resp');
+  aprEl.innerHTML = Object.keys(byResp).map(function(resp){
+    return '<div class="card" style="margin-bottom:8px;">'
+      +'<div class="card-title">👤 '+rdEscape(resp)+' — '+byResp[resp].length+' action(s)</div>'
+      +byResp[resp].map(function(a,i){
+          var ret = a.statut!=='done'&&rdIsRetard(a.delai);
+          return '<div class="rd-action-item '+(ret?'retard':'')+'" style="margin-bottom:4px;">'
+            +'<div style="display:flex;gap:8px;align-items:flex-start;">'
+            +'<span style="font-size:10px;font-weight:700;color:var(--or);">A'+(i+1)+'</span>'
+            +'<span style="flex:1;font-size:12px;">'+rdEscape(a.titre)+'</span>'
+            +(a.delai?'<span style="font-size:11px;'+(ret?'color:var(--rouge);':'')+' white-space:nowrap;">📅 '+rdDateShort(a.delai)+'</span>':'')
+            +'</div></div>';
+        }).join('')
+      +'</div>';
+  }).join('') || '<div style="color:var(--dim);font-size:13px;">Aucune action.</div>';
+}
+
+async function rdTogglePVRecu(reunionId, participantId) {
+  var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===reunionId; });
+  if (!r) return;
+  var p = (r.participants||[]).find(function(x){ return x.id===participantId; });
+  if (!p) return;
+  p.pv_recu = !p.pv_recu;
+  await dbPut('reunions_direction', r);
+  rdChargerDiffusion();
+  toast(p.pv_recu?'✅ PV marqué reçu — '+p.nom:p.nom+' : non reçu','info');
+}
+
+/* ─────────────────────────────────────────────────
+   SUIVI ACTIONS
+──────────────────────────────────────────────────── */
+function rdRenderSuivi() {
+  var filtreStat  = (document.getElementById('rd-sa-filtre-statut')||{}).value||'';
+  var filtreTheme = (document.getElementById('rd-sa-filtre-theme')||{}).value||'';
+  var search      = ((document.getElementById('rd-sa-search')||{}).value||'').toLowerCase();
+  var actions = (DATA.actions_reunion||[]).filter(function(a){
+    var st = a.statut; if (a.statut!=='done'&&rdIsRetard(a.delai)) st='retard';
+    if (filtreStat  && st!==filtreStat)   return false;
+    if (filtreTheme && a.theme!==filtreTheme) return false;
+    if (search && !(a.titre||'').toLowerCase().includes(search) && !(a.responsable||'').toLowerCase().includes(search)) return false;
+    return true;
+  });
+  var total  = (DATA.actions_reunion||[]).length;
+  var done   = (DATA.actions_reunion||[]).filter(function(a){ return a.statut==='done'; }).length;
+  var encours= (DATA.actions_reunion||[]).filter(function(a){ return a.statut!=='done'&&!rdIsRetard(a.delai); }).length;
+  var retard = (DATA.actions_reunion||[]).filter(function(a){ return a.statut!=='done'&&rdIsRetard(a.delai); }).length;
+  document.getElementById('rd-sa-total').textContent   = total;
+  document.getElementById('rd-sa-done').textContent    = done;
+  document.getElementById('rd-sa-encours').textContent = encours;
+  document.getElementById('rd-sa-retard').textContent  = retard;
+  var el = document.getElementById('rd-sa-list');
+  el.innerHTML = actions.length ? actions.map(function(a){
+    var ret = a.statut!=='done'&&rdIsRetard(a.delai);
+    var pCls = a.priorite==='haute'?'badge-rouge':a.priorite==='basse'?'badge-vert':'badge-or';
+    return '<div class="rd-action-item '+(a.statut==='done'?'done':ret?'retard':'')+'">'
+      +'<div style="display:flex;align-items:flex-start;gap:8px;">'
+      +'<span style="font-size:16px;flex-shrink:0;">'+(ret?'🔴':a.statut==='done'?'✅':'⏳')+'</span>'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+rdEscape(a.titre)+'</div>'
+      +'<div style="font-size:11px;color:var(--dim);">'+rdEscape(a.reunion_titre||'—')+'</div></div>'
+      +'<select onchange="rdChangerStatutSuivi(\''+a.id+'\',this.value)" class="form-control" style="width:120px;padding:4px 8px;font-size:11px;min-height:30px;">'
+      +'<option value="en_cours"'+(a.statut==='en_cours'?' selected':'')+'>⏳ En cours</option>'
+      +'<option value="done"'+(a.statut==='done'?' selected':'')+'>✅ Réalisée</option>'
+      +'<option value="retard"'+(a.statut==='retard'?' selected':'')+'>🔴 Retard</option>'
+      +'</select></div>'
+      +'<div class="rd-action-meta">'
+      +'<span class="rd-meta-pill">👤 '+rdEscape(a.responsable||'—')+'</span>'
+      +(a.delai?'<span class="rd-meta-pill" style="'+(ret?'border-color:var(--rouge);color:var(--rouge);':'')+'">📅 '+rdDateShort(a.delai)+'</span>':'')
+      +(RD_THEMES[a.theme]?'<span class="rd-meta-pill">'+RD_THEMES[a.theme].icon+' '+RD_THEMES[a.theme].label+'</span>':'')
+      +'<span class="badge '+pCls+'" style="font-size:9px;">'+(a.priorite||'—')+'</span>'
+      +'</div></div>';
+  }).join('') : '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px 0;">Aucune action correspondante.</div>';
+}
+
+async function rdChangerStatutSuivi(actionId, statut) {
+  var a = (DATA.actions_reunion||[]).find(function(x){ return x.id===actionId; });
+  if (!a) return;
+  a.statut = statut;
+  await dbPut('actions_reunion', a);
+  if (a.reunion_id) {
+    var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===a.reunion_id; });
+    if (r) { var ra=(r.actions||[]).find(function(x){ return x.id===actionId; }); if(ra){ ra.statut=statut; await dbPut('reunions_direction',r); } }
+  }
+  rdUpdateBadge();
+  rdRenderSuivi();
+  toast(statut==='done'?'✅ Action réalisée !':'📝 Statut mis à jour','info');
+}
+
+/* ─────────────────────────────────────────────────
+   ANALYSE 360°
+──────────────────────────────────────────────────── */
+function rdRenderAnalyse360() {
+  var ind360 = rdGetIndicateurs360();
+  var grid = document.getElementById('rd-analyse-grid');
+  var priorites=[], watchers=[];
+  grid.innerHTML = Object.keys(RD_THEMES).map(function(key){
+    var t = RD_THEMES[key];
+    var inds = ind360[key]||[];
+    var rouges = inds.filter(function(i){ return i.alert==='rouge'; }).length;
+    var ors    = inds.filter(function(i){ return i.alert==='or'; }).length;
+    var alCls  = rouges>0?'alerte-rouge':ors>0?'alerte-or':'alerte-vert';
+    if (rouges>0) priorites.push(key); else if (ors>0) watchers.push(key);
+    return '<div class="rd-a360-card '+alCls+'">'
+      +'<div style="font-size:24px;margin-bottom:6px;">'+t.icon+'</div>'
+      +'<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;font-weight:600;">'+t.label+'</div>'
+      +'<div style="font-size:13px;font-weight:700;margin:4px 0;color:'+(rouges>0?'var(--rouge)':ors>0?'var(--or)':'var(--vert)')+';">'
+      +(rouges>0?'⚠️ '+rouges+' alerte(s)':ors>0?'⚡ À surveiller':'✅ OK')+'</div>'
+      +'<div style="font-size:10px;color:var(--dim);">'+inds.length+' indicateurs</div></div>';
+  }).join('');
+
+  /* Thèmes suggérés */
+  var suggEl = document.getElementById('rd-themes-suggeres');
+  suggEl.innerHTML = '<div style="margin-bottom:12px;">'
+    +'<div style="font-size:11px;color:var(--rouge);font-weight:700;margin-bottom:8px;">🔴 PRIORITÉ HAUTE — Traiter en urgence</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    +(priorites.length
+        ? priorites.map(function(t){ return '<span class="rd-chip selected" style="cursor:default;">'+RD_THEMES[t].icon+' '+RD_THEMES[t].label+' ⚠️</span>'; }).join('')
+        : '<span style="color:var(--dim);font-size:12px;">Aucun thème critique.</span>')
+    +'</div></div>'
+    +'<div><div style="font-size:11px;color:var(--or);font-weight:700;margin-bottom:8px;">🟡 À SURVEILLER — Inclure à l\'ODJ</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    +(watchers.length
+        ? watchers.map(function(t){ return '<span class="rd-chip" style="cursor:default;">'+RD_THEMES[t].icon+' '+RD_THEMES[t].label+'</span>'; }).join('')
+        : '<span style="color:var(--dim);font-size:12px;">Aucun thème à surveiller.</span>')
+    +'</div></div>';
+
+  /* Historique */
+  var histEl = document.getElementById('rd-historique');
+  var reunions = (DATA.reunions_direction||[]).slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); }).slice(0,8);
+  histEl.innerHTML = reunions.length
+    ? '<div style="position:relative;padding-left:24px;">'
+      +'<div style="position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:linear-gradient(180deg,var(--bleu),var(--or));"></div>'
+      +reunions.map(function(r){
+          var dotColor = r.statut==='tenue'?'var(--vert)':r.statut==='en_cours'?'var(--or)':'var(--bleu)';
+          return '<div style="position:relative;margin-bottom:14px;">'
+            +'<div style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:'+dotColor+';border:2px solid #fff;box-shadow:0 0 0 2px '+dotColor+';"></div>'
+            +'<div style="background:#F4F6F9;border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;">'
+            +'<div style="font-size:13px;font-weight:600;">'+rdEscape(r.titre)+'</div>'
+            +'<div style="font-size:11px;color:var(--dim);margin-top:2px;">'+rdDateHeure(r.date)
+            +' · <span class="badge badge-'+(r.statut==='tenue'?'vert':r.statut==='planifiee'?'bleu':'or')+'">'+r.statut+'</span>'
+            +' · '+(r.actions||[]).length+' actions</div></div></div>';
+        }).join('')+'</div>'
+    : '<div style="color:var(--dim);font-size:13px;padding:10px 0;">Aucune réunion enregistrée. <button class="btn btn-sm btn-secondary" onclick="switchTab(\'rd\',\'planifier\')" style="margin-left:8px;">Planifier →</button></div>';
+}
+
+/* ─────────────────────────────────────────────────
+   CHARGEMENT INITIAL DU MODULE (patch startApp)
+──────────────────────────────────────────────────── */
+(function() {
+  var _origStartApp = typeof startApp === 'function' ? startApp : null;
+  if (_origStartApp) {
+    startApp = async function() {
+      await _origStartApp.apply(this, arguments);
+      await rdLoadData();
+    };
+  }
+})();
+/* FIN MODULE RÉUNIONS DIRECTION */
 </script>
 <!-- ── MODAL ANALYSE 360° (ADMIN) ──────────────────────────────── -->
 <div class="modal-overlay" id="modal-analyse360">
