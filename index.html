@@ -3964,6 +3964,428 @@ function updateBadgeMessages() {
 
 /* FIN MODULE MESSAGERIE v2 */
 
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RÔLES & PERMISSIONS v2 — ImmoSuite v15
+   Correctifs : hasRole · goTo guards · sidebar · modal création
+═══════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Mapping page → module ALL_MODULES ── */
+var PAGE_MODULE_MAP = {
+  'dashboard':          'Tableau de bord',
+  'foncier':            'Foncier',
+  'juridique':          'Dossiers Juridiques',
+  'programmes':         'Programmes',
+  'conception':         'Plans & Conception',
+  'constructeurs':      'Constructeurs',
+  'conventions':        'Conventions',
+  'avancement':         'Suivi Chantiers',
+  'dqe':                'DQE & Cout de revient',
+  'leads':              'Pipeline Leads',
+  'crm-pac':            'Plan Action Commercial',
+  'crm-carte':          'Carte & Geoloc',
+  'crm-itineraires':    'Carte & Geoloc',
+  'crm-rapports':       'Rapports Commerciaux',
+  'crm-apporteurs':     'Rapports Commerciaux',
+  'lots':               'Lots & Reservations',
+  'clients':            'Souscripteurs',
+  'paiements':          'Paiements',
+  'relances':           'Relances',
+  'comptabilite':       'Comptabilite',
+  'tresorerie-page':    'Tresorerie',
+  'previsionnel':       'Tresorerie',
+  'rh-employes':        'RH Employes',
+  'rh-pointage':        'Pointage',
+  'rh-paie':            'Paie',
+  'rh-declarations':    'Paie',
+  'messagerie':         'Messagerie',
+  'calendrier':         'Messagerie',
+  'parametres':         'Parametres',
+  'amenagement':        'Foncier',
+  'portail-souscripteur': null,  /* accès libre (portail client) */
+  'archives-docs':      'Parametres',
+  'reunion-direction':  'Tableau de bord'
+};
+
+/* ── 2. hasRole() corrigé — inclut manager + custom roles ── */
+(function() {
+  var _origHasRole = hasRole;
+  hasRole = function(requiredRole) {
+    if (!APP.currentUser) return false;
+    var role = APP.currentUser.role;
+    /* Admin = toujours true */
+    if (role === 'admin') return true;
+    /* Hiérarchie étendue */
+    var hierarchy = { admin:4, manager:3, comptable:2, commercial:1 };
+    var myLevel = hierarchy[role];
+    /* Chercher le niveau dans les custom roles si absent de la hiérarchie fixe */
+    if (myLevel === undefined) {
+      var allR = getAllRoles();
+      myLevel = allR[role] ? (allR[role].level || 1) : 0;
+    }
+    var reqLevel = hierarchy[requiredRole];
+    if (reqLevel === undefined) {
+      var allR2 = getAllRoles();
+      reqLevel = allR2[requiredRole] ? (allR2[requiredRole].level || 1) : 0;
+    }
+    return myLevel >= reqLevel;
+  };
+})();
+
+/* ── 3. Patch goTo() — vérifie userCanAccess avant navigation ── */
+(function() {
+  var _lastGoTo = goTo;
+  goTo = function(page) {
+    /* Pages toujours accessibles */
+    var publicPages = ['dashboard','portail-souscripteur'];
+    if (publicPages.indexOf(page) >= 0) { _lastGoTo(page); applyRoleToSidebar(); return; }
+    /* Vérifier le module requis */
+    var module = PAGE_MODULE_MAP[page];
+    if (module !== undefined && module !== null) {
+      if (!userCanAccess(module)) {
+        toast('⛔ Accès refusé — module « '+module+' » non autorisé pour le rôle ' + (APP.currentUser?APP.currentUser.role:'inconnu') + '.', 'error');
+        /* Aller sur le dashboard si possible */
+        _lastGoTo('dashboard');
+        applyRoleToSidebar();
+        return;
+      }
+    }
+    _lastGoTo(page);
+    applyRoleToSidebar();
+  };
+})();
+
+/* ── 4. Masquer/afficher la sidebar selon le rôle ── */
+function applyRoleToSidebar() {
+  if (!APP.currentUser) return;
+  document.querySelectorAll('.nav-item[data-page]').forEach(function(navItem) {
+    var page   = navItem.getAttribute('data-page');
+    var module = PAGE_MODULE_MAP[page];
+    /* Tableau de bord, portail, pages sans module → toujours visibles */
+    if (!module) { navItem.style.display=''; return; }
+    var ok = userCanAccess(module);
+    navItem.style.display = ok ? '' : 'none';
+    /* Masquer aussi la nav-section parente si tous ses enfants sont cachés */
+  });
+  /* Masquer les nav-section orphelines */
+  document.querySelectorAll('.nav-section').forEach(function(section) {
+    var next = section.nextElementSibling;
+    var hasVisible = false;
+    while (next && !next.classList.contains('nav-section')) {
+      if (next.classList.contains('nav-item') && next.style.display !== 'none') {
+        hasVisible = true; break;
+      }
+      next = next.nextElementSibling;
+    }
+    section.style.display = hasVisible ? '' : 'none';
+  });
+  /* Afficher/masquer onglet Paramètres selon le rôle */
+  var paramNav = document.querySelector('[data-page="parametres"]');
+  if (paramNav) paramNav.style.display = userCanAccess('Parametres') ? '' : 'none';
+}
+
+/* ── 5. Patch startApp + chargerPortail pour appliquer la sidebar ── */
+(function() {
+  var _origStart = startApp;
+  startApp = async function() {
+    await _origStart.apply(this, arguments);
+    await loadCustomRoles();
+    rebuildRoleMatrix();
+    applyRoleToSidebar();
+  };
+})();
+
+/* ── 6. updateRolePreview amélioré ── */
+(function() {
+  var _orig = updateRolePreview;
+  updateRolePreview = function() {
+    var role     = (document.getElementById('new-user-role')||{}).value || 'commercial';
+    var preview  = document.getElementById('role-preview-content');
+    var denied   = document.getElementById('role-preview-denied');
+    if (!preview) return;
+    var allRoles = getAllRoles();
+    var r = allRoles[role];
+    if (!r) return;
+    var granted = ALL_MODULES.filter(function(m){ return r.permissions && r.permissions[m]; });
+    var refused = ALL_MODULES.filter(function(m){ return !(r.permissions && r.permissions[m]); });
+    preview.innerHTML = granted.map(function(m){
+      return '<span style="background:#ECFDF5;color:#059669;padding:3px 8px;border-radius:12px;font-size:11px;border:1px solid #A7F3D0;">✓ '+m+'</span>';
+    }).join('') || '<span style="color:#94A3B8;font-size:12px;">Aucun accès configuré</span>';
+    if (denied && refused.length) {
+      denied.innerHTML = '⛔ Non accessible : '+refused.map(function(m){
+        return '<span style="background:#FEF2F2;color:#DC2626;padding:2px 6px;border-radius:10px;font-size:10px;border:1px solid #FECACA;">'+m+'</span>';
+      }).join(' ');
+    } else if (denied) { denied.innerHTML=''; }
+  };
+})();
+
+/* ── 7. Indicateur force mot de passe ── */
+function checkPwdStrength(pwd) {
+  var rules = [
+    { label:'8 caractères min.', ok: pwd.length >= 8 },
+    { label:'1 majuscule',       ok: /[A-Z]/.test(pwd) },
+    { label:'1 chiffre',         ok: /[0-9]/.test(pwd) },
+    { label:'1 caractère spécial', ok: /[^A-Za-z0-9]/.test(pwd) }
+  ];
+  var score = rules.filter(function(r){ return r.ok; }).length;
+  var colors = ['#E05252','#E05252','#D97706','#4AC47A','#16A34A'];
+  var labels = ['','Très faible','Faible','Moyen','Fort'];
+  var fill = document.getElementById('pwd-strength-fill');
+  var lbl  = document.getElementById('pwd-strength-label');
+  var rls  = document.getElementById('pwd-rules');
+  if (fill) { fill.style.width=(score*25)+'%'; fill.style.background=colors[score]||'#ccc'; }
+  if (lbl)  { lbl.textContent = labels[score]||''; lbl.style.color = colors[score]||'#ccc'; }
+  if (rls)  { rls.innerHTML = rules.map(function(r){ return '<span style="color:'+(r.ok?'var(--vert)':'var(--dim)')+';">'+(r.ok?'✓':'○')+' '+r.label+'</span>'; }).join(''); }
+  checkPwdMatch();
+}
+
+function checkPwdMatch() {
+  var p1 = (document.getElementById('new-user-pwd')||{}).value||'';
+  var p2 = (document.getElementById('new-user-pwd2')||{}).value||'';
+  var el = document.getElementById('pwd-match-msg');
+  if (!el||!p2) { if(el)el.textContent=''; return; }
+  el.textContent = p1===p2 ? '✅ Mots de passe identiques' : '❌ Ne correspond pas';
+  el.style.color = p1===p2 ? 'var(--vert)' : 'var(--rouge)';
+}
+
+function togglePwdVisibility(inputId, eyeId) {
+  var inp = document.getElementById(inputId);
+  var eye = document.getElementById(eyeId);
+  if (!inp) return;
+  inp.type = inp.type==='password' ? 'text' : 'password';
+  if (eye) eye.textContent = inp.type==='password' ? '👁️' : '🙈';
+}
+
+/* ── 8. openUserModal amélioré ── */
+(function() {
+  var _origOpen = openUserModal;
+  openUserModal = function(editUserId) {
+    if (!hasRole('admin')) { toast('⛔ Réservé aux administrateurs.', 'error'); return; }
+    var isEdit = !!editUserId;
+    var user   = isEdit ? DATA.users.find(function(u){ return u.id===editUserId; }) : null;
+
+    ['new-user-nom','new-user-login','new-user-email','new-user-pwd','new-user-pwd2'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.value = user && el.id!=='new-user-pwd'&&el.id!=='new-user-pwd2' ? (user[el.id.replace('new-user-','')]||'') : '';
+    });
+    /* Nom et login */
+    var elN = document.getElementById('new-user-nom');   if(elN && user) elN.value = user.nom||'';
+    var elL = document.getElementById('new-user-login'); if(elL && user) elL.value = user.login||'';
+    var elE = document.getElementById('new-user-email'); if(elE && user) elE.value = user.email||'';
+    /* Statut */
+    var elSt = document.getElementById('new-user-statut');
+    if (elSt) elSt.value = user ? (user.statut||'actif') : 'actif';
+    /* Rôle */
+    refreshRoleSelectInModal();
+    var elR = document.getElementById('new-user-role');
+    if (elR && user) elR.value = user.role||'commercial';
+    /* Reset indicateurs */
+    ['pwd-strength-fill','pwd-strength-label','pwd-rules','pwd-match-msg'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.innerHTML='';
+    });
+    /* Titre */
+    var title = document.getElementById('modal-user-title');
+    if (title) title.textContent = isEdit ? '✏️ Modifier utilisateur' : '👤 Nouvel utilisateur';
+    /* Marquer l'ID édité */
+    document.getElementById('modal-user-create').dataset.editId = editUserId||'';
+    /* Mot de passe : si édition, champ optionnel */
+    var pwdLabel = document.querySelector('label[for="new-user-pwd"]');
+    if (pwdLabel) pwdLabel.innerHTML = isEdit
+      ? 'Mot de passe <span style="color:var(--dim);font-size:10px;">(laisser vide = inchangé)</span>'
+      : 'Mot de passe *';
+    updateRolePreview();
+    document.getElementById('modal-user-create').classList.add('open');
+  };
+})();
+
+/* ── 9. createUserFromModal enrichi — email, statut, édition ── */
+(function() {
+  var _origCreate = createUserFromModal;
+  createUserFromModal = async function() {
+    var editId = document.getElementById('modal-user-create').dataset.editId || '';
+    var isEdit = !!editId;
+    var nom    = (document.getElementById('new-user-nom')||{}).value.trim();
+    var login  = (document.getElementById('new-user-login')||{}).value.trim();
+    var email  = (document.getElementById('new-user-email')||{}).value.trim();
+    var role   = (document.getElementById('new-user-role')||{}).value || 'commercial';
+    var statut = (document.getElementById('new-user-statut')||{}).value || 'actif';
+    var pwd    = (document.getElementById('new-user-pwd')||{}).value;
+    var pwd2   = (document.getElementById('new-user-pwd2')||{}).value;
+
+    /* Validations communes */
+    if (!nom)   { toast('⚠️ Nom obligatoire.', 'error'); return; }
+    if (!login) { toast('⚠️ Identifiant obligatoire.', 'error'); return; }
+
+    /* Email format check si renseigné */
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast('⚠️ Format email invalide.', 'error'); return;
+    }
+    /* Login unique (hors soi-même) */
+    var loginConflict = DATA.users.find(function(u){ return u.login===login && u.id!==editId; });
+    if (loginConflict) { toast('⚠️ Identifiant déjà utilisé par '+loginConflict.nom+'.', 'error'); return; }
+
+    /* Vérifier rôle valide */
+    var allRoles = getAllRoles();
+    if (!allRoles[role]) { toast('⚠️ Rôle inconnu.', 'error'); return; }
+
+    /* Mot de passe */
+    var user = isEdit ? DATA.users.find(function(u){ return u.id===editId; }) : null;
+    if (!isEdit) {
+      /* Création : mot de passe obligatoire */
+      if (!pwd)        { toast('⚠️ Mot de passe obligatoire.', 'error'); return; }
+      if (pwd !== pwd2){ toast('⚠️ Les mots de passe ne correspondent pas.', 'error'); return; }
+      var pErr = validatePasswordPolicy(pwd);
+      if (pErr)        { toast('⚠️ ' + pErr, 'error'); return; }
+    } else if (pwd) {
+      /* Édition : mot de passe fourni → valider */
+      if (pwd !== pwd2){ toast('⚠️ Les mots de passe ne correspondent pas.', 'error'); return; }
+      var pErrE = validatePasswordPolicy(pwd);
+      if (pErrE)       { toast('⚠️ ' + pErrE, 'error'); return; }
+    }
+
+    if (isEdit && user) {
+      /* Mise à jour */
+      user.nom    = nom;
+      user.login  = login;
+      user.email  = email;
+      user.role   = role;
+      user.statut = statut;
+      if (pwd) {
+        user.salt          = generateSalt();
+        user.password_hash = await hashPassword(pwd, user.salt);
+        delete user.password;
+      }
+      await dbPut('users', user);
+      await ajouterHistorique('user', user.id, 'modification', 'Modifié par '+APP.currentUser.nom);
+      closeModal('modal-user-create');
+      loadParams();
+      toast('✅ Utilisateur « '+nom+' » mis à jour.', 'success');
+    } else {
+      /* Création */
+      var salt = generateSalt();
+      var hash = await hashPassword(pwd, salt);
+      var newUser = { id:uid(), nom:nom, login:login, email:email, role:role, statut:statut,
+        password_hash:hash, salt:salt };
+      DATA.users.push(newUser);
+      await dbPut('users', newUser);
+      await ajouterHistorique('user', newUser.id, 'creation', 'Créé par '+APP.currentUser.nom);
+      closeModal('modal-user-create');
+      loadParams();
+      toast('✅ Utilisateur « '+nom+' » créé avec le rôle « '+(allRoles[role].label||role)+' ».', 'success');
+    }
+    applyRoleToSidebar();
+  };
+})();
+
+/* ── 10. renderUsersList enrichi — email, statut, toggle actif ── */
+(function() {
+  var _origLoadParams = loadParams;
+  loadParams = function() {
+    _origLoadParams();
+    /* Réafficher la liste utilisateurs avec les nouvelles infos */
+    var ul = document.getElementById('users-list');
+    if (!ul) return;
+    var isAdmin = hasRole('admin');
+    ul.innerHTML = DATA.users.map(function(u) {
+      var isSelf   = APP.currentUser && APP.currentUser.id === u.id;
+      var allRoles = getAllRoles();
+      var roleObj  = allRoles[u.role] || { label:u.role, icon:'👤' };
+      var isActif  = u.statut !== 'inactif';
+      var secIco   = u.password_hash ? '🔒' : '⚠️';
+      /* Badges */
+      var roleBadge = '<span style="background:'+(u.role==='admin'?'#FEF2F2':u.role==='manager'?'#F5F3FF':u.role==='comptable'?'#EFF6FF':'#ECFDF5')
+        +';color:'+(u.role==='admin'?'#DC2626':u.role==='manager'?'#7C3AED':u.role==='comptable'?'#1D4ED8':'#059669')
+        +';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">'
+        +roleObj.icon+' '+roleObj.label+'</span>';
+      var statutBadge = '<span style="background:'+(isActif?'#ECFDF5':'#FEF2F2')+';color:'+(isActif?'#059669':'#DC2626')
+        +';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">'+(isActif?'✅ Actif':'⛔ Inactif')+'</span>';
+      /* Modules accessibles */
+      var nbModules = ALL_MODULES.filter(function(m){ return roleObj.permissions&&roleObj.permissions[m]; }).length;
+      /* Boutons */
+      var btnEdit = isAdmin ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="openUserModal(\''+u.id+'\')" title="Modifier" style="font-size:11px;">✏️</button>' : '';
+      var btnToggle = (isAdmin && !isSelf)
+        ? '<button class="btn btn-sm btn-icon" style="font-size:11px;background:'+(isActif?'rgba(224,82,82,0.1)':'rgba(74,196,122,0.1)')
+          +';color:'+(isActif?'var(--rouge)':'var(--vert)')+';border:1px solid '+(isActif?'rgba(224,82,82,0.3)':'rgba(74,196,122,0.3)')+'"'
+          +' onclick="toggleUserStatut(\''+u.id+'\')" title="'+(isActif?'Désactiver':'Activer')+'">'
+          +(isActif?'🚫':'✅')+'</button>' : '';
+      var btnPwd = (isSelf||isAdmin)
+        ? '<button class="btn btn-secondary btn-sm" style="font-size:11px;" onclick="changeUserPassword(\''+u.id+'\')">🔑</button>' : '';
+      var btnDel = (isAdmin && !isSelf)
+        ? '<button class="btn btn-danger btn-sm btn-icon" style="font-size:11px;" onclick="deleteUser(\''+u.id+'\')">🗑️</button>' : '';
+      return '<div style="display:flex;justify-content:space-between;align-items:flex-start;'
+        +'padding:12px 14px;background:'+(isActif?'var(--card2)':'rgba(224,82,82,0.04)')
+        +';border:1px solid '+(isActif?'var(--bord)':'rgba(224,82,82,0.2)')
+        +';border-radius:var(--r);margin-bottom:8px;'
+        +(isSelf?'border-left:3px solid var(--or);':'')
+        +'">'
+        +'<div><div style="display:flex;align-items:center;gap:8px;">'
+        +'<span style="font-size:15px;">'+secIco+'</span>'
+        +'<strong style="font-size:13px;">'+u.nom+(isSelf?' <span style="font-size:10px;color:var(--or);">(vous)</span>':'')+'</strong>'
+        +'<span style="color:var(--dim);font-size:11px;">('+u.login+')</span>'
+        +'</div>'
+        +(u.email?'<div style="font-size:11px;color:var(--bleu);margin-top:2px;margin-left:23px;">📧 '+u.email+'</div>':'')
+        +'<div style="display:flex;gap:6px;margin-top:6px;margin-left:23px;flex-wrap:wrap;">'
+        +roleBadge+' '+statutBadge
+        +'<span style="font-size:10px;color:var(--dim);align-self:center;">'+nbModules+' modules</span>'
+        +'</div></div>'
+        +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+        +btnEdit+btnToggle+btnPwd+btnDel+'</div></div>';
+    }).join('') || '<div style="color:var(--dim);font-size:13px;padding:10px;">Aucun utilisateur.</div>';
+  };
+})();
+
+/* ── 11. toggleUserStatut ── */
+async function toggleUserStatut(userId) {
+  if (!hasRole('admin')) { toast('⛔ Réservé aux administrateurs.', 'error'); return; }
+  var u = DATA.users.find(function(x){ return x.id===userId; });
+  if (!u) return;
+  if (APP.currentUser && APP.currentUser.id === userId) { toast('⚠️ Impossible de modifier votre propre statut.', 'error'); return; }
+  u.statut = u.statut === 'inactif' ? 'actif' : 'inactif';
+  await dbPut('users', u);
+  await ajouterHistorique('user', u.id, 'statut_'+(u.statut), (u.statut==='actif'?'Activé':'Désactivé')+' par '+APP.currentUser.nom);
+  loadParams();
+  toast((u.statut==='actif'?'✅ Compte activé':'⛔ Compte désactivé')+' — '+u.nom, 'success');
+}
+
+/* ── 12. Bloquer la connexion si statut inactif ── */
+(function() {
+  var _origDoLogin = doLogin;
+  doLogin = async function() {
+    /* Laisser doLogin faire sa vérification normale d'abord */
+    var u = (document.getElementById('login-user')||{}).value.trim();
+    var user = DATA.users.find(function(x){ return x.login===u; });
+    if (user && user.statut === 'inactif') {
+      var errEl = document.getElementById('login-error');
+      if (errEl) { errEl.textContent = '⛔ Compte désactivé. Contactez votre administrateur.'; errEl.style.display='block'; }
+      await logConnexion(u, false, 'Compte inactif');
+      return;
+    }
+    await _origDoLogin.apply(this, arguments);
+    /* Après login réussi, appliquer la sidebar */
+    setTimeout(applyRoleToSidebar, 100);
+  };
+})();
+
+/* ── 13. Appliquer sidebar lors du chargement de session persistante ── */
+(function() {
+  var _origCheckSession = checkSession;
+  /* checkSession est appelée dans init() — on patch l'affichage post-login */
+  var _origInit = typeof init === 'function' ? init : null;
+  if (_origInit) {
+    init = async function() {
+      await _origInit.apply(this, arguments);
+      /* Si déjà connecté via session token, appliquer sidebar */
+      if (APP.currentUser) {
+        await loadCustomRoles();
+        rebuildRoleMatrix();
+        applyRoleToSidebar();
+      }
+    };
+  }
+})();
+
+/* FIN MODULE RÔLES & PERMISSIONS v2 */
+
 </script>
 </head>
 <body>
@@ -5747,6 +6169,10 @@ function updateBadgeMessages() {
                   <input type="text" id="new-user-login" class="form-control" placeholder="Ex: awa.kouame" autocomplete="off">
                 </div>
                 <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="new-user-email" class="form-control" placeholder="kouame@societe.ci">
+                </div>
+                <div class="form-group">
                   <label>Rôle *</label>
                   <select id="new-user-role" class="form-control" onchange="updateRolePreview()">
                     <option value="commercial">🎯 Commercial</option>
@@ -5756,18 +6182,43 @@ function updateBadgeMessages() {
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>Mot de passe *</label>
-                  <input type="password" id="new-user-pwd" class="form-control" placeholder="Min. 8 car., 1 MAJ, 1 chiffre" autocomplete="new-password">
+                  <label>Statut</label>
+                  <select id="new-user-statut" class="form-control">
+                    <option value="actif">✅ Actif</option>
+                    <option value="inactif">⛔ Inactif</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Mot de passe * <span id="pwd-strength-label" style="font-size:10px;font-weight:700;margin-left:6px;"></span></label>
+                  <div style="position:relative;">
+                    <input type="password" id="new-user-pwd" class="form-control" placeholder="Min. 8 car., 1 MAJ, 1 chiffre, 1 spécial"
+                      autocomplete="new-password" oninput="checkPwdStrength(this.value)">
+                    <button type="button" onclick="togglePwdVisibility('new-user-pwd','eye-pwd')"
+                      style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;" id="eye-pwd">👁️</button>
+                  </div>
+                  <div id="pwd-strength-bar" style="height:3px;border-radius:2px;background:var(--bord);margin-top:4px;overflow:hidden;">
+                    <div id="pwd-strength-fill" style="height:100%;width:0%;transition:width .3s,background .3s;border-radius:2px;"></div>
+                  </div>
+                  <div id="pwd-rules" style="font-size:10px;color:var(--dim);margin-top:4px;display:grid;grid-template-columns:1fr 1fr;gap:2px;"></div>
                 </div>
                 <div class="form-group">
                   <label>Confirmer le mot de passe *</label>
-                  <input type="password" id="new-user-pwd2" class="form-control" placeholder="Répéter le mot de passe" autocomplete="new-password">
+                  <div style="position:relative;">
+                    <input type="password" id="new-user-pwd2" class="form-control" placeholder="Répéter le mot de passe"
+                      autocomplete="new-password" oninput="checkPwdMatch()">
+                    <button type="button" onclick="togglePwdVisibility('new-user-pwd2','eye-pwd2')"
+                      style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;" id="eye-pwd2">👁️</button>
+                  </div>
+                  <div id="pwd-match-msg" style="font-size:11px;margin-top:3px;"></div>
                 </div>
               </div>
-              <!-- Aperçu accès du rôle sélectionné -->
-              <div id="role-preview" style="margin-top:16px;padding:12px;background:#F4F6F9;border-radius:8px;border:1px solid #D1D9E0;">
-                <div style="font-size:11px;font-weight:700;color:#2563EB;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Accès accordés avec ce rôle</div>
-                <div id="role-preview-content" style="font-size:12px;color:#333;display:flex;flex-wrap:wrap;gap:6px;"></div>
+              <!-- Aperçu modules accessibles -->
+              <div id="role-preview" style="margin-top:14px;padding:12px;background:#F4F6F9;border-radius:8px;border:1px solid #D1D9E0;">
+                <div style="font-size:11px;font-weight:700;color:#2563EB;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+                  🛡️ Modules accessibles avec ce rôle
+                </div>
+                <div id="role-preview-content" style="font-size:12px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+                <div id="role-preview-denied" style="margin-top:8px;font-size:11px;color:var(--rouge);"></div>
               </div>
             </div>
             <div class="modal-footer">
