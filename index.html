@@ -7124,6 +7124,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-client')">Annuler</button>
+      <button class="btn btn-secondary" style="background:#1D4ED8;color:#fff;" onclick="genererCahierCharges({clientId:APP.editingId})">📋 Cahier des charges</button>
       <button class="btn btn-primary" onclick="saveClient()">Enregistrer</button>
     </div>
   </div>
@@ -7570,6 +7571,19 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="tab-pane" id="tab-morcellement-generation">
         <div id="mrc-gen-recap" style="margin-bottom:16px;"></div>
         <div id="mrc-gen-preview" style="margin-bottom:16px;"></div>
+
+        <div style="padding:14px;background:rgba(184,115,51,0.08);border:1px solid rgba(184,115,51,0.35);border-radius:10px;margin-bottom:14px;">
+          <div style="font-weight:700;color:var(--or);margin-bottom:6px;">📥 Importer le morcellement depuis un fichier (état du foncier)</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">
+            Crée directement les lots à partir d'un fichier <strong>CSV</strong> ou <strong>Excel (.xlsx)</strong>.
+            Colonnes reconnues : <em>ILOT, LOT, SUPERFICIE, TYPE DE LOGEMENT, ETAT A LA VENTE, PU, Valeur Aménagement, Valeur Foncier, ZONE</em>.
+            Les lots existants (même numéro) ne sont pas dupliqués.
+          </div>
+          <input type="file" id="mrc-import-file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importMorcellementFichier(this)">
+          <button class="btn btn-primary" style="background:var(--or);" onclick="document.getElementById('mrc-import-file').click()">📁 Choisir un fichier CSV / Excel</button>
+          <span id="mrc-import-status" style="margin-left:10px;font-size:12px;"></span>
+        </div>
+
         <div style="padding:14px;background:rgba(74,196,122,0.08);border:1px solid rgba(74,196,122,0.3);border-radius:10px;">
           <div style="font-weight:700;color:var(--vert);margin-bottom:6px;">⚡ Génération des lots commerciaux</div>
           <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">
@@ -7651,6 +7665,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <label>Description courte</label>
             <input type="text" class="form-control" id="modele-desc" placeholder="Ex: Vue jardin, terrasse...">
           </div>
+        </div>
+        <div style="margin-top:14px;padding:12px;background:rgba(29,78,216,0.06);border:1px solid rgba(29,78,216,0.25);border-radius:8px;">
+          <div style="font-weight:700;color:#1D4ED8;margin-bottom:6px;">📐 Plans & vues du cahier des charges</div>
+          <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Ajoutez les plans (architectural, fondation, toiture, coupes, façades, électricité, plomberie, fosse septique, 3D). Ils figureront dans le cahier des charges du bien.</div>
+          <input type="file" id="modele-plan-file" accept="image/*" multiple style="display:none;" onchange="modeleAjouterPlans(this)">
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modele-plan-file').click()">🖼️ Ajouter des plans (images)</button>
+          <div id="modele-plans-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
         </div>
         <div style="display:flex;gap:10px;margin-top:12px;">
           <button class="btn btn-primary" onclick="saveModele()">💾 Enregistrer ce type</button>
@@ -7743,6 +7764,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-lot')">Annuler</button>
+      <button class="btn btn-secondary" style="background:#1D4ED8;color:#fff;" onclick="genererCahierCharges({lotId:APP.editingId})">📋 Cahier des charges</button>
       <button class="btn btn-primary" onclick="saveLot()">Enregistrer</button>
     </div>
   </div>
@@ -12655,6 +12677,42 @@ function clearModeleForm() {
   });
   document.getElementById('modele-nb').value = '1';
   document.getElementById('modele-standing').value = 'moyen';
+  APP._modelePlans = [];
+  renderModelePlans();
+}
+
+/* Gestion des plans/vues du modèle (images base64) */
+function renderModelePlans() {
+  var box = document.getElementById('modele-plans-list');
+  if (!box) return;
+  var plans = APP._modelePlans || [];
+  if (!plans.length) { box.innerHTML = '<span style="font-size:11px;color:var(--dim);">Aucun plan ajouté.</span>'; return; }
+  box.innerHTML = plans.map(function(pl, i) {
+    return '<div style="position:relative;width:90px;text-align:center;">'
+      + '<img src="' + pl.data + '" style="width:90px;height:70px;object-fit:cover;border:1px solid var(--bord);border-radius:6px;">'
+      + '<input type="text" value="' + (pl.label || '').replace(/"/g,'&quot;') + '" oninput="APP._modelePlans[' + i + '].label=this.value" placeholder="Légende" style="width:90px;font-size:10px;margin-top:2px;padding:2px;border:1px solid var(--bord);border-radius:4px;">'
+      + '<button onclick="APP._modelePlans.splice(' + i + ',1);renderModelePlans()" style="position:absolute;top:-6px;right:-6px;background:var(--rouge);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;">✕</button>'
+      + '</div>';
+  }).join('');
+}
+
+function modeleAjouterPlans(input) {
+  var files = input.files;
+  if (!files || !files.length) return;
+  if (!APP._modelePlans) APP._modelePlans = [];
+  var done = 0;
+  for (var i = 0; i < files.length; i++) {
+    (function(file) {
+      var r = new FileReader();
+      r.onload = function(e) {
+        APP._modelePlans.push({ label: file.name.replace(/\.[^.]+$/, ''), data: e.target.result });
+        done++;
+        if (done === files.length) renderModelePlans();
+      };
+      r.readAsDataURL(file);
+    })(files[i]);
+  }
+  input.value = '';
 }
 
 function renderModelesList(programmeId) {
@@ -12708,6 +12766,8 @@ function editModele(id) {
   document.getElementById('modele-desc').value = m.description || '';
   document.getElementById('modele-standing').value = m.standing || 'moyen';
   document.getElementById('modele-mode-livraison').value = m.mode_livraison || 'gros_oeuvre';
+  APP._modelePlans = (m.plans || []).slice();
+  renderModelePlans();
   document.getElementById('modele-nom').scrollIntoView({ behavior: 'smooth' });
   document.getElementById('modele-nom').focus();
 }
@@ -12730,6 +12790,7 @@ async function saveModele() {
     standing: document.getElementById('modele-standing').value,
     mode_livraison: document.getElementById('modele-mode-livraison').value,
     description: document.getElementById('modele-desc').value.trim(),
+    plans: (APP._modelePlans || []).slice(),
     created_at: APP.editingModeleId ? undefined : today()
   };
   if (!DATA.modeles_logement) DATA.modeles_logement = [];
@@ -13122,6 +13183,161 @@ async function confirmerGenerationLots() {
   previewGenerationLots();
   renderLots();
   toast('✅ ' + count + ' lot(s) généré(s) depuis le morcellement !', 'success');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   IMPORT MORCELLEMENT DEPUIS FICHIER (CSV / XLSX) — état du foncier
+══════════════════════════════════════════════════════════════════ */
+
+/* Découpe une ligne CSV en gérant les guillemets et ; ou , */
+function _csvSplit(line, sep) {
+  var out = [], cur = '', q = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') { if (q && line[i+1] === '"') { cur += '"'; i++; } else q = !q; }
+    else if (ch === sep && !q) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+/* Normalise un en-tête : minuscules, sans accents/espaces */
+function _norm(s) {
+  return (s || '').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/* Repère les colonnes par mots-clés */
+function _mapColonnes(headers) {
+  var H = headers.map(_norm);
+  function find(keys) {
+    for (var k = 0; k < keys.length; k++) {
+      for (var j = 0; j < H.length; j++) if (H[j] === _norm(keys[k]) || H[j].indexOf(_norm(keys[k])) === 0) return j;
+    }
+    return -1;
+  }
+  return {
+    ilot:   find(['ilot']),
+    lot:    find(['lot','numero','numerodelot']),
+    surface:find(['superficie','surface']),
+    type:   find(['typedelogement','type']),
+    etat:   find(['etatalavente','etat','statut']),
+    code:   find(['codeclient','code']),
+    pu:     find(['pu','prix','prixunitaire']),
+    amen:   find(['valeuramenagement','amenagement']),
+    fonc:   find(['valeurfoncier','foncier']),
+    zone:   find(['zone'])
+  };
+}
+
+/* Déduit le nb de pièces depuis le libellé ("villa 3 pièces" -> 3) */
+function _piecesFromType(t) {
+  var m = (t || '').match(/(\d+)\s*pi[eè]ce/i);
+  return m ? parseInt(m[1]) : 0;
+}
+
+/* Mappe l'état de vente vers un statut interne */
+function _statutFromEtat(e) {
+  var s = _norm(e);
+  if (s.indexOf('vendue') === 0 || s === 'vendu') return 'vendu';
+  if (s.indexOf('reserv') >= 0) return 'reserve';
+  if (s.indexOf('noncessible') >= 0 || s.indexOf('bloque') >= 0) return 'reserve';
+  return 'disponible';  /* "Non Vendue" et défaut */
+}
+
+/* Transforme un tableau de lignes (array d'arrays) en lots et les crée */
+async function _creerLotsDepuisLignes(rows) {
+  var progId = APP.currentMrcProgId;
+  if (!progId) { toast('Ouvrez le morcellement d\'un programme d\'abord.', 'error'); return; }
+  if (!rows || rows.length < 2) { toast('Fichier vide ou illisible.', 'error'); return; }
+
+  var col = _mapColonnes(rows[0]);
+  if (col.lot === -1 || col.surface === -1) {
+    toast('Colonnes LOT et SUPERFICIE introuvables dans le fichier.', 'error'); return;
+  }
+  if (!DATA.lots) DATA.lots = [];
+  var existants = {};
+  DATA.lots.filter(function(l){ return l.programme_id === progId; })
+           .forEach(function(l){ existants[(l.ilot||'') + '|' + l.numero] = true; });
+
+  var crees = 0, ignores = 0, lus = 0;
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    var g = function(c){ return c >= 0 && c < r.length ? r[c] : ''; };
+    var numero = (g(col.lot) || '').toString().trim();
+    var supRaw = (g(col.surface) || '').toString().replace(/\s/g, '').replace(',', '.');
+    var surface = parseFloat(supRaw) || 0;
+    if (!numero || surface <= 0 || surface > 5000) continue;  /* ignore totaux / vides */
+    lus++;
+    var ilot = (g(col.ilot) || '').toString().trim();
+    if (existants[ilot + '|' + numero]) { ignores++; continue; }
+
+    var typ = (g(col.type) || '').toString().trim();
+    var amen = parseFloat((g(col.amen) || '0').toString().replace(/\s/g,'').replace(',','.')) || 0;
+    var fonc = parseFloat((g(col.fonc) || '0').toString().replace(/\s/g,'').replace(',','.')) || 0;
+    var pu   = parseFloat((g(col.pu)   || '0').toString().replace(/\s/g,'').replace(',','.')) || 0;
+
+    var lot = {
+      id: uid(), programme_id: progId, numero: numero, ilot: ilot,
+      type: typ || 'Lot', surface: surface, pieces: _piecesFromType(typ),
+      prix: pu, cout_revient: amen + fonc,
+      standing: 'moyen', mode_livraison: 'gros_oeuvre',
+      statut: _statutFromEtat(g(col.etat)),
+      notes: [g(col.zone) ? 'Zone ' + g(col.zone) : '', g(col.code) ? 'Client ' + g(col.code) : ''].filter(Boolean).join(' · '),
+      created_at: today()
+    };
+    DATA.lots.push(lot);
+    await dbPut('lots', lot);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
+    existants[ilot + '|' + numero] = true;
+    crees++;
+  }
+  renderLots();
+  if (typeof previewGenerationLots === 'function') previewGenerationLots();
+  var st = document.getElementById('mrc-import-status');
+  if (st) st.innerHTML = '<span style="color:var(--vert);">✅ ' + crees + ' lot(s) créé(s)' + (ignores ? ' · ' + ignores + ' déjà existant(s)' : '') + '</span>';
+  toast('✅ Import terminé : ' + crees + ' lot(s) créé(s), ' + ignores + ' ignoré(s).', 'success');
+}
+
+function importMorcellementFichier(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var st = document.getElementById('mrc-import-status');
+  if (st) st.innerHTML = '<span style="color:var(--or);">⏳ Lecture de ' + file.name + '…</span>';
+  var nom = file.name.toLowerCase();
+  var reader = new FileReader();
+
+  if (nom.endsWith('.xlsx') || nom.endsWith('.xls')) {
+    if (typeof XLSX === 'undefined') {
+      if (st) st.innerHTML = '<span style="color:var(--rouge);">⚠️ Format Excel non supporté hors-ligne. Enregistrez le fichier en CSV (séparateur ;) puis réimportez.</span>';
+      toast('Convertissez le fichier en CSV pour l\'importer.', 'error');
+      input.value = '';
+      return;
+    }
+    reader.onload = function(e) {
+      try {
+        var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        _creerLotsDepuisLignes(rows);
+      } catch (err) { toast('Erreur lecture Excel : ' + err, 'error'); }
+      input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload = function(e) {
+      var txt = e.target.result;
+      var lines = txt.split(/\r?\n/).filter(function(l){ return l.trim() !== ''; });
+      if (!lines.length) { toast('Fichier vide.', 'error'); input.value = ''; return; }
+      var sep = (lines[0].split(';').length > lines[0].split(',').length) ? ';' : ',';
+      var rows = lines.map(function(l){ return _csvSplit(l, sep); });
+      _creerLotsDepuisLignes(rows);
+      input.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -21165,11 +21381,15 @@ function addDocConception(){var box=document.getElementById('conc-docs-list');if
 function collectPhasesConception(){var phases=[];document.querySelectorAll('[id^="phase-nom-"]').forEach(function(el){var s=document.getElementById(el.id.replace('nom','statut'));var p=document.getElementById(el.id.replace('nom','pct'));if(el.value.trim())phases.push({nom:el.value.trim(),statut:s?s.value:'a_faire',pct:parseInt(p?p.value:0)||0});});return phases;}
 
 async function saveConception(){
+  if(APP._savingConception)return; /* anti double-clic / double-tap mobile */
+  APP._savingConception=true;
+  try{
   var ref=document.getElementById('conc-ref').value.trim();var types=document.getElementById('conc-type-logements').value.trim();if(!ref||!types){toast('Référence et type obligatoires.','error');return;}
   var phases=collectPhasesConception();var av=phases.length?Math.round(phases.reduce(function(s,p){return s+(p.pct||0);},0)/phases.length):0;
   var c={id:APP.editingId||uid(),ref:ref,type_logements:types,programme_id:document.getElementById('conc-programme').value,architecte:document.getElementById('conc-architecte').value.trim(),surface:parseFloat(document.getElementById('conc-surface').value)||0,nb_unites:parseInt(document.getElementById('conc-nb-unites').value)||0,cout:parseFloat(document.getElementById('conc-cout').value)||0,phase:document.getElementById('conc-phase').value,statut:document.getElementById('conc-statut').value,date_debut:document.getElementById('conc-date-debut').value,date_fin:document.getElementById('conc-date-fin').value,description:document.getElementById('conc-description').value.trim(),phases:phases,avancement:av,created_at:APP.editingId?undefined:today()};
-  if(APP.editingId){var idx=DATA.conceptions.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.conceptions[idx]=c;}else DATA.conceptions.push(c);
+  if(APP.editingId){var idx=DATA.conceptions.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.conceptions[idx]=c;}else{DATA.conceptions.push(c);APP.editingId=c.id;}
   await dbPut('conceptions',c);closeModal('modal-conception');renderConceptionsFull();toast('Conception enregistrée.','success');
+  }finally{APP._savingConception=false;}
 }
 async function deleteConception(id){if(!confirm('Supprimer ce projet ?'))return;DATA.conceptions=DATA.conceptions.filter(function(c){return c.id!==id;});await dbDelete('conceptions',id);renderConceptionsFull();toast('Supprimé.','info');}
 function exportConceptionCSV(){var rows=['Référence,Programme,Type,Architecte,Surface,Unités,Phase,Statut'];DATA.conceptions.forEach(function(c){var pr=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:''};rows.push([c.ref,pr.nom,c.type_logements,c.architecte,c.surface,c.nb_unites,c.phase,c.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='conceptions.csv';a.click();}
@@ -26246,6 +26466,177 @@ function genererEtatPDF(opts) {
   win.document.open(); win.document.write(html); win.document.close();
   return win;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   CAHIER DES CHARGES — document technique remis au souscripteur
+   Élaboré par la Direction Technique. Sections standard + données du bien.
+   Textes par défaut éditables via DATA.params.cdc (objet de surcharges).
+══════════════════════════════════════════════════════════════════════ */
+var CDC_DEFAULTS = {
+  description_generale:
+    "La villa est une résidence conçue pour offrir à ses résidents un espace de vie confortable, élégant et fonctionnel, parfaitement adaptée pour une famille ou un couple désireux de vivre dans le confort.",
+  design:
+    "• Style : lignes épurées et finitions de standing.\n• Disposition : circulation fluide entre les différentes zones de vie.\n• Matériaux : béton armé, verre et bois — solidité et esthétique.",
+  document_reference:
+    "Le promoteur devra se conformer aux documents suivants :\n- Les Normes Françaises de la classe P éditées par l'AFNOR\n- Les Cahiers des Prescriptions Techniques\n- Les Cahiers des Charges de la SODECI, de la CIE et de CI-TELCOM\n- Les plans soumis aux souscripteurs.",
+  calendrier:
+    "1. Planification : définition des spécifications, matériaux, dimensions et équipements (réalisée en amont).\n2. Préparation du site : terrassement, mise en place pour la fondation, pose des canalisations et réseaux.\n3. Gros œuvres : mise en place de la structure principale (phase la plus longue).\n4. Réservation et câblages : électriques, sécuritaires, climatiques, domotique et réseaux divers.\n5. Finitions : revêtements sol et murs, portes et fenêtres, équipements électriques/sanitaires, cuisine, climatiseurs, sécurité, jardinage et paysagisme.\n\nDélai d'exécution : 24 mois ajustables suivant le démarrage de l'ouvrage. Projet prédéfini pour une durée n'excédant pas 60 mois.",
+  lot1_gros_oeuvre:
+    "1-0 Généralité\nLes fondations seront établies en fonction des charges à transmettre et du taux de travail admissible du sol d'assise.\n- Semelles en béton armé type B 350, aciers HA (dosé 350 kg/m³).\n- Gros béton pour massifs : béton dosé à 150 kg/m³ de ciment CPJ 42.5, coulé en pleine fouille.\n- Béton de propreté de 0,05 m minimum sous tous ouvrages de fondation, dosé à 150 kg/m³.\n- Poteaux et chaînages verticaux : béton armé dosé 350 kg/m³.\n- Chaînages horizontaux : Béton B 25, aciers HA.\n\nÉtapes du gros œuvre :\n1. Implantation et fouilles (matérialisation du bâtiment au sol).\n2. Fondations (partie inférieure assurant la stabilité).\n3. Élévation des murs du RDC : agglos creux 0,15 m (0,10 m pour cloisons), renforcés de poteaux et raidisseurs, couronnés d'un chaînage horizontal.\n4. Pose des menuiseries extérieures après achèvement du gros œuvre.\n5. Enduits et chapes : surfaces régulières et planes, descendues jusqu'au sol brut.",
+  lot2_second_oeuvre:
+    "2-0 Généralité\nTravaux intervenant après le gros œuvre pour terminer la construction et améliorer confort et fonctionnalité.\n1. Installation des réseaux électriques et de plomberie (alimentation eau et électricité). Contrôle SECUREL. Distribution intérieure et extérieure depuis le coffret compteur en limite de propriété.\n2. Revêtements (en option) :\n   - Terrasses et séjour : carreaux vitrifiés 60×60 cm\n   - Chambres : carreaux vitrifiés 60×60 cm\n   - Sols des toilettes : 40×40 cm antidérapant\n   - Faïences SDB et toilettes : 20×40 cm jusqu'à la sous-face du plafond\n   - Paillasses cuisine et murs : faïence 20×40 cm\n3. Climatisation et chauffage.\n4. Menuiseries intérieures (portes, placards).\n5. Cuisine et salle de bain.\n6. Aménagement des extérieurs (jardin, terrasse).\n7. Miroiterie : glaces claires 6 mm à joint biseauté, fixations chromées invisibles.",
+  lot3_finitions:
+    "Le logement standard livré comprend : maçonnerie, charpente et couverture, plomberie primaire (évacuations), menuiserie-bois (cadres de portes en option), électricité primaire (réservation des câblages).\n\n1- ÉCONOMIQUE : Gros œuvres · Câblage et appareillages électriques · Adduction eau + appareillage sanitaire · Faux plafond staff/placo hydrofuge (chambre principale et salon), lambris PVC ailleurs · Étanchéités · Menuiserie bois plein + serrurerie · Menuiserie alu (baies/fenêtres) · Carrelage vitrifié · Enduit + peinture.\n\n2- MOYEN STANDING : idem économique avec finitions de meilleure qualité.\n\n3- HAUT STANDING : Appareillages électriques et sanitaires haut de gamme · Faux plafond staff/placo hydrofuge · Serrurerie haut de gamme · Carrelage vitrifié type espagnol · Enduit + peinture.\n\nNB : La façade extérieure ne peut être modifiée qu'après concertation du syndic de copropriété ou avis d'un urbaniste agréé.",
+  dossiers_fournis:
+    "À LA SOUSCRIPTION : attestation de souscription · reçu de frais de dossiers · tableau d'amortissement · copie de la fiche de souscription.\nAPRÈS PAIEMENT DE 70 % : contrat de réservation (sous seing privé ou notarié, puis légalisé selon préférence).\nAPRÈS PAIEMENT DU SOLDE : attestation de solde définitive signée du promoteur.\nÀ LA LIVRAISON : dossier technique · promesse de cession/acte de vente · document d'expert attestant la levée des réserves · contrat de vente sous seing privé.",
+  conditions_souscription:
+    "Dès la souscription : paiement obligatoire de 500 000 FCFA (frais de dossiers et de souscription, non négociables et non remboursables).\nDès l'entame du projet : paiement de la première cotisation mensuelle selon le tableau d'amortissement (pénalité de 10 % sur les cotisations dues en cas de retard ≥ 3 mois).\nImmobilisation du bien après paiement de 70 % du coût total.\nRéception du contrat de cession au paiement du solde. Remise des clés après levée des réserves et procédures notariées.",
+  autres_conditions:
+    "Toute modification (interne/externe) mettant en péril la stabilité du logement dans les 10 ans après livraison annule la garantie décennale du promoteur. Les modifications autorisées sont soumises à l'architecte, l'urbaniste agréés et au syndic ; les frais sont à la charge du souscripteur.\nL'ensemble immobilier est placé sous le régime de la copropriété à l'achèvement.\nEn cas de désistement du souscripteur (hors faute du promoteur), le remboursement de 60 % des versements n'est effectif qu'à la fin du délai de réalisation ; remboursement total si le désistement provient du promoteur.",
+  moyens_paiement:
+    "Par virement bancaire (RIB communiqué en agence). Espèces et chèques via nos caisses en agence."
+};
+
+function _cdcTxt(key) {
+  var ov = (DATA.params && DATA.params.cdc) ? DATA.params.cdc[key] : null;
+  return (ov && ov.trim()) ? ov : (CDC_DEFAULTS[key] || '');
+}
+function _cdcPara(txt) {
+  return '<div style="white-space:pre-line;font-size:11px;line-height:1.6;margin:4px 0 10px;">' + escHtml(txt) + '</div>';
+}
+
+function genererCahierCharges(opts) {
+  opts = opts || {};
+  var client = null, lot = null;
+  if (opts.clientId) {
+    client = DATA.clients.find(function(c){ return c.id === opts.clientId; });
+    if (client && client.lot_id) lot = DATA.lots.find(function(l){ return l.id === client.lot_id; });
+  }
+  if (opts.lotId) {
+    lot = DATA.lots.find(function(l){ return l.id === opts.lotId; });
+    if (!client && lot) client = DATA.clients.find(function(c){ return c.lot_id === lot.id; });
+  }
+  if (!lot && !client) { toast('Sélectionnez un lot ou un souscripteur valide.', 'error'); return; }
+
+  var prog = DATA.programmes.find(function(p){ return p.id === ((lot && lot.programme_id) || (client && client.programme_id)); }) || {};
+  /* Modèle de logement : par type du lot ou du client */
+  var typeLabel = (lot && lot.type) || (client && client.type_logement) || '';
+  var modele = (DATA.modeles_logement || []).find(function(m){
+    return m.programme_id === prog.id && typeLabel && (_norm(m.nom) === _norm(typeLabel) || _norm(typeLabel).indexOf(_norm(m.nom)) >= 0);
+  }) || {};
+
+  var modeleNom = modele.nom || typeLabel || 'Villa';
+  var surface   = (lot && lot.surface) || modele.surface || '';
+  var prix      = (lot && lot.prix) || (client && client.montant_total) || modele.prix_vente || 0;
+  var duree     = (client && client.duree) || 60;
+  var immo70    = Math.round(prix * 0.7);
+  var mensuel   = duree > 0 ? Math.round((prix - (client ? (client.apport||0) : 0)) / duree) : 0;
+  var standingLbl = { economique:'Économique', moyen:'Moyen standing', haut:'Haut standing' };
+  var standing  = standingLbl[(lot && lot.standing) || (client && client.standing) || modele.standing] || '—';
+
+  var souscripteur = client ? ((client.prenoms ? client.prenoms + ' ' : '') + (client.nom || '')) : '—';
+  var codeSous = client ? (client.dossier || client.code_acces || '') : '';
+
+  /* Plans / vues attachés au modèle (modele.plans = [{label,data}]) */
+  var plans = (modele.plans || []).filter(function(pl){ return pl && pl.data; });
+  var plansHTML = plans.length
+    ? plans.map(function(pl){
+        return '<div class="cdc-plan"><div class="cdc-plan-t">' + escHtml(pl.label || 'Plan') + '</div>'
+          + '<img src="' + pl.data + '" style="max-width:100%;max-height:430px;object-fit:contain;border:1px solid #ddd;border-radius:6px;"></div>';
+      }).join('')
+    : '<div style="font-size:11px;color:#999;font-style:italic;">Aucun plan attaché. Ajoutez les vues (plan architectural, fondation, toiture, coupes, façades, électricité, plomberie, fosse septique, 3D) sur le modèle de logement.</div>';
+
+  /* Détail des surfaces par pièce (modele.pieces_detail = [{nom,surface}]) */
+  var pd = modele.pieces_detail || [];
+  var surfacesHTML = pd.length
+    ? '<table><thead><tr><th>Pièce</th><th class="num">Surface (m²)</th></tr></thead><tbody>'
+      + pd.map(function(r){ return '<tr><td>' + escHtml(r.nom) + '</td><td class="num">' + escHtml(String(r.surface)) + '</td></tr>'; }).join('')
+      + '</tbody></table>'
+    : '';
+
+  var pb = '<div style="page-break-before:always;"></div>';
+  var H3 = function(t){ return '<h3>' + escHtml(t) + '</h3>'; };
+
+  var contenu = '';
+
+  /* Bloc identité du bien */
+  contenu += '<div class="cdc-ident">'
+    + '<div class="cdc-villa">' + escHtml(modeleNom) + (surface ? ' — ' + escHtml(String(surface)) + ' m²' : '') + '</div>'
+    + '<div class="cdc-sous">' + escHtml(souscripteur) + (codeSous ? ' · ' + escHtml(codeSous) : '') + '</div>'
+    + '</div>';
+  contenu += '<table><tbody>'
+    + '<tr><th>Programme</th><td>' + escHtml(prog.nom || '—') + '</td><th>Localisation</th><td>' + escHtml(prog.localisation || prog.commune || 'Grand-Bassam / Yaou') + '</td></tr>'
+    + '<tr><th>Îlot</th><td>' + escHtml((lot && lot.ilot) || '—') + '</td><th>Lot N°</th><td>' + escHtml((lot && lot.numero) || '—') + '</td></tr>'
+    + '<tr><th>Type de logement</th><td>' + escHtml(typeLabel || '—') + '</td><th>Standing</th><td>' + escHtml(standing) + '</td></tr>'
+    + '<tr><th>Surface utile</th><td>' + escHtml(String(surface || '—')) + ' m²</td><th>Mode de livraison</th><td>' + escHtml(((lot && lot.mode_livraison) || (client && client.mode_livraison) || '—')) + '</td></tr>'
+    + '</tbody></table>';
+
+  /* Description */
+  contenu += H3('Description du bien');
+  contenu += _cdcPara(_cdcTxt('description_generale'));
+  contenu += _cdcPara(_cdcTxt('design'));
+  if (modele.description) contenu += _cdcPara(modele.description);
+
+  /* Surfaces */
+  if (surfacesHTML) { contenu += H3('Plan architectural — surfaces'); contenu += surfacesHTML; }
+
+  /* Plans / vues */
+  contenu += pb + H3('Plans & vues techniques');
+  contenu += plansHTML;
+
+  /* Sections techniques */
+  contenu += pb + H3('Objet du descriptif');
+  contenu += _cdcPara(_cdcTxt('description_generale'));
+  contenu += H3('Document technique de référence');
+  contenu += _cdcPara(_cdcTxt('document_reference'));
+  contenu += H3('Calendrier des travaux');
+  contenu += _cdcPara(_cdcTxt('calendrier'));
+
+  contenu += pb + H3('Lot N° 1 — Gros œuvres');
+  contenu += _cdcPara(_cdcTxt('lot1_gros_oeuvre'));
+  contenu += H3('Lot N° 2 — Second œuvre');
+  contenu += _cdcPara(_cdcTxt('lot2_second_oeuvre'));
+
+  contenu += pb + H3('Lot N° 3 — Options de finitions');
+  contenu += _cdcPara(_cdcTxt('lot3_finitions'));
+  contenu += H3('Liste des dossiers fournis aux clients');
+  contenu += _cdcPara(_cdcTxt('dossiers_fournis'));
+
+  contenu += pb + H3('Conditions de souscription');
+  contenu += _cdcPara(_cdcTxt('conditions_souscription'));
+  contenu += H3('Autres conditions');
+  contenu += _cdcPara(_cdcTxt('autres_conditions'));
+
+  /* Tableau d'amortissement */
+  contenu += H3('Tableau d\'amortissement');
+  contenu += '<table><thead><tr><th>' + escHtml(modeleNom) + '</th><th class="num">Coût global</th><th class="num">Immobilisation (70 %)</th><th class="num">Versement mensuel</th></tr></thead><tbody>'
+    + '<tr><td>' + escHtml(standing) + '</td><td class="num">' + fmtF(prix) + ' FCFA</td><td class="num">' + fmtF(immo70) + ' FCFA</td><td class="num">' + fmtF(mensuel) + ' FCFA</td></tr>'
+    + '</tbody></table>'
+    + '<div style="font-size:10px;color:#666;margin-top:4px;">Durée : ' + duree + ' mois' + (client && client.apport ? ' · Apport : ' + fmtF(client.apport) + ' FCFA' : '') + '</div>';
+  contenu += H3('Moyens de paiement');
+  contenu += _cdcPara(_cdcTxt('moyens_paiement'));
+
+  /* Signatures */
+  contenu += '<div class="etat-signatures"><div><div class="etat-sign-line">Le Souscripteur</div></div>'
+    + '<div><div class="etat-sign-line">Le Promoteur</div></div></div>';
+
+  var cssExtra = '.cdc-ident{background:#dfe7cf;border:1px solid #c2cfa8;border-radius:6px;padding:14px 18px;margin-bottom:12px;}'
+    + '.cdc-villa{font-size:18px;font-weight:700;color:#2E5E1E;}'
+    + '.cdc-sous{font-size:13px;font-weight:600;color:#1f2937;margin-top:4px;}'
+    + '.cdc-plan{margin:10px 0 16px;text-align:center;page-break-inside:avoid;}'
+    + '.cdc-plan-t{font-size:12px;font-weight:600;color:#1D4ED8;margin-bottom:4px;text-align:left;}'
+    + 'h3{page-break-after:avoid;}';
+
+  genererEtatPDF({
+    titre: 'Cahier des Charges',
+    sousTitre: modeleNom + (codeSous ? ' — ' + souscripteur + ' (' + codeSous + ')' : (client ? ' — ' + souscripteur : '')),
+    reference: (lot && (lot.ilot || lot.numero)) ? ('Îlot ' + (lot.ilot||'?') + ' · Lot ' + (lot.numero||'?')) : '',
+    couleur: '#2E5E1E',
+    contenu: contenu,
+    cssExtra: cssExtra
+  });
+}
+
 
 /* Construit un tableau HTML standard pour les états.
    cols: [{l:'Libellé', k:'cle', num:true}]  ·  rows: [objets]  ·  totaux: {cle:valeur} */
