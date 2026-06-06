@@ -2239,11 +2239,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
 
         <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('lots','grille')">🗂 Grille des Lots</button>
+          <button class="tab-btn active" onclick="switchTab('lots','dashboard')">📊 Tableau de bord</button>
+          <button class="tab-btn" onclick="switchTab('lots','grille')">🗂 Grille des Lots</button>
           <button class="tab-btn" onclick="switchTab('lots','terrains')">🌍 Terrains</button>
         </div>
 
-        <div class="tab-pane active" id="tab-lots-grille">
+        <div class="tab-pane active" id="tab-lots-dashboard">
+          <div id="lots-dashboard"></div>
+        </div>
+        <div class="tab-pane" id="tab-lots-grille">
           <div class="lots-grid" id="lots-grid"></div>
         </div>
         <div class="tab-pane" id="tab-lots-terrains">
@@ -13714,7 +13718,109 @@ async function saveLot() {
 
 function filterLots() { renderLots(); }
 
+/* ══════════════════════════════════════════════════════════════════
+   TABLEAU DE BORD — LOTS & FONCIER
+══════════════════════════════════════════════════════════════════ */
+function renderLotsDashboard() {
+  var box = document.getElementById('lots-dashboard');
+  if (!box) return;
+  var fProg = (document.getElementById('filter-programme-lots') || {}).value || '';
+  var lots = (DATA.lots || []).filter(function(l){ return !fProg || l.programme_id === fProg; });
+
+  if (!lots.length) {
+    box.innerHTML = '<div class="card"><div style="padding:24px;text-align:center;color:var(--blanc-dim);">Aucun lot. Importez le morcellement ou créez un lot.</div></div>';
+    return;
+  }
+
+  var N = function(v){ return parseFloat(v) || 0; };
+  var vendu = lots.filter(function(l){ return l.statut === 'vendu'; });
+  var dispo = lots.filter(function(l){ return l.statut === 'disponible'; });
+  var reserve = lots.filter(function(l){ return l.statut === 'reserve'; });
+
+  var caRealise   = vendu.reduce(function(s,l){ return s + N(l.prix); }, 0);
+  var caPotentiel = dispo.concat(reserve).reduce(function(s,l){ return s + N(l.prix); }, 0);
+  var valeurTotale = lots.reduce(function(s,l){ return s + N(l.prix); }, 0);
+  var coutTotal   = lots.reduce(function(s,l){ return s + N(l.cout_revient); }, 0);
+  var margeTotale = valeurTotale - coutTotal;
+  var margePct    = valeurTotale > 0 ? Math.round(margeTotale / valeurTotale * 100) : 0;
+  var surfaceTot  = lots.reduce(function(s,l){ return s + N(l.surface); }, 0);
+  var tauxEcoul   = lots.length ? Math.round(vendu.length / lots.length * 100) : 0;
+
+  /* KPI cards */
+  var kpis = [
+    { l:'Lots au total', v:lots.length, sub:Math.round(surfaceTot).toLocaleString('fr-FR')+' m²', c:'var(--bleu)' },
+    { l:'Vendus', v:vendu.length, sub:tauxEcoul+'% d\'écoulement', c:'var(--vert)' },
+    { l:'Disponibles', v:dispo.length, sub:reserve.length+' réservé(s)', c:'var(--or)' },
+    { l:'CA réalisé', v:fmtF(caRealise), sub:'FCFA encaissables', c:'var(--vert)' },
+    { l:'CA potentiel', v:fmtF(caPotentiel), sub:'stock à vendre', c:'var(--or)' },
+    { l:'Marge globale', v:fmtF(margeTotale), sub:margePct+'% (prix − coût)', c:'var(--violet)' }
+  ];
+  var kpiHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">'
+    + kpis.map(function(k){
+        return '<div class="kpi-card" style="border-top:3px solid '+k.c+';">'
+          + '<div class="kpi-label">'+k.l+'</div>'
+          + '<div class="kpi-value" style="font-size:18px;color:'+k.c+';">'+k.v+'</div>'
+          + '<div style="font-size:11px;color:var(--blanc-dim);margin-top:2px;">'+k.sub+'</div></div>';
+      }).join('') + '</div>';
+
+  /* Barre d'écoulement */
+  var nb = lots.length;
+  var barre = '<div class="card" style="margin-bottom:16px;"><div class="card-title">Répartition du stock</div>'
+    + '<div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin:10px 0 6px;">'
+    + (vendu.length ?  '<div style="width:'+(vendu.length/nb*100)+'%;background:var(--vert);"></div>' : '')
+    + (reserve.length ?'<div style="width:'+(reserve.length/nb*100)+'%;background:var(--or);"></div>' : '')
+    + (dispo.length ?  '<div style="width:'+(dispo.length/nb*100)+'%;background:var(--bord2,#888);"></div>' : '')
+    + '</div>'
+    + '<div style="display:flex;gap:16px;font-size:12px;">'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:var(--vert);border-radius:2px;"></span> Vendus ('+vendu.length+')</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:var(--or);border-radius:2px;"></span> Réservés ('+reserve.length+')</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:#888;border-radius:2px;"></span> Disponibles ('+dispo.length+')</span>'
+    + '</div></div>';
+
+  /* Agrégation générique par clé */
+  function agg(keyFn) {
+    var m = {};
+    lots.forEach(function(l){
+      var k = keyFn(l) || '—';
+      if (!m[k]) m[k] = { n:0, vendu:0, ca:0, caVendu:0, surface:0 };
+      m[k].n++; m[k].ca += N(l.prix); m[k].surface += N(l.surface);
+      if (l.statut === 'vendu') { m[k].vendu++; m[k].caVendu += N(l.prix); }
+    });
+    return Object.keys(m).map(function(k){ return Object.assign({ k:k }, m[k]); })
+      .sort(function(a,b){ return b.n - a.n; });
+  }
+
+  function tableauAgg(titre, rows, max) {
+    var maxN = rows.reduce(function(x,r){ return Math.max(x, r.n); }, 1);
+    var body = rows.slice(0, max || 100).map(function(r){
+      var pctV = r.n ? Math.round(r.vendu / r.n * 100) : 0;
+      return '<tr><td style="font-size:12px;">'+escHtml(r.k)+'</td>'
+        + '<td style="text-align:center;">'+r.n+'</td>'
+        + '<td style="min-width:120px;"><div style="display:flex;align-items:center;gap:6px;">'
+          + '<div style="flex:1;height:8px;background:var(--bord);border-radius:4px;overflow:hidden;"><div style="width:'+(r.n/maxN*100)+'%;height:100%;background:var(--or);"></div></div>'
+          + '<span style="font-size:11px;color:var(--blanc-dim);">'+pctV+'% vendu</span></div></td>'
+        + '<td style="text-align:right;font-weight:600;">'+fmtF(r.ca)+'</td>'
+        + '<td style="text-align:right;color:var(--vert);">'+fmtF(r.caVendu)+'</td></tr>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:16px;overflow-x:auto;"><div class="card-title">'+titre+'</div>'
+      + '<table style="width:100%;font-size:12px;margin-top:8px;"><thead><tr>'
+      + '<th style="text-align:left;">Catégorie</th><th>Lots</th><th>Écoulement</th>'
+      + '<th style="text-align:right;">Valeur totale</th><th style="text-align:right;">CA vendu</th>'
+      + '</tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+
+  var progNom = function(id){ var p=(DATA.programmes||[]).find(function(x){return x.id===id;}); return p?p.nom:'—'; };
+
+  var html = kpiHTML + barre;
+  if (!fProg) html += tableauAgg('Par programme', agg(function(l){ return progNom(l.programme_id); }));
+  html += tableauAgg('Par type de logement', agg(function(l){ return l.type; }), 15);
+  html += tableauAgg('Par îlot', agg(function(l){ return l.ilot ? 'Îlot '+l.ilot : '—'; }), 20);
+
+  box.innerHTML = html;
+}
+
 function renderLots() {
+  renderLotsDashboard();
   var filterProg = document.getElementById('filter-programme-lots').value;
   var filterStat = document.getElementById('filter-statut-lot').value;
 
