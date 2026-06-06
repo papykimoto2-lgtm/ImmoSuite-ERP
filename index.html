@@ -2145,6 +2145,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </select>
         </div>
 
+        <div id="clients-dashboard" style="margin-bottom:16px;"></div>
+
         <div class="card">
           <div class="table-wrap">
             <table id="table-clients">
@@ -11758,7 +11760,109 @@ async function saveClient() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   TABLEAU DE BORD — SOUSCRIPTEURS
+══════════════════════════════════════════════════════════════════ */
+function renderClientsDashboard() {
+  var box = document.getElementById('clients-dashboard');
+  if (!box) return;
+  var fProg  = (document.getElementById('filter-programme')||{}).value || '';
+  var fStand = (document.getElementById('filter-standing')||{}).value || '';
+  var fCA    = (document.getElementById('filter-commercial-client')||{}).value || '';
+
+  var list = (DATA.clients||[]).filter(function(c){
+    if (fProg && c.programme_id !== fProg) return false;
+    if (fStand && c.standing !== fStand) return false;
+    if (fCA.indexOf('comm:') === 0 && c.commercial_id !== fCA.slice(5)) return false;
+    if (fCA.indexOf('ap:') === 0 && c.apporteur_id !== fCA.slice(3)) return false;
+    return true;
+  });
+
+  if (!list.length) {
+    box.innerHTML = '<div class="card"><div style="padding:20px;text-align:center;color:var(--blanc-dim);">Aucun souscripteur pour ce filtre.</div></div>';
+    return;
+  }
+
+  var N = function(v){ return parseFloat(v)||0; };
+  var verseDe = function(cid){ return DATA.versements.filter(function(v){ return v.client_id===cid; }).reduce(function(s,v){ return s+N(v.montant); }, 0); };
+  var retards = (typeof getRetardataires === 'function') ? getRetardataires() : [];
+  var estRetard = function(cid){ return retards.some(function(r){ return r.id===cid; }); };
+
+  var caTotal = list.reduce(function(s,c){ return s+N(c.montant_total); }, 0);
+  var encaisse = list.reduce(function(s,c){ return s+verseDe(c.id); }, 0);
+  var reste = Math.max(0, caTotal - encaisse);
+  var tauxRec = caTotal>0 ? Math.round(encaisse/caTotal*100) : 0;
+  var nbSolde = 0, nbRetard = 0, nbCours = 0;
+  list.forEach(function(c){
+    var v = verseDe(c.id);
+    if (v >= N(c.montant_total) && N(c.montant_total)>0) nbSolde++;
+    else if (estRetard(c.id)) nbRetard++;
+    else nbCours++;
+  });
+  var dureeMoy = Math.round(list.reduce(function(s,c){ return s+N(c.duree); },0)/list.length) || 0;
+
+  var kpis = [
+    { l:'Souscripteurs', v:list.length, sub:nbSolde+' soldé(s)', c:'var(--bleu)' },
+    { l:'CA souscrit', v:fmtF(caTotal), sub:'FCFA', c:'var(--violet)' },
+    { l:'Encaissé', v:fmtF(encaisse), sub:tauxRec+'% de recouvrement', c:'var(--vert)' },
+    { l:'Reste à recouvrer', v:fmtF(reste), sub:'FCFA', c:'var(--or)' },
+    { l:'En cours', v:nbCours, sub:'paiements actifs', c:'var(--bleu)' },
+    { l:'En retard', v:nbRetard, sub:'à relancer', c:'var(--rouge)' }
+  ];
+  var kpiHTML = '<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">'
+    + kpis.map(function(k){
+        return '<div class="kpi-card" style="border-top:3px solid '+k.c+';">'
+          + '<div class="kpi-label">'+k.l+'</div>'
+          + '<div class="kpi-value" style="font-size:18px;color:'+k.c+';">'+k.v+'</div>'
+          + '<div style="font-size:11px;color:var(--blanc-dim);margin-top:2px;">'+k.sub+'</div></div>';
+      }).join('') + '</div>';
+
+  /* Barre de recouvrement */
+  var barre = '<div class="card" style="margin-bottom:16px;"><div class="card-title">Recouvrement global</div>'
+    + '<div style="display:flex;height:24px;border-radius:6px;overflow:hidden;margin:10px 0 6px;background:var(--bord);">'
+    + '<div style="width:'+tauxRec+'%;background:var(--vert);"></div></div>'
+    + '<div style="font-size:12px;color:var(--blanc-dim);">Encaissé '+fmtF(encaisse)+' / '+fmtF(caTotal)+' FCFA · durée moyenne '+dureeMoy+' mois</div></div>';
+
+  function agg(keyFn) {
+    var m = {};
+    list.forEach(function(c){
+      var k = keyFn(c) || '—';
+      if (!m[k]) m[k] = { n:0, ca:0, enc:0 };
+      m[k].n++; m[k].ca += N(c.montant_total); m[k].enc += verseDe(c.id);
+    });
+    return Object.keys(m).map(function(k){ return { k:k, n:m[k].n, ca:m[k].ca, enc:m[k].enc }; })
+      .sort(function(a,b){ return b.ca - a.ca; });
+  }
+  function tableauAgg(titre, rows, max) {
+    var body = rows.slice(0, max||100).map(function(r){
+      var pct = r.ca>0 ? Math.round(r.enc/r.ca*100) : 0;
+      return '<tr><td style="font-size:12px;">'+escHtml(r.k)+'</td>'
+        + '<td style="text-align:center;">'+r.n+'</td>'
+        + '<td style="text-align:right;font-weight:600;">'+fmtF(r.ca)+'</td>'
+        + '<td style="min-width:120px;"><div style="display:flex;align-items:center;gap:6px;">'
+          + '<div style="flex:1;height:8px;background:var(--bord);border-radius:4px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:var(--vert);"></div></div>'
+          + '<span style="font-size:11px;color:var(--blanc-dim);">'+pct+'%</span></div></td></tr>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:16px;overflow-x:auto;"><div class="card-title">'+titre+'</div>'
+      + '<table style="width:100%;font-size:12px;margin-top:8px;"><thead><tr>'
+      + '<th style="text-align:left;">Catégorie</th><th>Nb</th><th style="text-align:right;">CA souscrit</th><th>Recouvrement</th>'
+      + '</tr></thead><tbody>'+body+'</tbody></table></div>';
+  }
+
+  var progNom = function(id){ var p=(DATA.programmes||[]).find(function(x){return x.id===id;}); return p?p.nom:'—'; };
+  var standLbl = { economique:'Économique', moyen:'Moyen standing', haut:'Haut standing' };
+  var commNom = function(c){ return c.commercial || (c.commercial_id ? 'Commercial' : '') || c.apporteur || '— Non assigné —'; };
+
+  var html = kpiHTML + barre;
+  if (!fProg) html += tableauAgg('Par programme', agg(function(c){ return progNom(c.programme_id); }));
+  html += tableauAgg('Par standing', agg(function(c){ return standLbl[c.standing] || '—'; }));
+  html += tableauAgg('Par commercial / apporteur', agg(commNom), 15);
+
+  box.innerHTML = html;
+}
+
 function renderClients() {
+  renderClientsDashboard();
   populateFilterProgrammes();
   populateFiltreCommApporteurClient();
   var search = (document.getElementById('search-clients').value || '').toLowerCase();
@@ -15796,34 +15900,45 @@ function updateLotsByProgramme() {
   var progId = document.getElementById('c-programme').value;
   var lotSelect = document.getElementById('c-lot');
   if (!lotSelect) return;
+  lotSelect.disabled = false;
+  lotSelect.removeAttribute('disabled');
   if (!progId) {
     lotSelect.innerHTML = '<option value="">— Choisissez d\'abord un programme —</option>';
-    lotSelect.disabled = true;
     return;
   }
-  lotSelect.disabled = false;
   var lotsProg = DATA.lots.filter(function(l) { return l.programme_id === progId; });
-  var lotsDispo = lotsProg.filter(function(l) { return l.statut === 'disponible' || l.statut === 'reserve' || !l.statut; });
+  var dispo = lotsProg.filter(function(l) { return l.statut === 'disponible' || l.statut === 'reserve' || !l.statut; });
+  var vendus = lotsProg.filter(function(l) { return l.statut === 'vendu'; });
   if (APP.editingId) {
     var editClient = DATA.clients.find(function(c) { return c.id === APP.editingId; });
     if (editClient && editClient.lot_id) {
       var editLot = DATA.lots.find(function(l) { return l.id === editClient.lot_id; });
-      if (editLot && !lotsDispo.find(function(l) { return l.id === editLot.id; })) lotsDispo.unshift(editLot);
+      if (editLot && !dispo.find(function(l) { return l.id === editLot.id; })) dispo.unshift(editLot);
     }
   }
-  if (!lotsDispo.length) {
-    var msg = lotsProg.length
-      ? '— ' + lotsProg.length + ' lot(s) mais tous vendus —'
+  /* Diagnostic : aucun lot rattaché à ce programme */
+  if (!lotsProg.length) {
+    var totalAutres = (DATA.lots || []).length;
+    var msg = totalAutres
+      ? '— Aucun lot rattaché à ce programme (' + totalAutres + ' lot(s) sur d\'autres programmes) —'
       : '— Aucun lot : importez le morcellement —';
     lotSelect.innerHTML = '<option value="">' + msg + '</option>';
     return;
   }
-  lotsDispo.sort(function(a,b){ return String(a.numero).localeCompare(String(b.numero), undefined, {numeric:true}); });
-  lotSelect.innerHTML = '<option value="">— Choisir un lot (' + lotsDispo.length + ' disponible(s)) —</option>'
-    + lotsDispo.map(function(l) {
-        return '<option value="' + l.id + '">Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '')
-          + ' — ' + (l.type || '') + ' — ' + new Intl.NumberFormat('fr-FR').format(l.prix || 0) + ' FCFA</option>';
-      }).join('');
+  var fmt = function(l){
+    return '<option value="' + l.id + '">Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '')
+      + ' — ' + (l.type || '') + ' — ' + new Intl.NumberFormat('fr-FR').format(l.prix || 0) + ' FCFA</option>';
+  };
+  dispo.sort(function(a,b){ return String(a.numero).localeCompare(String(b.numero), undefined, {numeric:true}); });
+  vendus.sort(function(a,b){ return String(a.numero).localeCompare(String(b.numero), undefined, {numeric:true}); });
+  var html = '<option value="">— Choisir un lot (' + dispo.length + ' dispo / ' + lotsProg.length + ' au total) —</option>';
+  html += dispo.map(fmt).join('');
+  if (vendus.length) {
+    html += '<optgroup label="Déjà vendus (' + vendus.length + ', non sélectionnables)">'
+      + vendus.map(function(l){ return '<option value="" disabled>Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + ' — vendu</option>'; }).join('')
+      + '</optgroup>';
+  }
+  lotSelect.innerHTML = html;
 }
 
 /* Sélection d'un lot → remplit prix, type de logement et mode de livraison */
