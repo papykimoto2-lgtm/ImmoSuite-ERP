@@ -4034,10 +4034,23 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="card"><div id="titres-fonciers-box"><div style="color:var(--blanc-dim);font-size:13px;padding:20px;">Chargement...</div></div></div>
         </div>
         <div class="tab-pane" id="tab-foncier-mutations">
+          <div class="filters-bar">
+            <input type="text" class="search-input" placeholder="🔍 Parcelle, type, vendeur, acheteur..." id="search-mutations" oninput="renderMutations()">
+            <select class="filter-select" id="filter-type-mutation" onchange="renderMutations()">
+              <option value="">Tous types</option>
+              <option value="vente">Vente</option>
+              <option value="donation">Donation</option>
+              <option value="succession">Succession</option>
+              <option value="expropriation">Expropriation</option>
+              <option value="echange">Échange</option>
+              <option value="apport_societe">Apport en société</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="openMutation()" style="margin-left:auto;">+ Nouvelle mutation</button>
+          </div>
           <div class="card">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Date</th><th>Parcelle</th><th>Type mutation</th><th>Vendeur</th><th>Acheteur</th><th>Frais (FCFA)</th><th>Notaire</th><th>Statut</th></tr></thead>
+                <thead><tr><th>Date</th><th>Parcelle</th><th>Type mutation</th><th>Vendeur</th><th>Acheteur</th><th>Frais (FCFA)</th><th>Notaire</th><th>Statut</th><th>Actions</th></tr></thead>
                 <tbody id="tbody-mutations"></tbody>
               </table>
             </div>
@@ -5767,6 +5780,25 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="termine">Terminé</option><option value="reception_definitive">Réception définitive</option>
               <option value="suspendu">Suspendu</option></select></div>
             <div class="form-group span-2"><label>Description</label><textarea class="form-control" id="am-cv-description" rows="2"></textarea></div>
+            <div class="form-group span-2">
+              <label>Mode de rémunération de l’aménageur</label>
+              <select class="form-control" id="am-cv-mode-remun" onchange="amToggleModeRemun()">
+                <option value="especes">Espèces / Virement (FCFA)</option>
+                <option value="nature">En nature (parcelles attribuées)</option>
+                <option value="mixte">Mixte (FCFA + parcelles)</option>
+              </select>
+            </div>
+            <!-- Section lots en nature (visible si mode nature ou mixte) -->
+            <div class="form-group span-2" id="am-cv-section-nature" style="display:none;">
+              <label style="color:var(--or);">&#x1F3D7;&#xFE0F; Parcelles attribuées en paiement</label>
+              <div id="am-cv-lots-nature-list" style="margin-bottom:8px;min-height:32px;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:6px;background:rgba(0,0,0,0.15);font-size:12px;"></div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select class="form-control" id="am-cv-lot-pick" style="flex:1;"></select>
+                <input type="number" class="form-control" id="am-cv-lot-valeur" placeholder="Valeur FCFA" style="width:160px;">
+                <button class="btn btn-secondary btn-sm" type="button" onclick="amAddLotNature()">+ Ajouter</button>
+              </div>
+              <div style="margin-top:6px;font-size:11px;color:var(--blanc-dim);">Total valorisé : <strong id="am-cv-nature-total" style="color:var(--or);">0 FCFA</strong></div>
+            </div>
           </div></div>
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-am-convention')">Annuler</button>
             <button class="btn btn-primary" onclick="amSaveConvention()">Enregistrer</button></div>
@@ -5787,9 +5819,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="form-group"><label>Montant TTC (auto)</label><input type="number" class="form-control" id="am-situ-ttc" readonly style="color:var(--or);font-weight:700;"></div>
             <div class="form-group"><label>Retenue garantie (%)</label><input type="number" class="form-control" id="am-situ-retenue-pct" value="10" oninput="amCalcSituation()"></div>
             <div class="form-group"><label>Net à payer (auto)</label><input type="number" class="form-control" id="am-situ-net" readonly style="color:var(--vert);font-weight:700;"></div>
-            <div class="form-group"><label>Mode règlement</label><select class="form-control" id="am-situ-mode"><option value="virement">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile Money</option><option value="especes">Espèces</option></select></div>
-            <div class="form-group"><label>Statut</label><select class="form-control" id="am-situ-statut"><option value="brouillon">Brouillon</option><option value="validee">Validée (→ écriture 605/401)</option><option value="payee">Payée (+ règlement)</option></select></div>
+            <div class="form-group"><label>Mode règlement</label>
+              <select class="form-control" id="am-situ-mode" onchange="amSituToggleNature()">
+              <option value="virement">Virement</option>
+              <option value="cheque">Chèque</option>
+              <option value="mobile_money">Mobile Money</option>
+              <option value="especes">Espèces</option>
+              <option value="nature">En nature (parcelles)</option>
+            </select></div>
+            <div class="form-group"><label>Statut</label>
+              <select class="form-control" id="am-situ-statut">
+              <option value="brouillon">Brouillon</option>
+              <option value="validee">Validée (→ écriture 605/401 ou 212)</option>
+              <option value="payee">Payée (+ règlement)</option>
+            </select></div>
             <div class="form-group span-2"><label>Travaux réalisés</label><textarea class="form-control" id="am-situ-travaux" rows="2"></textarea></div>
+            <!-- Section lots en nature pour cette situation -->
+            <div class="form-group span-2" id="am-situ-section-nature" style="display:none;">
+              <label style="color:var(--or);">&#x1F3D8;&#xFE0F; Parcelles cédées en paiement de cette situation</label>
+              <div id="am-situ-lots-nature-list" style="margin-bottom:8px;min-height:32px;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:6px;background:rgba(0,0,0,0.15);font-size:12px;"></div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <select class="form-control" id="am-situ-lot-pick" style="flex:1;"></select>
+                <input type="number" class="form-control" id="am-situ-lot-valeur" placeholder="Valeur FCFA" style="width:160px;">
+                <button class="btn btn-secondary btn-sm" type="button" onclick="amSituAddLotNature()">+ Ajouter</button>
+              </div>
+              <div style="margin-top:6px;font-size:11px;color:var(--blanc-dim);">Total nature : <strong id="am-situ-nature-total" style="color:var(--or);">0 FCFA</strong></div>
+            </div>
           </div></div>
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-am-situation')">Annuler</button>
             <button class="btn btn-primary" onclick="amSaveSituation()">Enregistrer</button></div>
@@ -8129,12 +8184,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group span-2"><label>Localisation précise *</label><input type="text" class="form-control" id="parc-localisation" placeholder="Quartier, voie, repères..."></div>
           <div class="form-group"><label>Commune</label><input type="text" class="form-control" id="parc-commune" placeholder="Ex: Cocody, Yopougon..."></div>
           <div class="form-group"><label>Sous-préfecture / Département</label><input type="text" class="form-control" id="parc-sous-prefecture"></div>
-          <div class="form-group"><label>Superficie totale (m²) *</label><input type="number" class="form-control" id="parc-superficie"></div>
+          <div class="form-group"><label>Superficie totale (m²) *</label><input type="number" class="form-control" id="parc-sf-totale"></div>
           <div class="form-group"><label>Superficie constructible (m²)</label><input type="number" class="form-control" id="parc-superficie-const"></div>
           <div class="form-group span-2"><label>Description / Limites</label><textarea class="form-control" id="parc-description" placeholder="Bornage, limites géographiques, accès..."></textarea></div>
         </div>
       </div>
-      <div class="tab-pane" id="tab-modal-parcelle-titre">
+      <div class="tab-pane" id="tab-modal-parcelle-titre"><!-- Bug fix v16-2 : parc-superficie renommé parc-sf-totale pour éviter collision ID avec module Morcellement -->
         <div class="form-grid">
           <div class="form-group"><label>Type de titre</label>
             <select class="form-control" id="parc-type-titre">
@@ -8173,10 +8228,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
       <div class="tab-pane" id="tab-modal-parcelle-financier">
         <div class="form-grid">
-          <div class="form-group"><label>Prix d'acquisition (FCFA)</label><input type="number" class="form-control" id="parc-prix-acq"></div>
-          <div class="form-group"><label>Frais de mutation (FCFA)</label><input type="number" class="form-control" id="parc-frais-mutation"></div>
-          <div class="form-group"><label>Frais de bornage (FCFA)</label><input type="number" class="form-control" id="parc-frais-bornage"></div>
-          <div class="form-group"><label>Frais notariaux (FCFA)</label><input type="number" class="form-control" id="parc-frais-notaire"></div>
+          <div class="form-group"><label>Prix d'acquisition (FCFA)</label><input type="number" class="form-control" id="parc-prix-acq" oninput="calcParcelleTotal()"></div>
+          <div class="form-group"><label>Frais de mutation (FCFA)</label><input type="number" class="form-control" id="parc-frais-mutation" oninput="calcParcelleTotal()"></div>
+          <div class="form-group"><label>Frais de bornage (FCFA)</label><input type="number" class="form-control" id="parc-frais-bornage" oninput="calcParcelleTotal()"></div>
+          <div class="form-group"><label>Frais notariaux (FCFA)</label><input type="number" class="form-control" id="parc-frais-notaire" oninput="calcParcelleTotal()"></div>
           <div class="form-group"><label>Valeur estimée actuelle (FCFA)</label><input type="number" class="form-control" id="parc-valeur-actuelle"></div>
           <div class="form-group"><label>Prix de revient total (FCFA)</label><input type="number" class="form-control" id="parc-cout-total" readonly style="color:var(--or);font-weight:bold;"></div>
         </div>
@@ -8185,6 +8240,73 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-parcelle')">Annuler</button>
       <button class="btn btn-primary" onclick="saveParcelle()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Mutation Foncière — Bug fix v16-2 -->
+<div class="modal-overlay" id="modal-mutation">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-mutation-title">Nouvelle Mutation Foncière</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-mutation')">✕</button>
+    </div>
+    <div class="form-grid" style="padding:16px;gap:14px;">
+      <div class="form-group">
+        <label>Parcelle concernée *</label>
+        <select class="form-control" id="mut-parcelle-id"><option value="">— Sélectionner —</option></select>
+      </div>
+      <div class="form-group">
+        <label>Type de mutation *</label>
+        <select class="form-control" id="mut-type">
+          <option value="vente">Vente</option>
+          <option value="donation">Donation</option>
+          <option value="succession">Succession</option>
+          <option value="expropriation">Expropriation</option>
+          <option value="echange">Échange</option>
+          <option value="apport_societe">Apport en société</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date mutation</label>
+        <input type="date" class="form-control" id="mut-date">
+      </div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select class="form-control" id="mut-statut">
+          <option value="en_cours">En cours</option>
+          <option value="finalisee">Finalisée</option>
+          <option value="annulee">Annulée</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Vendeur / Cédant</label>
+        <input type="text" class="form-control" id="mut-vendeur" placeholder="Nom du propriétaire cédant">
+      </div>
+      <div class="form-group">
+        <label>Acheteur / Acquéreur</label>
+        <input type="text" class="form-control" id="mut-acheteur" placeholder="Nom du nouvel acquéreur">
+      </div>
+      <div class="form-group">
+        <label>Frais de mutation (FCFA)</label>
+        <input type="number" class="form-control" id="mut-frais" value="0">
+      </div>
+      <div class="form-group">
+        <label>Notaire instrumentant</label>
+        <input type="text" class="form-control" id="mut-notaire" placeholder="Maître ...">
+      </div>
+      <div class="form-group span-2">
+        <label>Référence de l'acte</label>
+        <input type="text" class="form-control" id="mut-ref-acte" placeholder="N° Acte notarié, répertoire...">
+      </div>
+      <div class="form-group span-2">
+        <label>Notes / Observations</label>
+        <textarea class="form-control" id="mut-notes" placeholder="Conditions particulières, clauses, remarques..." rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-mutation')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveMutation()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -9910,6 +10032,7 @@ var DATA = {
   declarations: [],
   // ── ERP EXPERT v2.0 ──
   parcelles: [],
+  mutations: [],
   dossiersJuridiques: [],
   constructeurs: [],
   conventions: [],
@@ -9951,13 +10074,13 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 108; /* v108: stores reunions_direction, actions_reunion (migration additive, non destructive) */
+var DB_VERSION = 109; /* v109: store mutations (Portefeuille Foncier) — migration additive, non destructive */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
 var ALL_STORES = [
   'clients','versements','programmes','lots','terrains','ecritures','relances',
-  'users','params','employes','bulletins','declarations','parcelles',
+  'users','params','employes','bulletins','declarations','parcelles','mutations',
   'dossiersJuridiques','constructeurs','conventions','situations','avenants',
   'conceptions','leads','pointages','itineraires','etapes_itineraire',
   'cr_visites','biens_amort','releves_bank','rapprochements',
@@ -10086,7 +10209,7 @@ async function saveData(store) {
 async function loadAllData() {
   var allKeys = [
     'clients','versements','programmes','lots','terrains','ecritures','relances',
-    'employes','bulletins','declarations','parcelles','dossiersJuridiques',
+    'employes','bulletins','declarations','parcelles','mutations','dossiersJuridiques',
     'constructeurs','conventions','situations','avenants','conceptions','leads',
     'pointages','itineraires','etapes_itineraire','cr_visites','biens_amort',
     'releves_bank','rapprochements','permis','plans_arch','rapports_chantier',
@@ -23438,7 +23561,7 @@ function openParcelle(id) {
     var p = DATA.parcelles.find(function(x){ return x.id===id; });
     if (p) {
       var fields = { 'parc-ref':p.ref,'parc-localisation':p.localisation,'parc-commune':p.commune,'parc-sous-prefecture':p.sous_prefecture,
-        'parc-superficie':p.superficie,'parc-superficie-const':p.superficie_const,'parc-description':p.description,
+        'parc-sf-totale':p.superficie,'parc-superficie-const':p.superficie_const,'parc-description':p.description,
         'parc-type-titre':p.type_titre,'parc-num-titre':p.num_titre,'parc-date-titre':p.date_titre,'parc-notaire':p.notaire,
         'parc-vendeur':p.vendeur,'parc-date-bornage':p.date_bornage,'parc-statut':p.statut,'parc-risque':p.risque,'parc-obs-jur':p.obs_jur,
         'parc-prix-acq':p.prix_acq,'parc-frais-mutation':p.frais_mutation,'parc-frais-bornage':p.frais_bornage,'parc-frais-notaire':p.frais_notaire,
@@ -23446,7 +23569,7 @@ function openParcelle(id) {
       Object.keys(fields).forEach(function(fid) { var el=document.getElementById(fid); if(el) el.value = fields[fid]||''; });
     }
   } else {
-    ['parc-ref','parc-localisation','parc-commune','parc-sous-prefecture','parc-superficie','parc-superficie-const','parc-description','parc-num-titre','parc-notaire','parc-vendeur','parc-obs-jur'].forEach(function(fid){ var el=document.getElementById(fid);if(el)el.value=''; });
+    ['parc-ref','parc-localisation','parc-commune','parc-sous-prefecture','parc-sf-totale','parc-superficie-const','parc-description','parc-num-titre','parc-notaire','parc-vendeur','parc-obs-jur','parc-prix-acq','parc-frais-mutation','parc-frais-bornage','parc-frais-notaire','parc-valeur-actuelle','parc-cout-total'].forEach(function(fid){ var el=document.getElementById(fid);if(el)el.value=''; });
     var statusEl = document.getElementById('parc-statut'); if (statusEl) statusEl.value = 'prospection';
     var risqueEl = document.getElementById('parc-risque'); if (risqueEl) risqueEl.value = 'faible';
   }
@@ -23459,12 +23582,13 @@ async function saveParcelle() {
   var ref = document.getElementById('parc-ref').value.trim();
   if (!ref) { toast('Référence obligatoire.', 'error'); return; }
   var coutTot = ['parc-prix-acq','parc-frais-mutation','parc-frais-bornage','parc-frais-notaire'].reduce(function(s,id){ return s+(parseFloat(document.getElementById(id).value)||0); }, 0);
+  var existing = APP.editingId ? DATA.parcelles.find(function(x){return x.id===APP.editingId;}) : null;
   var p = {
     id: APP.editingId || uid(),
     ref: ref, localisation: document.getElementById('parc-localisation').value.trim(),
     commune: document.getElementById('parc-commune').value.trim(),
     sous_prefecture: document.getElementById('parc-sous-prefecture').value.trim(),
-    superficie: parseFloat(document.getElementById('parc-superficie').value)||0,
+    superficie: parseFloat(document.getElementById('parc-sf-totale').value)||0,
     superficie_const: parseFloat(document.getElementById('parc-superficie-const').value)||0,
     description: document.getElementById('parc-description').value.trim(),
     type_titre: document.getElementById('parc-type-titre').value,
@@ -23483,7 +23607,7 @@ async function saveParcelle() {
     valeur_actuelle: parseFloat(document.getElementById('parc-valeur-actuelle').value)||0,
     programme_id: document.getElementById('parc-programme').value,
     cout_total: coutTot,
-    created_at: APP.editingId ? undefined : today()
+    created_at: (existing && existing.created_at) ? existing.created_at : today()
   };
   if (APP.editingId) { var idx=DATA.parcelles.findIndex(function(x){return x.id===APP.editingId;}); if(idx>=0)DATA.parcelles[idx]=p; }
   else DATA.parcelles.push(p);
@@ -23510,6 +23634,169 @@ function exportFoncierCSV() {
   a.href=URL.createObjectURL(blob); a.download='foncier_PartnerImmo.csv'; a.click();
   toast('Foncier exporté.', 'success');
 }
+
+/* ── Bug fix v16-2 : calcParcelleTotal ─────────────────── */
+function calcParcelleTotal() {
+  var total = ['parc-prix-acq','parc-frais-mutation','parc-frais-bornage','parc-frais-notaire']
+    .reduce(function(s,id){ var e=document.getElementById(id); return s+(e?parseFloat(e.value)||0:0); },0);
+  var ct = document.getElementById('parc-cout-total');
+  if (ct) ct.value = total;
+}
+
+/* ── Bug fix v16-2 : renderTitresFonciers ──────────────── */
+function renderTitresFonciers() {
+  var box = document.getElementById('titres-fonciers-box');
+  if (!box) return;
+  var parcelles = DATA.parcelles || [];
+  if (!parcelles.length) {
+    box.innerHTML = '<div style="color:var(--blanc-dim);font-size:13px;padding:24px;text-align:center;">Aucune parcelle enregistrée. Ajoutez des parcelles via l\'onglet Parcelles.</div>';
+    return;
+  }
+  var groupes = {};
+  var ordreTypes = ['tf_definitif','tf_provisoire','acd','lettre_attribution','sans_titre'];
+  var labelsTypes = { tf_definitif:'📜 Titre Foncier Définitif', tf_provisoire:'📄 TF Provisoire', acd:'🔖 Attestation de Concession Définitive (ACD)', lettre_attribution:'📝 Lettre d\'Attribution', sans_titre:'⚠️ Sans titre' };
+  parcelles.forEach(function(p) {
+    var type = p.type_titre || 'sans_titre';
+    if (!groupes[type]) groupes[type] = [];
+    groupes[type].push(p);
+  });
+  var html = '';
+  ordreTypes.forEach(function(type) {
+    var liste = groupes[type];
+    if (!liste || !liste.length) return;
+    var statutMap = { prospection:'badge-or', negociation:'badge-bleu', acd:'badge-violet', tf_provisoire:'badge-or', tf_definitif:'badge-vert', affecte:'badge-vert', contentieux:'badge-rouge' };
+    html += '<div style="margin-bottom:20px;">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--or);padding:8px 0;border-bottom:1px solid var(--bord);margin-bottom:12px;">'
+      + (labelsTypes[type]||type) + ' <span style="font-size:11px;color:var(--blanc-dim);font-weight:400;">(' + liste.length + ' parcelle'+(liste.length>1?'s':'')+' — '
+      + fmtF(liste.reduce(function(s,p){return s+(p.superficie||0);},0))+' m² — '
+      + fmtF(liste.reduce(function(s,p){return s+(p.cout_total||0);},0))+' FCFA)</span></div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">'
+      + liste.map(function(p) {
+          var prog = p.programme_id ? ((DATA.programmes.find(function(x){return x.id===p.programme_id;})||{}).nom||'—') : '—';
+          var risqueColor = {faible:'var(--vert)',moyen:'var(--or)',eleve:'var(--rouge)'}[p.risque]||'var(--blanc-dim)';
+          return '<div class="foncier-card" onclick="openParcelle(\''+p.id+'\')">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+            + '<div style="font-weight:700;color:var(--or);font-size:14px;">'+escHtml(p.ref||'—')+'</div>'
+            + '<span class="badge '+(statutMap[p.statut]||'badge-bleu')+'">'+escHtml((p.statut||'').replace(/_/g,' '))+'</span></div>'
+            + '<div style="font-size:12px;color:var(--blanc-dim);margin-bottom:6px;">📍 '+escHtml(p.localisation||'—')+(p.commune?' — '+escHtml(p.commune):'')+'</div>'
+            + '<div style="font-size:11px;color:var(--blanc-dim);font-family:monospace;margin-bottom:6px;">N° : '+escHtml(p.num_titre||'—')+'</div>'
+            + '<div style="display:flex;justify-content:space-between;font-size:11px;">'
+            + '<span>📐 '+fmtF(p.superficie||0)+' m²</span>'
+            + '<span style="color:var(--or);">'+fmtF(p.cout_total||0)+' F</span></div>'
+            + (p.programme_id ? '<div style="font-size:10px;color:var(--bleu);margin-top:4px;">🏗️ '+escHtml(prog)+'</div>' : '')
+            + (p.date_titre ? '<div style="font-size:10px;color:var(--blanc-dim);margin-top:2px;">📅 Obtenu le '+p.date_titre+'</div>' : '')
+            + (p.risque && p.risque!=='faible' ? '<div style="font-size:10px;margin-top:4px;color:'+risqueColor+';">⚠️ Risque '+escHtml(p.risque)+'</div>' : '')
+            + '</div>';
+        }).join('')
+      + '</div></div>';
+  });
+  box.innerHTML = html || '<div style="color:var(--blanc-dim);font-size:13px;padding:24px;text-align:center;">Aucun titre foncier trouvé.</div>';
+}
+
+/* ── Bug fix v16-2 : Système MUTATIONS complet ─────────── */
+function renderMutations() {
+  var tbody = document.getElementById('tbody-mutations');
+  if (!tbody) return;
+  var q = (document.getElementById('search-mutations') ? document.getElementById('search-mutations').value : '').toLowerCase();
+  var type = document.getElementById('filter-type-mutation') ? document.getElementById('filter-type-mutation').value : '';
+  var list = (DATA.mutations||[]).filter(function(m) {
+    var parcelle = DATA.parcelles.find(function(p){return p.id===m.parcelle_id;});
+    var refParc = parcelle ? parcelle.ref : '';
+    return (!q || (refParc+' '+(m.vendeur||'')+' '+(m.acheteur||'')+' '+(m.notaire||'')).toLowerCase().includes(q))
+      && (!type || m.type_mutation === type);
+  }).sort(function(a,b){ return (b.date_mutation||'').localeCompare(a.date_mutation||''); });
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucune mutation enregistrée</td></tr>'; return; }
+  var statMap = { en_cours:'badge-or', finalisee:'badge-vert', annulee:'badge-rouge' };
+  tbody.innerHTML = list.map(function(m) {
+    var parcelle = DATA.parcelles.find(function(p){return p.id===m.parcelle_id;});
+    var refParc = parcelle ? parcelle.ref : '—';
+    return '<tr>'
+      + '<td style="font-size:11px;">'+(m.date_mutation||'—')+'</td>'
+      + '<td style="font-weight:600;color:var(--or);">'+escHtml(refParc)+'</td>'
+      + '<td style="font-size:11px;">'+escHtml((m.type_mutation||'—').replace(/_/g,' '))+'</td>'
+      + '<td style="font-size:12px;">'+escHtml(m.vendeur||'—')+'</td>'
+      + '<td style="font-size:12px;">'+escHtml(m.acheteur||'—')+'</td>'
+      + '<td style="font-weight:600;">'+fmtF(m.frais_mutation||0)+' FCFA</td>'
+      + '<td style="font-size:12px;">'+escHtml(m.notaire||'—')+'</td>'
+      + '<td><span class="badge '+(statMap[m.statut]||'badge-bleu')+'">'+escHtml((m.statut||'').replace(/_/g,' '))+'</span></td>'
+      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="openMutation(\''+m.id+'\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteMutation(\''+m.id+'\')">🗑</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openMutation(id) {
+  APP.editingId = id || null;
+  // Populate parcelles select
+  var sel = document.getElementById('mut-parcelle-id');
+  if (sel) {
+    var cur = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    DATA.parcelles.forEach(function(p) { var o=document.createElement('option'); o.value=p.id; o.textContent=p.ref+(p.localisation?' — '+p.localisation:''); sel.appendChild(o); });
+    sel.value = cur;
+  }
+  if (id) {
+    var m = (DATA.mutations||[]).find(function(x){return x.id===id;});
+    if (m) {
+      var fields = {'mut-parcelle-id':m.parcelle_id,'mut-type':m.type_mutation,'mut-date':m.date_mutation,'mut-vendeur':m.vendeur,'mut-acheteur':m.acheteur,'mut-frais':m.frais_mutation,'mut-notaire':m.notaire,'mut-ref-acte':m.ref_acte,'mut-statut':m.statut,'mut-notes':m.notes};
+      Object.keys(fields).forEach(function(fid){var el=document.getElementById(fid);if(el)el.value=fields[fid]||'';});
+    }
+  } else {
+    ['mut-vendeur','mut-acheteur','mut-notaire','mut-ref-acte','mut-notes'].forEach(function(fid){var el=document.getElementById(fid);if(el)el.value='';});
+    var de=document.getElementById('mut-date'); if(de)de.value=today();
+    var fe=document.getElementById('mut-frais'); if(fe)fe.value='0';
+    var se=document.getElementById('mut-statut'); if(se)se.value='en_cours';
+    var te=document.getElementById('mut-type'); if(te)te.value='vente';
+    var pe=document.getElementById('mut-parcelle-id'); if(pe)pe.value='';
+  }
+  document.getElementById('modal-mutation-title').textContent = id ? 'Modifier Mutation' : 'Nouvelle Mutation Foncière';
+  document.getElementById('modal-mutation').classList.add('open');
+}
+
+async function saveMutation() {
+  var parcId = document.getElementById('mut-parcelle-id').value;
+  if (!parcId) { toast('Sélectionnez une parcelle.', 'error'); return; }
+  var m = {
+    id: APP.editingId || uid(),
+    parcelle_id: parcId,
+    type_mutation: document.getElementById('mut-type').value,
+    date_mutation: document.getElementById('mut-date').value,
+    vendeur: document.getElementById('mut-vendeur').value.trim(),
+    acheteur: document.getElementById('mut-acheteur').value.trim(),
+    frais_mutation: parseFloat(document.getElementById('mut-frais').value)||0,
+    notaire: document.getElementById('mut-notaire').value.trim(),
+    ref_acte: document.getElementById('mut-ref-acte').value.trim(),
+    statut: document.getElementById('mut-statut').value,
+    notes: document.getElementById('mut-notes').value.trim(),
+    created_at: today()
+  };
+  if (!DATA.mutations) DATA.mutations = [];
+  if (APP.editingId) { var idx=DATA.mutations.findIndex(function(x){return x.id===APP.editingId;}); if(idx>=0)DATA.mutations[idx]=m; }
+  else DATA.mutations.push(m);
+  await dbPut('mutations', m);
+  closeModal('modal-mutation');
+  renderMutations();
+  toast('Mutation enregistrée.', 'success');
+}
+
+async function deleteMutation(id) {
+  if (!confirm('Supprimer cette mutation ?')) return;
+  DATA.mutations = (DATA.mutations||[]).filter(function(m){return m.id!==id;});
+  await dbDelete('mutations', id);
+  renderMutations();
+  toast('Mutation supprimée.', 'info');
+}
+
+/* ── Bug fix v16-2 : patch switchTab pour callbacks foncier ─ */
+(function() {
+  var _origSwitchTab = switchTab;
+  switchTab = function(context, tab) {
+    _origSwitchTab(context, tab);
+    if (context === 'foncier') {
+      if (tab === 'titres')    { setTimeout(renderTitresFonciers, 0); }
+      if (tab === 'mutations') { setTimeout(renderMutations, 0); }
+    }
+  };
+})();
 
 /* ── DOSSIERS JURIDIQUES ────────────────────────────── */
 function renderDossiersJuridiques() {
@@ -26913,6 +27200,13 @@ function amOpenConventionModal(id) {
     'am-cv-avancement': c ? c.avancement : 0, 'am-cv-statut': c ? c.statut : 'en_cours', 'am-cv-description': c ? c.description : ''
   };
   Object.keys(v).forEach(function(el){ var e = document.getElementById(el); if (e) e.value = v[el]; });
+  // Hydrater mode remuneration et lots en nature
+  var modeRemun = document.getElementById('am-cv-mode-remun');
+  if (modeRemun) { modeRemun.value = c ? (c.mode_remuneration || 'especes') : 'especes'; }
+  APP._amCvLotsNature = (c && c.lots_nature) ? JSON.parse(JSON.stringify(c.lots_nature)) : [];
+  amRenderCvLotsNature();
+  amToggleModeRemun();
+  amRefreshLotPickConv(c ? c.programme_id : '');
   openModal('modal-am-convention');
 }
 async function amSaveConvention() {
@@ -26939,8 +27233,21 @@ async function amSaveConvention() {
     date_demarrage: document.getElementById('am-cv-date-demarrage').value,
     date_fin_prev: document.getElementById('am-cv-date-fin-prev').value,
     avancement: parseInt(document.getElementById('am-cv-avancement').value) || 0,
+    mode_remuneration: document.getElementById('am-cv-mode-remun') ? document.getElementById('am-cv-mode-remun').value : 'especes',
+    lots_nature: APP._amCvLotsNature ? JSON.parse(JSON.stringify(APP._amCvLotsNature)) : [],
     created_at: APP.editingId ? undefined : today()
   };
+  // Marquer les lots en nature comme reserve_amenageur
+  if (c.lots_nature && c.lots_nature.length) {
+    c.lots_nature.forEach(function(ln) {
+      var lot = DATA.lots.find(function(l){ return l.id === ln.lot_id; });
+      if (lot && lot.statut === 'disponible') {
+        lot.statut = 'reserve_amenageur';
+        lot.convention_amenagement_id = c.id;
+        dbPut('lots', lot);
+      }
+    });
+  }
   var idx = DATA.conventions_amenagement.findIndex(function(x){ return x.id === c.id; });
   if (idx >= 0) DATA.conventions_amenagement[idx] = c; else DATA.conventions_amenagement.push(c);
   await dbPut('conventions_amenagement', c);
@@ -26966,7 +27273,7 @@ function amRenderConventions() {
       + '<td style="font-size:12px;">' + escHtml(_amProg(c.programme_id)) + '</td>'
       + '<td style="font-size:11px;">' + escHtml(c.objet || '—') + '</td>'
       + '<td style="font-weight:700;color:var(--or);">' + fmtF(c.montant_ttc || 0) + ' F</td>'
-      + '<td><span class="badge ' + (sC[c.statut] || 'badge-bleu') + '">' + (c.statut || '—') + '</span> ' + (c.avancement || 0) + '%</td>'
+      + '<td>' + (c.mode_remuneration === 'nature' ? '<span class="badge badge-or" title="Paiement en parcelles">&#x1F3D7; Nature</span> ' : c.mode_remuneration === 'mixte' ? '<span class="badge badge-bleu">Mixte</span> ' : '') + '<span class="badge ' + (sC[c.statut] || 'badge-bleu') + '">' + (c.statut || '—') + '</span> ' + (c.avancement || 0) + '%</td>'
       + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="amEtatConvention(\'' + c.id + '\')" title="PDF">📄</button> '
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="amOpenConventionModal(\'' + c.id + '\')">✏️</button> '
       + '<button class="btn btn-danger btn-sm btn-icon" onclick="amDeleteConvention(\'' + c.id + '\')">🗑</button></td></tr>';
@@ -26993,6 +27300,13 @@ function amOpenSituationModal(id) {
     'am-situ-ttc': s ? s.montant_ttc : 0, 'am-situ-retenue-pct': s ? s.retenue_pct : 10, 'am-situ-net': s ? s.net : 0,
     'am-situ-mode': s ? s.mode : 'virement', 'am-situ-statut': s ? s.statut : 'brouillon', 'am-situ-travaux': s ? s.travaux : '' };
   Object.keys(v).forEach(function(el){ var e = document.getElementById(el); if (e) e.value = v[el]; });
+  APP._amSituLotsNature = (s && s.lots_nature) ? JSON.parse(JSON.stringify(s.lots_nature)) : [];
+  amRenderSituLotsNature();
+  amSituToggleNature();
+  if (s && s.convention_id) {
+    var cv = DATA.conventions_amenagement.find(function(x){ return x.id === s.convention_id; });
+    if (cv) { amRefreshLotPickSitu(cv.programme_id || ''); }
+  }
   openModal('modal-am-situation');
 }
 async function amSaveSituation() {
@@ -27015,20 +27329,36 @@ async function amSaveSituation() {
     mode: document.getElementById('am-situ-mode').value,
     statut: document.getElementById('am-situ-statut').value,
     travaux: document.getElementById('am-situ-travaux').value.trim(),
+    lots_nature: APP._amSituLotsNature ? JSON.parse(JSON.stringify(APP._amSituLotsNature)) : [],
     created_at: APP.editingId ? undefined : today()
   };
   var idx = DATA.situations_amenagement.findIndex(function(x){ return x.id === s.id; });
   if (idx >= 0) DATA.situations_amenagement[idx] = s; else DATA.situations_amenagement.push(s);
   await dbPut('situations_amenagement', s);
 
-  // Comptabilisation : Débit 605 / Crédit 401 (et règlement si payée)
+  // Paiement en nature : transfert statut lots
+  if (s.mode === 'nature' && s.lots_nature && s.lots_nature.length) {
+    s.lots_nature.forEach(function(ln) {
+      var lot = DATA.lots.find(function(l){ return l.id === ln.lot_id; });
+      if (lot) {
+        lot.statut = 'attribue_amenageur';
+        lot.date_attribution_amenageur = s.date;
+        dbPut('lots', lot);
+      }
+    });
+  }
+  // Comptabilisation : Débit 605 / Crédit 401 (espèces) ou 212 (nature)
   if (s.statut === 'validee' || s.statut === 'payee') {
     var cv = DATA.conventions_amenagement.find(function(x){ return x.id === conv; }) || { numero: '' };
     var lib = 'Situation aménagement ' + s.numero + ' — ' + cv.numero + ' — ' + _amName(cv.amenageur_id);
+    var cptCredit = (s.mode === 'nature') ? '212' : '401';
+    var natureInfo = (s.mode === 'nature' && s.lots_nature && s.lots_nature.length)
+      ? ' [Nature: ' + s.lots_nature.map(function(ln){ return 'Lot ' + (ln.numero || ln.lot_id); }).join(', ') + ']'
+      : '';
     var ecr = { id: 'ecr_amsit_' + s.id, ref: 'AMG-' + s.numero, date: s.date, piece: s.numero,
-      libelle: lib, compte: CPT_AMENAGEMENT_DEBIT, compte_debit: CPT_AMENAGEMENT_DEBIT, compte_credit: '401',
+      libelle: lib + natureInfo, compte: CPT_AMENAGEMENT_DEBIT, compte_debit: CPT_AMENAGEMENT_DEBIT, compte_credit: cptCredit,
       montant: s.montant_ht, type: 'charge', mode: s.mode, programme_id: cv.programme_id || '',
-      notes: 'Avancement ' + s.avancement + '%', created_at: today() };
+      notes: 'Avancement ' + s.avancement + '% — Règlement ' + (s.mode === 'nature' ? 'en nature (parcelles)' : s.mode), created_at: today() };
     if (!DATA.ecritures.some(function(e){ return e.id === ecr.id; })) DATA.ecritures.push(ecr);
     else { var ei = DATA.ecritures.findIndex(function(e){ return e.id === ecr.id; }); DATA.ecritures[ei] = ecr; }
     await dbPut('ecritures', ecr);
@@ -27042,7 +27372,7 @@ async function amSaveSituation() {
     }
     if (typeof buildBalance === 'function') buildBalance();
     if (typeof buildCompteResultat === 'function') buildCompteResultat();
-    toast('✅ Situation + écriture ' + CPT_AMENAGEMENT_DEBIT + '/401 créée.', 'success');
+    toast('✅ Situation + écriture ' + CPT_AMENAGEMENT_DEBIT + '/' + cptCredit + ' créée.' + (s.mode === 'nature' ? ' (paiement en parcelles)' : ''), 'success');
   } else {
     toast('Situation enregistrée.', 'success');
   }
@@ -31887,6 +32217,200 @@ if (typeof rdEscape === 'function' && typeof window.msgEscape === 'undefined') {
     </div>
   </div>
 </div>
+
+
+<script>
+/* ==================================================================================
+   REMUNERATION EN NATURE - Amenageurs ImmoSuite
+   Helpers pour gestion des lots attribues en paiement de travaux
+   ================================================================================== */
+if (!window.APP) window.APP = {};
+APP._amCvLotsNature   = APP._amCvLotsNature   || [];
+APP._amSituLotsNature = APP._amSituLotsNature  || [];
+
+function amToggleModeRemun() {
+  var sel = document.getElementById('am-cv-mode-remun');
+  var sec = document.getElementById('am-cv-section-nature');
+  if (!sel || !sec) return;
+  var show = sel.value === 'nature' || sel.value === 'mixte';
+  sec.style.display = show ? '' : 'none';
+}
+
+function amRefreshLotPickConv(progId) {
+  var sel = document.getElementById('am-cv-lot-pick');
+  if (!sel) return;
+  var lots = (DATA.lots || []).filter(function(l) {
+    return (!progId || l.programme_id === progId) &&
+           (l.statut === 'disponible' || l.statut === 'reserve_amenageur');
+  });
+  sel.innerHTML = '<option value="">-- Choisir un lot --</option>' +
+    lots.map(function(l) {
+      return '<option value="' + l.id + '" data-prix="' + (l.prix || 0) + '">'
+        + 'Lot ' + escHtml(l.numero || l.id)
+        + (l.type ? ' -- ' + escHtml(l.type) : '')
+        + (l.surface ? ' (' + l.surface + ' m²)' : '')
+        + ' | ' + fmtF(l.prix || 0) + ' F'
+        + '</option>';
+    }).join('');
+  sel.onchange = function() {
+    var opt = sel.options[sel.selectedIndex];
+    var prix = opt ? (opt.getAttribute('data-prix') || 0) : 0;
+    var inp = document.getElementById('am-cv-lot-valeur');
+    if (inp && !inp.value) inp.value = prix;
+  };
+}
+
+function amRefreshLotPickSitu(progId) {
+  var sel = document.getElementById('am-situ-lot-pick');
+  if (!sel) return;
+  var lots = (DATA.lots || []).filter(function(l) {
+    return (!progId || l.programme_id === progId) &&
+           (l.statut === 'disponible' || l.statut === 'reserve_amenageur');
+  });
+  sel.innerHTML = '<option value="">-- Choisir un lot --</option>' +
+    lots.map(function(l) {
+      return '<option value="' + l.id + '" data-prix="' + (l.prix || 0) + '">'
+        + 'Lot ' + escHtml(l.numero || l.id)
+        + (l.type ? ' -- ' + escHtml(l.type) : '')
+        + (l.surface ? ' (' + l.surface + ' m²)' : '')
+        + ' | ' + fmtF(l.prix || 0) + ' F'
+        + '</option>';
+    }).join('');
+  sel.onchange = function() {
+    var opt = sel.options[sel.selectedIndex];
+    var prix = opt ? (opt.getAttribute('data-prix') || 0) : 0;
+    var inp = document.getElementById('am-situ-lot-valeur');
+    if (inp && !inp.value) inp.value = prix;
+  };
+}
+
+function amSituToggleNature() {
+  var sel = document.getElementById('am-situ-mode');
+  var sec = document.getElementById('am-situ-section-nature');
+  if (!sel || !sec) return;
+  sec.style.display = (sel.value === 'nature') ? '' : 'none';
+  if (sel.value === 'nature') { amSituSyncNatureTotal(); }
+}
+
+function amAddLotNature() {
+  var sel   = document.getElementById('am-cv-lot-pick');
+  var valEl = document.getElementById('am-cv-lot-valeur');
+  if (!sel || !sel.value) { toast('Sélectionnez un lot.', 'error'); return; }
+  var lot = (DATA.lots || []).find(function(l){ return l.id === sel.value; });
+  if (!lot) return;
+  var val = parseFloat(valEl ? valEl.value : 0) || lot.prix || 0;
+  if ((APP._amCvLotsNature || []).some(function(ln){ return ln.lot_id === sel.value; })) {
+    toast('Ce lot est déjà dans la liste.', 'error'); return;
+  }
+  APP._amCvLotsNature = APP._amCvLotsNature || [];
+  APP._amCvLotsNature.push({ lot_id: lot.id, numero: lot.numero || lot.id, type: lot.type || '', surface: lot.surface || 0, valeur: val });
+  if (valEl) valEl.value = '';
+  sel.value = '';
+  amRenderCvLotsNature();
+}
+
+function amRenderCvLotsNature() {
+  var box   = document.getElementById('am-cv-lots-nature-list');
+  var totEl = document.getElementById('am-cv-nature-total');
+  if (!box) return;
+  var list = APP._amCvLotsNature || [];
+  if (!list.length) {
+    box.innerHTML = '<span style="color:var(--blanc-dim);font-style:italic;">Aucune parcelle ajoutée</span>';
+    if (totEl) totEl.textContent = '0 FCFA';
+    return;
+  }
+  var total = 0;
+  box.innerHTML = list.map(function(ln, idx) {
+    total += ln.valeur || 0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-bottom:1px solid rgba(255,255,255,0.05);">'
+      + '<span><strong>Lot ' + escHtml(ln.numero) + '</strong>'
+      + (ln.type ? ' — ' + escHtml(ln.type) : '')
+      + (ln.surface ? ' (' + ln.surface + ' m²)' : '')
+      + '</span>'
+      + '<span style="color:var(--or);font-weight:700;">' + fmtF(ln.valeur || 0) + ' F</span>'
+      + ' <button class="btn btn-danger btn-sm btn-icon" type="button" onclick="amRemoveCvLotNature(' + idx + ')">&#x2715;</button>'
+      + '</div>';
+  }).join('');
+  if (totEl) totEl.textContent = fmtF(total) + ' FCFA';
+}
+
+function amRemoveCvLotNature(idx) {
+  APP._amCvLotsNature.splice(idx, 1);
+  amRenderCvLotsNature();
+}
+
+function amSituAddLotNature() {
+  var sel   = document.getElementById('am-situ-lot-pick');
+  var valEl = document.getElementById('am-situ-lot-valeur');
+  if (!sel || !sel.value) { toast('Sélectionnez un lot.', 'error'); return; }
+  var lot = (DATA.lots || []).find(function(l){ return l.id === sel.value; });
+  if (!lot) return;
+  var val = parseFloat(valEl ? valEl.value : 0) || lot.prix || 0;
+  if ((APP._amSituLotsNature || []).some(function(ln){ return ln.lot_id === sel.value; })) {
+    toast('Ce lot est déjà dans la liste.', 'error'); return;
+  }
+  APP._amSituLotsNature = APP._amSituLotsNature || [];
+  APP._amSituLotsNature.push({ lot_id: lot.id, numero: lot.numero || lot.id, type: lot.type || '', surface: lot.surface || 0, valeur: val });
+  if (valEl) valEl.value = '';
+  sel.value = '';
+  amRenderSituLotsNature();
+  amSituSyncNatureTotal();
+}
+
+function amRenderSituLotsNature() {
+  var box   = document.getElementById('am-situ-lots-nature-list');
+  var totEl = document.getElementById('am-situ-nature-total');
+  if (!box) return;
+  var list = APP._amSituLotsNature || [];
+  if (!list.length) {
+    box.innerHTML = '<span style="color:var(--blanc-dim);font-style:italic;">Aucune parcelle ajoutée</span>';
+    if (totEl) totEl.textContent = '0 FCFA';
+    return;
+  }
+  var total = 0;
+  box.innerHTML = list.map(function(ln, idx) {
+    total += ln.valeur || 0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-bottom:1px solid rgba(255,255,255,0.05);">'
+      + '<span><strong>Lot ' + escHtml(ln.numero) + '</strong>'
+      + (ln.type ? ' — ' + escHtml(ln.type) : '')
+      + (ln.surface ? ' (' + ln.surface + ' m²)' : '')
+      + '</span>'
+      + '<span style="color:var(--or);font-weight:700;">' + fmtF(ln.valeur || 0) + ' F</span>'
+      + ' <button class="btn btn-danger btn-sm btn-icon" type="button" onclick="amSituRemoveLotNature(' + idx + ')">&#x2715;</button>'
+      + '</div>';
+  }).join('');
+  if (totEl) totEl.textContent = fmtF(total) + ' FCFA';
+}
+
+function amSituRemoveLotNature(idx) {
+  APP._amSituLotsNature.splice(idx, 1);
+  amRenderSituLotsNature();
+  amSituSyncNatureTotal();
+}
+
+function amSituSyncNatureTotal() {
+  var list  = APP._amSituLotsNature || [];
+  var total = list.reduce(function(acc, ln){ return acc + (ln.valeur || 0); }, 0);
+  var htEl  = document.getElementById('am-situ-ht');
+  var ttcEl = document.getElementById('am-situ-ttc');
+  var netEl = document.getElementById('am-situ-net');
+  var totEl = document.getElementById('am-situ-nature-total');
+  if (htEl)  htEl.value  = total;
+  if (ttcEl) ttcEl.value = total;
+  if (netEl) netEl.value = total;
+  if (totEl) totEl.textContent = fmtF(total) + ' FCFA';
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'am-cv-programme') {
+    amRefreshLotPickConv(e.target.value);
+  }
+  if (e.target && e.target.id === 'am-situ-convention') {
+    var cv = (DATA.conventions_amenagement || []).find(function(x){ return x.id === e.target.value; });
+    if (cv) amRefreshLotPickSitu(cv.programme_id || '');
+  }
+});
+</script>
 
 </body>
 </html>
