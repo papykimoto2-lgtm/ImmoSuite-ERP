@@ -1,0 +1,11 @@
+{
+  "appId": "ci.partnerimmo.immosuite",
+  "appName": "ImmoSuite",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

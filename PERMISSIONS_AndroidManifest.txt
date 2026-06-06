@@ -1,0 +1,21 @@
+PERMISSIONS ANDROID — à coller dans le fichier
+    android/app/src/main/AndroidManifest.xml
+(juste avant la balise <application ...>)
+
+------------------------------------------------------------
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+------------------------------------------------------------
+
+NOTES
+- INTERNET / ACCESS_NETWORK_STATE : sync Supabase + envoi EmailJS quand reseau dispo.
+- CAMERA : module Scan Badge (pointage).
+- READ/WRITE_EXTERNAL_STORAGE : export PDF / CSV des bulletins et etats.
+- Les permissions runtime (camera) se demandent au 1er usage sur Android 6+.
+
+Apres modification du manifest : relancer  npx cap sync android  puis recompiler.

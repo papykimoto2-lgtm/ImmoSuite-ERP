@@ -1,0 +1,19 @@
+{
+  "name": "immosuite-app",
+  "version": "16.1.0",
+  "description": "ImmoSuite ERP — application Android (Capacitor)",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync",
+    "open": "cap open android",
+    "build:apk": "cd android && gradlew.bat assembleDebug",
+    "build:release": "cd android && gradlew.bat assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
