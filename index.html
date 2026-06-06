@@ -1592,9 +1592,77 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   .msg-bubble { max-width: 85%; }
   .msg-info-panel { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   OPTIMISATION MOBILE GLOBALE — ImmoSuite (v16)
+   Cible les fenêtres/grilles/tables mal affichées sur petit écran
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  /* 1. Grilles inline multi-colonnes (repeat 3/4/5/6) → 2 colonnes max */
+  [style*="repeat(3,"], [style*="repeat(4,"],
+  [style*="repeat(5,"], [style*="repeat(6,"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  .kpi-value { font-size: 15px; }
+
+  /* 2. MODALS : feuille plein écran, en-tête + pied fixes, corps défilant */
+  .modal-overlay.open { align-items: flex-end; padding: 0; }
+  .modal, .modal-lg, .modal-xl, .modal-sm {
+    width: 100% !important; max-width: 100% !important;
+    max-height: 96vh !important; border-radius: 18px 18px 0 0;
+    display: flex; flex-direction: column; overflow: hidden !important;
+  }
+  .modal-header { flex-shrink: 0; }
+  .modal-body {
+    flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 16px;
+  }
+  .modal-footer {
+    flex-shrink: 0; position: sticky; bottom: 0; z-index: 2;
+    background: var(--card); border-top: 1px solid var(--bord);
+    gap: 8px; padding: 12px 16px;
+  }
+  .modal-footer .btn { flex: 1 1 40%; justify-content: center; }
+
+  /* 3. TABLES LARGES : défilement horizontal au lieu d'être coupées */
+  .card, .modal-body, .table-wrap, .tableau-wrap,
+  [id$="-table"], [id$="-tableau"] {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .card table, .modal-body table { min-width: max-content; }
+  .card .kpi-grid table, .form-grid table { min-width: 0; }
+
+  /* 4. En-têtes de page / cartes : éviter chevauchement titre / boutons */
+  .page-header, .card-header,
+  .card > div[style*="justify-content:space-between"],
+  .card > div[style*="justify-content: space-between"] {
+    flex-wrap: wrap; gap: 8px;
+  }
+  .page-header .btn, .card-header .btn { flex: 0 0 auto; }
+
+  /* 5. Barres de filtres / chips défilables proprement */
+  .filters-bar { flex-wrap: nowrap; }
+  .filters-bar > * { flex: 0 0 auto; }
+
+  /* 6. Formulaires : champs confortables (anti-zoom iOS) */
+  .form-control, .filter-select { font-size: 16px; }
+
+  /* 7. Aperçus / previews riches passent en pile */
+  #bulletin-calcul-preview .form-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* Très petit écran : densité réduite */
+@media (max-width: 430px) {
+  [style*="repeat(3,"], [style*="repeat(4,"],
+  [style*="repeat(5,"], [style*="repeat(6,"],
+  .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+  .modal-footer .btn { flex: 1 1 100%; }
+  .page-title { font-size: 18px; }
+}
 </style>
 <!-- EmailJS SDK -->
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript" src="vendor/email.min.js"></script>
 </head>
 <body>
 
@@ -2397,7 +2465,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <table>
                   <thead><tr>
                     <th>Matricule</th><th>Employé</th><th>Catégorie</th>
-                    <th>Salaire brut</th><th>CNPS salarié (3,2%)</th><th>ITS</th>
+                    <th>Salaire brut</th><th>CNPS salarié (6,30%)</th><th>ITS</th>
                     <th style="color:var(--vert);">Net à payer (422)</th>
                     <th>Acomptes (423)</th><th>Reliquat</th><th>Mode règlt</th><th>Statut</th>
                   </tr></thead>
@@ -3784,12 +3852,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <table style="margin-top:10px;font-size:12px;">
               <thead><tr><th>Branche</th><th>Part Employé</th><th>Part Employeur</th><th>Total</th><th>Plafond mensuel</th></tr></thead>
               <tbody>
-                <tr><td>Vieillesse / Retraite</td><td>3,2%</td><td>4,8%</td><td>8%</td><td>1 647 315 FCFA</td></tr>
-                <tr><td>Accidents du Travail (AT)</td><td>0%</td><td>2% à 5%</td><td>variable</td><td>Sans plafond</td></tr>
-                <tr><td>Prestations Familiales (PF)</td><td>0%</td><td>5,75%</td><td>5,75%</td><td>Sans plafond</td></tr>
-                <tr class="total-row" style="font-weight:600;"><td>TOTAL</td><td>3,2%</td><td>~13,55%</td><td>~16,75%</td><td></td></tr>
+                <tr><td>Vieillesse / Retraite</td><td>6,30%</td><td>7,70%</td><td>14%</td><td>3 375 000 FCFA</td></tr>
+                <tr><td>Accidents du Travail (AT)</td><td>0%</td><td>2% à 5%</td><td>variable</td><td>75 000 FCFA</td></tr>
+                <tr><td>Prestations Familiales (PF)</td><td>0%</td><td>5,75%</td><td>5,75%</td><td>75 000 FCFA</td></tr>
+                <tr><td>CMU (forfait)</td><td>500 F</td><td>500 F</td><td>1 000 F / pers.</td><td>forfait</td></tr>
+                <tr><td>FDFP (TA+FC+régul.)</td><td>0%</td><td>1,60%</td><td>1,60%</td><td>Sans plafond</td></tr>
+                <tr><td>ITS part patronale</td><td>—</td><td>1,20%</td><td>1,20%</td><td>Sans plafond</td></tr>
+                <tr class="total-row" style="font-weight:600;"><td>TOTAL</td><td>6,30% + CMU</td><td>~16,8%</td><td>—</td><td></td></tr>
               </tbody>
             </table>
+          </div>
+          <div class="card">
+            <div class="card-title">📋 Grille salariale BTP — Côte d'Ivoire 2023</div>
+            <div class="page-subtitle" style="margin-bottom:8px;">Salaire catégoriel revalorisé (+15 % / 2016) · SMIG 69 000 FCFA</div>
+            <div id="grille-salariale-table" style="overflow-x:auto;"></div>
           </div>
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
@@ -7828,16 +7904,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="form-group"><label>Date d'embauche *</label><input type="date" class="form-control" id="emp-date-embauche"></div>
           <div class="form-group"><label>Date fin contrat (si CDD)</label><input type="date" class="form-control" id="emp-date-fin"></div>
-          <div class="form-group"><label>Catégorie CNPS</label>
-            <select class="form-control" id="emp-categorie">
-              <option value="1A">1A — Manœuvre ordinaire</option>
-              <option value="1B">1B — Manœuvre spécialisé</option>
-              <option value="2">2 — OS / Ouvrier spécialisé</option>
-              <option value="3">3 — Ouvrier qualifié</option>
-              <option value="4">4 — Employé qualifié</option>
-              <option value="5">5 — Agent de maîtrise</option>
-              <option value="6">6 — Cadre</option>
-              <option value="7">7 — Cadre supérieur</option>
+          <div class="form-group"><label>Catégorie (grille BTP 2023)</label>
+            <select class="form-control" id="emp-categorie" onchange="appliquerGrilleSalaire()">
+              <option value="">— Hors grille / manuel —</option>
             </select>
           </div>
           <div class="form-group"><label>Salaire de base brut (FCFA) *</label><input type="number" class="form-control" id="emp-salaire-base" oninput="calcSalaireNet()"></div>
@@ -7901,23 +7970,30 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <label>Mois de paie *</label>
           <input type="month" class="form-control" id="b-mois">
         </div>
-        <div class="form-group"><label>Salaire de base brut (FCFA)</label><input type="number" class="form-control" id="b-base" oninput="calcBulletin()"></div>
-        <div class="form-group"><label>Primes (FCFA)</label><input type="number" class="form-control" id="b-primes" value="0" oninput="calcBulletin()"></div>
-        <div class="form-group"><label>Indemnité transport (FCFA)</label><input type="number" class="form-control" id="b-transport" value="0" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Salaire catégoriel (FCFA)</label><input type="number" class="form-control" id="b-categoriel" value="0" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Sursalaire (FCFA)</label><input type="number" class="form-control" id="b-sursalaire" value="0" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Taux ancienneté (%)</label><input type="number" step="0.5" class="form-control" id="b-anciennete" value="0" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Primes imposables (FCFA)</label><input type="number" class="form-control" id="b-primes" value="0" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Transport non impos. (FCFA)</label><input type="number" class="form-control" id="b-transport" value="0" oninput="calcBulletin()"></div>
         <div class="form-group"><label>Indemnité logement (FCFA)</label><input type="number" class="form-control" id="b-logement" value="0" oninput="calcBulletin()"></div>
         <div class="form-group"><label>Heures supp. (FCFA)</label><input type="number" class="form-control" id="b-heures-supp" value="0" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Parts fiscales (RICF)</label><input type="number" step="0.5" class="form-control" id="b-parts" value="1" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Pers. CMU</label><input type="number" class="form-control" id="b-cmu-pers" value="1" oninput="calcBulletin()"></div>
         <div class="form-group"><label>Retenues diverses (FCFA)</label><input type="number" class="form-control" id="b-retenues" value="0" oninput="calcBulletin()"></div>
         <div class="form-group"><label>Avances sur salaire (FCFA)</label><input type="number" class="form-control" id="b-avances" value="0" oninput="calcBulletin()"></div>
-        <div class="form-group"><label>Jours travaillés</label><input type="number" class="form-control" id="b-jours" value="26" oninput="calcBulletin()"></div>
+        <div class="form-group"><label>Jours travaillés / 30</label><input type="number" class="form-control" id="b-jours" value="30" oninput="calcBulletin()"></div>
       </div>
       <div class="card" id="bulletin-calcul-preview" style="background:var(--gris-med);">
-        <div class="form-section-title">Résultat du calcul</div>
+        <div class="form-section-title">Résultat du calcul (CI 2026)</div>
         <div class="form-grid cols-3" style="font-size:13px;">
-          <div><div style="color:var(--blanc-dim);font-size:11px;">Brut total</div><div id="calc-brut" style="font-weight:600;color:var(--blanc);">0 FCFA</div></div>
-          <div><div style="color:var(--blanc-dim);font-size:11px;">CNPS salarié (3,2%)</div><div id="calc-cnps-sal" style="font-weight:600;color:var(--rouge);">0 FCFA</div></div>
-          <div><div style="color:var(--blanc-dim);font-size:11px;">ITS calculé</div><div id="calc-its" style="font-weight:600;color:var(--rouge);">0 FCFA</div></div>
-          <div><div style="color:var(--blanc-dim);font-size:11px;">CNPS patronal (~13,55%)</div><div id="calc-cnps-pat" style="font-weight:600;color:var(--violet);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">Brut imposable</div><div id="calc-brut-imp" style="font-weight:600;color:var(--blanc);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">Brut total (gains)</div><div id="calc-brut" style="font-weight:600;color:var(--blanc);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">CNPS salarié (6,30%)</div><div id="calc-cnps-sal" style="font-weight:600;color:var(--rouge);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">ITS net (brut − RICF)</div><div id="calc-its" style="font-weight:600;color:var(--rouge);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">CMU salarié</div><div id="calc-cmu" style="font-weight:600;color:var(--rouge);">0 FCFA</div></div>
           <div><div style="color:var(--blanc-dim);font-size:11px;">Total retenues salarié</div><div id="calc-retenues-tot" style="font-weight:600;color:var(--rouge);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">Charges patronales</div><div id="calc-cnps-pat" style="font-weight:600;color:var(--violet);">0 FCFA</div></div>
+          <div><div style="color:var(--blanc-dim);font-size:11px;">Coût total employeur</div><div id="calc-cout" style="font-weight:600;color:var(--or);">0 FCFA</div></div>
           <div><div style="color:var(--blanc-dim);font-size:11px;font-weight:700;">NET À PAYER</div><div id="calc-net" style="font-weight:700;font-size:18px;color:var(--or);">0 FCFA</div></div>
         </div>
       </div>
@@ -15111,72 +15187,283 @@ function sortTable(context, key) {
    Référentiel : CNPS CI, DGI CI, Code du Travail CI
 ══════════════════════════════════════════════════════ */
 
-/* ── CONSTANTES CNPS & ITS CÔTE D'IVOIRE ─────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   MOTEUR PAIE CÔTE D'IVOIRE 2026 — conforme réforme ITS 2024 (ord. 2023-718/719)
+   Validé au franc près sur bulletin réel PARTNER IMMO (avril 2026)
+══════════════════════════════════════════════════════════════════════ */
+var PAIE_CI = {
+  joursMois: 30,                 /* base de proration (jours calendaires) */
+  /* Barème ITS unifié mensuel sur le brut imposable (0/16/21/24/28/32 %) */
+  baremeITS: [
+    { min: 0,       max: 75000,    taux: 0    },
+    { min: 75000,   max: 240000,   taux: 0.16 },
+    { min: 240000,  max: 800000,   taux: 0.21 },
+    { min: 800000,  max: 2400000,  taux: 0.24 },
+    { min: 2400000, max: 8000000,  taux: 0.28 },
+    { min: 8000000, max: Infinity, taux: 0.32 }
+  ],
+  ricfParPart: 11000,            /* RICF mensuel = (parts − 1) × 11 000 */
+  cnps: {
+    retraiteSalarial: 0.063,     /* 6,30 % */
+    retraitePatronal: 0.077,     /* 7,70 % */
+    plafondRetraite: 3375000,    /* plafond mensuel retraite */
+    accidentTravail:  0.05,      /* AT 2–5 % selon risque (défaut 5 %) */
+    prestationsFam:   0.0575,    /* PF 5,75 % */
+    plafondATPF:      75000      /* base plafonnée AT + PF */
+  },
+  fdfp: { taxeApprentissage: 0.004, formationContinue: 0.006, fcRegul: 0.006 },
+  itsPatronal: 0.012,            /* ITS part patronale 1,20 % */
+  cmuSalarial: 500, cmuPatronal: 500
+};
+/* Alias rétrocompatibles (ancien code) */
 var CNPS = {
-  tauxSalarie:  0.032,   // 3,2% retraite
-  tauxPatronalRetraite: 0.048,  // 4,8% retraite
-  tauxAT:       0.02,    // 2% accidents travail (taux moyen)
-  tauxPF:       0.0575,  // 5,75% prestations familiales
-  plafondRetraite: 1647315 // plafond mensuel CNPS retraite
+  tauxSalarie: PAIE_CI.cnps.retraiteSalarial,
+  tauxPatronalRetraite: PAIE_CI.cnps.retraitePatronal,
+  tauxAT: PAIE_CI.cnps.accidentTravail,
+  tauxPF: PAIE_CI.cnps.prestationsFam,
+  plafondRetraite: PAIE_CI.cnps.plafondRetraite
+};
+var BAREME_ITS = PAIE_CI.baremeITS;
+
+/* ══════════════════════════════════════════════════════════════════════
+   GRILLE SALARIALE CÔTE D'IVOIRE 2023 — Convention BTP & activités connexes
+   (Salaire catégoriel revalorisé +15 % / 2016). Source : grille KMC 30/04/2025
+══════════════════════════════════════════════════════════════════════ */
+var GRILLE_SALARIALE_CI = {
+  smig: 69000,
+  secteurs: [
+    { groupe: 'Ingénieurs / Cadres assimilés', cats: [
+      { code:'CADRE_1A', label:'1A', salaire:178796 },
+      { code:'CADRE_1B', label:'1B', salaire:201979 },
+      { code:'CADRE_2A', label:'2A', salaire:219709 },
+      { code:'CADRE_2B', label:'2B', salaire:244626 },
+      { code:'CADRE_3A', label:'3A', salaire:263886 },
+      { code:'CADRE_3B', label:'3B', salaire:395746 }
+    ]},
+    { groupe: 'Agents de maîtrise / Techniciens', cats: [
+      { code:'MAITRISE_M1', label:'M1', salaire:138822 },
+      { code:'MAITRISE_M2', label:'M2', salaire:148876 },
+      { code:'MAITRISE_M3', label:'M3', salaire:174485 },
+      { code:'MAITRISE_M4', label:'M4', salaire:191000 },
+      { code:'MAITRISE_M5', label:'M5', salaire:203206 }
+    ]},
+    { groupe: 'Employés', cats: [
+      { code:'EMP_1',  label:'1ère catégorie',   salaire:75165 },
+      { code:'EMP_2',  label:'2ème catégorie',   salaire:83461 },
+      { code:'EMP_3',  label:'3ème catégorie',   salaire:87855 },
+      { code:'EMP_4',  label:'4ème catégorie',   salaire:95420 },
+      { code:'EMP_5',  label:'5ème catégorie',   salaire:112260 },
+      { code:'EMP_6',  label:'6ème catégorie',   salaire:129587 },
+      { code:'EMP_7A', label:'7ème catégorie A', salaire:131049 },
+      { code:'EMP_7B', label:'7ème catégorie B', salaire:144472 }
+    ]},
+    { groupe: 'Chauffeurs', cats: [
+      { code:'CHAUFF_A', label:'A', salaire:83705 },
+      { code:'CHAUFF_B', label:'B', salaire:87610 },
+      { code:'CHAUFF_C', label:'C', salaire:89319 },
+      { code:'CHAUFF_D', label:'D', salaire:90296 }
+    ]},
+    { groupe: 'Ouvriers', cats: [
+      { code:'OUV_1A', label:'1A', salaire:76029 },
+      { code:'OUV_1B', label:'1B', salaire:77363 },
+      { code:'OUV_2',  label:'2',  salaire:77848 },
+      { code:'OUV_3A', label:'3A', salaire:79314 },
+      { code:'OUV_3B', label:'3B', salaire:82974 },
+      { code:'OUV_4A', label:'4A', salaire:83705 },
+      { code:'OUV_4B', label:'4B', salaire:88344 },
+      { code:'OUV_5A', label:'5A', salaire:89564 },
+      { code:'OUV_5B', label:'5B', salaire:94201 },
+      { code:'OUV_6A', label:'6A', salaire:96395 },
+      { code:'OUV_6B', label:'6B', salaire:106646 },
+      { code:'OUV_HC', label:'HC (Hors catégorie)', salaire:143130 }
+    ]}
+  ]
 };
 
-/* Barème ITS mensuel CI 2024 (tranches en FCFA) */
-var BAREME_ITS = [
-  { min: 0,       max: 50000,   taux: 0,    base: 0 },
-  { min: 50001,   max: 130000,  taux: 0.015, base: 0 },
-  { min: 130001,  max: 200000,  taux: 0.05,  base: 1200 },
-  { min: 200001,  max: 500000,  taux: 0.10,  base: 4700 },
-  { min: 500001,  max: 1500000, taux: 0.20,  base: 34700 },
-  { min: 1500001, max: Infinity, taux: 0.32, base: 234700 }
-];
+/* Index plat code → {salaire,label,groupe} */
+var GRILLE_INDEX = (function(){
+  var idx = {};
+  GRILLE_SALARIALE_CI.secteurs.forEach(function(s){
+    s.cats.forEach(function(c){ idx[c.code] = { salaire:c.salaire, label:c.label, groupe:s.groupe }; });
+  });
+  return idx;
+})();
 
-function calcITS(salaireBrutImposable) {
-  // Abattement forfaitaire 15% (frais professionnels CI)
-  var base = salaireBrutImposable * 0.85;
+function grilleSalaireFor(code) {
+  var e = GRILLE_INDEX[code];
+  return e ? e.salaire : null;
+}
+
+/* Construit les <optgroup> du select catégorie */
+function buildGrilleOptions(selected) {
+  var html = '<option value="">— Hors grille / manuel —</option>';
+  GRILLE_SALARIALE_CI.secteurs.forEach(function(s){
+    html += '<optgroup label="'+s.groupe+'">';
+    s.cats.forEach(function(c){
+      var sel = (c.code === selected) ? ' selected' : '';
+      html += '<option value="'+c.code+'"'+sel+'>'+c.label+' — '+fmtF(c.salaire)+' FCFA</option>';
+    });
+    html += '</optgroup>';
+  });
+  return html;
+}
+
+/* Auto-remplit le salaire catégoriel quand on choisit une catégorie de la grille */
+function appliquerGrilleSalaire() {
+  var code = document.getElementById('emp-categorie').value;
+  var sal = grilleSalaireFor(code);
+  if (sal != null) {
+    document.getElementById('emp-salaire-base').value = sal;
+    if (typeof calcSalaireNet === 'function') calcSalaireNet();
+    if (typeof toast === 'function') toast('Salaire catégoriel grille BTP 2023 appliqué : ' + fmtF(sal) + ' FCFA', 'info');
+  }
+}
+
+
+/* ── Parts fiscales selon situation familiale ──────────── */
+function calcPartsFiscales(matrimonial, enfants) {
+  enfants = parseInt(enfants) || 0;
+  var p = 1;
+  if (matrimonial === 'marie' || matrimonial === 'marié') p = 2;
+  else if (matrimonial === 'veuf' || matrimonial === 'veuve') p = 1.5;
+  p += 0.5 * enfants;
+  return Math.min(5, p);
+}
+
+/* ── Taux prime ancienneté (CI : 2 % à 2 ans, +1 %/an, plafond 25 %) ── */
+function calcTauxAnciennete(dateEntree) {
+  if (!dateEntree) return 0;
+  var d = new Date(dateEntree); if (isNaN(d)) return 0;
+  var ans = Math.floor((Date.now() - d.getTime()) / (365.25 * 864e5));
+  if (ans < 2) return 0;
+  return Math.min(25, ans);
+}
+
+function calcITSBrut(brutImposable) {
   var its = 0;
-  for (var i = 0; i < BAREME_ITS.length; i++) {
-    var t = BAREME_ITS[i];
-    if (base <= t.min) break;
-    if (base > t.min) {
-      var part = Math.min(base, t.max) - t.min;
-      its += part * t.taux;
-    }
+  for (var i = 0; i < PAIE_CI.baremeITS.length; i++) {
+    var t = PAIE_CI.baremeITS[i];
+    if (brutImposable > t.min) its += (Math.min(brutImposable, t.max) - t.min) * t.taux;
   }
   return Math.round(its);
 }
 
-function calcCNPSSalarie(brutTotal) {
-  var baseRetraite = Math.min(brutTotal, CNPS.plafondRetraite);
-  return Math.round(baseRetraite * CNPS.tauxSalarie);
+function calcRICF(parts) {
+  return Math.round(Math.max(0, (parts || 1) - 1) * PAIE_CI.ricfParPart);
 }
 
-function calcCNPSPatronal(brutTotal) {
-  var retraite = Math.min(brutTotal, CNPS.plafondRetraite) * CNPS.tauxPatronalRetraite;
-  var at = brutTotal * CNPS.tauxAT;
-  var pf = brutTotal * CNPS.tauxPF;
+/* ── Moteur détaillé : renvoie tout le bulletin ────────── */
+function calcPaieCI(d) {
+  var jours   = d.jours || PAIE_CI.joursMois;
+  var prorata = jours / PAIE_CI.joursMois;
+  var R = Math.round;
+
+  /* GAINS imposables */
+  var categoriel  = R((d.salaireCategoriel || 0) * prorata);
+  var sursalaire  = R((d.sursalaire || 0) * prorata);
+  var tauxAnc     = (d.tauxAnciennete != null) ? d.tauxAnciennete : 0;
+  var anciennete  = R(categoriel * tauxAnc / 100);
+  var primesImpos = R((d.primesImpos || 0) * prorata);
+  var logement    = R((d.logement || 0) * prorata);
+  var heuresSupp  = R(d.heuresSupp || 0);
+  var brutImposable = categoriel + sursalaire + anciennete + primesImpos + logement + heuresSupp;
+
+  /* GAINS non imposables */
+  var transport = R((d.transport || 0) * prorata);
+
+  var brutTotal  = brutImposable + transport;  /* total gains (poste 20) */
+  var brutSocial = brutImposable;              /* assiette CNPS */
+
+  /* RETENUES SALARIALES */
+  var cnpsRetraiteSal = R(Math.min(brutSocial, PAIE_CI.cnps.plafondRetraite) * PAIE_CI.cnps.retraiteSalarial);
+  var parts   = d.parts || 1;
+  var itsBrut = calcITSBrut(brutImposable);
+  var ricf    = calcRICF(parts);
+  var itsNet  = Math.max(0, itsBrut - ricf);
+  var nbPers  = d.cmuPersonnes || 1;
+  var cmuSal  = PAIE_CI.cmuSalarial * nbPers;
+  var retenuesDiv = R(d.retenuesDiverses || d.retenues || 0);
+  var avances     = R(d.avances || 0);
+  var totalRetenuesSal = cnpsRetraiteSal + itsNet + cmuSal + retenuesDiv + avances;
+
+  /* CHARGES PATRONALES */
+  var baseATPF        = Math.min(brutSocial, PAIE_CI.cnps.plafondATPF);
+  var cnpsRetraitePat = R(Math.min(brutSocial, PAIE_CI.cnps.plafondRetraite) * PAIE_CI.cnps.retraitePatronal);
+  var cnpsAT          = R(baseATPF * PAIE_CI.cnps.accidentTravail);
+  var cnpsPF          = R(baseATPF * PAIE_CI.cnps.prestationsFam);
+  var itsPat          = R(brutImposable * PAIE_CI.itsPatronal);
+  var fdfpTA          = R(brutImposable * PAIE_CI.fdfp.taxeApprentissage);
+  var fdfpFC          = R(brutImposable * PAIE_CI.fdfp.formationContinue);
+  var fdfpRegul       = R(brutImposable * PAIE_CI.fdfp.fcRegul);
+  var cmuPat          = PAIE_CI.cmuPatronal * nbPers;
+  var totalPatronal   = cnpsRetraitePat + cnpsAT + cnpsPF + itsPat + fdfpTA + fdfpFC + fdfpRegul + cmuPat;
+
+  var net       = Math.max(0, brutTotal - totalRetenuesSal);
+  var coutTotal = brutTotal + totalPatronal;
+
   return {
-    retraite: Math.round(retraite),
-    at: Math.round(at),
-    pf: Math.round(pf),
-    total: Math.round(retraite + at + pf)
+    jours: jours, prorata: prorata, parts: parts,
+    categoriel: categoriel, sursalaire: sursalaire, tauxAnc: tauxAnc, anciennete: anciennete,
+    primesImpos: primesImpos, logement: logement, heuresSupp: heuresSupp, transport: transport,
+    brutImposable: brutImposable, brutSocial: brutSocial, brutTotal: brutTotal,
+    cnpsRetraiteSal: cnpsRetraiteSal, itsBrut: itsBrut, ricf: ricf, itsNet: itsNet,
+    cmuSal: cmuSal, retenuesDiv: retenuesDiv, avances: avances, totalRetenuesSal: totalRetenuesSal,
+    cnpsRetraitePat: cnpsRetraitePat, cnpsAT: cnpsAT, cnpsPF: cnpsPF, itsPat: itsPat,
+    fdfpTA: fdfpTA, fdfpFC: fdfpFC, fdfpRegul: fdfpRegul, cmuPat: cmuPat, totalPatronal: totalPatronal,
+    net: net, coutTotal: coutTotal,
+    /* alias rétrocompatibles */
+    brut: brutTotal, cnpsSal: cnpsRetraiteSal, its: itsNet,
+    retenues: totalRetenuesSal, cnpsPat: totalPatronal
   };
 }
 
+/* ── Wrapper rétrocompatible : accepte ancien format {base,primes,...} ── */
 function calcNetAPayer(b) {
-  var brut = (b.base || 0) + (b.primes || 0) + (b.transport || 0) + (b.logement || 0) + (b.heuresSupp || 0);
-  var cnpsSal = calcCNPSSalarie(b.base || 0);
-  var brutImposable = brut - cnpsSal;
-  var its = calcITS(brutImposable);
-  var retenues = cnpsSal + its + (b.retenues || 0) + (b.avances || 0);
-  var net = Math.max(0, brut - retenues);
-  var pat = calcCNPSPatronal(b.base || 0);
-  return { brut, cnpsSal, its, retenues, net, cnpsPat: pat.total, coutTotal: brut + pat.total };
+  var d;
+  if (b.salaireCategoriel != null || b.sursalaire != null) {
+    d = b;
+  } else {
+    /* ancien format : base = salaire principal, primes = sursalaire/primes imposables */
+    d = {
+      salaireCategoriel: b.base || 0,
+      sursalaire: 0,
+      primesImpos: b.primes || 0,
+      transport: b.transport || 0,
+      logement: b.logement || 0,
+      heuresSupp: b.heuresSupp || 0,
+      retenuesDiverses: b.retenues || 0,
+      avances: b.avances || 0,
+      jours: b.jours || PAIE_CI.joursMois,
+      tauxAnciennete: b.tauxAnciennete || 0,
+      parts: b.parts || 1,
+      cmuPersonnes: b.cmuPersonnes || 1
+    };
+  }
+  return calcPaieCI(d);
 }
+
+/* Alias rétrocompatibles charges patronales détaillées */
+function calcCNPSSalarie(brutTotal) {
+  return Math.round(Math.min(brutTotal, PAIE_CI.cnps.plafondRetraite) * PAIE_CI.cnps.retraiteSalarial);
+}
+function calcCNPSPatronal(brutTotal) {
+  var retraite = Math.min(brutTotal, PAIE_CI.cnps.plafondRetraite) * PAIE_CI.cnps.retraitePatronal;
+  var baseATPF = Math.min(brutTotal, PAIE_CI.cnps.plafondATPF);
+  var at = baseATPF * PAIE_CI.cnps.accidentTravail;
+  var pf = baseATPF * PAIE_CI.cnps.prestationsFam;
+  return { retraite: Math.round(retraite), at: Math.round(at), pf: Math.round(pf),
+           total: Math.round(retraite + at + pf) };
+}
+function calcITS(brutImposable) { return calcITSBrut(brutImposable); }
+
 
 /* ── GESTION DES EMPLOYÉS ─────────────────────────────── */
 function openEmployeModal(id) {
   APP.editingId = id || null;
   document.getElementById('modal-emp-title').textContent = id ? 'Modifier l\'employé' : 'Nouvel Employé';
+  /* Peupler la grille salariale BTP 2023 */
+  var _eCat = id ? (DATA.employes.find(function(x){return x.id===id;})||{}).categorie : '';
+  document.getElementById('emp-categorie').innerHTML = buildGrilleOptions(_eCat || '');
   var fields = ['matricule','nom','prenoms','ddn','genre','matrimonial','enfants','cnps-num','tel','email','adresse',
     'poste','dept','contrat','date-embauche','date-fin','categorie','salaire-base','primes','transport','logement',
     'mode-paiement','statut','banque','compte-banque','wallet','rib'];
@@ -15369,6 +15656,27 @@ function loadPaie() {
   renderPayslips(mois);
   buildPaieRecap(mois);
   buildVirements(mois);
+  renderGrilleSalariale();
+}
+
+function renderGrilleSalariale() {
+  var box = document.getElementById('grille-salariale-table');
+  if (!box) return;
+  var html = '<table style="font-size:12px;width:100%;"><thead><tr>'
+    + '<th style="text-align:left;">Secteur</th><th style="text-align:left;">Catégorie</th>'
+    + '<th style="text-align:right;">Salaire catégoriel 2023</th></tr></thead><tbody>';
+  GRILLE_SALARIALE_CI.secteurs.forEach(function(s){
+    s.cats.forEach(function(c, i){
+      html += '<tr>'
+        + (i === 0 ? '<td rowspan="'+s.cats.length+'" style="vertical-align:top;font-weight:600;color:var(--or);">'+s.groupe+'</td>' : '')
+        + '<td>'+c.label+'</td>'
+        + '<td style="text-align:right;font-weight:600;">'+fmtF(c.salaire)+' FCFA</td></tr>';
+    });
+  });
+  html += '<tr style="border-top:2px solid var(--gris-clair);"><td colspan="2" style="font-weight:700;">SMIG</td>'
+    + '<td style="text-align:right;font-weight:700;color:var(--vert);">'+fmtF(GRILLE_SALARIALE_CI.smig)+' FCFA</td></tr>';
+  html += '</tbody></table>';
+  box.innerHTML = html;
 }
 
 function renderPayslips(mois) {
@@ -15524,14 +15832,18 @@ function openBulletinModal(bullId, empId) {
     if (b) {
       selEmp.value = b.employe_id;
       document.getElementById('b-mois').value = b.mois;
-      document.getElementById('b-base').value = b.base;
-      document.getElementById('b-primes').value = b.primes || 0;
+      document.getElementById('b-categoriel').value = b.salaireCategoriel != null ? b.salaireCategoriel : (b.base || 0);
+      document.getElementById('b-sursalaire').value = b.sursalaire || 0;
+      document.getElementById('b-anciennete').value = b.tauxAnciennete || 0;
+      document.getElementById('b-primes').value = b.primesImpos != null ? b.primesImpos : (b.primes || 0);
       document.getElementById('b-transport').value = b.transport || 0;
       document.getElementById('b-logement').value = b.logement || 0;
       document.getElementById('b-heures-supp').value = b.heuresSupp || 0;
-      document.getElementById('b-retenues').value = b.retenues || 0;
+      document.getElementById('b-parts').value = b.parts || 1;
+      document.getElementById('b-cmu-pers').value = b.cmuPersonnes || 1;
+      document.getElementById('b-retenues').value = b.retenuesDiverses != null ? b.retenuesDiverses : (b.retenues || 0);
       document.getElementById('b-avances').value = b.avances || 0;
-      document.getElementById('b-jours').value = b.jours || 26;
+      document.getElementById('b-jours').value = b.jours || 30;
     }
   } else if (empId) {
     selEmp.value = empId;
@@ -15547,51 +15859,68 @@ function prefillBulletin() {
   var empId = document.getElementById('b-employe').value;
   var e = DATA.employes.find(function(x){ return x.id === empId; });
   if (e) {
-    document.getElementById('b-base').value = e.salaire_base || 0;
+    /* Répartition catégoriel / sursalaire : si non détaillé, tout en catégoriel */
+    document.getElementById('b-categoriel').value = e.salaire_categoriel != null ? e.salaire_categoriel : (e.salaire_base || 0);
+    document.getElementById('b-sursalaire').value = e.sursalaire || 0;
+    document.getElementById('b-anciennete').value = calcTauxAnciennete(e.date_embauche || e.date_entree);
     document.getElementById('b-primes').value = e.primes || 0;
     document.getElementById('b-transport').value = e.transport || 0;
     document.getElementById('b-logement').value = e.logement || 0;
     document.getElementById('b-heures-supp').value = 0;
+    document.getElementById('b-parts').value = calcPartsFiscales(e.matrimonial, e.enfants);
+    document.getElementById('b-cmu-pers').value = 1 + (parseInt(e.enfants) || 0) + (e.matrimonial === 'marie' ? 1 : 0);
     document.getElementById('b-retenues').value = 0;
     document.getElementById('b-avances').value = 0;
+    document.getElementById('b-jours').value = 30;
     calcBulletin();
   }
 }
 
+function _bulletinInputs() {
+  var v = function(id){ return parseFloat(document.getElementById(id).value) || 0; };
+  return {
+    salaireCategoriel: v('b-categoriel'),
+    sursalaire: v('b-sursalaire'),
+    tauxAnciennete: v('b-anciennete'),
+    primesImpos: v('b-primes'),
+    transport: v('b-transport'),
+    logement: v('b-logement'),
+    heuresSupp: v('b-heures-supp'),
+    parts: v('b-parts') || 1,
+    cmuPersonnes: parseInt(document.getElementById('b-cmu-pers').value) || 1,
+    retenuesDiverses: v('b-retenues'),
+    avances: v('b-avances'),
+    jours: parseInt(document.getElementById('b-jours').value) || 30
+  };
+}
+
 function calcBulletin() {
-  var base = parseFloat(document.getElementById('b-base').value) || 0;
-  var primes = parseFloat(document.getElementById('b-primes').value) || 0;
-  var transport = parseFloat(document.getElementById('b-transport').value) || 0;
-  var logement = parseFloat(document.getElementById('b-logement').value) || 0;
-  var heuresSupp = parseFloat(document.getElementById('b-heures-supp').value) || 0;
-  var retenues = parseFloat(document.getElementById('b-retenues').value) || 0;
-  var avances = parseFloat(document.getElementById('b-avances').value) || 0;
-  var r = calcNetAPayer({ base, primes, transport, logement, heuresSupp, retenues, avances });
-  document.getElementById('calc-brut').textContent = fmtF(r.brut) + ' FCFA';
-  document.getElementById('calc-cnps-sal').textContent = fmtF(r.cnpsSal) + ' FCFA';
-  document.getElementById('calc-its').textContent = fmtF(r.its) + ' FCFA';
-  document.getElementById('calc-cnps-pat').textContent = fmtF(r.cnpsPat) + ' FCFA';
-  document.getElementById('calc-retenues-tot').textContent = fmtF(r.retenues) + ' FCFA';
-  document.getElementById('calc-net').textContent = fmtF(r.net) + ' FCFA';
+  var r = calcPaieCI(_bulletinInputs());
+  document.getElementById('calc-brut-imp').textContent   = fmtF(r.brutImposable) + ' FCFA';
+  document.getElementById('calc-brut').textContent       = fmtF(r.brutTotal) + ' FCFA';
+  document.getElementById('calc-cnps-sal').textContent   = fmtF(r.cnpsRetraiteSal) + ' FCFA';
+  document.getElementById('calc-its').textContent        = fmtF(r.itsNet) + ' FCFA';
+  document.getElementById('calc-cmu').textContent        = fmtF(r.cmuSal) + ' FCFA';
+  document.getElementById('calc-retenues-tot').textContent = fmtF(r.totalRetenuesSal) + ' FCFA';
+  document.getElementById('calc-cnps-pat').textContent   = fmtF(r.totalPatronal) + ' FCFA';
+  document.getElementById('calc-cout').textContent       = fmtF(r.coutTotal) + ' FCFA';
+  document.getElementById('calc-net').textContent        = fmtF(r.net) + ' FCFA';
 }
 
 async function saveBulletin() {
   var empId = document.getElementById('b-employe').value;
   var mois = document.getElementById('b-mois').value;
   if (!empId || !mois) { toast('Employé et mois obligatoires.', 'error'); return; }
-  var bull = {
+  var inp = _bulletinInputs();
+  var bull = Object.assign({
     id: APP.editingId || 'bull_' + empId + '_' + mois,
     employe_id: empId, mois: mois,
-    base: parseFloat(document.getElementById('b-base').value) || 0,
-    primes: parseFloat(document.getElementById('b-primes').value) || 0,
-    transport: parseFloat(document.getElementById('b-transport').value) || 0,
-    logement: parseFloat(document.getElementById('b-logement').value) || 0,
-    heuresSupp: parseFloat(document.getElementById('b-heures-supp').value) || 0,
-    retenues: parseFloat(document.getElementById('b-retenues').value) || 0,
-    avances: parseFloat(document.getElementById('b-avances').value) || 0,
-    jours: parseInt(document.getElementById('b-jours').value) || 26,
+    /* champs rétrocompat */
+    base: inp.salaireCategoriel + inp.sursalaire,
+    primes: inp.primesImpos,
+    retenues: inp.retenuesDiverses,
     created_at: new Date().toISOString()
-  };
+  }, inp);
   if (APP.editingId) {
     var idx = DATA.bulletins.findIndex(function(x){ return x.id===APP.editingId; });
     if (idx >= 0) DATA.bulletins[idx] = bull;
@@ -15612,15 +15941,7 @@ function imprimerBulletin() {
   var mois = document.getElementById('b-mois').value;
   var e = DATA.employes.find(function(x){ return x.id===empId; });
   if (!e) { toast('Sélectionnez un employé.','error'); return; }
-  var base = parseFloat(document.getElementById('b-base').value)||0;
-  var primes = parseFloat(document.getElementById('b-primes').value)||0;
-  var transport = parseFloat(document.getElementById('b-transport').value)||0;
-  var logement = parseFloat(document.getElementById('b-logement').value)||0;
-  var heuresSupp = parseFloat(document.getElementById('b-heures-supp').value)||0;
-  var retenues = parseFloat(document.getElementById('b-retenues').value)||0;
-  var avances = parseFloat(document.getElementById('b-avances').value)||0;
-  var jours = parseInt(document.getElementById('b-jours').value)||26;
-  printBulletinData({ employe: e, mois, base, primes, transport, logement, heuresSupp, retenues, avances, jours });
+  printBulletinData(Object.assign({ employe: e, mois: mois }, _bulletinInputs()));
 }
 
 function imprimerBulletinId(bullId) {
@@ -15628,44 +15949,114 @@ function imprimerBulletinId(bullId) {
   if (!b) return;
   var e = DATA.employes.find(function(x){ return x.id===b.employe_id; });
   if (!e) return;
-  printBulletinData({ employe:e, mois:b.mois, base:b.base, primes:b.primes, transport:b.transport, logement:b.logement, heuresSupp:b.heuresSupp, retenues:b.retenues, avances:b.avances, jours:b.jours });
+  printBulletinData(Object.assign({ employe: e }, b));
 }
 
+/* ── BULLETIN DE PAIE A4 — modèle officiel CI (numéroté, parts patronale/salariale) ── */
 function printBulletinData(d) {
-  var r = calcNetAPayer(d);
-  var societe = DATA.params.societe || 'ImmoSuite ERP';
-  var win = window.open('', '', 'width=800,height=900');
-  win.document.write('<html><head><title>Bulletin — ' + d.employe.nom + '</title>'
-    + '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:20px;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #ccc;padding:6px 8px;}th{background:#f5f0e0;}.total{font-weight:bold;background:#f5f0e0;}.net{font-size:15px;font-weight:bold;background:#fdf5dd;}.header{border-bottom:2px solid #2563EB;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;}</style></head><body>');
-  win.document.write('<div class="header"><div><h2 style="margin:0;color:#1D4ED8;">' + societe + '</h2><p style="margin:4px 0;font-size:11px;">' + (DATA.params.rccm ? 'RCCM : ' + DATA.params.rccm : '') + '</p></div>'
-    + '<div style="text-align:right;"><h3 style="margin:0;">BULLETIN DE PAIE</h3><p style="margin:4px 0;">Période : <strong>' + d.mois + '</strong></p></div></div>');
-  win.document.write('<table style="margin-bottom:10px;"><tr><th colspan="2">EMPLOYÉ</th><th colspan="2">EMPLOI</th></tr>'
-    + '<tr><td>Nom & Prénoms</td><td><strong>' + d.employe.nom + ' ' + d.employe.prenoms + '</strong></td><td>Poste</td><td>' + d.employe.poste + '</td></tr>'
-    + '<tr><td>Matricule</td><td>' + d.employe.matricule + '</td><td>Département</td><td>' + (d.employe.dept||'—') + '</td></tr>'
-    + '<tr><td>N° CNPS</td><td>' + (d.employe.cnps_num||'—') + '</td><td>Catégorie</td><td>' + (d.employe.categorie||'—') + '</td></tr>'
-    + '<tr><td>Jours travaillés</td><td>' + d.jours + ' jours</td><td>Contrat</td><td>' + d.employe.contrat + '</td></tr></table>');
-  win.document.write('<table><thead><tr><th>Désignation</th><th>Base</th><th>Montant (FCFA)</th></tr></thead><tbody>'
-    + '<tr><td>Salaire de base</td><td>' + d.jours + ' jrs</td><td>' + fmtF(d.base) + '</td></tr>'
-    + (d.primes ? '<tr><td>Primes</td><td></td><td>' + fmtF(d.primes) + '</td></tr>' : '')
-    + (d.transport ? '<tr><td>Indemnité transport</td><td></td><td>' + fmtF(d.transport) + '</td></tr>' : '')
-    + (d.logement ? '<tr><td>Indemnité logement</td><td></td><td>' + fmtF(d.logement) + '</td></tr>' : '')
-    + (d.heuresSupp ? '<tr><td>Heures supplémentaires</td><td></td><td>' + fmtF(d.heuresSupp) + '</td></tr>' : '')
-    + '<tr class="total"><td colspan="2"><strong>SALAIRE BRUT</strong></td><td><strong>' + fmtF(r.brut) + '</strong></td></tr>'
-    + '<tr style="color:darkred;"><td>Cotisation CNPS salarié (3,2%)</td><td>Retraite</td><td>— ' + fmtF(r.cnpsSal) + '</td></tr>'
-    + '<tr style="color:darkred;"><td>ITS (Impôt sur Traitement & Salaires)</td><td>Abatement 15%</td><td>— ' + fmtF(r.its) + '</td></tr>'
-    + (d.retenues ? '<tr style="color:darkred;"><td>Retenues diverses</td><td></td><td>— ' + fmtF(d.retenues) + '</td></tr>' : '')
-    + (d.avances ? '<tr style="color:darkred;"><td>Avance sur salaire</td><td></td><td>— ' + fmtF(d.avances) + '</td></tr>' : '')
-    + '<tr class="net"><td colspan="2">NET À PAYER</td><td style="color:#1D4ED8;font-size:15px;">' + fmtF(r.net) + ' FCFA</td></tr>'
+  var r = calcPaieCI(d);
+  var e = d.employe;
+  var P = DATA.params || {};
+  var societe = P.societe || 'ImmoSuite ERP';
+  var moisLib = (function(m){
+    if (!m) return '';
+    var parts = m.split('-'); var mn = ['JANVIER','FÉVRIER','MARS','AVRIL','MAI','JUIN','JUILLET','AOÛT','SEPTEMBRE','OCTOBRE','NOVEMBRE','DÉCEMBRE'];
+    return (mn[parseInt(parts[1])-1] || '') + ' ' + parts[0];
+  })(d.mois);
+  var f = function(n){ return n ? fmtF(n) : ''; };
+  var pct = function(t){ return (t*100).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+
+  /* Lignes GAINS */
+  function gain(num,lib,base,nbtaux,montant){
+    return '<tr><td class="c">'+num+'</td><td>'+lib+'</td><td class="r">'+f(base)+'</td><td class="r">'+(nbtaux||'')+'</td><td class="r">'+f(montant)+'</td><td></td><td class="r"></td><td class="r"></td></tr>';
+  }
+  /* Ligne retenue/patronal */
+  function ret(num,lib,base,txS,retS,txP,retP){
+    return '<tr><td class="c">'+num+'</td><td>'+lib+'</td><td class="r">'+f(base)+'</td><td class="r">'+(txS||'')+'</td><td class="r"></td><td class="r">'+f(retS)+'</td><td class="r">'+(txP||'')+'</td><td class="r">'+f(retP)+'</td></tr>';
+  }
+
+  var rows = '';
+  rows += gain('01','Salaire Catégoriel', d.salaireCategoriel, (r.jours).toLocaleString('fr-FR',{minimumFractionDigits:2}), r.categoriel);
+  if (r.sursalaire)  rows += gain('02','Sursalaire', d.sursalaire, (r.jours).toLocaleString('fr-FR',{minimumFractionDigits:2}), r.sursalaire);
+  if (r.anciennete)  rows += gain('03','Prime d\'Ancienneté', r.categoriel, pct(r.tauxAnc/100), r.anciennete);
+  if (r.primesImpos) rows += gain('10','Primes imposables', '', '', r.primesImpos);
+  if (r.logement)    rows += gain('11','Indemnité Logement', '', '', r.logement);
+  if (r.heuresSupp)  rows += gain('12','Heures supplémentaires', '', '', r.heuresSupp);
+  /* Totaux brut */
+  rows += '<tr class="tot"><td class="c">20</td><td class="b r" colspan="3">Total brut</td><td class="r b">'+f(r.brutImposable)+'</td><td></td><td></td><td></td></tr>';
+  rows += '<tr><td class="c">21</td><td class="r" colspan="3">Brut fiscal employé</td><td class="r">'+f(r.brutImposable)+'</td><td></td><td></td><td></td></tr>';
+  rows += '<tr><td class="c">22</td><td class="r" colspan="3">Brut social</td><td class="r">'+f(r.brutSocial)+'</td><td></td><td></td><td></td></tr>';
+  /* Retenues / patronal */
+  rows += ret('31','ITS, Imp. sur Trait. et Sal.', r.brutImposable, '', r.itsNet, pct(PAIE_CI.itsPatronal), r.itsPat);
+  rows += ret('34','CNPS, Régime de Retraite', r.brutSocial, pct(PAIE_CI.cnps.retraiteSalarial), r.cnpsRetraiteSal, pct(PAIE_CI.cnps.retraitePatronal), r.cnpsRetraitePat);
+  rows += ret('35','CNPS, Accident Travail', Math.min(r.brutSocial,PAIE_CI.cnps.plafondATPF), '', '', pct(PAIE_CI.cnps.accidentTravail), r.cnpsAT);
+  rows += ret('36','CNPS, Prest. Famil.', Math.min(r.brutSocial,PAIE_CI.cnps.plafondATPF), '', '', pct(PAIE_CI.cnps.prestationsFam), r.cnpsPF);
+  rows += ret('37','FDFP, Taxe Apprentissage', r.brutImposable, '', '', pct(PAIE_CI.fdfp.taxeApprentissage), r.fdfpTA);
+  rows += ret('38','FDFP, Taxe Form. Continue', r.brutImposable, '', '', pct(PAIE_CI.fdfp.formationContinue), r.fdfpFC);
+  rows += ret('39','FDFP, TFC à régulariser', r.brutImposable, '', '', pct(PAIE_CI.fdfp.fcRegul), r.fdfpRegul);
+  if (r.transport) rows += '<tr><td class="c">17</td><td>Prime Transport non impos.</td><td class="r">'+f(d.transport)+'</td><td class="r">'+(r.jours).toLocaleString('fr-FR',{minimumFractionDigits:2})+'</td><td class="r">'+f(r.transport)+'</td><td></td><td></td><td></td></tr>';
+  rows += ret('43','CMU', '', '', r.cmuSal, '', r.cmuPat);
+  if (r.retenuesDiv) rows += ret('45','Retenues diverses', '', '', r.retenuesDiv, '', '');
+  if (r.avances)     rows += ret('46','Avances sur salaire', '', '', r.avances, '', '');
+  /* Totaux colonnes */
+  rows += '<tr class="tot"><td></td><td colspan="3" class="r"></td><td class="r b">'+f(r.brutTotal)+'</td><td></td><td class="r b">'+f(r.totalRetenuesSal)+'</td><td class="r b">'+f(r.totalPatronal)+'</td></tr>';
+
+  var win = window.open('', '', 'width=900,height=1100');
+  win.document.write('<html><head><meta charset="utf-8"><title>Bulletin '+e.nom+' '+moisLib+'</title><style>'
+    + '*{box-sizing:border-box;} body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#111;padding:16px;}'
+    + 'h1{font-size:16px;margin:0;text-align:right;} .sub{text-align:right;font-size:11px;}'
+    + '.hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:10px;}'
+    + '.soc{font-size:11px;line-height:1.5;} .soc b{font-size:13px;}'
+    + '.ident{display:flex;gap:12px;margin-bottom:10px;}'
+    + '.ident .col{font-size:10px;line-height:1.7;} .ident .lbl{color:#555;display:inline-block;min-width:78px;}'
+    + '.ident .emp{flex:1;background:#dfe7cf;border:1px solid #c2cfa8;padding:10px 14px;border-radius:4px;}'
+    + '.ident .emp .nm{font-size:13px;font-weight:bold;}'
+    + 'table.main{border-collapse:collapse;width:100%;margin-top:4px;}'
+    + 'table.main th,table.main td{border:1px solid #888;padding:2px 5px;font-size:9.5px;}'
+    + 'table.main th{background:#eee;text-align:center;font-size:9px;}'
+    + '.r{text-align:right;} .c{text-align:center;} .b{font-weight:bold;}'
+    + '.tot td{background:#f3f3f3;}'
+    + '.net{margin-top:8px;background:#dfe7cf;border:1px solid #c2cfa8;padding:8px 14px;display:flex;justify-content:space-between;font-size:14px;font-weight:bold;border-radius:4px;}'
+    + 'table.cum{border-collapse:collapse;width:100%;margin-top:12px;} table.cum th,table.cum td{border:1px solid #999;padding:3px 5px;font-size:9px;text-align:right;} table.cum th{background:#eee;text-align:center;}'
+    + '.foot{margin-top:10px;font-size:9px;color:#444;text-align:center;} .sign{display:flex;justify-content:space-between;margin-top:28px;font-size:10px;}'
+    + '@media print{body{padding:4mm;}}'
+    + '</style></head><body>');
+  /* En-tête */
+  win.document.write('<div class="hd"><div class="soc"><b>'+societe+'</b><br>'
+    + (P.adresse||'BP 696 Abidjan 28')+'<br>'
+    + (P.cnps_employeur ? 'N°CNPS '+P.cnps_employeur : 'N°CNPS —')+'</div>'
+    + '<div><h1>BULLETIN DE PAIE</h1><div class="sub">'+moisLib+'</div></div></div>');
+  /* Identité */
+  win.document.write('<div class="ident"><div class="col">'
+    + '<div><span class="lbl">Matricule:</span> <b>'+(e.matricule||'—')+'</b></div>'
+    + '<div><span class="lbl">CNPS N°:</span> '+(e.cnps_num||'—')+'</div>'
+    + '<div><span class="lbl">Direction:</span> '+(e.dept||'—')+'</div>'
+    + '<div><span class="lbl">Emploi:</span> '+(e.poste||'—')+'</div>'
+    + '<div><span class="lbl">Catégorie:</span> '+(e.categorie||'—')+'</div>'
+    + '<div><span class="lbl">Parts:</span> '+(r.parts).toLocaleString('fr-FR',{minimumFractionDigits:1})+'</div>'
+    + '<div><span class="lbl">Date entrée:</span> '+(e.date_embauche||e.date_entree||'—')+'</div>'
+    + '</div>'
+    + '<div class="emp"><div class="nm">'+(e.genre==='F'?'Mme':'M.')+' '+(e.nom||'')+' '+(e.prenoms||'')+'</div>'
+    + '<div style="margin-top:6px;font-size:10px;">'+(e.adresse||'')+'</div></div></div>');
+  /* Tableau principal */
+  win.document.write('<table class="main"><thead>'
+    + '<tr><th rowspan="2">N°</th><th rowspan="2">DÉSIGNATION</th><th rowspan="2">BASE</th><th colspan="3">PART SALARIALE</th><th colspan="2">PART PATRONALE</th></tr>'
+    + '<tr><th>Nbre/taux</th><th>GAINS</th><th>RETENUES</th><th>Nbre/taux</th><th>RETENUES</th></tr>'
+    + '</thead><tbody>'+rows+'</tbody></table>');
+  /* Net à payer */
+  win.document.write('<div class="net"><span>NET À PAYER</span><span>'+fmtF(r.net)+' FCFA</span></div>');
+  /* Cumuls */
+  win.document.write('<table class="cum"><thead><tr><th>CUMULS</th><th>Brut social</th><th>Brut fiscal</th><th>ITS net</th><th>RICF</th><th>ITS brut</th><th>Retraite</th><th>CMU</th></tr></thead><tbody>'
+    + '<tr><td class="c">Période</td><td>'+fmtF(r.brutSocial)+'</td><td>'+fmtF(r.brutImposable)+'</td><td>'+fmtF(r.itsNet)+'</td><td>'+fmtF(r.ricf)+'</td><td>'+fmtF(r.itsBrut)+'</td><td>'+fmtF(r.cnpsRetraiteSal)+'</td><td>'+fmtF(r.cmuSal)+'</td></tr>'
     + '</tbody></table>');
-  win.document.write('<table style="margin-top:10px;font-size:11px;border-color:#ddd;"><tr><th colspan="4">CHARGES PATRONALES (information)</th></tr>'
-    + '<tr><td>CNPS patronal retraite (4,8%)</td><td>' + fmtF(calcCNPSPatronal(d.base).retraite) + '</td><td>CNPS AT (2%)</td><td>' + fmtF(calcCNPSPatronal(d.base).at) + '</td></tr>'
-    + '<tr><td>CNPS PF (5,75%)</td><td>' + fmtF(calcCNPSPatronal(d.base).pf) + '</td><td><strong>Total charges patronales</strong></td><td><strong>' + fmtF(r.cnpsPat) + '</strong></td></tr></table>');
-  win.document.write('<p style="margin-top:20px;font-size:11px;text-align:right;">Fait à Abidjan, le ' + new Date().toLocaleDateString('fr-FR') + '</p>');
-  win.document.write('<p style="margin-top:40px;display:flex;justify-content:space-between;font-size:11px;"><span>Signature Employé</span><span>Signature Employeur / DRH</span></p>');
+  win.document.write('<div class="sign"><span>Signature Employé</span><span>Signature Employeur</span></div>');
+  win.document.write('<div class="foot">Coût total employeur : '+fmtF(r.coutTotal)+' FCFA — Pour vous aider à faire valoir vos droits, conservez ce bulletin sans limitation de durée.</div>');
   win.document.write('</body></html>');
   win.document.close();
-  win.print();
+  win.focus();
+  setTimeout(function(){ win.print(); }, 250);
 }
+
 
 /* ── DÉCLARATIONS SOCIALES & FISCALES ────────────────── */
 function loadDeclarations() {
@@ -16091,14 +16482,14 @@ function initLeafletMap() {
     var lcss = document.createElement('link');
     lcss.id = 'leaflet-css';
     lcss.rel = 'stylesheet';
-    lcss.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    lcss.href = 'vendor/leaflet.min.css';
     lcss.onload = function() { if (_geoMap) _refreshGeoMap(true); };
     document.head.appendChild(lcss);
   }
   if (typeof L === 'undefined') {
     // Charger Leaflet dynamiquement
     var script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    script.src = 'vendor/leaflet.min.js';
     script.onload = function() { _leafletLoaded = true; _buildMap(); };
     document.head.appendChild(script);
   } else {
@@ -17096,7 +17487,7 @@ function _buildAnalyses(commList, dateMin) {
     if (!document.getElementById('chartjs-script')) {
       var s = document.createElement('script');
       s.id = 'chartjs-script';
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+      s.src = 'vendor/chart.umd.js';
       s.onload = function() { _drawCharts(commList, dateMin); };
       document.head.appendChild(s);
     }
@@ -22673,6 +23064,9 @@ async function init() {
  * depuis DATA.employes (dept=commercial, statut=actif)
  * Source unique = module RH
  */
+/* Alias rétrocompatible : populateItiSelects → populateCommerciauxPartout */
+function populateItiSelects() { return populateCommerciauxPartout(); }
+
 function populateCommerciauxPartout() {
   var commerciaux = DATA.employes.filter(function(e) {
     return (e.dept === 'commercial' || e.poste === 'commercial' || e.poste === 'Commercial')
