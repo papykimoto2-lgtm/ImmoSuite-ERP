@@ -4051,10 +4051,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
 
         <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('livre-paie','journal')">📋 Journal Mensuel</button>
-          <button class="tab-btn" onclick="switchTab('livre-paie','annuel')">📆 Récap. Annuel</button>
-          <button class="tab-btn" onclick="switchTab('livre-paie','individuel')">👤 Fiche Individuelle</button>
-          <button class="tab-btn" onclick="switchTab('livre-paie','charges')">🏛️ Charges Patronales</button>
+          <button class="tab-btn active" onclick="switchTab('livre-paie','journal');renderLPJournal()">📋 Journal Mensuel</button>
+          <button class="tab-btn" onclick="switchTab('livre-paie','annuel');renderLPAnnuel()">📆 Récap. Annuel</button>
+          <button class="tab-btn" onclick="switchTab('livre-paie','individuel');renderLPIndividuel()">👤 Fiche Individuelle</button>
+          <button class="tab-btn" onclick="switchTab('livre-paie','charges');renderLPCharges()">🏛️ Charges Patronales</button>
         </div>
 
         <!-- TAB 1 : Journal mensuel (tous employés, 1 mois, détail complet) -->
@@ -10983,6 +10983,7 @@ function switchTab(context, tab) {
   else if (context === 'agr-prom')         prefix = 'tab-agr-prom-';
   else if (context === 'agr-prog')         prefix = 'tab-agr-prog-';
   else if (context === 'am')               prefix = 'tab-am-';
+  else if (context === 'livre-paie')       prefix = 'tab-livre-paie-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
