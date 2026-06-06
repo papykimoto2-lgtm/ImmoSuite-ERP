@@ -3573,7 +3573,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <div class="form-section-title">🔄 Synchronisation</div>
               <div style="font-size:13px;color:var(--blanc-dim);margin-bottom:16px;">Synchronisez les données locales (IndexedDB) vers Supabase pour accès multi-appareils.</div>
               <div style="display:flex;flex-direction:column;gap:10px;">
-                <button class="btn btn-primary" onclick="syncToSupabase()">⬆️ Sync locale → Cloud</button>
+                <button class="btn btn-primary" onclick="syncAllToSupabase()">⬆️ Sync locale → Cloud</button>
                 <button class="btn btn-secondary" onclick="syncFromSupabase()">⬇️ Récupérer depuis Cloud</button>
                 <div id="sync-result" style="font-size:12px;color:var(--blanc-dim);"></div>
               </div>
@@ -7081,18 +7081,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="form-group">
             <label>Lot *</label>
-            <select class="form-control" id="c-lot">
+            <select class="form-control" id="c-lot" onchange="onClientLotChange()">
               <option value="">— Choisir —</option>
             </select>
           </div>
           <div class="form-group">
             <label>Type de logement</label>
-            <input type="text" class="form-control" id="c-type-logement" readonly>
+            <input type="text" class="form-control" id="c-type-logement" placeholder="Auto depuis le lot (modifiable)">
           </div>
           <div class="form-group">
             <label>Mode de livraison</label>
-            <input type="text" class="form-control" id="c-mode-livraison" readonly
-              style="font-weight:700;cursor:default;">
+            <select class="form-control" id="c-mode-livraison" style="font-weight:700;">
+              <option value="gros_oeuvre">🧱 Gros œuvre</option>
+              <option value="cle_en_main">🔑 Clé en main</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Standing</label>
@@ -10386,6 +10388,66 @@ async function deleteFromSupabase(table, id) {
   }
 }
 
+/* Correspondance table Supabase ↔ store local (IndexedDB / DATA) */
+var SUPA_STORE_MAP = [
+  ['pi_programmes',       'programmes'],
+  ['pi_lots',            'lots'],
+  ['pi_terrains',        'terrains'],
+  ['pi_modeles_logement','modeles_logement'],
+  ['pi_clients',         'clients'],
+  ['pi_versements',      'versements'],
+  ['pi_commissions',     'commissions'],
+  ['pi_leads',           'leads'],
+  ['pi_ecritures',       'ecritures']
+];
+
+/* Push global : envoie tous les enregistrements locaux vers Supabase */
+async function syncAllToSupabase() {
+  if (!SB.url || !SB.key) { toast('Configurez d\'abord l\'URL et la clé Supabase.', 'error'); return; }
+  var out = document.getElementById('sync-result');
+  var total = 0, erreurs = 0;
+  for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
+    var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
+    var rows = DATA[store] || [];
+    if (out) out.textContent = '⬆️ ' + store + ' (' + rows.length + ')…';
+    for (var j = 0; j < rows.length; j++) {
+      try { await syncToSupabase(table, rows[j]); total++; } catch(e) { erreurs++; }
+    }
+  }
+  if (out) out.innerHTML = '<span style="color:var(--vert);">✅ ' + total + ' enregistrement(s) envoyé(s)' + (erreurs ? ' · ' + erreurs + ' erreur(s)' : '') + '</span>';
+  toast('Synchronisation locale → Cloud terminée (' + total + ').', 'success');
+}
+
+/* Pull : récupère toutes les données depuis Supabase vers le local */
+async function syncFromSupabase() {
+  if (!SB.url || !SB.key) { toast('Configurez d\'abord l\'URL et la clé Supabase.', 'error'); return; }
+  if (!navigator.onLine) { toast('Connexion internet requise pour récupérer depuis le Cloud.', 'error'); return; }
+  if (!confirm('Récupérer les données depuis le Cloud ? Les enregistrements distants seront fusionnés dans ce poste.')) return;
+  var out = document.getElementById('sync-result');
+  var total = 0, tablesVides = 0;
+  for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
+    var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
+    if (out) out.textContent = '⬇️ ' + store + '…';
+    var rows = await sbFetch(table + '?select=*', 'GET');
+    if (!rows || !rows.length) { tablesVides++; continue; }
+    if (!DATA[store]) DATA[store] = [];
+    var byId = {};
+    DATA[store].forEach(function(x){ byId[x.id] = x; });
+    for (var j = 0; j < rows.length; j++) {
+      var r = rows[j];
+      byId[r.id] = r;
+      try { await dbPut(store, r); } catch(e) {}
+      total++;
+    }
+    DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
+  }
+  if (out) out.innerHTML = '<span style="color:var(--vert);">✅ ' + total + ' enregistrement(s) récupéré(s)</span>';
+  /* Rafraîchir les vues principales */
+  ['renderClients','renderLots','renderProgrammes','renderVersements','buildRapportsCommerciaux','refreshDashboard']
+    .forEach(function(fn){ if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} } });
+  toast('Données récupérées depuis le Cloud (' + total + ').', 'success');
+}
+
 /* Rejoue la file en respectant l'ordre. S'arrête au premier échec (réseau). */
 async function flushSyncOutbox() {
   if (_syncFlushing) return;
@@ -11514,6 +11576,7 @@ function openClientModal(id) {
     document.getElementById('modal-client-title').textContent = 'Nouveau Souscripteur';
     document.getElementById('c-date-debut').value = today();
   }
+  if (typeof updateLotsByProgramme === 'function') updateLotsByProgramme();
   openModal('modal-client');
 }
 
@@ -11526,6 +11589,8 @@ function clearClientForm() {
   });
   document.getElementById('doc-btns').style.display = 'none';
   document.getElementById('doc-btns').innerHTML = '';
+  var modeEl = document.getElementById('c-mode-livraison'); if (modeEl) modeEl.value = 'gros_oeuvre';
+  var standEl = document.getElementById('c-standing'); if (standEl) standEl.value = 'economique';
 }
 
 function fillClientForm(c) {
@@ -11547,12 +11612,10 @@ function fillClientForm(c) {
     updateLotsByProgramme();
     setTimeout(function() {
       setSelectValue('c-lot', c.lot_id);
-      var modeLiv = c.mode_livraison || 'gros_oeuvre';
-      var modeLivEl = document.getElementById('c-mode-livraison');
-      modeLivEl.value = modeLiv === 'cle_en_main' ? '🔑 Clé en main' : '🧱 Gros œuvre';
-      modeLivEl.dataset.value = modeLiv;
-      modeLivEl.style.color = modeLiv === 'cle_en_main' ? 'var(--vert)' : 'var(--or)';
+      setSelectValue('c-mode-livraison', c.mode_livraison || 'gros_oeuvre');
     }, 50);
+  } else {
+    setSelectValue('c-mode-livraison', c.mode_livraison || 'gros_oeuvre');
   }
   calcEcheancier();
 }
@@ -11570,6 +11633,36 @@ function calcEcheancier() {
   var reste = total - apport;
   var mensualite = duree > 0 ? Math.ceil(reste / duree) : 0;
   document.getElementById('c-mensualite').value = mensualite > 0 ? fcfa(mensualite) : '—';
+}
+
+/* Statut du lot selon le % encaissé : réservé jusqu'au seuil d'immobilisation, puis vendu */
+async function majStatutLotClient(clientId) {
+  var c = DATA.clients.find(function(x){ return x.id === clientId; });
+  if (!c || !c.lot_id) return;
+  var lot = DATA.lots.find(function(l){ return l.id === c.lot_id; });
+  if (!lot) return;
+  var seuil = parseFloat((DATA.params||{}).seuil_immobilisation_pct) || 70;
+  var total = parseFloat(c.montant_total) || 0;
+  var paye = DATA.versements.filter(function(v){ return v.client_id === clientId; })
+    .reduce(function(s,v){ return s + (parseFloat(v.montant)||0); }, 0);
+  var pct = total > 0 ? (paye / total * 100) : 0;
+  var nouveau = pct >= seuil ? 'vendu' : 'reserve';
+  if (lot.statut !== nouveau || lot.client_id !== clientId) {
+    lot.statut = nouveau; lot.client_id = clientId;
+    await dbPut('lots', lot);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
+  }
+  return nouveau;
+}
+
+/* Code dossier souscripteur séquentiel : SS001, SS002… */
+function genererCodeDossier() {
+  var max = 0;
+  (DATA.clients||[]).forEach(function(c){
+    var m = /^SS0*(\d+)/i.exec((c.dossier||'').trim());
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  });
+  return 'SS' + String(max + 1).padStart(3, '0');
 }
 
 async function saveClient() {
@@ -11594,7 +11687,9 @@ async function saveClient() {
   APP._savingClient = true;
   var id = APP.editingId || uid();
   var _ancienLotId = null;
-  if (APP.editingId) { var _exC = DATA.clients.find(function(c){ return c.id === id; }); if (_exC) _ancienLotId = _exC.lot_id || null; }
+  var _dossier = '';
+  if (APP.editingId) { var _exC = DATA.clients.find(function(c){ return c.id === id; }); if (_exC) { _ancienLotId = _exC.lot_id || null; _dossier = _exC.dossier || ''; } }
+  if (!_dossier) _dossier = genererCodeDossier();
   var client = {
     id: id,
     nom: nom,
@@ -11611,13 +11706,14 @@ async function saveClient() {
     programme_id: document.getElementById('c-programme').value,
     lot_id: document.getElementById('c-lot').value,
     type_logement: document.getElementById('c-type-logement').value,
-    mode_livraison: (function(){ var el=document.getElementById('c-mode-livraison'); return el.dataset.value || 'gros_oeuvre'; })(),
+    mode_livraison: (function(){ var el=document.getElementById('c-mode-livraison'); return el ? el.value : 'gros_oeuvre'; })(),
     standing: document.getElementById('c-standing').value,
     montant_total: parseFloat(document.getElementById('c-montant-total').value) || 0,
     apport: parseFloat(document.getElementById('c-apport').value) || 0,
     duree: parseInt(document.getElementById('c-duree').value) || 60,
     date_debut: document.getElementById('c-date-debut').value,
     statut: 'actif',
+    dossier: _dossier,
     commercial_id: document.getElementById('c-commercial') ? document.getElementById('c-commercial').value : '',
     commercial:    (function(){ var e=document.getElementById('c-commercial'); if(!e||!e.value) return ''; var opt=e.options[e.selectedIndex]; return opt?opt.textContent.trim():''; })(),
     apporteur_id:  document.getElementById('c-apporteur') ? document.getElementById('c-apporteur').value : '',
@@ -11646,10 +11742,12 @@ async function saveClient() {
     }
     if (client.lot_id) {
       var lot = DATA.lots.find(function(l) { return l.id === client.lot_id; });
-      if (lot) { lot.statut = 'vendu'; lot.client_id = id; await dbPut('lots', lot); if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot); }
+      if (lot) { lot.client_id = id; await dbPut('lots', lot); }
     }
 
     await dbPut('clients', client);
+    /* Statut du lot : réservé jusqu'au seuil d'immobilisation, vendu au-delà */
+    await majStatutLotClient(id);
     syncToSupabase('pi_clients', client);
     closeModal('modal-client');
     toast('Souscripteur enregistré.', 'success');
@@ -11753,7 +11851,7 @@ async function deleteClient(id) {
   if (DATA.commissions && DATA.commissions.length) {
     var versIds = DATA.versements.filter(function(v){ return v.client_id === id; }).map(function(v){ return v.id; });
     DATA.commissions.filter(function(cm){ return cm.client_id === id || versIds.indexOf(cm.versement_id) >= 0; })
-      .forEach(function(cm){ try { dbDelete('commissions', cm.id); } catch(e){} });
+      .forEach(function(cm){ try { dbDelete('commissions', cm.id); if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_commissions', cm.id); } catch(e){} });
     DATA.commissions = DATA.commissions.filter(function(cm){ return !(cm.client_id === id || versIds.indexOf(cm.versement_id) >= 0); });
   }
   DATA.clients = DATA.clients.filter(function(c) { return c.id !== id; });
@@ -11948,6 +12046,7 @@ async function comptabiliserCommission(comm, silencieux) {
   comm.ecriture_id   = ecriture.id;
   comm.ecriture_ref  = ref;
   await dbPut('commissions', comm);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', comm);
 
   // Rafraîchir comptabilité
   buildBalance();
@@ -11997,6 +12096,7 @@ async function comptabiliserPaiementCommission(comm, modePaiement) {
   comm.ecriture_paiement_id  = ecriture.id;
   comm.ecriture_paiement_ref = ref;
   await dbPut('commissions', comm);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', comm);
 
   buildBalance();
   buildCompteResultat();
@@ -12069,6 +12169,7 @@ async function genererCommissionsVersement(versement) {
       if (!DATA.commissions) DATA.commissions = [];
       DATA.commissions.push(comm);
       await dbPut('commissions', comm);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', comm);
     }
   }
 
@@ -12104,6 +12205,7 @@ async function genererCommissionsVersement(versement) {
       if (!DATA.commissions) DATA.commissions = [];
       DATA.commissions.push(commAp);
       await dbPut('commissions', commAp);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', commAp);
     }
   }
 
@@ -12146,6 +12248,7 @@ async function payerCommission(id) {
   comm.date_paiement = today();
   comm.ref_paiement = ref;
   await dbPut('commissions', comm);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', comm);
 
   // Comptabiliser la charge si pas encore fait
   if (!comm.ecriture_id) {
@@ -12208,6 +12311,7 @@ async function annulerCommission(id) {
 
   comm.statut = 'annulee';
   await dbPut('commissions', comm);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', comm);
   toast(comm.ecriture_extourne_ref ? 'Commission annulée et extournée.' : 'Commission annulée.', 'info');
   renderCommissions();
   if (typeof buildKPIsApporteurs === 'function') buildKPIsApporteurs();
@@ -12282,7 +12386,7 @@ async function regenererToutesCommissions() {
   var aConserver = (DATA.commissions||[]).filter(function(c){ return c.statut==='payee'; });
   var aSupprimer = (DATA.commissions||[]).filter(function(c){ return c.statut!=='payee'; });
   for (var i=0; i<aSupprimer.length; i++) {
-    try { await dbDelete('commissions', aSupprimer[i].id); } catch(e){}
+    try { await dbDelete('commissions', aSupprimer[i].id); if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_commissions', aSupprimer[i].id); } catch(e){}
   }
   DATA.commissions = aConserver;
   // Regénérer depuis versements
@@ -12436,6 +12540,8 @@ async function savePaiement() {
 
   // ── Génération automatique des commissions ─────────────────────────────────
   await genererCommissionsVersement(versement);
+  // ── Statut du lot : passe « vendu » dès que le seuil d'immobilisation est atteint ──
+  if (typeof majStatutLotClient === 'function') await majStatutLotClient(versement.client_id);
 
   closeModal('modal-paiement');
   toast('Versement enregistré.', 'success');
@@ -12490,10 +12596,14 @@ function filterPaiements() { renderVersements(); }
 
 async function deleteVersement(id) {
   if (!confirm('Supprimer ce versement ?')) return;
+  var v = DATA.versements.find(function(x){ return x.id === id; });
+  var clientId = v ? v.client_id : null;
   DATA.versements = DATA.versements.filter(function(v) { return v.id !== id; });
   await dbDelete('versements', id);
   deleteFromSupabase('pi_versements', id);
+  if (clientId && typeof majStatutLotClient === 'function') await majStatutLotClient(clientId);
   renderVersements();
+  refreshDashboard();
   toast('Versement supprimé.', 'info');
 }
 
@@ -15685,43 +15795,52 @@ function populateClientSelects() {
 function updateLotsByProgramme() {
   var progId = document.getElementById('c-programme').value;
   var lotSelect = document.getElementById('c-lot');
+  if (!lotSelect) return;
   if (!progId) {
     lotSelect.innerHTML = '<option value="">— Choisissez d\'abord un programme —</option>';
     lotSelect.disabled = true;
     return;
   }
   lotSelect.disabled = false;
-  var lotsDispo = DATA.lots.filter(function(l) { return l.programme_id === progId && (l.statut === 'disponible' || l.statut === 'reserve'); });
+  var lotsProg = DATA.lots.filter(function(l) { return l.programme_id === progId; });
+  var lotsDispo = lotsProg.filter(function(l) { return l.statut === 'disponible' || l.statut === 'reserve' || !l.statut; });
   if (APP.editingId) {
     var editClient = DATA.clients.find(function(c) { return c.id === APP.editingId; });
     if (editClient && editClient.lot_id) {
       var editLot = DATA.lots.find(function(l) { return l.id === editClient.lot_id; });
-      if (editLot && !lotsDispo.find(function(l) { return l.id === editLot.id; })) {
-        lotsDispo.unshift(editLot);
-      }
+      if (editLot && !lotsDispo.find(function(l) { return l.id === editLot.id; })) lotsDispo.unshift(editLot);
     }
   }
   if (!lotsDispo.length) {
-    lotSelect.innerHTML = '<option value="">— Aucun lot disponible dans ce programme —</option>';
+    var msg = lotsProg.length
+      ? '— ' + lotsProg.length + ' lot(s) mais tous vendus —'
+      : '— Aucun lot : importez le morcellement —';
+    lotSelect.innerHTML = '<option value="">' + msg + '</option>';
     return;
   }
+  lotsDispo.sort(function(a,b){ return String(a.numero).localeCompare(String(b.numero), undefined, {numeric:true}); });
   lotSelect.innerHTML = '<option value="">— Choisir un lot (' + lotsDispo.length + ' disponible(s)) —</option>'
-    + lotsDispo.map(function(l) { return '<option value="' + l.id + '">' + 'Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + ' — ' + l.type + ' — ' + new Intl.NumberFormat('fr-FR').format(l.prix) + ' FCFA</option>'; }).join('');
+    + lotsDispo.map(function(l) {
+        return '<option value="' + l.id + '">Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '')
+          + ' — ' + (l.type || '') + ' — ' + new Intl.NumberFormat('fr-FR').format(l.prix || 0) + ' FCFA</option>';
+      }).join('');
+}
 
-  // Sync prix, type logement et mode livraison
-  lotSelect.onchange = function() {
-    var lot = DATA.lots.find(function(l) { return l.id === lotSelect.value; });
-    if (lot) {
-      document.getElementById('c-montant-total').value = lot.prix || '';
-      document.getElementById('c-type-logement').value = lot.type || '';
-      var modeLiv = lot.mode_livraison || 'gros_oeuvre';
-      var modeLivEl = document.getElementById('c-mode-livraison');
-      modeLivEl.value = modeLiv === 'cle_en_main' ? '🔑 Clé en main' : '🧱 Gros œuvre';
-      modeLivEl.dataset.value = modeLiv;
-      modeLivEl.style.color = modeLiv === 'cle_en_main' ? 'var(--vert)' : 'var(--or)';
-      calcEcheancier();
-    }
-  };
+/* Sélection d'un lot → remplit prix, type de logement et mode de livraison */
+function onClientLotChange() {
+  var lotSelect = document.getElementById('c-lot');
+  var lot = DATA.lots.find(function(l) { return l.id === lotSelect.value; });
+  if (!lot) {
+    document.getElementById('c-type-logement').value = '';
+    return;
+  }
+  document.getElementById('c-montant-total').value = lot.prix || '';
+  document.getElementById('c-type-logement').value = lot.type || '';
+  var modeLiv = lot.mode_livraison || 'gros_oeuvre';
+  var modeLivEl = document.getElementById('c-mode-livraison');
+  if (modeLivEl) modeLivEl.value = modeLiv;
+  if (lot.standing) { var st = document.getElementById('c-standing'); if (st) st.value = lot.standing; }
+  if (typeof calcEcheancier === 'function') calcEcheancier();
 }
 
 function sortTable(context, key) {
@@ -24854,13 +24973,33 @@ async function convertirEnSouscripteur() {
   var nom = document.getElementById('ld-nom').value.trim();
   var tel = document.getElementById('ld-tel').value.trim();
   if (!nom) { toast('Complétez le nom du prospect.', 'error'); return; }
+  /* Récupérer toutes les infos du prospect pour les reporter */
+  var g = function(id){ var e=document.getElementById(id); return e ? e.value : ''; };
+  var data = {
+    nom: nom, tel: tel,
+    email: g('ld-email'), profession: g('ld-profession'),
+    programme: g('ld-programme'), type: g('ld-type-logement'),
+    budget: g('ld-budget'), commercial: g('ld-commercial')
+  };
   await saveLead();
   closeModal('modal-lead');
   setTimeout(function() {
     goTo('clients');
-    setTimeout(function() { openClientModal(); if(document.getElementById('c-nom'))document.getElementById('c-nom').value=nom; if(document.getElementById('c-tel'))document.getElementById('c-tel').value=tel; }, 300);
+    setTimeout(function() {
+      openClientModal();
+      var sv = function(id,val){ var e=document.getElementById(id); if(e && val) e.value = val; };
+      sv('c-nom', data.nom); sv('c-tel', data.tel);
+      sv('c-email', data.email); sv('c-profession', data.profession);
+      sv('c-type-logement', data.type);
+      sv('c-montant-total', data.budget);
+      if (data.commercial) { if (typeof setSelectValue === 'function') setSelectValue('c-commercial', data.commercial); else sv('c-commercial', data.commercial); }
+      if (data.programme) {
+        if (typeof setSelectValue === 'function') setSelectValue('c-programme', data.programme); else sv('c-programme', data.programme);
+        if (typeof updateLotsByProgramme === 'function') updateLotsByProgramme();
+      }
+    }, 300);
   }, 300);
-  toast('Ouvrez le formulaire pour finaliser la souscription.', 'info');
+  toast('Prospect reporté — choisissez le lot pour finaliser.', 'info');
 }
 
 /* ══════════════════════════════════════════════════════
