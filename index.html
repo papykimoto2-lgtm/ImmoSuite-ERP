@@ -616,6 +616,16 @@ textarea.form-control { resize:vertical; min-height:90px; }
 .paie-impact.neu { background:rgba(184,115,51,0.1); color:var(--or); }
 .pointage-action-row { display:flex; gap:6px; margin-top:10px; }
 
+/* Livre de Paie */
+#page-rh-livre-paie .table-wrap table { font-size:12px; }
+#page-rh-livre-paie thead tr { position:sticky; top:0; z-index:2; }
+#page-rh-livre-paie tfoot td { background:rgba(184,115,51,0.06); }
+.lp-sep-row td { border-top:2px solid var(--bord) !important; }
+@media print {
+  #page-rh-livre-paie .table-wrap { overflow:visible; }
+  #page-rh-livre-paie .card { page-break-inside:avoid; }
+}
+
 /* Misc */
 .workflow-stepper { display:flex; gap:0; margin:14px 0; overflow-x:auto; }
 .workflow-step { flex:1; padding:8px 10px; text-align:center; font-size:10px; background:var(--bord); color:var(--dim); white-space:nowrap; }
@@ -1935,6 +1945,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('rh-declarations')" data-page="rh-declarations">
         <span class="nav-icon">📑</span><span>Déclarations Sociales</span>
         <span class="nav-badge" id="badge-declarations" style="display:none;">!</span>
+      </div>
+      <div class="nav-item" onclick="goTo('rh-livre-paie')" data-page="rh-livre-paie">
+        <span class="nav-icon">📒</span><span>Livre de Paie</span>
       </div>
 
       <!-- ── TRANSVERSAL (hors flux métier) ──────────────────────── -->
@@ -3784,6 +3797,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn active" onclick="switchTab('paie','bulletins')">📋 Bulletins du mois</button>
           <button class="tab-btn" onclick="switchTab('paie','recap')">📊 Récapitulatif</button>
           <button class="tab-btn" onclick="switchTab('paie','virements')">💳 Ordres de virement</button>
+          <button class="tab-btn" onclick="goTo('rh-livre-paie')">📒 Livre de Paie</button>
         </div>
 
         <div class="tab-pane active" id="tab-paie-bulletins">
@@ -4012,8 +4026,101 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
 
       <!-- ══════════════════════════════════════════════
-           FONCIER & PORTEFEUILLE — Dept. Juridique
+           LIVRE DE PAIE — Registre légal SYSCOHADA
       ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-rh-livre-paie">
+        <div class="page-header">
+          <div>
+            <div class="page-title">📒 Livre de Paie</div>
+            <div class="page-subtitle">Registre légal des salaires — CNPS · ITS · FDFP — Côte d'Ivoire</div>
+          </div>
+          <div class="spacer"></div>
+          <select class="filter-select" id="lp-annee"></select>
+          <button class="btn btn-secondary btn-sm" onclick="exportLivrePaieCSV()">⬇ Export CSV</button>
+          <button class="btn btn-secondary btn-sm" onclick="printLivrePaie()">🖨️ Imprimer</button>
+        </div>
+
+        <!-- KPIs annuels -->
+        <div class="kpi-grid" id="lp-kpis">
+          <div class="kpi-card" data-icon="👥"><div class="kpi-label">Effectif moyen</div><div class="kpi-value or" id="lp-kpi-effectif">—</div><div class="kpi-delta">employés actifs</div></div>
+          <div class="kpi-card" data-icon="💵"><div class="kpi-label">Masse salariale brute</div><div class="kpi-value" id="lp-kpi-brut">—</div><div class="kpi-delta">total annuel</div></div>
+          <div class="kpi-card" data-icon="🏦"><div class="kpi-label">Total CNPS versé</div><div class="kpi-value" id="lp-kpi-cnps">—</div><div class="kpi-delta">salarié + patronal</div></div>
+          <div class="kpi-card" data-icon="📊"><div class="kpi-label">Total ITS retenu</div><div class="kpi-value" id="lp-kpi-its">—</div><div class="kpi-delta">impôt sur salaires</div></div>
+          <div class="kpi-card" data-icon="💰"><div class="kpi-label">Total Net à payer</div><div class="kpi-value or" id="lp-kpi-net">—</div><div class="kpi-delta">cumul annuel</div></div>
+          <div class="kpi-card" data-icon="🏭"><div class="kpi-label">Coût total employeur</div><div class="kpi-value" id="lp-kpi-cout">—</div><div class="kpi-delta">brut + charges patronales</div></div>
+        </div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('livre-paie','journal')">📋 Journal Mensuel</button>
+          <button class="tab-btn" onclick="switchTab('livre-paie','annuel')">📆 Récap. Annuel</button>
+          <button class="tab-btn" onclick="switchTab('livre-paie','individuel')">👤 Fiche Individuelle</button>
+          <button class="tab-btn" onclick="switchTab('livre-paie','charges')">🏛️ Charges Patronales</button>
+        </div>
+
+        <!-- TAB 1 : Journal mensuel (tous employés, 1 mois, détail complet) -->
+        <div class="tab-pane active" id="tab-livre-paie-journal">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <select class="filter-select" id="lp-mois-journal" onchange="renderLPJournal()">
+              <option value="01">Janvier</option><option value="02">Février</option>
+              <option value="03">Mars</option><option value="04">Avril</option>
+              <option value="05">Mai</option><option value="06">Juin</option>
+              <option value="07">Juillet</option><option value="08">Août</option>
+              <option value="09">Septembre</option><option value="10">Octobre</option>
+              <option value="11">Novembre</option><option value="12">Décembre</option>
+            </select>
+            <select class="filter-select" id="lp-filter-dept-journal" onchange="renderLPJournal()">
+              <option value="">Tous départements</option>
+            </select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-wrap" id="lp-journal-wrap" style="overflow-x:auto;">
+              <div style="color:var(--dim);font-size:13px;padding:20px;">Chargement…</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:12px;" id="lp-journal-totaux"></div>
+        </div>
+
+        <!-- TAB 2 : Récapitulatif annuel (matrice employés × mois) -->
+        <div class="tab-pane" id="tab-livre-paie-annuel">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <select class="filter-select" id="lp-col-annuel" onchange="renderLPAnnuel()">
+              <option value="net">Net à payer</option>
+              <option value="brut">Brut total</option>
+              <option value="its">ITS retenu</option>
+              <option value="cnpsSal">CNPS salarié</option>
+              <option value="coutTotal">Coût employeur</option>
+            </select>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-wrap" id="lp-annuel-wrap" style="overflow-x:auto;">
+              <div style="color:var(--dim);font-size:13px;padding:20px;">Chargement…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3 : Fiche individuelle (1 employé, 12 mois) -->
+        <div class="tab-pane" id="tab-livre-paie-individuel">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <select class="filter-select" id="lp-emp-individuel" onchange="renderLPIndividuel()">
+              <option value="">— Sélectionner un employé —</option>
+            </select>
+          </div>
+          <div id="lp-individuel-content">
+            <div style="color:var(--dim);font-size:13px;padding:20px;">Sélectionnez un employé pour afficher sa fiche annuelle.</div>
+          </div>
+        </div>
+
+        <!-- TAB 4 : Charges patronales détaillées par mois -->
+        <div class="tab-pane" id="tab-livre-paie-charges">
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div class="table-wrap" id="lp-charges-wrap" style="overflow-x:auto;">
+              <div style="color:var(--dim);font-size:13px;padding:20px;">Chargement…</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:12px;" id="lp-charges-totaux"></div>
+        </div>
+      </div>
+      <!-- FIN LIVRE DE PAIE -->
       <div class="page" id="page-foncier">
         <div class="page-header">
           <div>
@@ -10801,6 +10908,7 @@ function goTo(page) {
   if (page === 'rh-employes') { renderEmployes(); updateRHKPIs(); }
   if (page === 'rh-paie') { loadPaie(); }
   if (page === 'rh-declarations') { loadDeclarations(); }
+  if (page === 'rh-livre-paie')   { loadLivrePaie(); }
   if (page === 'rh-pointage') { loadPointage(); }
   if (page === 'foncier') { renderParcelles(); updateFoncierKPIs(); }
   if (page === 'juridique') { renderDossiersJuridiques(); loadAgrementInfo(); }
@@ -16910,6 +17018,678 @@ function printBulletinData(d) {
   setTimeout(function(){ win.print(); }, 250);
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════
+   LIVRE DE PAIE — Registre légal SYSCOHADA
+   Journal mensuel · Récapitulatif annuel · Fiche individuelle
+   Charges patronales · Export CSV · Impression
+══════════════════════════════════════════════════════════════════════ */
+
+var LP_MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                      'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+/* ── Initialisation générale de la page ──────────────────────────── */
+function loadLivrePaie() {
+  var sel = document.getElementById('lp-annee');
+  if (!sel) return;
+  if (!sel.options.length) {
+    var cy = new Date().getFullYear();
+    for (var y = cy - 2; y <= cy + 1; y++) {
+      var o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      if (y === cy) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.onchange = function() { loadLivrePaie(); };
+  }
+  /* Mois par défaut = mois courant */
+  var selMJ = document.getElementById('lp-mois-journal');
+  if (selMJ && !selMJ.dataset.init) {
+    selMJ.value = String(new Date().getMonth() + 1).padStart(2, '0');
+    selMJ.dataset.init = '1';
+  }
+  /* Peupler départements */
+  var deptSel = document.getElementById('lp-filter-dept-journal');
+  if (deptSel && deptSel.options.length <= 1) {
+    var depts = {};
+    (DATA.employes || []).forEach(function(e) { if (e.dept) depts[e.dept] = 1; });
+    Object.keys(depts).forEach(function(d) {
+      var o = document.createElement('option'); o.value = d; o.textContent = d;
+      deptSel.appendChild(o);
+    });
+  }
+  /* Peupler select employé individuel */
+  var empSel = document.getElementById('lp-emp-individuel');
+  if (empSel && empSel.options.length <= 1) {
+    var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+    actifs.forEach(function(e) {
+      var o = document.createElement('option');
+      o.value = e.id; o.textContent = e.matricule + ' — ' + e.nom + ' ' + e.prenoms;
+      empSel.appendChild(o);
+    });
+  }
+  _lpUpdateKPIs();
+  renderLPJournal();
+  renderLPAnnuel();
+  renderLPCharges();
+}
+
+/* ── Calcule les données d'un employé pour un mois donné (YYYY-MM) ── */
+function _lpDataEmp(e, moisKey) {
+  var bull = (DATA.bulletins || []).find(function(b) {
+    return b.employe_id === e.id && b.mois === moisKey;
+  });
+  var r = calcPaieEmploye(e, bull);
+  r._source = bull ? 'bulletin' : 'fiche';
+  return r;
+}
+
+/* ── KPIs annuels ────────────────────────────────────────────────── */
+function _lpUpdateKPIs() {
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var totBrut = 0, totNet = 0, totITS = 0, totCNPS = 0, totCout = 0, totCNPSPat = 0;
+  for (var m = 1; m <= 12; m++) {
+    var moisKey = annee + '-' + String(m).padStart(2,'0');
+    actifs.forEach(function(e) {
+      var r = _lpDataEmp(e, moisKey);
+      totBrut += r.brutTotal || 0;
+      totNet  += r.net || 0;
+      totITS  += r.itsNet || r.its || 0;
+      totCNPS += (r.cnpsRetraiteSal || r.cnpsSal || 0) + (r.totalPatronal || r.cnpsPat || 0);
+      totCNPSPat += r.totalPatronal || r.cnpsPat || 0;
+      totCout += r.coutTotal || 0;
+    });
+  }
+  function setEl(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+  setEl('lp-kpi-effectif', actifs.length);
+  setEl('lp-kpi-brut',  fmtF(totBrut)  + ' FCFA');
+  setEl('lp-kpi-cnps',  fmtF(totCNPS)  + ' FCFA');
+  setEl('lp-kpi-its',   fmtF(totITS)   + ' FCFA');
+  setEl('lp-kpi-net',   fmtF(totNet)   + ' FCFA');
+  setEl('lp-kpi-cout',  fmtF(totCout)  + ' FCFA');
+}
+
+/* ── TAB 1 : Journal mensuel détaillé ─────────────────────────────── */
+function renderLPJournal() {
+  var wrap = document.getElementById('lp-journal-wrap');
+  var totDiv = document.getElementById('lp-journal-totaux');
+  if (!wrap) return;
+
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var moisNum = (document.getElementById('lp-mois-journal') || {}).value || '01';
+  var moisKey = annee + '-' + moisNum;
+  var moisLabel = LP_MOIS_LABELS[parseInt(moisNum) - 1] + ' ' + annee;
+  var filterDept = (document.getElementById('lp-filter-dept-journal') || {}).value || '';
+
+  var actifs = (DATA.employes || []).filter(function(e) {
+    return e.statut === 'actif' && (!filterDept || e.dept === filterDept);
+  });
+
+  if (!actifs.length) {
+    wrap.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:20px;">Aucun employé actif.</div>';
+    return;
+  }
+
+  var cols = [
+    { k: 'matricule',      label: 'Matricule',       fmt: function(v) { return '<strong style="color:var(--or);">' + v + '</strong>'; } },
+    { k: '_nom',           label: 'Nom & Prénoms',   fmt: function(v) { return v; } },
+    { k: '_poste',         label: 'Poste',            fmt: function(v) { return '<span style="font-size:11px;">' + v + '</span>'; } },
+    { k: 'jours',          label: 'Jours',            num: true },
+    { k: 'categoriel',     label: 'Sal. catégoriel',  num: true },
+    { k: 'sursalaire',     label: 'Sursalaire',       num: true },
+    { k: 'anciennete',     label: 'Ancienneté',       num: true },
+    { k: 'primesImpos',    label: 'Primes imp.',      num: true },
+    { k: 'heuresSupp',     label: 'H. supp.',         num: true },
+    { k: 'transport',      label: 'Transport',        num: true },
+    { k: 'logement',       label: 'Logement',         num: true },
+    { k: 'brutImposable',  label: 'Brut impos.',      num: true, bold: true },
+    { k: 'brutTotal',      label: 'Brut total',       num: true, bold: true, color: 'var(--bleu)' },
+    { k: 'cnpsRetraiteSal',label: 'CNPS sal. 6,3%',  num: true, color: 'var(--rouge)' },
+    { k: 'itsNet',         label: 'ITS net',          num: true, color: 'var(--rouge)' },
+    { k: 'cmuSal',         label: 'CMU sal.',         num: true, color: 'var(--rouge)' },
+    { k: 'retenuesDiv',    label: 'Ret. diverses',    num: true, color: 'var(--rouge)' },
+    { k: 'avances',        label: 'Avances',          num: true, color: 'var(--rouge)' },
+    { k: 'totalRetenuesSal', label: 'Total retenues', num: true, bold: true, color: 'var(--rouge)' },
+    { k: 'net',            label: 'NET À PAYER',      num: true, bold: true, color: 'var(--vert)', large: true },
+    { k: 'totalPatronal',  label: 'Charges pat.',     num: true, color: 'var(--violet)' },
+    { k: 'coutTotal',      label: 'Coût total',       num: true, bold: true, color: 'var(--or)' },
+    { k: '_source',        label: 'Source',           fmt: function(v) { return v === 'bulletin' ? '<span class="badge badge-vert" style="font-size:10px;">✔ Bulletin</span>' : '<span class="badge badge-or" style="font-size:10px;">⚙ Fiche</span>'; } }
+  ];
+
+  var totals = {};
+  cols.forEach(function(c) { if (c.num) totals[c.k] = 0; });
+
+  var rows = actifs.map(function(e) {
+    var r = _lpDataEmp(e, moisKey);
+    r.matricule = e.matricule;
+    r._nom = e.nom + ' ' + e.prenoms;
+    r._poste = e.poste || '—';
+    /* Compatibilité champs */
+    if (r.itsNet == null) r.itsNet = r.its || 0;
+    if (r.cnpsRetraiteSal == null) r.cnpsRetraiteSal = r.cnpsSal || 0;
+    if (r.totalRetenuesSal == null) r.totalRetenuesSal = r.retenues || 0;
+    if (r.totalPatronal == null) r.totalPatronal = r.cnpsPat || 0;
+    if (r.brutTotal == null) r.brutTotal = r.brut || 0;
+    cols.forEach(function(c) { if (c.num) totals[c.k] = (totals[c.k] || 0) + (r[c.k] || 0); });
+    return r;
+  });
+
+  var thHtml = cols.map(function(c) {
+    return '<th style="white-space:nowrap;font-size:11px;' + (c.color ? 'color:' + c.color + ';' : '') + '">' + c.label + '</th>';
+  }).join('');
+
+  var tbodyHtml = rows.map(function(r) {
+    var tds = cols.map(function(c) {
+      var val = r[c.k];
+      var display;
+      if (c.fmt) {
+        display = c.fmt(val);
+      } else if (c.num) {
+        display = fmtF(val || 0);
+      } else {
+        display = val != null ? String(val) : '—';
+      }
+      var style = 'white-space:nowrap;font-size:12px;';
+      if (c.bold) style += 'font-weight:700;';
+      if (c.color) style += 'color:' + c.color + ';';
+      if (c.large) style += 'font-size:13px;';
+      return '<td style="' + style + '">' + display + '</td>';
+    }).join('');
+    return '<tr>' + tds + '</tr>';
+  }).join('');
+
+  /* Ligne totaux */
+  var tfHtml = cols.map(function(c, i) {
+    if (i === 0) return '<td style="font-weight:700;font-size:12px;color:var(--or);">TOTAL</td>';
+    if (i <= 2) return '<td></td>';
+    if (c.num) return '<td style="font-weight:700;font-size:12px;' + (c.color ? 'color:' + c.color + ';' : '') + '">' + fmtF(totals[c.k] || 0) + '</td>';
+    return '<td></td>';
+  }).join('');
+
+  wrap.innerHTML = '<div style="padding:12px 16px 6px;font-size:12px;color:var(--dim);font-weight:600;">'
+    + '📋 Journal de paie — ' + moisLabel + ' (' + actifs.length + ' employé(s))</div>'
+    + '<table style="min-width:1400px;">'
+    + '<thead><tr>' + thHtml + '</tr></thead>'
+    + '<tbody>' + tbodyHtml + '</tbody>'
+    + '<tfoot><tr style="background:rgba(184,115,51,0.08);border-top:2px solid var(--or);">' + tfHtml + '</tr></tfoot>'
+    + '</table>';
+
+  if (totDiv) {
+    totDiv.innerHTML = '<div class="form-section-title" style="margin-bottom:12px;">Synthèse — ' + moisLabel + '</div>'
+      + '<div class="kpi-grid">'
+      + '<div class="kpi-card" data-icon="💵"><div class="kpi-label">Masse salariale brute</div><div class="kpi-value or">' + fmtF(totals.brutTotal || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="🏦"><div class="kpi-label">CNPS salarié</div><div class="kpi-value" style="color:var(--rouge);">' + fmtF(totals.cnpsRetraiteSal || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="📊"><div class="kpi-label">ITS total</div><div class="kpi-value" style="color:var(--rouge);">' + fmtF(totals.itsNet || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="💰"><div class="kpi-label">Total Net à payer</div><div class="kpi-value or">' + fmtF(totals.net || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="🏭"><div class="kpi-label">Charges patronales</div><div class="kpi-value" style="color:var(--violet);">' + fmtF(totals.totalPatronal || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="🏛️"><div class="kpi-label">Coût total employeur</div><div class="kpi-value">' + fmtF(totals.coutTotal || 0) + ' FCFA</div></div>'
+      + '</div>';
+  }
+}
+
+/* ── TAB 2 : Récapitulatif annuel (matrice employés × mois) ───────── */
+function renderLPAnnuel() {
+  var wrap = document.getElementById('lp-annuel-wrap');
+  if (!wrap) return;
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var col = (document.getElementById('lp-col-annuel') || {}).value || 'net';
+  var colLabels = { net: 'Net à payer', brut: 'Brut total', its: 'ITS', cnpsSal: 'CNPS sal.', coutTotal: 'Coût total' };
+
+  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  if (!actifs.length) { wrap.innerHTML = '<div style="color:var(--dim);padding:20px;">Aucun employé actif.</div>'; return; }
+
+  /* En-têtes mois */
+  var thMois = LP_MOIS_LABELS.map(function(l, i) {
+    var mm = String(i + 1).padStart(2, '0');
+    return '<th style="font-size:11px;text-align:right;white-space:nowrap;">' + l.substring(0,3) + '<br>' + annee + '</th>';
+  }).join('');
+
+  var colTotals = new Array(12).fill(0);
+  var grandTotal = 0;
+
+  var tbodyRows = actifs.map(function(e) {
+    var empTotal = 0;
+    var tds = LP_MOIS_LABELS.map(function(l, i) {
+      var mm = String(i + 1).padStart(2, '0');
+      var moisKey = annee + '-' + mm;
+      var r = _lpDataEmp(e, moisKey);
+      var val = 0;
+      if (col === 'net') val = r.net || 0;
+      else if (col === 'brut') val = r.brutTotal || r.brut || 0;
+      else if (col === 'its') val = r.itsNet || r.its || 0;
+      else if (col === 'cnpsSal') val = r.cnpsRetraiteSal || r.cnpsSal || 0;
+      else if (col === 'coutTotal') val = r.coutTotal || 0;
+      empTotal += val;
+      colTotals[i] += val;
+      var hasBull = (DATA.bulletins || []).some(function(b) { return b.employe_id === e.id && b.mois === moisKey; });
+      return '<td style="text-align:right;font-size:12px;white-space:nowrap;'
+        + (hasBull ? 'color:var(--vert);' : 'color:var(--dim);')
+        + '">' + fmtF(val) + '</td>';
+    }).join('');
+    grandTotal += empTotal;
+    return '<tr>'
+      + '<td style="font-weight:600;color:var(--or);font-size:12px;white-space:nowrap;">' + e.matricule + '</td>'
+      + '<td style="font-size:12px;white-space:nowrap;">' + e.nom + ' ' + e.prenoms + '</td>'
+      + '<td style="font-size:11px;color:var(--dim);">' + (e.poste || '—') + '</td>'
+      + tds
+      + '<td style="text-align:right;font-weight:700;font-size:12px;color:var(--or);border-left:2px solid var(--bord);">' + fmtF(empTotal) + '</td>'
+      + '</tr>';
+  }).join('');
+
+  var tfTotals = colTotals.map(function(v) {
+    return '<td style="text-align:right;font-weight:700;font-size:12px;">' + fmtF(v) + '</td>';
+  }).join('');
+
+  wrap.innerHTML = '<div style="padding:12px 16px 6px;font-size:12px;color:var(--dim);font-weight:600;">'
+    + '📆 ' + colLabels[col] + ' — Récapitulatif annuel ' + annee + '</div>'
+    + '<table style="min-width:900px;">'
+    + '<thead><tr>'
+    + '<th style="font-size:11px;">Matricule</th>'
+    + '<th style="font-size:11px;">Employé</th>'
+    + '<th style="font-size:11px;">Poste</th>'
+    + thMois
+    + '<th style="font-size:11px;text-align:right;border-left:2px solid var(--bord);">Total annuel</th>'
+    + '</tr></thead>'
+    + '<tbody>' + tbodyRows + '</tbody>'
+    + '<tfoot><tr style="background:rgba(184,115,51,0.08);border-top:2px solid var(--or);">'
+    + '<td colspan="3" style="font-weight:700;font-size:12px;color:var(--or);">TOTAL GÉNÉRAL</td>'
+    + tfTotals
+    + '<td style="text-align:right;font-weight:700;font-size:13px;color:var(--or);border-left:2px solid var(--bord);">' + fmtF(grandTotal) + '</td>'
+    + '</tr></tfoot>'
+    + '</table>';
+}
+
+/* ── TAB 3 : Fiche individuelle (1 employé × 12 mois) ────────────── */
+function renderLPIndividuel() {
+  var content = document.getElementById('lp-individuel-content');
+  if (!content) return;
+  var empId = (document.getElementById('lp-emp-individuel') || {}).value || '';
+  if (!empId) {
+    content.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:20px;">Sélectionnez un employé.</div>';
+    return;
+  }
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var e = (DATA.employes || []).find(function(x) { return x.id === empId; });
+  if (!e) { content.innerHTML = '<div style="color:var(--dim);padding:20px;">Employé introuvable.</div>'; return; }
+
+  var lignes = [
+    { k: 'categoriel',     label: 'Salaire catégoriel' },
+    { k: 'sursalaire',     label: 'Sursalaire' },
+    { k: 'anciennete',     label: 'Prime ancienneté' },
+    { k: 'primesImpos',    label: 'Primes imposables' },
+    { k: 'heuresSupp',     label: 'Heures supplémentaires' },
+    { k: 'transport',      label: 'Indemnité transport' },
+    { k: 'logement',       label: 'Indemnité logement' },
+    { k: 'brutImposable',  label: 'BRUT IMPOSABLE', bold: true, sep: true },
+    { k: 'brutTotal',      label: 'BRUT TOTAL (gains)', bold: true, color: 'var(--bleu)' },
+    { k: 'cnpsRetraiteSal',label: '(-) CNPS salarié 6,30%', color: 'var(--rouge)' },
+    { k: 'itsNet',         label: '(-) ITS net', color: 'var(--rouge)' },
+    { k: 'cmuSal',         label: '(-) CMU salarié', color: 'var(--rouge)' },
+    { k: 'retenuesDiv',    label: '(-) Retenues diverses', color: 'var(--rouge)' },
+    { k: 'avances',        label: '(-) Avances', color: 'var(--rouge)' },
+    { k: 'totalRetenuesSal', label: 'TOTAL RETENUES SALARIALES', bold: true, color: 'var(--rouge)', sep: true },
+    { k: 'net',            label: '★ NET À PAYER', bold: true, color: 'var(--vert)', large: true, sep: true },
+    { k: 'cnpsRetraitePat',label: 'CNPS patronal retraite 7,7%', color: 'var(--violet)' },
+    { k: 'cnpsAT',         label: 'CNPS AT', color: 'var(--violet)' },
+    { k: 'cnpsPF',         label: 'CNPS PF', color: 'var(--violet)' },
+    { k: 'itsPat',         label: 'ITS patronal 1,2%', color: 'var(--violet)' },
+    { k: 'fdfpTA',         label: 'FDFP taxe apprentissage 0,4%', color: 'var(--violet)' },
+    { k: 'fdfpFC',         label: 'FDFP formation continue 0,6%', color: 'var(--violet)' },
+    { k: 'totalPatronal',  label: 'TOTAL CHARGES PATRONALES', bold: true, color: 'var(--violet)', sep: true },
+    { k: 'coutTotal',      label: 'COÛT TOTAL EMPLOYEUR', bold: true, color: 'var(--or)', large: true }
+  ];
+
+  var thMois = LP_MOIS_LABELS.map(function(l) {
+    return '<th style="text-align:right;font-size:11px;white-space:nowrap;">' + l.substring(0,3) + '</th>';
+  }).join('');
+
+  var annualTotals = {};
+  lignes.forEach(function(l) { annualTotals[l.k] = 0; });
+
+  /* Pré-calculer tous les mois */
+  var allR = LP_MOIS_LABELS.map(function(l, i) {
+    var mm = String(i + 1).padStart(2, '0');
+    var r = _lpDataEmp(e, annee + '-' + mm);
+    if (r.itsNet == null) r.itsNet = r.its || 0;
+    if (r.cnpsRetraiteSal == null) r.cnpsRetraiteSal = r.cnpsSal || 0;
+    if (r.totalRetenuesSal == null) r.totalRetenuesSal = r.retenues || 0;
+    if (r.totalPatronal == null) r.totalPatronal = r.cnpsPat || 0;
+    if (r.brutTotal == null) r.brutTotal = r.brut || 0;
+    if (r.cnpsRetraitePat == null) r.cnpsRetraitePat = 0;
+    if (r.cnpsAT == null) r.cnpsAT = 0;
+    if (r.cnpsPF == null) r.cnpsPF = 0;
+    if (r.itsPat == null) r.itsPat = 0;
+    if (r.fdfpTA == null) r.fdfpTA = 0;
+    if (r.fdfpFC == null) r.fdfpFC = 0;
+    lignes.forEach(function(ln) { annualTotals[ln.k] = (annualTotals[ln.k] || 0) + (r[ln.k] || 0); });
+    return r;
+  });
+
+  var trHtml = lignes.map(function(ln) {
+    var style = 'font-size:12px;white-space:nowrap;';
+    if (ln.bold) style += 'font-weight:700;';
+    if (ln.color) style += 'color:' + ln.color + ';';
+    if (ln.large) style += 'font-size:13px;';
+    var sepStyle = ln.sep ? 'border-top:2px solid var(--bord);' : '';
+    var tds = allR.map(function(r) {
+      return '<td style="text-align:right;' + style + sepStyle + '">' + fmtF(r[ln.k] || 0) + '</td>';
+    }).join('');
+    return '<tr>'
+      + '<td style="' + style + sepStyle + 'padding-right:12px;">' + ln.label + '</td>'
+      + tds
+      + '<td style="text-align:right;' + style + 'font-weight:700;border-left:2px solid var(--bord);">' + fmtF(annualTotals[ln.k] || 0) + '</td>'
+      + '</tr>';
+  }).join('');
+
+  content.innerHTML = '<div class="card" style="padding:0;overflow:hidden;">'
+    + '<div style="padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">'
+    + '<div><div class="form-section-title" style="margin:0;">👤 ' + e.nom + ' ' + e.prenoms + '</div>'
+    + '<div style="font-size:12px;color:var(--dim);">' + e.matricule + ' · ' + (e.poste || '—') + ' · ' + (e.contrat || '—') + ' · CNPS : ' + (e.cnps_num || '—') + '</div></div>'
+    + '<button class="btn btn-secondary btn-sm" onclick="printFicheIndividuelle()">🖨️ Imprimer fiche</button>'
+    + '</div>'
+    + '<div class="table-wrap" style="overflow-x:auto;">'
+    + '<table style="min-width:1100px;">'
+    + '<thead><tr>'
+    + '<th style="font-size:11px;min-width:240px;">Rubrique</th>'
+    + thMois
+    + '<th style="font-size:11px;text-align:right;border-left:2px solid var(--bord);">Cumul annuel</th>'
+    + '</tr></thead>'
+    + '<tbody>' + trHtml + '</tbody>'
+    + '</table></div></div>';
+}
+
+/* ── TAB 4 : Charges patronales mensuelles ─────────────────────────── */
+function renderLPCharges() {
+  var wrap = document.getElementById('lp-charges-wrap');
+  var totDiv = document.getElementById('lp-charges-totaux');
+  if (!wrap) return;
+
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+
+  var cols = ['cnpsRetraitePat', 'cnpsAT', 'cnpsPF', 'itsPat', 'fdfpTA', 'fdfpFC', 'fdfpRegul', 'cmuPat', 'totalPatronal'];
+  var colLabels = {
+    cnpsRetraitePat: 'CNPS Retraite 7,7%',
+    cnpsAT:          'CNPS AT 5%',
+    cnpsPF:          'CNPS PF 5,75%',
+    itsPat:          'ITS patronal 1,2%',
+    fdfpTA:          'FDFP TA 0,4%',
+    fdfpFC:          'FDFP FC 0,6%',
+    fdfpRegul:       'FDFP Régul 0,6%',
+    cmuPat:          'CMU patronal',
+    totalPatronal:   'TOTAL PATRONAL'
+  };
+
+  var grandTotals = {};
+  cols.forEach(function(c) { grandTotals[c] = 0; });
+
+  var thCols = cols.map(function(c) {
+    return '<th style="text-align:right;font-size:11px;white-space:nowrap;' + (c === 'totalPatronal' ? 'color:var(--violet);' : '') + '">' + colLabels[c] + '</th>';
+  }).join('');
+
+  var rows = LP_MOIS_LABELS.map(function(l, i) {
+    var mm = String(i + 1).padStart(2, '0');
+    var moisKey = annee + '-' + mm;
+    var totals = {};
+    cols.forEach(function(c) { totals[c] = 0; });
+    actifs.forEach(function(e) {
+      var r = _lpDataEmp(e, moisKey);
+      cols.forEach(function(c) {
+        var val = r[c] || 0;
+        if (c === 'totalPatronal' && !r.totalPatronal) val = r.cnpsPat || 0;
+        totals[c] += val;
+        grandTotals[c] += val;
+      });
+    });
+    var tds = cols.map(function(c) {
+      return '<td style="text-align:right;font-size:12px;white-space:nowrap;' + (c === 'totalPatronal' ? 'font-weight:700;color:var(--violet);' : '') + '">' + fmtF(totals[c] || 0) + '</td>';
+    }).join('');
+    return '<tr><td style="font-size:12px;font-weight:600;white-space:nowrap;">' + l + ' ' + annee + '</td>' + tds + '</tr>';
+  }).join('');
+
+  var tfRow = cols.map(function(c) {
+    return '<td style="text-align:right;font-weight:700;font-size:12px;' + (c === 'totalPatronal' ? 'color:var(--violet);' : '') + '">' + fmtF(grandTotals[c] || 0) + '</td>';
+  }).join('');
+
+  wrap.innerHTML = '<div style="padding:12px 16px 6px;font-size:12px;color:var(--dim);font-weight:600;">'
+    + '🏛️ Charges patronales — ' + annee + '</div>'
+    + '<table style="min-width:900px;">'
+    + '<thead><tr><th style="font-size:11px;">Mois</th>' + thCols + '</tr></thead>'
+    + '<tbody>' + rows + '</tbody>'
+    + '<tfoot><tr style="background:rgba(138,82,224,0.08);border-top:2px solid var(--violet);">'
+    + '<td style="font-weight:700;font-size:12px;color:var(--violet);">TOTAL ANNUEL</td>'
+    + tfRow + '</tr></tfoot>'
+    + '</table>';
+
+  if (totDiv) {
+    totDiv.innerHTML = '<div class="form-section-title" style="margin-bottom:12px;">Récapitulatif charges patronales — ' + annee + '</div>'
+      + '<div class="kpi-grid">'
+      + '<div class="kpi-card" data-icon="🏦"><div class="kpi-label">CNPS Retraite patronal</div><div class="kpi-value" style="color:var(--violet);">' + fmtF(grandTotals.cnpsRetraitePat || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="⚠️"><div class="kpi-label">CNPS AT + PF</div><div class="kpi-value" style="color:var(--violet);">' + fmtF((grandTotals.cnpsAT || 0) + (grandTotals.cnpsPF || 0)) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="📚"><div class="kpi-label">FDFP (TA + FC + Régul)</div><div class="kpi-value" style="color:var(--violet);">' + fmtF((grandTotals.fdfpTA || 0) + (grandTotals.fdfpFC || 0) + (grandTotals.fdfpRegul || 0)) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="🏥"><div class="kpi-label">CMU patronal</div><div class="kpi-value" style="color:var(--violet);">' + fmtF(grandTotals.cmuPat || 0) + ' FCFA</div></div>'
+      + '<div class="kpi-card" data-icon="🏛️"><div class="kpi-label">Total charges patronales</div><div class="kpi-value or">' + fmtF(grandTotals.totalPatronal || 0) + ' FCFA</div></div>'
+      + '</div>';
+  }
+}
+
+/* ── Export CSV du livre de paie complet ─────────────────────────── */
+function exportLivrePaieCSV() {
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var rows = [];
+  var header = ['Matricule','Nom','Prénoms','Poste','Mois','Jours','Sal.Catégoriel','Sursalaire','Ancienneté',
+    'Primes imp.','H.Supp','Transport','Logement','Brut imposable','Brut total',
+    'CNPS sal.6,3%','ITS net','CMU sal.','Retenues div.','Avances','Total retenues',
+    'NET À PAYER','CNPS retraite pat.','CNPS AT','CNPS PF','ITS pat.','FDFP TA','FDFP FC','CMU pat.','Total patronal','Coût total'];
+  rows.push(header.join(';'));
+
+  actifs.forEach(function(e) {
+    for (var m = 1; m <= 12; m++) {
+      var mm = String(m).padStart(2,'0');
+      var moisKey = annee + '-' + mm;
+      var r = _lpDataEmp(e, moisKey);
+      if (r.itsNet == null) r.itsNet = r.its || 0;
+      if (r.cnpsRetraiteSal == null) r.cnpsRetraiteSal = r.cnpsSal || 0;
+      if (r.totalRetenuesSal == null) r.totalRetenuesSal = r.retenues || 0;
+      if (r.totalPatronal == null) r.totalPatronal = r.cnpsPat || 0;
+      if (r.brutTotal == null) r.brutTotal = r.brut || 0;
+      var line = [
+        e.matricule, e.nom, e.prenoms, e.poste || '', moisKey,
+        r.jours || 30, r.categoriel || 0, r.sursalaire || 0, r.anciennete || 0,
+        r.primesImpos || 0, r.heuresSupp || 0, r.transport || 0, r.logement || 0,
+        r.brutImposable || 0, r.brutTotal || 0,
+        r.cnpsRetraiteSal || 0, r.itsNet || 0, r.cmuSal || 0, r.retenuesDiv || 0,
+        r.avances || 0, r.totalRetenuesSal || 0, r.net || 0,
+        r.cnpsRetraitePat || 0, r.cnpsAT || 0, r.cnpsPF || 0, r.itsPat || 0,
+        r.fdfpTA || 0, r.fdfpFC || 0, r.cmuPat || 0,
+        r.totalPatronal || 0, r.coutTotal || 0
+      ];
+      rows.push(line.join(';'));
+    }
+  });
+
+  var bom = '\uFEFF';
+  var blob = new Blob([bom + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'livre_paie_' + annee + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('Livre de paie exporté — ' + rows.length + ' lignes.', 'success');
+}
+
+/* ── Impression du livre de paie ─────────────────────────────────── */
+function printLivrePaie() {
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var params = DATA.params || {};
+  var ste = params.raison_sociale || params.nom_entreprise || 'PartnerImmo CI';
+
+  var moisBlocks = LP_MOIS_LABELS.map(function(moisLabel, i) {
+    var mm = String(i + 1).padStart(2, '0');
+    var moisKey = annee + '-' + mm;
+
+    var totBrut = 0, totNet = 0, totITS = 0, totCNPS = 0, totPat = 0;
+    var tbody = actifs.map(function(e) {
+      var r = _lpDataEmp(e, moisKey);
+      if (r.itsNet == null) r.itsNet = r.its || 0;
+      if (r.cnpsRetraiteSal == null) r.cnpsRetraiteSal = r.cnpsSal || 0;
+      if (r.totalPatronal == null) r.totalPatronal = r.cnpsPat || 0;
+      if (r.brutTotal == null) r.brutTotal = r.brut || 0;
+      totBrut += r.brutTotal; totNet += r.net; totITS += r.itsNet;
+      totCNPS += r.cnpsRetraiteSal; totPat += r.totalPatronal;
+      return '<tr>'
+        + '<td>' + e.matricule + '</td>'
+        + '<td>' + e.nom + ' ' + e.prenoms + '</td>'
+        + '<td>' + (e.poste || '—') + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.categoriel || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.sursalaire || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.anciennete || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.primesImpos || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.transport || 0) + '</td>'
+        + '<td style="text-align:right;font-weight:600;">' + fmtF(r.brutTotal || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.cnpsRetraiteSal || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.itsNet || 0) + '</td>'
+        + '<td style="text-align:right;font-weight:700;color:#166534;">' + fmtF(r.net || 0) + '</td>'
+        + '<td style="text-align:right;">' + fmtF(r.totalPatronal || 0) + '</td>'
+        + '<td style="text-align:right;font-weight:700;color:#92400e;">' + fmtF(r.coutTotal || 0) + '</td>'
+        + '</tr>';
+    }).join('');
+
+    return '<div class="month-block" style="page-break-after:always;">'
+      + '<h3 style="color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:4px;margin-bottom:8px;">'
+      + moisLabel + ' ' + annee + '</h3>'
+      + '<table><thead><tr>'
+      + '<th>Matricule</th><th>Nom & Prénoms</th><th>Poste</th>'
+      + '<th>Catégoriel</th><th>Sursalaire</th><th>Ancienneté</th><th>Primes</th><th>Transport</th>'
+      + '<th>Brut total</th><th>CNPS 6,3%</th><th>ITS net</th><th>NET À PAYER</th>'
+      + '<th>Ch. patronales</th><th>Coût total</th>'
+      + '</tr></thead><tbody>' + tbody
+      + '<tr style="border-top:2px solid #1e3a5f;background:#f8f4e8;">'
+      + '<td colspan="3" style="font-weight:700;">TOTAL ' + moisLabel.toUpperCase() + '</td>'
+      + '<td colspan="5"></td>'
+      + '<td style="text-align:right;font-weight:700;">' + fmtF(totBrut) + '</td>'
+      + '<td style="text-align:right;font-weight:700;">' + fmtF(totCNPS) + '</td>'
+      + '<td style="text-align:right;font-weight:700;">' + fmtF(totITS) + '</td>'
+      + '<td style="text-align:right;font-weight:700;color:#166534;">' + fmtF(totNet) + '</td>'
+      + '<td style="text-align:right;font-weight:700;">' + fmtF(totPat) + '</td>'
+      + '<td style="text-align:right;font-weight:700;color:#92400e;">' + fmtF(totBrut + totPat) + '</td>'
+      + '</tr>'
+      + '</tbody></table></div>';
+  }).join('');
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>Livre de Paie ' + annee + ' — ' + ste + '</title>'
+    + '<style>'
+    + 'body{font-family:Arial,sans-serif;font-size:10px;color:#000;margin:10mm;}'
+    + '.header-print{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;border-bottom:3px solid #1e3a5f;padding-bottom:10px;}'
+    + '.company-name{font-size:16px;font-weight:700;color:#1e3a5f;}'
+    + '.doc-title{font-size:14px;font-weight:700;color:#92400e;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:9px;}'
+    + 'th{background:#1e3a5f;color:#fff;padding:4px 5px;text-align:left;border:1px solid #ccc;font-size:9px;white-space:nowrap;}'
+    + 'td{padding:3px 5px;border:1px solid #ddd;vertical-align:top;}'
+    + 'tr:nth-child(even){background:#f9f9f9;}'
+    + 'h3{font-size:12px;}'
+    + '@page{margin:10mm;size:A4 landscape;}'
+    + '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
+    + '</style></head><body>'
+    + '<div class="header-print">'
+    + '<div><div class="company-name">' + ste + '</div>'
+    + '<div style="font-size:10px;color:#555;">' + (params.adresse || '') + ' — ' + (params.cnps || '') + '</div></div>'
+    + '<div style="text-align:right;">'
+    + '<div class="doc-title">LIVRE DE PAIE — EXERCICE ' + annee + '</div>'
+    + '<div style="font-size:9px;color:#555;">Édité le ' + new Date().toLocaleDateString('fr-CI') + ' · ' + actifs.length + ' employé(s)</div>'
+    + '</div></div>'
+    + moisBlocks
+    + '</body></html>');
+  win.document.close();
+  setTimeout(function() { win.print(); }, 400);
+}
+
+/* ── Impression fiche individuelle ────────────────────────────────── */
+function printFicheIndividuelle() {
+  var empId = (document.getElementById('lp-emp-individuel') || {}).value || '';
+  var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
+  if (!empId) { toast('Aucun employé sélectionné.', 'error'); return; }
+  var e = (DATA.employes || []).find(function(x) { return x.id === empId; });
+  if (!e) return;
+  var params = DATA.params || {};
+  var ste = params.raison_sociale || params.nom_entreprise || 'PartnerImmo CI';
+
+  var lignes = [
+    { k: 'categoriel', label: 'Salaire catégoriel' },
+    { k: 'sursalaire', label: 'Sursalaire' },
+    { k: 'anciennete', label: 'Prime ancienneté' },
+    { k: 'primesImpos', label: 'Primes imposables' },
+    { k: 'heuresSupp', label: 'Heures supplémentaires' },
+    { k: 'transport', label: 'Transport (non imp.)' },
+    { k: 'logement', label: 'Logement' },
+    { k: 'brutImposable', label: 'BRUT IMPOSABLE', bold: true },
+    { k: 'brutTotal', label: 'BRUT TOTAL', bold: true },
+    { k: 'cnpsRetraiteSal', label: 'CNPS salarié 6,3%' },
+    { k: 'itsNet', label: 'ITS net' },
+    { k: 'cmuSal', label: 'CMU salarié' },
+    { k: 'retenuesDiv', label: 'Retenues diverses' },
+    { k: 'avances', label: 'Avances' },
+    { k: 'totalRetenuesSal', label: 'TOTAL RETENUES', bold: true },
+    { k: 'net', label: 'NET À PAYER', bold: true, highlight: true },
+    { k: 'totalPatronal', label: 'Charges patronales', italic: true },
+    { k: 'coutTotal', label: 'COÛT TOTAL EMPLOYEUR', bold: true }
+  ];
+
+  var thMois = LP_MOIS_LABELS.map(function(l) { return '<th>' + l.substring(0,3) + '</th>'; }).join('');
+  var annTotals = {};
+  lignes.forEach(function(l) { annTotals[l.k] = 0; });
+  var allR = LP_MOIS_LABELS.map(function(l, i) {
+    var mm = String(i + 1).padStart(2, '0');
+    var r = _lpDataEmp(e, annee + '-' + mm);
+    if (r.itsNet == null) r.itsNet = r.its || 0;
+    if (r.cnpsRetraiteSal == null) r.cnpsRetraiteSal = r.cnpsSal || 0;
+    if (r.totalRetenuesSal == null) r.totalRetenuesSal = r.retenues || 0;
+    if (r.totalPatronal == null) r.totalPatronal = r.cnpsPat || 0;
+    if (r.brutTotal == null) r.brutTotal = r.brut || 0;
+    lignes.forEach(function(ln) { annTotals[ln.k] = (annTotals[ln.k] || 0) + (r[ln.k] || 0); });
+    return r;
+  });
+
+  var trRows = lignes.map(function(ln) {
+    var bg = ln.highlight ? 'background:#dcfce7;' : (ln.bold ? 'background:#f9f6ee;' : '');
+    var fw = ln.bold ? 'font-weight:700;' : '';
+    var fi = ln.italic ? 'font-style:italic;' : '';
+    var tds = allR.map(function(r) {
+      return '<td style="text-align:right;' + bg + fw + fi + '">' + fmtF(r[ln.k] || 0) + '</td>';
+    }).join('');
+    return '<tr><td style="' + bg + fw + fi + '">' + ln.label + '</td>' + tds
+      + '<td style="text-align:right;border-left:2px solid #999;' + bg + fw + fi + '">' + fmtF(annTotals[ln.k] || 0) + '</td></tr>';
+  }).join('');
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>Fiche Individuelle ' + e.matricule + ' — ' + annee + '</title>'
+    + '<style>body{font-family:Arial,sans-serif;font-size:9px;margin:10mm;}table{width:100%;border-collapse:collapse;}'
+    + 'th{background:#1e3a5f;color:#fff;padding:4px;border:1px solid #ccc;font-size:9px;}'
+    + 'td{padding:3px 5px;border:1px solid #ddd;}tr:nth-child(even){background:#fafafa;}'
+    + '@page{margin:10mm;size:A4 landscape;}'
+    + '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>'
+    + '</head><body>'
+    + '<div style="display:flex;justify-content:space-between;border-bottom:3px solid #1e3a5f;padding-bottom:8px;margin-bottom:12px;">'
+    + '<div><div style="font-size:14px;font-weight:700;color:#1e3a5f;">' + ste + '</div>'
+    + '<div style="font-size:10px;color:#555;">Livre de paie — Fiche individuelle</div></div>'
+    + '<div style="text-align:right;">'
+    + '<div style="font-size:12px;font-weight:700;">Exercice ' + annee + '</div>'
+    + '<div style="font-size:10px;">' + e.matricule + ' — ' + e.nom + ' ' + e.prenoms + '</div>'
+    + '<div style="font-size:9px;color:#555;">' + (e.poste || '—') + ' · ' + (e.contrat || '—') + ' · CNPS : ' + (e.cnps_num || '—') + '</div>'
+    + '</div></div>'
+    + '<table><thead><tr><th style="min-width:180px;">Rubrique</th>' + thMois
+    + '<th style="border-left:2px solid #999;">Total annuel</th></tr></thead>'
+    + '<tbody>' + trRows + '</tbody></table>'
+    + '<div style="margin-top:12px;font-size:8px;color:#888;">Édité le ' + new Date().toLocaleDateString('fr-CI') + ' · Livre de paie confidentiel — usage interne uniquement</div>'
+    + '</body></html>');
+  win.document.close();
+  setTimeout(function() { win.print(); }, 350);
+}
 
 /* ── DÉCLARATIONS SOCIALES & FISCALES ────────────────── */
 function loadDeclarations() {
