@@ -1662,7 +1662,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 </style>
 <!-- EmailJS SDK -->
-<script type="text/javascript" src="vendor/email.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -10812,6 +10812,9 @@ function refreshDashboard() {
      d:retardataires+' dossiers à relancer'},
     {l:'Programmes actifs', v:DATA.programmes.filter(function(p){return p.statut!=='termine';}).length, i:'🏗️', c:'',
      d:DATA.terrains.length+' terrains en portefeuille'},
+    (function(){ var ms = calcMasseSalariale(); return {
+      l:'Masse salariale (mois)', v:fmtF(ms.masseBrute)+' FCFA', i:'👥', c:'',
+      d:ms.effectif+' actifs · coût '+fmtF(ms.coutEmployeur)+' F'}; })(),
   ].map(function(k){
     return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'">'
       +'<div class="kpi-label">'+k.l+'</div>'
@@ -15446,6 +15449,43 @@ function calcNetAPayer(b) {
 function calcCNPSSalarie(brutTotal) {
   return Math.round(Math.min(brutTotal, PAIE_CI.cnps.plafondRetraite) * PAIE_CI.cnps.retraiteSalarial);
 }
+
+/* ── Construit une entrée de paie complète à partir d'une fiche employé ── */
+function paieInputFromEmploye(e) {
+  e = e || {};
+  return {
+    salaireCategoriel: e.salaire_categoriel != null ? e.salaire_categoriel : (e.salaire_base || 0),
+    sursalaire: e.sursalaire || 0,
+    primesImpos: e.primes || 0,
+    transport: e.transport || 0,
+    logement: e.logement || 0,
+    heuresSupp: 0,
+    tauxAnciennete: calcTauxAnciennete(e.date_embauche || e.date_entree),
+    parts: calcPartsFiscales(e.matrimonial, e.enfants),
+    cmuPersonnes: 1 + (parseInt(e.enfants) || 0) + (e.matrimonial === 'marie' ? 1 : 0),
+    jours: PAIE_CI.joursMois
+  };
+}
+
+/* Paie d'un employé : bulletin du mois si présent, sinon reconstruction depuis la fiche */
+function calcPaieEmploye(e, bull) {
+  return bull ? calcPaieCI(bull) : calcPaieCI(paieInputFromEmploye(e));
+}
+
+/* Masse salariale du mois (bulletins si présents, sinon estimation fiche) */
+function calcMasseSalariale(mois) {
+  if (!mois) { var n = new Date(); mois = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0'); }
+  var actifs = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; });
+  var brute = 0, net = 0, pat = 0, cout = 0;
+  actifs.forEach(function(e){
+    var bull = (DATA.bulletins || []).find(function(b){ return b.employe_id === e.id && b.mois === mois; });
+    var r = calcPaieEmploye(e, bull);
+    brute += r.brutTotal; net += r.net; pat += r.totalPatronal; cout += r.coutTotal;
+  });
+  return { mois: mois, effectif: actifs.length, masseBrute: brute, masseNet: net,
+           chargesPat: pat, coutEmployeur: cout };
+}
+
 function calcCNPSPatronal(brutTotal) {
   var retraite = Math.min(brutTotal, PAIE_CI.cnps.plafondRetraite) * PAIE_CI.cnps.retraitePatronal;
   var baseATPF = Math.min(brutTotal, PAIE_CI.cnps.plafondATPF);
@@ -15498,7 +15538,14 @@ function calcSalaireNet() {
   var primes = parseFloat(document.getElementById('emp-primes').value) || 0;
   var transport = parseFloat(document.getElementById('emp-transport').value) || 0;
   var logement = parseFloat(document.getElementById('emp-logement').value) || 0;
-  var r = calcNetAPayer({ base, primes, transport, logement });
+  var mat = (document.getElementById('emp-matrimonial')||{}).value || '';
+  var enf = (document.getElementById('emp-enfants')||{}).value || 0;
+  var dEmb = (document.getElementById('emp-date-embauche')||{}).value || '';
+  var r = calcPaieCI({
+    salaireCategoriel: base, primesImpos: primes, transport: transport, logement: logement,
+    parts: calcPartsFiscales(mat, enf), tauxAnciennete: calcTauxAnciennete(dEmb),
+    cmuPersonnes: 1 + (parseInt(enf)||0) + (mat === 'marie' ? 1 : 0), jours: PAIE_CI.joursMois
+  });
   document.getElementById('emp-net-estime').value = fmtF(r.net) + ' FCFA (estimation)';
 }
 
@@ -15579,7 +15626,7 @@ function renderEmployes() {
   var badgeContrat = { CDI: 'badge-vert', CDD: 'badge-or', stage: 'badge-bleu' };
   var badgeStat = { actif: 'badge-vert', inactif: 'badge-rouge', suspendu: 'badge-or' };
   tbody.innerHTML = list.map(function(e) {
-    var r = calcNetAPayer({ base: e.salaire_base, primes: e.primes, transport: e.transport, logement: e.logement });
+    var r = calcPaieEmploye(e);
     return '<tr>'
       + '<td><strong style="color:var(--or);">' + e.matricule + '</strong></td>'
       + '<td>' + e.nom + ' ' + e.prenoms + '</td>'
@@ -15689,7 +15736,7 @@ function renderPayslips(mois) {
   }
   grid.innerHTML = actifs.map(function(e) {
     var bull = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
-    var r = bull ? calcNetAPayer(bull) : calcNetAPayer({ base: e.salaire_base, primes: e.primes, transport: e.transport, logement: e.logement });
+    var r = calcPaieEmploye(e, bull);
     var hasB = !!bull;
     return '<div class="payslip-card" style="' + (hasB ? '' : 'opacity:0.7;border-left-color:var(--gris-bord);') + '">'
       + '<div class="emp-name">' + e.nom + ' ' + e.prenoms + '</div>'
@@ -15716,7 +15763,7 @@ function buildPaieRecap(mois) {
   var totBrut = 0, totNet = 0, totITS = 0, totCNPSSal = 0, totCNPSPat = 0;
   actifs.forEach(function(e) {
     var bull = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
-    var r = calcNetAPayer(bull || { base: e.salaire_base, primes: e.primes, transport: e.transport, logement: e.logement });
+    var r = calcPaieEmploye(e, bull);
     totBrut += r.brut; totNet += r.net; totITS += r.its; totCNPSSal += r.cnpsSal; totCNPSPat += r.cnpsPat;
   });
   box.innerHTML = '<div class="form-section-title">Récapitulatif de paie — ' + mois + '</div>'
@@ -15735,7 +15782,7 @@ function buildPaieRecap(mois) {
     + '</tr></thead><tbody>'
     + actifs.map(function(e) {
         var bull = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
-        var r = calcNetAPayer(bull || { base: e.salaire_base, primes: e.primes, transport: e.transport, logement: e.logement });
+        var r = calcPaieEmploye(e, bull);
         return '<tr>'
           + '<td style="color:var(--or);">' + e.matricule + '</td>'
           + '<td>' + e.nom + ' ' + e.prenoms + '</td>'
@@ -15759,7 +15806,7 @@ function buildVirements(mois) {
   var modeLabel = { virement: '🏦 Virement', wave: '🌊 Wave', orange_money: '🟠 Orange Money', mtn: '🟡 MTN MoMo', especes: '💵 Espèces' };
   tbody.innerHTML = actifs.map(function(e) {
     var bull = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
-    var r = calcNetAPayer(bull || { base: e.salaire_base, primes: e.primes, transport: e.transport, logement: e.logement });
+    var r = calcPaieEmploye(e, bull);
     var statut = bull ? '<span class="badge badge-vert">✔ Prêt</span>' : '<span class="badge badge-or">⏳ En attente</span>';
     var coord = e.mode_paiement === 'virement' ? (e.banque || '—') : (modeLabel[e.mode_paiement] || e.mode_paiement);
     var num = e.mode_paiement === 'virement' ? (e.compte_banque || '—') : (e.wallet || '—');
@@ -15780,7 +15827,7 @@ function exportVirements() {
   var rows = ['Matricule,Nom,Prénoms,Banque/Opérateur,N° Compte/Wallet,Net à payer (FCFA),Mode'];
   DATA.employes.filter(function(e){ return e.statut==='actif'; }).forEach(function(e) {
     var bull = DATA.bulletins.find(function(b){ return b.employe_id===e.id && b.mois===mois; });
-    var r = calcNetAPayer(bull || { base:e.salaire_base, primes:e.primes, transport:e.transport, logement:e.logement });
+    var r = calcPaieEmploye(e, bull);
     var coord = e.mode_paiement === 'virement' ? e.banque : '';
     var num = e.mode_paiement === 'virement' ? e.compte_banque : e.wallet;
     rows.push([e.matricule, e.nom, e.prenoms, coord, num, r.net, e.mode_paiement].join(','));
@@ -15800,14 +15847,12 @@ async function genererTousBulletins() {
     var e = actifs[i];
     var exists = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
     if (!exists) {
-      var bull = {
+      var bull = Object.assign({
         id: 'bull_' + e.id + '_' + mois,
         employe_id: e.id, mois: mois,
-        base: e.salaire_base, primes: e.primes || 0,
-        transport: e.transport || 0, logement: e.logement || 0,
-        heuresSupp: 0, retenues: 0, avances: 0, jours: 26,
+        base: e.salaire_base, primes: e.primes || 0, retenues: 0,
         created_at: new Date().toISOString()
-      };
+      }, paieInputFromEmploye(e));
       DATA.bulletins.push(bull);
       await dbPut('bulletins', bull);
     }
@@ -16102,7 +16147,7 @@ function updateDeclKPIs() {
   var its = 0;
   actifs.forEach(function(e) {
     var b = DATA.bulletins.find(function(x){ return x.employe_id===e.id && x.mois===moisActuel; });
-    var r = calcNetAPayer(b || { base: e.salaire_base, primes: e.primes, transport: e.transport, logement: e.logement });
+    var r = calcPaieEmploye(e, b);
     its += r.its;
   });
   var annee = document.getElementById('decl-annee') ? (document.getElementById('decl-annee').value || now.getFullYear()) : now.getFullYear();
@@ -16482,14 +16527,14 @@ function initLeafletMap() {
     var lcss = document.createElement('link');
     lcss.id = 'leaflet-css';
     lcss.rel = 'stylesheet';
-    lcss.href = 'vendor/leaflet.min.css';
+    lcss.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
     lcss.onload = function() { if (_geoMap) _refreshGeoMap(true); };
     document.head.appendChild(lcss);
   }
   if (typeof L === 'undefined') {
     // Charger Leaflet dynamiquement
     var script = document.createElement('script');
-    script.src = 'vendor/leaflet.min.js';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
     script.onload = function() { _leafletLoaded = true; _buildMap(); };
     document.head.appendChild(script);
   } else {
@@ -17487,7 +17532,7 @@ function _buildAnalyses(commList, dateMin) {
     if (!document.getElementById('chartjs-script')) {
       var s = document.createElement('script');
       s.id = 'chartjs-script';
-      s.src = 'vendor/chart.umd.js';
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
       s.onload = function() { _drawCharts(commList, dateMin); };
       document.head.appendChild(s);
     }
@@ -25204,6 +25249,11 @@ function _a360Metrics() {
   // Clients sans commercial / sans apporteur (qualité données)
   var clientsSansComm = clients.filter(function(c){ return !c.commercial && !c.commercial_id; }).length;
 
+  // RH / Paie — masse salariale du mois courant
+  var ms = (typeof calcMasseSalariale === 'function') ? calcMasseSalariale()
+    : { masseBrute:0, masseNet:0, chargesPat:0, coutEmployeur:0, effectif:effectif };
+  var poidsSalaireEncaisse = encaisse > 0 ? Math.round(ms.coutEmployeur / encaisse * 100) : 0;
+
   return {
     nbClients: clients.length, nbLeads: leads.length, leadsActifs: leadsActifs,
     caPortef: caPortef, encaisse: encaisse, txRecouv: txRecouv, txConv: txConv,
@@ -25213,7 +25263,9 @@ function _a360Metrics() {
     effectif: effectif, nbCommerciaux: commerciaux.length,
     produits: produits, charges: charges, resultat: resultat, margePct: margePct,
     commDues: commDues, nbApporteurs: apporteurs.length,
-    concentrationComm: concentrationComm, topCommNom: topCommNom, clientsSansComm: clientsSansComm
+    concentrationComm: concentrationComm, topCommNom: topCommNom, clientsSansComm: clientsSansComm,
+    masseBrute: ms.masseBrute, masseNet: ms.masseNet, chargesPat: ms.chargesPat,
+    coutEmployeur: ms.coutEmployeur, poidsSalaireEncaisse: poidsSalaireEncaisse
   };
 }
 
@@ -25235,6 +25287,7 @@ function _a360Diagnostic(m) {
   if (m.chantiersRetard > 0) faiblesses.push(m.chantiersRetard+' chantier(s) en retard de livraison.');
   if (m.commDues > 0) faiblesses.push('Commissions impayées : '+fmtF(m.commDues)+' F en attente.');
   if (m.clientsSansComm > 0) faiblesses.push(m.clientsSansComm+' client(s) sans commercial affecté (données incomplètes).');
+  if (m.poidsSalaireEncaisse > 40 && m.encaisse > 0) faiblesses.push('Masse salariale lourde : coût employeur = '+m.poidsSalaireEncaisse+'% des encaissements.');
 
   // ── Risques ──
   if (m.resultat < 0) risques.push('Résultat négatif ('+fmtF(m.resultat)+' F) : rentabilité menacée.');
@@ -25260,6 +25313,8 @@ function _a360Diagnostic(m) {
     plan.strategique.push({ p:'Moyenne', t:'Renforcer la force de vente', d:'Recruter/former au moins 1 commercial supplémentaire.' });
   if (m.tauxVente < 60 && m.lotsTotal>0)
     plan.strategique.push({ p:'Moyenne', t:'Stratégie d\'écoulement du stock foncier', d:'Taux de vente '+m.tauxVente+'%. Définir une politique commerciale (offres, financement) sur les invendus.' });
+  if (m.poidsSalaireEncaisse > 40 && m.encaisse > 0)
+    plan.strategique.push({ p:'Haute', t:'Maîtriser la masse salariale', d:'Coût employeur ('+fmtF(m.coutEmployeur)+' F/mois) = '+m.poidsSalaireEncaisse+'% des encaissements. Aligner effectif et productivité sur le chiffre d\'affaires.' });
   if (!plan.strategique.length)
     plan.strategique.push({ p:'Basse', t:'Consolider la croissance', d:'Indicateurs structurels sains. Maintenir le cap et sécuriser les acquis.' });
 
@@ -25358,6 +25413,12 @@ function buildAnalyse360() {
     +kpi('Vente lots', m.tauxVente+'%', m.tauxVente>=60?'#10B981':'#EA580C', m.lotsVendus+'/'+m.lotsTotal)
     +kpi('Commissions dues', fmtF(m.commDues)+' F', m.commDues?'#EA580C':'#10B981')
     +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">'
+    +kpi('Effectif actif', m.effectif, '#3B82F6', m.nbCommerciaux+' commercial(aux)')
+    +kpi('Masse salariale (mois)', fmtF(m.masseBrute)+' F', '#B87333')
+    +kpi('Charges patronales', fmtF(m.chargesPat)+' F', '#8B5CF6', 'coût '+fmtF(m.coutEmployeur)+' F')
+    +kpi('Poids paie / encaissé', m.poidsSalaireEncaisse+'%', m.poidsSalaireEncaisse>40?'#EF4444':m.poidsSalaireEncaisse>25?'#B87333':'#10B981')
+    +'</div>'
 
     // SWOT
     +'<div style="font-size:13px;font-weight:700;color:#1C1C2E;margin-bottom:10px;">🧩 Diagnostic SWOT</div>'
@@ -25394,6 +25455,8 @@ function imprimerAnalyse360() {
     +'<tr><th>Clients / Prospects actifs</th><td>'+m.nbClients+' / '+m.leadsActifs+'</td><th>Taux conversion</th><td>'+m.txConv+'%</td></tr>'
     +'<tr><th>Impayés</th><td>'+fmtF(m.montantRetard)+' F ('+m.nbRetard+')</td><th>Commissions dues</th><td>'+fmtF(m.commDues)+' F</td></tr>'
     +'<tr><th>Chantiers en cours / retard</th><td>'+m.convEnCours+' / '+m.chantiersRetard+'</td><th>Vente lots</th><td>'+m.tauxVente+'% ('+m.lotsVendus+'/'+m.lotsTotal+')</td></tr>'
+    +'<tr><th>Effectif actif</th><td>'+m.effectif+'</td><th>Masse salariale (mois)</th><td>'+fmtF(m.masseBrute)+' F</td></tr>'
+    +'<tr><th>Charges patronales</th><td>'+fmtF(m.chargesPat)+' F</td><th>Coût employeur / Poids paie</th><td>'+fmtF(m.coutEmployeur)+' F · '+m.poidsSalaireEncaisse+'%</td></tr>'
     +'</table>'
     +'<h2>Forces</h2>'+ul(diag.forces)
     +'<h2>Faiblesses</h2>'+ul(diag.faiblesses)
