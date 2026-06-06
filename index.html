@@ -5686,9 +5686,28 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="form-group"><label>Coût travaux / lot (F)</label><input type="number" class="form-control" id="prev-travaux-lot" oninput="prevRender()"></div>
             <div class="form-group"><label>Études (% du CA)</label><input type="number" class="form-control" id="prev-etudes-pct" oninput="prevRender()"></div>
             <div class="form-group"><label>Commissions (% du CA)</label><input type="number" class="form-control" id="prev-commission-pct" oninput="prevRender()"></div>
-            <div class="form-group"><label>Charges fixes / mois (F)</label><input type="number" class="form-control" id="prev-charges-fixes" oninput="prevRender()"></div>
             <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="prev-tva" oninput="prevRender()"></div>
             <div class="form-group"><label>IS (%)</label><input type="number" class="form-control" id="prev-is" oninput="prevRender()"></div>
+          </div>
+          <div class="form-section-title" style="font-size:13px;color:var(--blanc-dim);">Charges directes (par lot)</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+            <div class="form-group"><label>VRD / viabilisation / lot (F)</label><input type="number" class="form-control" id="prev-vrd-lot" oninput="prevRender()"></div>
+            <div class="form-group"><label>Honoraires techniques / lot (F)</label><input type="number" class="form-control" id="prev-honoraires-lot" oninput="prevRender()" placeholder="Archi, BET, géomètre, notaire"></div>
+            <div class="form-group"><label>Imprévus / aléas (% du coût production)</label><input type="number" class="form-control" id="prev-imprevus-pct" oninput="prevRender()" placeholder="3"></div>
+          </div>
+          <div class="form-section-title" style="font-size:13px;color:var(--blanc-dim);">Charges indirectes / fonctionnement</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+            <div class="form-group">
+              <label>Masse salariale / mois (F)</label>
+              <input type="number" class="form-control" id="prev-masse-salariale" oninput="prevRender()">
+              <label style="font-size:11px;color:var(--blanc-dim);display:flex;align-items:center;gap:6px;margin-top:4px;cursor:pointer;">
+                <input type="checkbox" id="prev-masse-auto" onchange="prevToggleMasseAuto()" style="width:auto;"> Récupérer du module RH (Paie)
+              </label>
+            </div>
+            <div class="form-group"><label>Marketing / commercialisation (% CA)</label><input type="number" class="form-control" id="prev-marketing-pct" oninput="prevRender()" placeholder="2"></div>
+            <div class="form-group"><label>Frais généraux & admin / mois (F)</label><input type="number" class="form-control" id="prev-charges-fixes" oninput="prevRender()"></div>
+            <div class="form-group"><label>Taxes & impôts locaux / an (F)</label><input type="number" class="form-control" id="prev-taxes-locales" oninput="prevRender()" placeholder="Patente, foncier non bâti"></div>
+            <div class="form-group"><label>Dotations amortissements / an (F)</label><input type="number" class="form-control" id="prev-dotations" oninput="prevRender()"></div>
           </div>
           <div class="form-section-title" style="font-size:13px;color:var(--blanc-dim);">Financement</div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
@@ -5698,6 +5717,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="form-group"><label>Différé (mois)</label><input type="number" class="form-control" id="prev-emp-differe" oninput="prevRender()"></div>
             <div class="form-group"><label>Apports associés (F)</label><input type="number" class="form-control" id="prev-apports" oninput="prevRender()"></div>
             <div class="form-group"><label>Subventions (F)</label><input type="number" class="form-control" id="prev-subventions" oninput="prevRender()"></div>
+            <div class="form-group"><label>Taux d'actualisation (% / an)</label><input type="number" class="form-control" id="prev-actualisation" oninput="prevRender()" placeholder="12"></div>
           </div>
         </div>
 
@@ -27570,16 +27590,30 @@ function etatGrandLivre() {
 ===================================================== */
 
 /* ---- Valeurs par défaut d'un scénario ---- */
+function prevToggleMasseAuto() {
+  var chk = document.getElementById('prev-masse-auto');
+  var inp = document.getElementById('prev-masse-salariale');
+  if (chk && chk.checked && typeof calcMasseSalariale === 'function') {
+    var ms = calcMasseSalariale();
+    if (inp) { inp.value = Math.round(ms.coutEmployeur || 0); inp.readOnly = true; }
+    toast('Masse salariale récupérée du module RH : ' + fmtF(Math.round(ms.coutEmployeur||0)) + ' F/mois (' + ms.effectif + ' actifs).', 'success');
+  } else if (inp) {
+    inp.readOnly = false;
+  }
+  prevRender();
+}
+
 function _prevDefaut() {
   return {
-    id: '', nom: 'Nouveau prévisionnel', programme_id: '',
     date_debut: today().slice(0, 7) + '-01', horizon_annees: 3,
     hyp: {
       prix_lot: 15000000, lots_par_an: 24, croissance: 10, apport: 20, credit_mois: 24,
       foncier_lot: 4000000, travaux_lot: 6000000, etudes_pct: 4, commission_pct: 5,
-      charges_fixes_mois: 2500000, tva: 18, is: 25
+      charges_fixes_mois: 2500000, tva: 18, is: 25,
+      vrd_lot: 0, honoraires_lot: 0, imprevus_pct: 3,
+      masse_salariale_mois: 0, masse_salariale_auto: false, marketing_pct: 2, taxes_locales_an: 0, dotations_an: 0
     },
-    fin: { emp_montant: 100000000, emp_taux: 9, emp_duree: 60, emp_differe: 12, apports: 30000000, subventions: 0 },
+    fin: { emp_montant: 100000000, emp_taux: 9, emp_duree: 60, emp_differe: 12, apports: 30000000, subventions: 0, actualisation: 12 },
     created_at: today()
   };
 }
@@ -27591,9 +27625,13 @@ function _prevCompute(s) {
   var h = s.hyp || {}, f = s.fin || {};
   var prix = +h.prix_lot || 0, lotsAn0 = +h.lots_par_an || 0, g = (+h.croissance || 0) / 100;
   var apport = (+h.apport || 0) / 100, credit = Math.max(1, +h.credit_mois || 1);
-  var coutLot = (+h.foncier_lot || 0) + (+h.travaux_lot || 0);
+  var coutLot = (+h.foncier_lot || 0) + (+h.travaux_lot || 0) + (+h.vrd_lot || 0) + (+h.honoraires_lot || 0);
   var etudesP = (+h.etudes_pct || 0) / 100, commP = (+h.commission_pct || 0) / 100;
   var chFixeM = +h.charges_fixes_mois || 0, tva = (+h.tva || 0) / 100, isP = (+h.is || 0) / 100;
+  var imprevusP = (+h.imprevus_pct || 0) / 100, marketingP = (+h.marketing_pct || 0) / 100;
+  var masseM = h.masse_salariale_auto && typeof calcMasseSalariale === 'function'
+    ? (calcMasseSalariale().coutEmployeur || 0) : (+h.masse_salariale_mois || 0);
+  var taxesM = (+h.taxes_locales_an || 0) / 12, dotationsAn = +h.dotations_an || 0;
 
   // Emprunt
   var P = +f.emp_montant || 0, i = (+f.emp_taux || 0) / 100 / 12;
@@ -27635,14 +27673,16 @@ function _prevCompute(s) {
   var years = [];
   for (var yy = 0; yy < H; yy++) {
     var a = { y: yy, an: debut.getFullYear() + yy, CA: 0, prodCost: 0, etudes: 0, comm: 0, chFixes: chFixeM * 12,
+      imprevus: 0, marketing: 0, masse: masseM * 12, taxesLoc: taxesM * 12,
       interets: 0, rembCapital: 0, encaisse: 0, tvaPayee: 0 };
     for (var mm = yy * 12; mm < (yy + 1) * 12; mm++) {
       a.CA += saleM[mm]; a.prodCost += prodM[mm]; a.etudes += etuM[mm]; a.comm += comM[mm];
+      a.imprevus += prodM[mm] * imprevusP; a.marketing += saleM[mm] * marketingP;
       a.interets += intM[mm]; a.rembCapital += capM[mm]; a.encaisse += encM[mm]; a.tvaPayee += tvaM[mm];
     }
-    a.chargesExpl = a.prodCost + a.etudes + a.comm + a.chFixes;
+    a.chargesExpl = a.prodCost + a.etudes + a.comm + a.chFixes + a.imprevus + a.marketing + a.masse + a.taxesLoc;
     a.ebe = a.CA - a.chargesExpl;
-    a.dotations = 0;
+    a.dotations = dotationsAn;
     a.rExploit = a.ebe - a.dotations;
     a.rAvantIS = a.rExploit - a.interets;
     a.is = a.rAvantIS > 0 ? Math.round(a.rAvantIS * isP) : 0;
@@ -27660,7 +27700,8 @@ function _prevCompute(s) {
     var isMois = 0;
     // IS de l'année y payé au 1er mois de l'année suivante
     if (t % 12 === 0 && t > 0) isMois = years[yt - 1] ? years[yt - 1].is : 0;
-    var outflow = prodM[t] + etuM[t] + comM[t] + chFixeM + tvaM[t] + intM[t] + capM[t] + isMois;
+    var outflow = prodM[t] + etuM[t] + comM[t] + chFixeM + tvaM[t] + intM[t] + capM[t] + isMois
+      + prodM[t] * imprevusP + saleM[t] * marketingP + masseM + taxesM;
     var net = inflow - outflow;
     cumul += net;
     var dlab = new Date(debut.getFullYear(), debut.getMonth() + t, 1);
@@ -27692,8 +27733,40 @@ function _prevCompute(s) {
   var cafCumul = years.reduce(function(x, a){ return x + a.caf; }, 0);
   var capaRemb = P > 0 ? cafCumul / P : 0;
 
-  return { H: H, N: N, years: years, treso: treso, plan: plan, totals: T,
-    ratios: { seuilRentab: seuilRentab, dscr: dscr, margeNettePct: margeNettePct, capaRemb: capaRemb } };
+  /* ── Indicateurs d'investissement (DCF) ──────────────────────────────
+     Cash-flow économique annuel = encaissements − décaissements d'exploitation − IS
+     (hors financement : emprunt/apports/subventions exclus). Profil naturellement
+     négatif au démarrage (achat foncier + travaux) puis positif (ventes). */
+  var ecoCF = [];
+  for (var ya = 0; ya < H; ya++) {
+    var enc = 0, dec = 0;
+    for (var mc = ya * 12; mc < (ya + 1) * 12; mc++) {
+      enc += encM[mc];
+      dec += prodM[mc] + etuM[mc] + comM[mc] + chFixeM + tvaM[mc]
+        + prodM[mc] * imprevusP + saleM[mc] * marketingP + masseM + taxesM;
+    }
+    var isY = years[ya] ? years[ya].is : 0;
+    ecoCF.push(enc - dec - isY);
+  }
+  var rAct = (+f.actualisation || 12) / 100;
+  var van = 0;
+  for (var d = 0; d < ecoCF.length; d++) van += ecoCF[d] / Math.pow(1 + rAct, d + 1);
+  /* TRI par bissection sur [-90%, +300%] */
+  function _npv(rate) { var v = 0; for (var z = 0; z < ecoCF.length; z++) v += ecoCF[z] / Math.pow(1 + rate, z + 1); return v; }
+  var tri = null, lo = -0.9, hi = 3, flo = _npv(lo), fhi = _npv(hi);
+  if (flo * fhi < 0) {
+    for (var it = 0; it < 80; it++) { var mid = (lo + hi) / 2, fm = _npv(mid); if (Math.abs(fm) < 1) { tri = mid; break; } if (flo * fm < 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; } tri = mid; }
+  }
+  /* Délai de récupération (payback) sur cash-flow économique cumulé */
+  var cumEco = 0, payback = null;
+  for (var pb = 0; pb < ecoCF.length; pb++) { cumEco += ecoCF[pb]; if (payback === null && cumEco >= 0) payback = pb + 1; }
+  /* ROI global = résultat net cumulé / capitaux engagés (apports + emprunt) */
+  var capEngage = (+f.apports || 0) + P + (+f.subventions || 0);
+  var roi = capEngage > 0 ? (T.rNet / capEngage) * 100 : 0;
+
+  return { H: H, N: N, years: years, treso: treso, plan: plan, totals: T, ecoCF: ecoCF,
+    ratios: { seuilRentab: seuilRentab, dscr: dscr, margeNettePct: margeNettePct, capaRemb: capaRemb,
+      van: van, tri: tri, payback: payback, roi: roi, tauxActu: rAct, capEngage: capEngage } };
 }
 
 /* ============ UI ============ */
@@ -27747,11 +27820,14 @@ function prevReadForm() {
     apport: _gn('prev-apport'), credit_mois: _gn('prev-credit-mois'),
     foncier_lot: _gn('prev-foncier-lot'), travaux_lot: _gn('prev-travaux-lot'),
     etudes_pct: _gn('prev-etudes-pct'), commission_pct: _gn('prev-commission-pct'),
-    charges_fixes_mois: _gn('prev-charges-fixes'), tva: _gn('prev-tva'), is: _gn('prev-is')
+    charges_fixes_mois: _gn('prev-charges-fixes'), tva: _gn('prev-tva'), is: _gn('prev-is'),
+    vrd_lot: _gn('prev-vrd-lot'), honoraires_lot: _gn('prev-honoraires-lot'), imprevus_pct: _gn('prev-imprevus-pct'),
+    masse_salariale_mois: _gn('prev-masse-salariale'), masse_salariale_auto: (document.getElementById('prev-masse-auto')||{}).checked||false,
+    marketing_pct: _gn('prev-marketing-pct'), taxes_locales_an: _gn('prev-taxes-locales'), dotations_an: _gn('prev-dotations')
   };
   s.fin = {
     emp_montant: _gn('prev-emp-montant'), emp_taux: _gn('prev-emp-taux'), emp_duree: _gn('prev-emp-duree'),
-    emp_differe: _gn('prev-emp-differe'), apports: _gn('prev-apports'), subventions: _gn('prev-subventions')
+    emp_differe: _gn('prev-emp-differe'), apports: _gn('prev-apports'), subventions: _gn('prev-subventions'), actualisation: _gn('prev-actualisation')
   };
   return s;
 }
@@ -27766,8 +27842,13 @@ function prevFillForm(s) {
   _sv('prev-foncier-lot', h.foncier_lot); _sv('prev-travaux-lot', h.travaux_lot);
   _sv('prev-etudes-pct', h.etudes_pct); _sv('prev-commission-pct', h.commission_pct);
   _sv('prev-charges-fixes', h.charges_fixes_mois); _sv('prev-tva', h.tva); _sv('prev-is', h.is);
+  _sv('prev-vrd-lot', h.vrd_lot); _sv('prev-honoraires-lot', h.honoraires_lot); _sv('prev-imprevus-pct', h.imprevus_pct);
+  _sv('prev-masse-salariale', h.masse_salariale_mois); _sv('prev-marketing-pct', h.marketing_pct);
+  _sv('prev-taxes-locales', h.taxes_locales_an); _sv('prev-dotations', h.dotations_an);
+  var mAuto=document.getElementById('prev-masse-auto'); if(mAuto){ mAuto.checked = !!h.masse_salariale_auto; }
+  var mInp=document.getElementById('prev-masse-salariale'); if(mInp){ mInp.readOnly = !!h.masse_salariale_auto; }
   _sv('prev-emp-montant', f.emp_montant); _sv('prev-emp-taux', f.emp_taux); _sv('prev-emp-duree', f.emp_duree);
-  _sv('prev-emp-differe', f.emp_differe); _sv('prev-apports', f.apports); _sv('prev-subventions', f.subventions);
+  _sv('prev-emp-differe', f.emp_differe); _sv('prev-apports', f.apports); _sv('prev-subventions', f.subventions); _sv('prev-actualisation', f.actualisation);
 }
 
 function prevSeedFromProgramme() {
@@ -27824,16 +27905,79 @@ function prevRender() {
   var s = prevReadForm();
   var c = _prevCompute(s);
   var r = c.ratios;
-  function kpi(lbl, val, color) {
-    return '<div class="kpi-card" style="border-top-color:' + (color || 'var(--bleu)') + ';"><div class="kpi-label">' + lbl
-      + '</div><div class="kpi-value" style="font-size:17px;color:' + (color || 'var(--blanc)') + ';">' + val + '</div></div>';
+  function kpi(lbl, val, color, sub) {
+    return '<div class="kpi-card" style="border-top:3px solid ' + (color || 'var(--bleu)') + ';"><div class="kpi-label">' + lbl
+      + '</div><div class="kpi-value" style="font-size:17px;color:' + (color || 'var(--blanc)') + ';">' + val + '</div>'
+      + (sub ? '<div style="font-size:10px;color:var(--blanc-dim);margin-top:2px;">' + sub + '</div>' : '') + '</div>';
   }
-  var kpis = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+  var fpct = function(v){ return (v*100).toFixed(1) + '%'; };
+  var triTxt = (r.tri === null) ? 'n.d.' : (r.tri * 100).toFixed(1) + '%';
+  var paybackTxt = r.payback ? ('An ' + r.payback) : '> ' + c.H + ' ans';
+  var tresoNeg = c.treso.some(function(t){ return t.cumul < 0; });
+
+  /* Verdict bancaire : VAN>0, TRI≥taux, DSCR≥1.2, trésorerie positive */
+  var criteres = [
+    { ok: r.van > 0,                       txt: 'VAN positive' },
+    { ok: (r.tri !== null && r.tri >= r.tauxActu), txt: 'TRI ≥ taux d\'actualisation' },
+    { ok: r.dscr >= 1.2,                   txt: 'DSCR ≥ 1,20' },
+    { ok: !tresoNeg,                       txt: 'Trésorerie positive' },
+    { ok: c.totals.rNet > 0,               txt: 'Résultat net positif' }
+  ];
+  var nbOk = criteres.filter(function(x){ return x.ok; }).length;
+  var bancable = nbOk >= 4 && r.van > 0;
+  var vCol = bancable ? 'var(--vert)' : (nbOk >= 3 ? 'var(--or)' : 'var(--rouge)');
+  var vLabel = bancable ? '✔ Projet bancable' : (nbOk >= 3 ? '⚠ À consolider' : '✖ Risqué');
+  var verdict = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:16px 18px;border-radius:12px;margin-bottom:16px;'
+    + 'background:linear-gradient(135deg,' + vCol + '22,' + vCol + '08);border:1px solid ' + vCol + '55;">'
+    + '<div style="font-size:20px;font-weight:800;color:' + vCol + ';">' + vLabel + '</div>'
+    + '<div style="font-size:12px;color:var(--blanc-dim);">' + nbOk + '/' + criteres.length + ' critères bancaires satisfaits · horizon ' + c.H + ' ans · actualisation ' + fpct(r.tauxActu) + '</div>'
+    + '<div style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">'
+    + criteres.map(function(x){ return '<span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:' + (x.ok ? 'rgba(74,196,122,.16);color:var(--vert)' : 'rgba(239,68,68,.14);color:var(--rouge)') + ';">' + (x.ok ? '✓ ' : '✗ ') + x.txt + '</span>'; }).join('')
+    + '</div></div>';
+
+  var kpis = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px;">'
     + kpi('CA cumulé (' + c.H + ' ans)', fmtF(c.totals.CA) + ' F', 'var(--vert)')
-    + kpi('Résultat net cumulé', fmtF(c.totals.rNet) + ' F', c.totals.rNet >= 0 ? 'var(--vert)' : 'var(--rouge)')
-    + kpi('DSCR année 1', (r.dscr).toFixed(2) + (r.dscr >= 1.2 ? ' ✔' : ' ⚠'), r.dscr >= 1.2 ? 'var(--vert)' : 'var(--or)')
-    + kpi('Marge nette', r.margeNettePct.toFixed(1) + '%', 'var(--bleu)')
+    + kpi('Résultat net cumulé', fmtF(c.totals.rNet) + ' F', c.totals.rNet >= 0 ? 'var(--vert)' : 'var(--rouge)', 'Marge ' + r.margeNettePct.toFixed(1) + '%')
+    + kpi('VAN', fmtF(Math.round(r.van)) + ' F', r.van >= 0 ? 'var(--vert)' : 'var(--rouge)', 'actualisée à ' + fpct(r.tauxActu))
+    + kpi('TRI', triTxt, (r.tri !== null && r.tri >= r.tauxActu) ? 'var(--vert)' : 'var(--or)', 'cible ≥ ' + fpct(r.tauxActu))
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">'
+    + kpi('Délai de récupération', paybackTxt, 'var(--violet)', 'cash-flow cumulé > 0')
+    + kpi('ROI global', r.roi.toFixed(1) + '%', r.roi >= 0 ? 'var(--vert)' : 'var(--rouge)', 'RN / capitaux engagés')
+    + kpi('DSCR année 1', r.dscr.toFixed(2) + (r.dscr >= 1.2 ? ' ✔' : ' ⚠'), r.dscr >= 1.2 ? 'var(--vert)' : 'var(--or)', 'service de la dette')
+    + kpi('Seuil de rentabilité', fmtF(Math.round(r.seuilRentab)) + ' F', 'var(--bleu)', 'CA mort / an')
     + '</div>';
+
+  /* Mini-graphique : CA vs Résultat net par année (barres CSS) */
+  var maxCA = Math.max.apply(null, c.years.map(function(a){ return Math.abs(a.CA); }).concat([1]));
+  var chartCA = '<div class="card" style="margin-bottom:16px;"><div class="card-title">Chiffre d\'affaires & résultat net par année</div>'
+    + '<div style="display:flex;align-items:flex-end;gap:18px;height:150px;padding:10px 4px 0;">'
+    + c.years.map(function(a){
+        var hCA = Math.max(2, Math.round(Math.abs(a.CA) / maxCA * 120));
+        var hRN = Math.max(2, Math.round(Math.abs(a.rNet) / maxCA * 120));
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">'
+          + '<div style="display:flex;align-items:flex-end;gap:4px;height:124px;">'
+          + '<div title="CA" style="width:22px;height:' + hCA + 'px;background:var(--vert);border-radius:4px 4px 0 0;"></div>'
+          + '<div title="Résultat net" style="width:22px;height:' + hRN + 'px;background:' + (a.rNet >= 0 ? 'var(--bleu)' : 'var(--rouge)') + ';border-radius:4px 4px 0 0;"></div>'
+          + '</div><div style="font-size:11px;font-weight:600;">' + a.an + '</div></div>';
+      }).join('')
+    + '</div><div style="display:flex;gap:16px;font-size:11px;color:var(--blanc-dim);margin-top:6px;">'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:var(--vert);border-radius:2px;"></span> CA</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:var(--bleu);border-radius:2px;"></span> Résultat net</span></div></div>';
+
+  /* Courbe de trésorerie cumulée (sparkline annuelle) */
+  var trAnnuel = []; for (var ty = 0; ty < c.H; ty++) trAnnuel.push(c.treso[Math.min(c.N - 1, (ty + 1) * 12 - 1)].cumul);
+  var maxAbs = Math.max.apply(null, trAnnuel.map(function(v){ return Math.abs(v); }).concat([1]));
+  var chartTreso = '<div class="card" style="margin-bottom:16px;"><div class="card-title">Trésorerie cumulée (fin d\'année)</div>'
+    + '<div style="display:flex;align-items:center;gap:12px;height:90px;padding-top:8px;">'
+    + trAnnuel.map(function(v, idx){
+        var hh = Math.max(3, Math.round(Math.abs(v) / maxAbs * 70));
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">'
+          + '<div style="font-size:10px;color:var(--blanc-dim);">' + fmtF(Math.round(v / 1000000)) + 'M</div>'
+          + '<div style="width:100%;height:' + hh + 'px;background:' + (v >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';border-radius:4px;"></div>'
+          + '<div style="font-size:11px;">' + c.years[idx].an + '</div></div>';
+      }).join('')
+    + '</div></div>';
 
   function annTable(rows, head) {
     return '<div class="table-wrap"><table style="font-size:12px;"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
@@ -27846,17 +27990,23 @@ function prevRender() {
   var exploit = '<div class="form-section-title" style="color:var(--or);">① Compte d\'exploitation prévisionnel</div>'
     + annTable(
         exLine('Chiffre d\'affaires (ventes)', 'CA', 'var(--vert)')
-      + exLine('Coût de production (foncier+travaux)', 'prodCost', 'var(--rouge)')
+      + exLine('Coût de production (foncier+travaux+VRD+honoraires)', 'prodCost', 'var(--rouge)')
+      + exLine('Imprévus / aléas', 'imprevus', 'var(--rouge)')
       + exLine('Études', 'etudes', 'var(--rouge)')
       + exLine('Commissions', 'comm', 'var(--rouge)')
-      + exLine('Charges fixes', 'chFixes', 'var(--rouge)')
-      + '<tr style="font-weight:700;border-top:2px solid var(--or);"><td>EBE / Résultat d\'exploitation</td>'
+      + exLine('Marketing / commercialisation', 'marketing', 'var(--rouge)')
+      + exLine('Masse salariale', 'masse', 'var(--rouge)')
+      + exLine('Frais généraux & admin', 'chFixes', 'var(--rouge)')
+      + exLine('Taxes & impôts locaux', 'taxesLoc', 'var(--rouge)')
+      + '<tr style="font-weight:700;border-top:2px solid var(--or);"><td>EBE (Excédent brut d\'exploitation)</td>'
       + c.years.map(function(a){ return '<td style="text-align:right;color:' + (a.ebe >= 0 ? 'var(--vert)' : 'var(--rouge)') + ';">' + fmtF(a.ebe) + '</td>'; }).join('') + '</tr>'
       , exHead);
   // Résultat
   var resultat = '<div class="form-section-title" style="margin-top:18px;color:var(--bleu);">② Compte de résultat prévisionnel</div>'
     + annTable(
-        exLine('Résultat d\'exploitation', 'rExploit')
+        exLine('EBE', 'ebe')
+      + exLine('Dotations aux amortissements', 'dotations', 'var(--rouge)')
+      + exLine('Résultat d\'exploitation', 'rExploit')
       + exLine('Charges financières (intérêts)', 'interets', 'var(--rouge)')
       + exLine('Résultat avant IS', 'rAvantIS')
       + exLine('Impôt sur les sociétés', 'is', 'var(--rouge)')
@@ -27891,11 +28041,13 @@ function prevRender() {
     : '<div class="alert alert-success" style="margin-top:12px;">✔ Trésorerie cumulée positive sur tout l\'horizon.</div>';
 
   var ratiosBox = '<div style="margin-top:16px;padding:14px;border-radius:var(--radius);background:rgba(29,78,216,0.06);border:1px solid rgba(29,78,216,0.2);font-size:12px;">'
-    + '<strong>Ratios bancaires :</strong> Seuil de rentabilité ≈ ' + fmtF(r.seuilRentab) + ' F/an · '
+    + '<strong>Indicateurs de rentabilité :</strong> VAN = ' + fmtF(Math.round(r.van)) + ' F (actualisée à ' + (r.tauxActu*100).toFixed(0) + '%) · '
+    + 'TRI = ' + triTxt + ' · Délai de récupération = ' + paybackTxt + ' · ROI = ' + r.roi.toFixed(1) + '%<br>'
+    + '<strong>Ratios bancaires :</strong> Seuil de rentabilité ≈ ' + fmtF(Math.round(r.seuilRentab)) + ' F/an · '
     + 'DSCR an 1 = ' + r.dscr.toFixed(2) + ' (cible ≥ 1,20) · '
-    + 'Capacité de remboursement (CAF cumulée / emprunt) = ' + r.capaRemb.toFixed(2) + 'x</div>';
+    + 'Capacité de remboursement = ' + r.capaRemb.toFixed(2) + 'x · Capitaux engagés = ' + fmtF(r.capEngage) + ' F</div>';
 
-  box.innerHTML = kpis + exploit + resultat + planfin + treso + alerte + ratiosBox;
+  box.innerHTML = verdict + kpis + chartCA + chartTreso + exploit + resultat + planfin + treso + alerte + ratiosBox;
 }
 
 /* ---- Helpers PDF ---- */
