@@ -3449,6 +3449,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                   <input type="email" id="new-user-email" class="form-control" placeholder="kouame@societe.ci">
                 </div>
                 <div class="form-group">
+                  <label>Téléphone / WhatsApp</label>
+                  <input type="text" id="new-user-tel" class="form-control" placeholder="+225 07 00 00 00 00">
+                </div>
+                <div class="form-group">
                   <label>Rôle *</label>
                   <select id="new-user-role" class="form-control" onchange="updateRolePreview()">
                     <option value="commercial">🎯 Commercial</option>
@@ -3559,6 +3563,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 </div>
                 <div class="form-group span-2"><label>Public Key</label>
                   <input type="text" id="param-emailjs-key" class="form-control" placeholder="xxxxxxxxxxxxxxx">
+                </div>
+                <div class="form-group span-2"><label>🔗 Lien de l'application (envoyé dans les invitations)</label>
+                  <input type="text" id="param-app-url" class="form-control" placeholder="https://immosuite.partnerimmo.ci">
                 </div>
               </div>
               <div style="display:flex;gap:8px;margin-top:10px;">
@@ -8007,6 +8014,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 </div>
 
 <!-- Modal Déclaration -->
+<!-- Modal Invitation (accès logiciel par Email / WhatsApp) -->
+<div class="modal-overlay" id="modal-invitation">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="invit-title">📨 Inviter à utiliser le logiciel</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-invitation')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="font-size:12px;margin-bottom:14px;">
+        Envoyez au destinataire ses accès et le lien de l'application.
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Destinataire</label><input type="text" class="form-control" id="invit-nom" readonly></div>
+        <div class="form-group"><label>Email</label><input type="email" class="form-control" id="invit-email" placeholder="email@exemple.ci"></div>
+        <div class="form-group"><label>Téléphone / WhatsApp</label><input type="text" class="form-control" id="invit-tel" placeholder="+225 ..."></div>
+        <div class="form-group span-2"><label>Message (modifiable)</label><textarea class="form-control" id="invit-message" style="min-height:180px;font-size:13px;"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="invitationCopier()">📋 Copier</button>
+      <button class="btn btn-success btn-sm" onclick="invitationWhatsApp()">💬 WhatsApp</button>
+      <button class="btn btn-primary btn-sm" onclick="invitationEmail()">✉️ Email</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-declaration">
   <div class="modal">
     <div class="modal-header">
@@ -14896,13 +14929,20 @@ async function createUserFromModal() {
   if (!allRoles[role]) role = 'commercial';
   var salt = generateSalt();
   var hash = await hashPassword(pwd, salt);
-  var user = { id: uid(), nom: nom.trim(), login: login.trim(), password_hash: hash, salt: salt, role: role };
+  var email = (document.getElementById('new-user-email')||{}).value||'';
+  var tel   = (document.getElementById('new-user-tel')||{}).value||'';
+  var user = { id: uid(), nom: nom.trim(), login: login.trim(), password_hash: hash, salt: salt, role: role, email: email.trim(), tel: tel.trim() };
   DATA.users.push(user);
   await dbPut('users', user);
   await ajouterHistorique('user', user.id, 'creation', 'Créé par ' + APP.currentUser.nom);
   closeModal('modal-user-create');
   loadParams();
   toast('✅ Utilisateur « ' + nom.trim() + ' » créé avec le rôle ' + role + '.', 'success');
+  /* Inviter à utiliser le logiciel (accès + lien) */
+  if (email.trim() || tel.trim()) {
+    ouvrirInvitation({ nom: nom.trim(), login: login.trim(), secret: pwd,
+      email: email.trim(), tel: tel.trim(), type: 'user', secretLabel: 'Mot de passe' });
+  }
 }
 
 /** Supprime un utilisateur (admin uniquement, impossible de se supprimer soi-même) */
@@ -21221,13 +21261,14 @@ function genererCodeAcces(clientId) {
   client.code_acces = code;
   client.code_acces_date = new Date().toISOString();
   dbPut('clients', client);
-  // Afficher le code dans un alert stylé
-  var msg = 'Code acces genere pour ' + client.prenoms + ' ' + client.nom + '\n\n'
-    + 'CODE : ' + code + '\n\n'
-    + 'Identifiant : Dossier ' + (client.dossier||client.id) + ' ou tel ' + client.tel + '\n\n'
-    + 'Communiquez ce code au souscripteur par WhatsApp ou SMS.';
-  alert(msg);
   toast('Code généré pour ' + client.nom + ' : ' + code, 'success');
+  /* Inviter le souscripteur (identifiant = dossier/tel + code + lien) */
+  ouvrirInvitation({
+    nom: (client.prenoms ? client.prenoms + ' ' : '') + client.nom,
+    login: client.dossier || client.tel || client.id,
+    secret: code, email: client.email || '', tel: client.tel || '',
+    type: 'souscripteur', secretLabel: "Code d'accès"
+  });
 }
 
 // ── Authentification souscripteur ────────────────────────────
@@ -21722,6 +21763,86 @@ function testerEmailJS() {
   });
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   INVITATION D'ACCÈS — envoi des identifiants + lien app (Email/WhatsApp)
+══════════════════════════════════════════════════════════════════ */
+function getAppUrl() {
+  var u = (DATA.params || {}).app_url;
+  if (u && u.trim()) return u.trim();
+  try { return location.href.split('#')[0]; } catch(e) { return ''; }
+}
+
+/* data = { nom, login, secret, email, tel, type:'user'|'souscripteur', secretLabel } */
+var _invitData = null;
+function ouvrirInvitation(data) {
+  _invitData = data || {};
+  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var url = getAppUrl();
+  var secretLabel = data.secretLabel || (data.type === 'souscripteur' ? "Code d'accès" : 'Mot de passe');
+  var espace = data.type === 'souscripteur' ? "votre Espace Souscripteur" : "l'espace de gestion";
+  var instruction = data.type === 'souscripteur'
+    ? "Ouvrez le lien, cliquez sur « Espace souscripteur », puis saisissez votre identifiant et ce code."
+    : "Ouvrez le lien et connectez-vous avec votre identifiant et votre mot de passe.";
+
+  var msg = 'Bonjour ' + (data.nom || '') + ',\n\n'
+    + 'Vous avez maintenant accès à ' + soc + ' (' + espace + ').\n\n'
+    + (url ? ('🔗 Lien : ' + url + '\n') : '')
+    + '👤 Identifiant : ' + (data.login || '') + '\n'
+    + '🔑 ' + secretLabel + ' : ' + (data.secret || '') + '\n\n'
+    + instruction + '\n\n'
+    + 'Cordialement,\n' + soc;
+
+  document.getElementById('invit-title').textContent = data.type === 'souscripteur'
+    ? '📨 Inviter le souscripteur' : '📨 Inviter l\'utilisateur';
+  document.getElementById('invit-nom').value = data.nom || '';
+  document.getElementById('invit-email').value = data.email || '';
+  document.getElementById('invit-tel').value = data.tel || '';
+  document.getElementById('invit-message').value = msg;
+  openModal('modal-invitation');
+}
+
+function invitationCopier() {
+  var t = document.getElementById('invit-message');
+  t.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  if (navigator.clipboard) { try { navigator.clipboard.writeText(t.value); } catch(e) {} }
+  toast('Message copié.', 'success');
+}
+
+function invitationWhatsApp() {
+  var tel = (document.getElementById('invit-tel').value || '').replace(/[\s+\-()]/g, '');
+  var msg = document.getElementById('invit-message').value;
+  if (!tel) { toast('Numéro de téléphone manquant.', 'error'); return; }
+  if (tel.indexOf('225') !== 0 && tel.length <= 10) tel = '225' + tel;  /* indicatif CI par défaut */
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function invitationEmail() {
+  var email = (document.getElementById('invit-email').value || '').trim();
+  var msg = document.getElementById('invit-message').value;
+  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var sujet = 'Vos accès à ' + soc;
+  if (!email) { toast('Email manquant.', 'error'); return; }
+
+  var p = DATA.params || {};
+  if (p.emailjs_service && p.emailjs_template && p.emailjs_key && typeof emailjs !== 'undefined') {
+    emailjs.init(p.emailjs_key);
+    emailjs.send(p.emailjs_service, p.emailjs_template, {
+      to_email: email, to_name: _invitData.nom || '', subject: sujet,
+      message: msg, from_name: soc, reply_to: p.email || ''
+    }).then(function() {
+      toast('✅ Invitation envoyée à ' + email, 'success');
+      closeModal('modal-invitation');
+    }).catch(function(err) {
+      toast('❌ Erreur EmailJS : ' + (err.text || err), 'error');
+    });
+  } else {
+    /* Repli : client mail par défaut */
+    window.location.href = 'mailto:' + email + '?subject=' + encodeURIComponent(sujet) + '&body=' + encodeURIComponent(msg);
+    toast('Client email ouvert (EmailJS non configuré).', 'info');
+  }
+}
+
 function envoyerEmailClient() {
   var c = DATA.clients.find(function(x){ return x.id === APP.editingId; });
   if (!c)                 { toast('Aucun client sélectionné.','error'); return; }
@@ -21874,6 +21995,7 @@ async function saveCommsParams() {
     emailjs_service:  gv('param-emailjs-service'),
     emailjs_template: gv('param-emailjs-template'),
     emailjs_key:      gv('param-emailjs-key'),
+    app_url:          gv('param-app-url'),
     wa_societe:       gv('param-wa-societe'),
     wa_message:       gv('param-wa-message'),
     twilio_sid:       gv('param-twilio-sid'),
@@ -21901,6 +22023,7 @@ loadParamFields = function() {
   sv('param-emailjs-service',  p.emailjs_service);
   sv('param-emailjs-template', p.emailjs_template);
   sv('param-emailjs-key',      p.emailjs_key);
+  sv('param-app-url',          p.app_url);
   sv('param-wa-societe',       p.wa_societe);
   sv('param-wa-message',       p.wa_message||'Bonjour {nom}, votre promoteur ImmoSuite ERP vous contacte.');
   sv('param-twilio-sid',       p.twilio_sid);
