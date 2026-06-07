@@ -3372,7 +3372,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="card">
               <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
                 <span>👤 Utilisateurs du système</span>
-                <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Nouvel utilisateur</button>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn btn-secondary btn-sm" onclick="confirmReinitMotsDePasse()" title="Réinitialise les mots de passe de tous les utilisateurs">🔑 Réinitialiser les mots de passe</button>
+                  <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Nouvel utilisateur</button>
+                </div>
               </div>
               <div id="users-list" style="margin-top:12px;"></div>
             </div>
@@ -4600,6 +4603,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
            CRM — CARTE GÉOLOCALISÉE
       ═══════════════════════════════════════════════ -->
       <div class="page" id="page-crm-carte">
+        <style>
+          @media (max-width: 768px) {
+            #page-crm-carte .geo-layout { grid-template-columns: 1fr !important; }
+            #page-crm-carte #geo-map-leaflet { height: 58vh !important; min-height: 320px; }
+            #page-crm-carte .filters-bar { flex-wrap: wrap; }
+            #page-crm-carte .filters-bar .search-input,
+            #page-crm-carte .filters-bar .filter-select { min-width: 0 !important; width: 100%; }
+          }
+        </style>
         <div class="page-header" style="flex-wrap:wrap;gap:10px;">
           <div>
             <div class="page-title">Carte Commerciale</div>
@@ -4639,7 +4651,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <input type="text" class="search-input" id="geo-search" placeholder="🔍 Nom, téléphone, commune..." oninput="renderCarteGeo()" style="min-width:200px;">
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
+        <div class="geo-layout" style="display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;">
 
           <!-- Carte Leaflet -->
           <div>
@@ -4693,6 +4705,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
            CRM — PLANIFICATION D'ITINÉRAIRES
       ═══════════════════════════════════════════════ -->
       <div class="page" id="page-crm-itineraires">
+        <style>
+          @media (max-width: 768px) {
+            #page-crm-itineraires [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+            #page-crm-itineraires .filters-bar { flex-wrap: wrap; }
+            #page-crm-itineraires .filters-bar .filter-select,
+            #page-crm-itineraires .filters-bar .search-input { min-width: 0 !important; width: 100%; }
+            #page-crm-itineraires .card { overflow-x: auto; }
+          }
+        </style>
         <div class="page-header">
           <div>
             <div class="page-title">Planification d'Itinéraires</div>
@@ -5250,6 +5271,19 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
       <!-- ── RAPPORTS COMMERCIAUX ───────────────────── -->
       <div class="page" id="page-crm-rapports">
+        <style>
+          @media (max-width: 768px) {
+            #page-crm-rapports [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+            #page-crm-rapports [style*="grid-template-columns:300px 1fr"] { grid-template-columns: 1fr !important; }
+            #page-crm-rapports [style*="repeat(4,1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
+            #page-crm-rapports [style*="repeat(3,1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
+            #page-crm-rapports .filters-bar { flex-wrap: wrap; }
+            #page-crm-rapports .filters-bar .filter-select,
+            #page-crm-rapports .filters-bar .search-input { min-width: 0 !important; width: 100%; }
+            #page-crm-rapports .card { overflow-x: auto; }
+            #page-crm-rapports table { font-size: 11px; }
+          }
+        </style>
         <div class="page-header">
           <div>
             <div class="page-title">Rapports Commerciaux</div>
@@ -10423,7 +10457,20 @@ async function loadAllData() {
     var prows = await dbGetAll('params');
     if (prows.length) DATA.params = Object.assign(DATA.params || {}, prows[0]);
     var urows = await dbGetAll('users');
-    if (urows.length) DATA.users = urows;
+    if (urows.length) {
+      DATA.users = urows;
+    } else {
+      /* Admin pré-créé par défaut (identifiant: admin / mot de passe: Sanix2026!) — à changer après connexion */
+      var adminDefaut = {
+        id: 1, login: 'admin', nom: 'Administrateur', role: 'admin', statut: 'actif',
+        salt: '5a6e69784945524d4f3230323673656c61646d696e696d6d6f7375697465',
+        password_hash: 'ead0913712d5114ee5b8893ed0fe6cf2345ce38a54ccb2c44cb877bba0c7d786',
+        must_change: true,
+        created_at: new Date().toISOString()
+      };
+      DATA.users = [adminDefaut];
+      try { await dbPut('users', adminDefaut); } catch(e) {}
+    }
   } catch(e) {}
 }
 
@@ -10687,6 +10734,44 @@ async function hashPassword(password, salt) {
     } catch (e) { /* contexte non sécurisé (file://) → fallback JS */ }
   }
   return _sha256js(data);
+}
+
+/** Politique de mot de passe fort : 8 car., 1 maj, 1 chiffre, 1 spécial */
+/** Réinitialise les mots de passe de TOUS les utilisateurs (SHA-256 + sel). */
+async function reinitialiserTousMotsDePasse(nouveauMdp) {
+  nouveauMdp = nouveauMdp || 'Sanix2026!';
+  if (!DATA.users || !DATA.users.length) {
+    if (typeof toast === 'function') toast('Aucun utilisateur à réinitialiser.', 'error');
+    return 0;
+  }
+  var n = 0;
+  for (var i = 0; i < DATA.users.length; i++) {
+    var u = DATA.users[i];
+    u.salt = generateSalt();
+    u.password_hash = await hashPassword(nouveauMdp, u.salt);
+    delete u.password;
+    u.must_change = true;
+    await dbPut('users', u);
+    n++;
+  }
+  console.log('[SEC] ' + n + ' mot(s) de passe réinitialisé(s) → « ' + nouveauMdp + ' »');
+  if (typeof toast === 'function') toast(n + ' mot(s) de passe réinitialisé(s). Nouveau : ' + nouveauMdp, 'success');
+  return n;
+}
+if (typeof window !== 'undefined') window.reinitialiserTousMotsDePasse = reinitialiserTousMotsDePasse;
+
+/** Réinitialisation avec confirmation + saisie d'un mot de passe commun (admin). */
+async function confirmReinitMotsDePasse() {
+  if (typeof currentUser !== 'undefined' && currentUser && currentUser.role && currentUser.role !== 'admin') {
+    toast('Action réservée à l\'administrateur.', 'error'); return;
+  }
+  var mdp = prompt('Nouveau mot de passe commun pour TOUS les utilisateurs\n(min. 8 car., 1 majuscule, 1 chiffre, 1 spécial) :', 'Sanix2026!');
+  if (mdp === null) return;
+  var err = validatePasswordPolicy(mdp);
+  if (err) { toast(err, 'error'); return; }
+  if (!confirm('Confirmer la réinitialisation de TOUS les mots de passe vers « ' + mdp + ' » ?\nChaque utilisateur devra le changer à la prochaine connexion.')) return;
+  var n = await reinitialiserTousMotsDePasse(mdp);
+  if (n) alert('✅ ' + n + ' mot(s) de passe réinitialisé(s).\n\nNouveau mot de passe : ' + mdp + '\n\nCommunique-le aux utilisateurs ; ils devront le changer.');
 }
 
 /** Politique de mot de passe fort : 8 car., 1 maj, 1 chiffre, 1 spécial */
