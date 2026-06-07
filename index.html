@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.1 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v18.2 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -10449,6 +10449,13 @@ function dbPut(store, obj) {
     if (!db) { resolve(); return; }
     if (!db.objectStoreNames.contains(store)) { resolve(); return; }
     try {
+      /* ── Dirty tracking : marquer cet enregistrement à pousser vers le cloud
+         lors du prochain cycle (toutes les 30 s).
+         On ne marque PAS pendant un pull cloud (_pulling=true) pour éviter
+         de réexpédier ce qu'on vient juste de recevoir. ── */
+      if (!_pulling && obj && obj.id !== undefined && _SYNC_TABLE_BY_STORE && _SYNC_TABLE_BY_STORE[store]) {
+        _dirtySync[store + '|' + String(obj.id)] = true;
+      }
       var tx = db.transaction(store, 'readwrite');
       tx.objectStore(store).put(obj);
       tx.oncomplete = resolve;
@@ -10823,6 +10830,57 @@ async function syncFromSupabase() {
   ['renderClients','renderLots','renderProgrammes','renderVersements','buildRapportsCommerciaux','refreshDashboard']
     .forEach(function(fn){ if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} } });
   toast('Données récupérées depuis le Cloud (' + total + ').', 'success');
+}
+
+/* ── Pull silencieux après login ──────────────────────────────────────────
+   Récupère toutes les données depuis Supabase sans demander de confirmation
+   et sans inonder l'interface de toasts.  Met à jour l'interface en fond.
+   Stratégie "newest wins" : le cloud écrase le local seulement si plus récent.
+─────────────────────────────────────────────────────────────────────────── */
+async function pullFromCloudSilent() {
+  if (!navigator.onLine) return;
+  getSBConfig();
+  if (!SB.url || !SB.key) return;
+
+  _pulling = true;   // empêche dbPut de marquer ces enregistrements "dirty"
+  var total = 0;
+  try {
+    for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
+      var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
+      try {
+        var rows = await sbFetch(table + '?select=*', 'GET');
+        if (!rows || !rows.length) continue;
+        if (!DATA[store]) DATA[store] = [];
+        var byId = {};
+        DATA[store].forEach(function(x){ if (x && x.id !== undefined) byId[String(x.id)] = x; });
+        for (var j = 0; j < rows.length; j++) {
+          var r = _supaUnwrap(table, rows[j]);
+          if (!r || r.id === undefined) continue;
+          var ex = byId[String(r.id)];
+          if (!ex || _ts(r) >= _ts(ex)) {
+            byId[String(r.id)] = r;
+            try { await dbPut(store, r); } catch(e) {}   // _pulling=true → pas marqué dirty
+            total++;
+          }
+        }
+        DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
+      } catch(tableErr) { /* une table en erreur ne bloque pas les autres */ }
+    }
+  } finally {
+    _pulling = false;
+  }
+
+  if (total > 0) {
+    /* Rafraîchir les vues actives sans bruit */
+    ['refreshDashboard','renderClients','renderLots','renderProgrammes',
+     'renderVersements','renderEmployes','renderParcelles']
+      .forEach(function(fn){
+        if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} }
+      });
+    /* Toast discret : une seule ligne, pas de popup */
+    toast('☁️ Données synchronisées (' + total + ' enreg.)', 'info', 2500);
+    console.log('[Sync] Pull post-login : ' + total + ' enregistrement(s) mis à jour.');
+  }
 }
 
 /* Rejoue la file en respectant l'ordre. S'arrête au premier échec (réseau). */
@@ -11220,6 +11278,7 @@ async function doLogin() {
   localStorage.setItem('pici_login_attempts', JSON.stringify(attempts));
 
   startSession(user);
+  demarrerSyncAuto();           // ← lance le push dirty toutes les 30 s
   startInactivityTimer();
   await logConnexion(u, true, 'Connexion réussie');
 
@@ -11228,11 +11287,17 @@ async function doLogin() {
   document.getElementById('user-name').textContent   = user.nom;
   document.getElementById('user-avatar').textContent = user.nom[0].toUpperCase();
   goTo('dashboard');
+
+  /* Pull silencieux en arrière-plan : récupère les données cloud sans bloquer l'UI.
+     Délai 1,5 s pour laisser le dashboard se rendre avant la mise à jour. */
+  setTimeout(function(){ pullFromCloudSilent(); }, 1500);
 }
 
 function logout(forced) {
   if (!forced && !confirm('Se déconnecter ?')) return;
   stopInactivityTimer();
+  /* Arrêter le timer de synchro automatique */
+  if (window._autoSyncTimer) { clearInterval(window._autoSyncTimer); window._autoSyncTimer = null; }
   localStorage.removeItem('pici_auth_token');
   APP.currentUser = null;
   showLogin();
