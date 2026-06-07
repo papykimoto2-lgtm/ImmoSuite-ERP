@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v17.8 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v18.1 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -10720,6 +10720,37 @@ var SUPA_STORE_MAP = [
   ['pi_actions_reunion', 'actions_reunion']
 ];
 
+/* ── Suivi des modifications : on n'envoie que ce qui a changé ── */
+var _SYNC_TABLE_BY_STORE = {};
+SUPA_STORE_MAP.forEach(function(p){ _SYNC_TABLE_BY_STORE[p[1]] = p[0]; });
+var _dirtySync = {};        // "store|id" des enregistrements modifiés localement
+var _pulling = false;       // vrai pendant une récupération depuis le cloud (ne pas marquer comme « modifié »)
+
+/* Envoie au cloud uniquement les enregistrements modifiés depuis le dernier envoi (léger). */
+async function flushDirtySync() {
+  if (!SB.url || !SB.key || !navigator.onLine) return;
+  var keys = Object.keys(_dirtySync);
+  if (!keys.length) return;
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i], sep = k.indexOf('|'), store = k.slice(0, sep), id = k.slice(sep + 1);
+    var table = _SYNC_TABLE_BY_STORE[store];
+    if (!table) { delete _dirtySync[k]; continue; }
+    var rec = (DATA[store] || []).find(function(x){ return String(x.id) === String(id); });
+    if (!rec) { delete _dirtySync[k]; continue; }   // supprimé localement → la suppression cloud est gérée ailleurs
+    var ok = await syncToSupabase(table, rec);
+    if (ok) delete _dirtySync[k];                    // sinon on garde pour réessayer au prochain cycle
+  }
+}
+
+/* Démarre la synchro automatique : envoi des changements toutes les 30 s + reprise de la file. */
+function demarrerSyncAuto() {
+  if (window._autoSyncTimer) return;
+  window._autoSyncTimer = setInterval(function(){
+    try { flushDirtySync(); } catch(e){}
+    try { if (typeof flushSyncOutbox === 'function') flushSyncOutbox(); } catch(e){}
+  }, 30000);
+}
+
 /* Push global : envoie tous les enregistrements locaux vers Supabase */
 async function syncAllToSupabase() {
   if (!SB.url || !SB.key) { toast('Configurez d\'abord l\'URL et la clé Supabase.', 'error'); return; }
@@ -11218,6 +11249,7 @@ function goTo(page) {
   var navEl = document.querySelector('[data-page="' + page + '"]');
   if (navEl) navEl.classList.add('active');
   APP.currentPage = page;
+  if (typeof crmStopPolling === 'function') crmStopPolling();
   if (page === 'dashboard') refreshDashboard();
   if (page === 'clients') renderClients();
   if (page === 'paiements') { renderVersements(); populateClientSelects(); }
@@ -11237,7 +11269,7 @@ function goTo(page) {
   if (page === 'constructeurs') { renderConstructeurs(); updateConstructeursKPIs(); }
   if (page === 'conventions') { renderConventions(); populateConventionSelects(); }
   if (page === 'avancement') { renderChantiersDashboard(); }
-  if (page === 'leads') { renderPipeline(); }
+  if (page === 'leads') { renderPipeline(); if (typeof crmStartPolling === 'function') crmStartPolling(); }
   if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else { renderCarteGeo(); _refreshGeoMap(false); } }, 80); }
   if (page === 'crm-itineraires') { loadPageItineraires(); }
   if (page === 'crm-rapports')   { buildRapportsCommerciaux(); }
@@ -24912,7 +24944,7 @@ async function saveEvenement() {
   if(!DATA.evenements_calendrier) DATA.evenements_calendrier=[];
   if(APP.editingId){var idx=DATA.evenements_calendrier.findIndex(function(e){return e.id===APP.editingId;});if(idx>=0)DATA.evenements_calendrier[idx]=ev;}
   else DATA.evenements_calendrier.push(ev);
-  await dbPut('evenements_calendrier',ev);
+  await dbPut('evenements_calendrier',ev); if (typeof syncToSupabase==='function') syncToSupabase('pi_evenements_calendrier', ev);
   closeModal('modal-evenement');
   renderCalendrier();
   toast((APP.editingId?'Événement modifié':'Événement créé')+' : '+titre,'success');
@@ -24925,7 +24957,7 @@ async function supprimerEvenement(id) {
   if(!eid) return;
   if(!confirm('Supprimer cet événement ?')) return;
   DATA.evenements_calendrier=(DATA.evenements_calendrier||[]).filter(function(e){return e.id!==eid;});
-  await dbDelete('evenements_calendrier',eid);
+  await dbDelete('evenements_calendrier',eid); if (typeof deleteFromSupabase==='function') deleteFromSupabase('pi_evenements_calendrier', eid);
   closeModal('modal-evenement');
   renderCalendrier();
   toast('Événement supprimé.','info');
@@ -25001,16 +25033,18 @@ function renderConversations() {
 /* ─── Patch goTo ──────────────────────────────────────── */
 var _origGoToCollab = goTo;
 goTo = function(page) {
+  if (typeof msgStopPolling === 'function') msgStopPolling();   // arrête le rafraîchissement si on quitte la messagerie
+  if (typeof calStopPolling === 'function') calStopPolling();
   if (page==='calendrier') {
     _origGoToCollab(page);
     setTimeout(function(){
       var moisEl=document.getElementById('cal-mois-select');
       if(moisEl&&!moisEl.value) moisEl.value=today().slice(0,7);
-      chargerEvenements().then(function(){ renderCalendrier(); });
+      chargerEvenements().then(function(){ renderCalendrier(); if (typeof calStartPolling==='function') calStartPolling(); });
     },80);
   } else if (page==='messagerie') {
     _origGoToCollab(page);
-    setTimeout(function(){ chargerMessages().then(function(){ renderConversations(); }); },80);
+    setTimeout(function(){ chargerMessages().then(function(){ renderConversations(); if (typeof msgStartPolling==='function') msgStartPolling(); }); },80);
   } else {
     _origGoToCollab(page);
   }
@@ -26052,6 +26086,23 @@ function _plInitiales(nom) {
 function _plRelanceDue(l) {
   if (!l.date_relance) return false;
   return l.date_relance <= today();
+}
+
+/* ── Rafraîchissement automatique : Pipeline commercial (leads) ── */
+function crmStopPolling(){ if(window._crmPollTimer){clearInterval(window._crmPollTimer);window._crmPollTimer=null;} }
+function crmStartPolling(){ crmStopPolling(); if(!SB.url||!SB.key)return; window._crmPollTimer=setInterval(crmPollNouveaux,15000); }
+async function crmPollNouveaux(){
+  if(!SB.url||!SB.key||!navigator.onLine)return;
+  if(document.querySelector('.modal.open, .modal-overlay.active'))return;   // ne pas déranger en pleine édition
+  var since=new Date(Date.now()-90000).toISOString();
+  try{
+    var rows=await sbFetch('pi_leads?updated_at=gt.'+encodeURIComponent(since)+'&select=*','GET');
+    if(!rows||!rows.length)return;
+    DATA.leads=DATA.leads||[];
+    var byId={},changed=false; DATA.leads.forEach(function(x){byId[x.id]=x;});
+    rows.forEach(function(row){var l=_supaUnwrap('pi_leads',row); if(!l||!l.id)return; if(!byId[l.id]||_ts(l)>=_ts(byId[l.id])){byId[l.id]=l;try{dbPut('leads',l);}catch(_){} changed=true;}});
+    if(changed){ DATA.leads=Object.keys(byId).map(function(k){return byId[k];}); if(typeof renderPipeline==='function')renderPipeline(); }
+  }catch(e){}
 }
 
 function renderPipeline() {
@@ -30098,6 +30149,48 @@ async function rdLoadData() {
   rdUpdateBadge();
 }
 
+/* ── Rafraîchissement automatique : Calendrier partagé ── */
+function calStopPolling(){ if(window._calPollTimer){clearInterval(window._calPollTimer);window._calPollTimer=null;} }
+function calStartPolling(){ calStopPolling(); if(!SB.url||!SB.key)return; window._calPollTimer=setInterval(calPollNouveaux,15000); }
+async function calPollNouveaux(){
+  if(!SB.url||!SB.key||!navigator.onLine)return;
+  var since=new Date(Date.now()-90000).toISOString();
+  try{
+    var rows=await sbFetch('pi_evenements_calendrier?updated_at=gt.'+encodeURIComponent(since)+'&select=*','GET');
+    if(!rows||!rows.length)return;
+    DATA.evenements_calendrier=DATA.evenements_calendrier||[];
+    var byId={},changed=false; DATA.evenements_calendrier.forEach(function(x){byId[x.id]=x;});
+    rows.forEach(function(row){var e=_supaUnwrap('pi_evenements_calendrier',row); if(!e||!e.id)return; if(!byId[e.id]||_ts(e)>=_ts(byId[e.id])){byId[e.id]=e;try{dbPut('evenements_calendrier',e);}catch(_){} changed=true;}});
+    if(changed){ DATA.evenements_calendrier=Object.keys(byId).map(function(k){return byId[k];});
+      if(typeof renderCalendrier==='function')renderCalendrier();
+      if(typeof renderListeEvenements==='function')renderListeEvenements();
+    }
+  }catch(e){}
+}
+
+/* ── Rafraîchissement automatique : Réunions Direction ── */
+function rdStopPolling(){ if(window._rdPollTimer){clearInterval(window._rdPollTimer);window._rdPollTimer=null;} }
+function rdStartPolling(){ rdStopPolling(); if(!SB.url||!SB.key)return; window._rdPollTimer=setInterval(rdPollNouveaux,15000); }
+async function rdPollNouveaux(){
+  if(!SB.url||!SB.key||!navigator.onLine)return;
+  var since=new Date(Date.now()-90000).toISOString();
+  try{
+    var changed=false;
+    var rows=await sbFetch('pi_reunions_direction?updated_at=gt.'+encodeURIComponent(since)+'&select=*','GET');
+    if(rows&&rows.length){ DATA.reunions_direction=DATA.reunions_direction||[]; var b={}; DATA.reunions_direction.forEach(function(x){b[x.id]=x;});
+      rows.forEach(function(row){var r=_supaUnwrap('pi_reunions_direction',row); if(!r||!r.id)return; if(!b[r.id]||_ts(r)>=_ts(b[r.id])){b[r.id]=r;try{dbPut('reunions_direction',r);}catch(_){} changed=true;}});
+      DATA.reunions_direction=Object.keys(b).map(function(k){return b[k];}); }
+    var arows=await sbFetch('pi_actions_reunion?updated_at=gt.'+encodeURIComponent(since)+'&select=*','GET');
+    if(arows&&arows.length){ DATA.actions_reunion=DATA.actions_reunion||[]; var ab={}; DATA.actions_reunion.forEach(function(x){ab[x.id]=x;});
+      arows.forEach(function(row){var a=_supaUnwrap('pi_actions_reunion',row); if(!a||!a.id)return; if(!ab[a.id]||_ts(a)>=_ts(ab[a.id])){ab[a.id]=a;try{dbPut('actions_reunion',a);}catch(_){} changed=true;}});
+      DATA.actions_reunion=Object.keys(ab).map(function(k){return ab[k];}); }
+    if(changed && !document.querySelector('.modal.open, .modal-overlay.active')){
+      if(typeof rdUpdateBadge==='function')rdUpdateBadge();
+      if(typeof rdInitPage==='function')rdInitPage();
+    } else if(changed && typeof rdUpdateBadge==='function'){ rdUpdateBadge(); }
+  }catch(e){}
+}
+
 function rdUpdateBadge() {
   var retard = (DATA.actions_reunion||[]).filter(function(a){ return a.statut !== 'done' && rdIsRetard(a.delai); }).length;
   var badge = document.getElementById('badge-reunions-retard');
@@ -30112,7 +30205,8 @@ function rdUpdateBadge() {
   var _orig = goTo;
   goTo = function(page) {
     _orig(page);
-    if (page === 'reunion-direction') rdInitPage();
+    if (typeof rdStopPolling === 'function') rdStopPolling();
+    if (page === 'reunion-direction') { rdInitPage(); if (typeof rdStartPolling === 'function') rdStartPolling(); }
   };
 })();
 
@@ -30296,7 +30390,7 @@ async function rdSauvegarderReunion() {
   };
 
   DATA.reunions_direction.push(r);
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
 
   rdResetPlanForm();
   rdUpdateBadge();
@@ -30379,7 +30473,7 @@ async function rdToggleConfirmation(reunionId, participantId) {
   var p = (r.participants||[]).find(function(x){ return x.id===participantId; });
   if (!p) return;
   p.confirme = !p.confirme;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   rdRenderParticipantsConvoc(r);
   toast(p.confirme?'✅ '+p.nom+' confirmé':p.nom+' : en attente','info');
 }
@@ -30389,7 +30483,7 @@ async function rdTousConfirmes() {
   var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===id; });
   if (!r) return;
   (r.participants||[]).forEach(function(p){ p.confirme=true; });
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   rdRenderParticipantsConvoc(r);
   toast('✅ Tous participants confirmés','success');
 }
@@ -30489,7 +30583,7 @@ async function rdSauvegarderPreparation() {
   r.odj = JSON.parse(JSON.stringify(RD_STATE.currentODJ));
   r.docs_prepa = document.getElementById('rd-prep-docs').value;
   r.notes_prepa = document.getElementById('rd-prep-notes').value;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   toast('✅ Préparation sauvegardée','success');
 }
 
@@ -30550,7 +30644,7 @@ async function rdTogglePresence(reunionId, participantId) {
   var p = (r.participants||[]).find(function(x){ return x.id===participantId; });
   if (!p) return;
   p.present = !p.present;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   rdRenderPresence(r);
 }
 
@@ -30559,7 +30653,7 @@ async function rdMarquerTraite(reunionId, pointId) {
   if (!r) return;
   var p = (r.odj||[]).find(function(x){ return x.id===pointId; });
   if (p) p.traite = !p.traite;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   rdChargerRealisation();
 }
 
@@ -30586,7 +30680,7 @@ async function rdOuvrirSeance() {
   if (!r) return;
   r.statut = 'en_cours';
   r.heure_ouverture = rdNow();
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   toast('🔔 Séance ouverte — '+rdDateHeure(r.heure_ouverture),'success');
 }
 
@@ -30645,7 +30739,7 @@ async function rdSauvegarderNotes() {
   r.notes_seance = document.getElementById('rd-notes-seance').value;
   r.decisions = JSON.parse(JSON.stringify(RD_STATE.currentDecisions));
   r.actions   = JSON.parse(JSON.stringify(RD_STATE.currentActionsLive));
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   toast('✅ Notes sauvegardées','success');
 }
 
@@ -30660,13 +30754,13 @@ async function rdCloturerSeance() {
   r.notes_seance = document.getElementById('rd-notes-seance').value;
   r.decisions = JSON.parse(JSON.stringify(RD_STATE.currentDecisions));
   r.actions   = JSON.parse(JSON.stringify(RD_STATE.currentActionsLive));
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   /* Persister actions dans store global */
   for (var i=0;i<RD_STATE.currentActionsLive.length;i++) {
     var a = Object.assign({}, RD_STATE.currentActionsLive[i], { reunion_id:id, reunion_titre:r.titre });
     var idx2 = DATA.actions_reunion.findIndex(function(x){ return x.id===a.id; });
     if (idx2>=0) DATA.actions_reunion[idx2]=a; else DATA.actions_reunion.push(a);
-    await dbPut('actions_reunion', a);
+    await dbPut('actions_reunion', a); if (typeof syncToSupabase==='function') syncToSupabase('pi_actions_reunion', a);
   }
   rdUpdateBadge();
   toast('🔒 Séance clôturée ! PV généré.','success');
@@ -30772,7 +30866,7 @@ async function rdChangerStatutAction(reunionId, actionId, statut) {
   var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===reunionId; });
   if (!r) return;
   var a = (r.actions||[]).find(function(x){ return x.id===actionId; });
-  if (a) { a.statut=statut; await dbPut('reunions_direction', r); }
+  if (a) { a.statut=statut; await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r); }
   var ga = (DATA.actions_reunion||[]).find(function(x){ return x.id===actionId; });
   if (ga) { ga.statut=statut; await dbPut('actions_reunion', ga); }
   rdUpdateBadge();
@@ -30797,8 +30891,8 @@ async function rdAjouterActionPV() {
   if (!r.actions) r.actions=[];
   r.actions.push(a);
   DATA.actions_reunion.push(a);
-  await dbPut('reunions_direction', r);
-  await dbPut('actions_reunion', a);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
+  await dbPut('actions_reunion', a); if (typeof syncToSupabase==='function') syncToSupabase('pi_actions_reunion', a);
   ['rd-pva-titre','rd-pva-delai','rd-pva-obs'].forEach(function(fid){ document.getElementById(fid).value=''; });
   rdRenderPlanActionPV(r);
   rdUpdateBadge();
@@ -30812,7 +30906,7 @@ async function rdSauvegarderPV() {
   r.pv_numero = document.getElementById('rd-pv-numero').value;
   r.pv_date   = document.getElementById('rd-pv-date').value;
   r.pv_resume = document.getElementById('rd-pv-resume').value;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   rdGenererApercu(r);
   toast('✅ PV sauvegardé.','success');
 }
@@ -30881,7 +30975,7 @@ async function rdPlanifierProchaine() {
   r.prochaine_lieu   = document.getElementById('rd-proch-lieu').value;
   r.prochaine_themes = document.getElementById('rd-proch-themes').value;
   r.prochaine_notes  = document.getElementById('rd-proch-notes').value;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   /* Créer automatiquement la prochaine */
   var suivante = {
     id:uid(), titre:r.titre+' — Suivante',
@@ -30966,7 +31060,7 @@ async function rdTogglePVRecu(reunionId, participantId) {
   var p = (r.participants||[]).find(function(x){ return x.id===participantId; });
   if (!p) return;
   p.pv_recu = !p.pv_recu;
-  await dbPut('reunions_direction', r);
+  await dbPut('reunions_direction', r); if (typeof syncToSupabase==='function') syncToSupabase('pi_reunions_direction', r);
   rdChargerDiffusion();
   toast(p.pv_recu?'✅ PV marqué reçu — '+p.nom:p.nom+' : non reçu','info');
 }
@@ -31020,7 +31114,7 @@ async function rdChangerStatutSuivi(actionId, statut) {
   var a = (DATA.actions_reunion||[]).find(function(x){ return x.id===actionId; });
   if (!a) return;
   a.statut = statut;
-  await dbPut('actions_reunion', a);
+  await dbPut('actions_reunion', a); if (typeof syncToSupabase==='function') syncToSupabase('pi_actions_reunion', a);
   if (a.reunion_id) {
     var r = (DATA.reunions_direction||[]).find(function(x){ return x.id===a.reunion_id; });
     if (r) { var ra=(r.actions||[]).find(function(x){ return x.id===actionId; }); if(ra){ ra.statut=statut; await dbPut('reunions_direction',r); } }
@@ -33050,6 +33144,52 @@ function msgEscape(s) {
 /* ────────────────────────────────────────────
    ENVOI DE MESSAGE (remplace la fonction existante)
 ──────────────────────────────────────────────── */
+/* ── Rafraîchissement automatique de la messagerie (quasi temps réel) ── */
+function msgStopPolling() { if (MSG._pollTimer) { clearInterval(MSG._pollTimer); MSG._pollTimer = null; } }
+function msgStartPolling() {
+  msgStopPolling();
+  if (!SB.url || !SB.key) return;          // pas de cloud configuré → pas de rafraîchissement
+  MSG._pollTimer = setInterval(msgPollNouveaux, 12000);
+}
+async function msgPollNouveaux() {
+  if (!SB.url || !SB.key || !navigator.onLine) return;
+  var since = new Date(Date.now() - 60000).toISOString();   // 60 s glissantes (chevauchement = aucun manque)
+  try {
+    var changed = false, convChanged = false;
+    var rows = await sbFetch('pi_messages?updated_at=gt.' + encodeURIComponent(since) + '&select=*&order=updated_at.asc', 'GET');
+    if (rows && rows.length) {
+      DATA.messages = DATA.messages || [];
+      var byId = {}; DATA.messages.forEach(function(x){ byId[x.id] = x; });
+      rows.forEach(function(row){
+        var m = _supaUnwrap('pi_messages', row);
+        if (!m || !m.id) return;
+        if (!byId[m.id] || _ts(m) >= _ts(byId[m.id])) { byId[m.id] = m; try { dbPut('messages', m); } catch(e){} changed = true; }
+      });
+      DATA.messages = Object.keys(byId).map(function(k){ return byId[k]; });
+    }
+    var crows = await sbFetch('pi_conversations?updated_at=gt.' + encodeURIComponent(since) + '&select=*&order=updated_at.asc', 'GET');
+    if (crows && crows.length) {
+      DATA.conversations = DATA.conversations || [];
+      var cById = {}; DATA.conversations.forEach(function(x){ cById[x.id] = x; });
+      crows.forEach(function(row){
+        var c = _supaUnwrap('pi_conversations', row);
+        if (!c || !c.id) return;
+        if (!cById[c.id] || _ts(c) >= _ts(cById[c.id])) { cById[c.id] = c; try { dbPut('conversations', c); } catch(e){} convChanged = true; }
+      });
+      DATA.conversations = Object.keys(cById).map(function(k){ return cById[k]; });
+    }
+    if (changed || convChanged) {
+      if (typeof renderConversations === 'function') renderConversations();
+      if (changed && MSG.activeConvId) {
+        var conv = (DATA.conversations || []).find(function(c){ return c.id === MSG.activeConvId; });
+        var u = (APP.currentUser && APP.currentUser.id) || 'admin';
+        if (typeof msgRenderMessages === 'function') msgRenderMessages(MSG.activeConvId, u, conv && conv.type === 'groupe', conv);
+      }
+      if (typeof updateBadgeMessages === 'function') updateBadgeMessages();
+    }
+  } catch(e) {}
+}
+
 async function envoyerMessage() {
   var convId = (document.getElementById('message-input')||{}).dataset.convId || MSG.activeConvId;
   var contenu = (document.getElementById('message-input').value||'').trim();
@@ -33069,6 +33209,7 @@ async function envoyerMessage() {
 
   DATA.messages.push(msg);
   await dbPut('messages', msg);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_messages', msg);
   document.getElementById('message-input').value = '';
   document.getElementById('message-input').style.height = '';
   MSG.pendingFiles = [];
@@ -33206,6 +33347,7 @@ async function envoyerNouveauMessage() {
     conv = { id:uid(), type:'direct', participants:participants, date_creation:new Date().toISOString() };
     DATA.conversations.push(conv);
     await dbPut('conversations', conv);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', conv);
   }
 
   var msg = {
@@ -33216,6 +33358,7 @@ async function envoyerNouveauMessage() {
   };
   DATA.messages.push(msg);
   await dbPut('messages', msg);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_messages', msg);
 
   MSG.modalFiles = [];
   closeModal('modal-nouveau-message');
