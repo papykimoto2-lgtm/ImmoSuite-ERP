@@ -3086,6 +3086,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <!-- ── PARAMÈTRES ─────────────────────────────── -->
       <!-- ⚙ PARAMÈTRES ──────────────────────────────── -->
       <div class="page" id="page-parametres">
+        <style>
+          @media (max-width: 768px) {
+            #page-parametres [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+            #page-parametres .tab-nav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+            #page-parametres .tab-btn { white-space: nowrap; flex: 0 0 auto; }
+            #page-parametres .filters-bar { flex-wrap: wrap; }
+            #page-parametres .filters-bar .filter-select,
+            #page-parametres .filters-bar .search-input { min-width: 0 !important; width: 100%; }
+            #page-parametres .card { overflow-x: auto; }
+          }
+        </style>
         <div class="page-header">
           <div>
             <div class="page-title">Paramètres système</div>
