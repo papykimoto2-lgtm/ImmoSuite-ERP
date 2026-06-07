@@ -3,7 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>ImmoSuite ERP v1.0 — Logiciel de Gestion Immobilière</title>
+<script>
+/* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
+   version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
+   version déployée sur Vercel, sur PC comme sur mobile. ── */
+window.IMMOSUITE_VERSION = 'v17.1 · 2026-06-07';
+(function () {
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        regs.forEach(function (r) { r.unregister(); });
+      }).catch(function () {});
+    }
+    if (window.caches && caches.keys) {
+      caches.keys().then(function (keys) {
+        keys.forEach(function (k) { caches.delete(k); });
+      }).catch(function () {});
+    }
+    console.log('%cImmoSuite ' + window.IMMOSUITE_VERSION, 'color:#B87333;font-weight:bold;');
+  } catch (e) {}
+})();
+</script>
 <style>
 /* ═══════════════════════════════════════════════════════
    ImmoSuite ERP — v1.0 MOBILE-FIRST
@@ -1752,8 +1776,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="login-field">
       <label>Mot de passe</label>
-      <input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••••"
-             onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="position:relative;">
+        <input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••••"
+               style="width:100%;padding-right:42px;box-sizing:border-box;"
+               onkeydown="if(event.key==='Enter')doLogin()">
+        <button type="button" onclick="toggleLoginPass()" title="Afficher / masquer"
+                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;line-height:1;padding:4px;color:#6B6B9A;">
+          <span id="login-pass-eye">👁️</span>
+        </button>
+      </div>
     </div>
     <button class="btn-login" onclick="doLogin()">Connexion →</button>
     <div id="login-error" style="display:none;"></div>
@@ -10471,11 +10502,11 @@ async function loadAllData() {
     if (urows.length) {
       DATA.users = urows;
     } else {
-      /* Admin pré-créé par défaut (identifiant: admin / mot de passe: Sanix2026!) — à changer après connexion */
+      /* Admin pré-créé par défaut (identifiant: admin / mot de passe: admin123) — à changer après connexion */
       var adminDefaut = {
         id: 1, login: 'admin', nom: 'Administrateur', role: 'admin', statut: 'actif',
         salt: '5a6e69784945524d4f3230323673656c61646d696e696d6d6f7375697465',
-        password_hash: 'ead0913712d5114ee5b8893ed0fe6cf2345ce38a54ccb2c44cb877bba0c7d786',
+        password_hash: '011e29bd84e41cfda1319a7c924df0692ca7f61b09455393657365efc60b0b60',
         must_change: true,
         created_at: new Date().toISOString()
       };
@@ -10927,6 +10958,14 @@ async function creerPremierAdmin() {
   var lu = document.getElementById('login-user'); if (lu) lu.value = login;
   var lp = document.getElementById('login-pass'); if (lp) { lp.value = ''; lp.focus(); }
   toast('Compte administrateur créé. Connectez-vous.', 'success');
+}
+
+function toggleLoginPass() {
+  var inp = document.getElementById('login-pass');
+  var eye = document.getElementById('login-pass-eye');
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text'; if (eye) eye.textContent = '🙈'; }
+  else { inp.type = 'password'; if (eye) eye.textContent = '👁️'; }
 }
 
 async function doLogin() {
