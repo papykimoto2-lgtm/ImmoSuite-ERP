@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.2 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v18.3 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -10340,7 +10340,11 @@ var DATA = {
   avenants_amenagement: [],
   /* v108 — Module Reunions Direction */
   reunions_direction: [],
-  actions_reunion: []
+  actions_reunion: [],
+  /* MàJ RH 2026-06-07 — désormais synchronisés avec le cloud */
+  custom_roles: [],
+  historique_actions: [],   // déjà chargé dans loadAllData, initialisé ici pour cohérence
+  workflow_configs: []      // idem
 };
 
 /* ──────────────────────────────────────────────────────
@@ -10500,7 +10504,9 @@ async function loadAllData() {
   'apporteurs','commissions',
   'nomenclatures','prix_unitaire','devis_fournisseurs',
   /* v108 */
-  'reunions_direction','actions_reunion'
+  'reunions_direction','actions_reunion',
+  /* MàJ RH 2026-06-07 : stores désormais synchronisés */
+  'custom_roles','logs_connexion'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -10724,7 +10730,11 @@ var SUPA_STORE_MAP = [
   ['pi_situations_amenagement', 'situations_amenagement'],
   ['pi_avenants_amenagement', 'avenants_amenagement'],
   ['pi_reunions_direction', 'reunions_direction'],
-  ['pi_actions_reunion', 'actions_reunion']
+  ['pi_actions_reunion', 'actions_reunion'],
+  /* ── Stores ajoutés MàJ RH 2026-06-07 ── */
+  ['pi_historique_actions', 'historique_actions'],   // journal d'audit (tableau standard)
+  ['pi_workflow_configs',   'workflow_configs'],      // configs workflow validation
+  ['pi_custom_roles',       'custom_roles']           // rôles personnalisés
 ];
 
 /* ── Suivi des modifications : on n'envoie que ce qui a changé ── */
@@ -10864,6 +10874,10 @@ async function pullFromCloudSilent() {
           }
         }
         DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
+        /* Cas spécial : custom_roles → reconstruire l'index en mémoire */
+        if (store === 'custom_roles' && typeof CUSTOM_ROLES !== 'undefined') {
+          DATA.custom_roles.forEach(function(r){ if (r && r.id) CUSTOM_ROLES[r.id] = r; });
+        }
       } catch(tableErr) { /* une table en erreur ne bloque pas les autres */ }
     }
   } finally {
