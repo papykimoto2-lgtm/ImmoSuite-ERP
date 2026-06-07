@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v17.3 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v17.5 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -10531,9 +10531,17 @@ async function loadAllData() {
 ────────────────────────────────────────────────────── */
 var SB = { url: '', key: '' };
 
+var SB_URL_DEFAUT = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+var SB_KEY_DEFAUT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
 function getSBConfig() {
-  SB.url = localStorage.getItem('sb_url') || 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-  SB.key = localStorage.getItem('sb_key') || 'sb_publishable_IVhJiZJ8vSlmkou1QBCdXw_psNob1WK';
+  var u = (localStorage.getItem('sb_url') || '').trim();
+  var k = (localStorage.getItem('sb_key') || '').trim();
+  /* Garde-fou : si l'URL enregistrée n'est pas une vraie adresse Supabase
+     (ex. la clé collée par erreur dans le champ URL), on ignore les valeurs
+     sauvegardées et on retombe sur la configuration correcte par défaut. */
+  if (!/^https?:\/\/[^ ]+\.supabase\.co\/?$/i.test(u)) { u = ''; k = ''; }
+  SB.url = (u || SB_URL_DEFAUT).replace(/\/+$/, '');
+  SB.key = (u && k) ? k : SB_KEY_DEFAUT;
 }
 
 /* Récupère un utilisateur partagé depuis Supabase par identifiant (auth multi-appareils) */
@@ -10575,9 +10583,20 @@ async function sbFetch(path, method, body) {
     };
     if (body) opts.body = JSON.stringify(body);
     var resp = await fetch(SB.url + '/rest/v1/' + path, opts);
-    if (!resp.ok) return null;
+    if (!resp.ok) {
+      try {
+        var t = await resp.text();
+        console.warn('[Supabase] ' + (method || 'GET') + ' ' + path + ' → HTTP ' + resp.status + ' : ' + t);
+        window._lastSupaError = 'HTTP ' + resp.status + ' : ' + t;
+      } catch(_) {}
+      return null;
+    }
     return await resp.json();
-  } catch(e) { return null; }
+  } catch(e) {
+    console.warn('[Supabase] échec réseau ' + path, e);
+    window._lastSupaError = 'réseau : ' + ((e && e.message) ? e.message : 'inconnu');
+    return null;
+  }
 }
 
 /* ── File d'attente de synchronisation (résilience hors ligne) ──────────────
@@ -15600,8 +15619,9 @@ function loadParamFields() {
   sv('param-seuil-rapport',p.seuil_rapport||14);
   sv('param-seuil-chantier',p.seuil_chantier||30);
   sv('param-seuil-provision',p.seuil_provision||5);
-  sv('param-sb-url',localStorage.getItem('sb_url'));
-  sv('param-sb-key',localStorage.getItem('sb_key'));
+  getSBConfig();
+  sv('param-sb-url', SB.url);
+  sv('param-sb-key', SB.key);
   setTimeout(updateSBStatusBadge, 50);
   // Charger rôles custom et reconstruire la matrice
   loadCustomRoles().then(function(){ rebuildRoleMatrix(); renderRolesList(); renderRolesMatrix(); });
