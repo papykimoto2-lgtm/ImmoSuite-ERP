@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v17.2 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v17.3 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -10608,14 +10608,16 @@ function _supaRow(table, obj) { return table === 'pi_users' ? obj : { id: obj.id
 function _supaUnwrap(table, row) { return (table === 'pi_users') ? row : (row && row.data ? row.data : row); }
 
 async function syncToSupabase(table, obj) {
-  if (!SB.url || !SB.key) return;
-  if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return; }
+  if (!SB.url || !SB.key) return false;
+  if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
   try {
     await sbFetch(table + '?id=eq.' + obj.id, 'DELETE');
     var res = await sbFetch(table, 'POST', _supaRow(table, obj));
-    if (res === null) _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj });
+    if (res === null) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
+    return true;
   } catch(e) {
     _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj });
+    return false;
   }
 }
 
@@ -10654,11 +10656,12 @@ async function syncAllToSupabase() {
     var rows = DATA[store] || [];
     if (out) out.textContent = '⬆️ ' + store + ' (' + rows.length + ')…';
     for (var j = 0; j < rows.length; j++) {
-      try { await syncToSupabase(table, rows[j]); total++; } catch(e) { erreurs++; }
+      var ok = await syncToSupabase(table, rows[j]);
+      if (ok) total++; else erreurs++;
     }
   }
-  if (out) out.innerHTML = '<span style="color:var(--vert);">✅ ' + total + ' enregistrement(s) envoyé(s)' + (erreurs ? ' · ' + erreurs + ' erreur(s)' : '') + '</span>';
-  toast('Synchronisation locale → Cloud terminée (' + total + ').', 'success');
+  if (out) out.innerHTML = '<span style="color:' + (erreurs ? 'var(--or)' : 'var(--vert)') + ';">' + (erreurs ? '⚠️ ' : '✅ ') + total + ' enregistrement(s) envoyé(s)' + (erreurs ? ' · ' + erreurs + ' échec(s) — voir la console' : '') + '</span>';
+  toast('Synchronisation locale → Cloud : ' + total + ' OK' + (erreurs ? ', ' + erreurs + ' échec(s)' : '') + '.', erreurs ? 'info' : 'success');
 }
 
 /* Pull : récupère toutes les données depuis Supabase vers le local */
