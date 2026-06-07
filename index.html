@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v17.5 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v17.8 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -10626,9 +10626,18 @@ function _outboxEnqueue(entry) {
 function _supaRow(table, obj) { return table === 'pi_users' ? obj : { id: obj.id, data: obj }; }
 function _supaUnwrap(table, row) { return (table === 'pi_users') ? row : (row && row.data ? row.data : row); }
 
+/* Date de modification d'un enregistrement (pour « le plus récent gagne ») */
+function _ts(x) {
+  if (!x) return 0;
+  var v = x._modifie || x.updated_at;
+  var t = v ? Date.parse(v) : 0;
+  return isNaN(t) ? 0 : t;
+}
+
 async function syncToSupabase(table, obj) {
   if (!SB.url || !SB.key) return false;
   if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
+  if (table !== 'pi_users' && obj && typeof obj === 'object') { obj._modifie = new Date().toISOString(); }
   try {
     await sbFetch(table + '?id=eq.' + obj.id, 'DELETE');
     var res = await sbFetch(table, 'POST', _supaRow(table, obj));
@@ -10662,17 +10671,83 @@ var SUPA_STORE_MAP = [
   ['pi_versements',      'versements'],
   ['pi_commissions',     'commissions'],
   ['pi_leads',           'leads'],
-  ['pi_ecritures',       'ecritures']
+  ['pi_ecritures',       'ecritures'],
+  ['pi_employes',        'employes'],
+  ['pi_pointages',       'pointages'],
+  ['pi_bulletins',       'bulletins'],
+  ['pi_declarations',    'declarations'],
+  ['pi_relances', 'relances'],
+  ['pi_parcelles', 'parcelles'],
+  ['pi_mutations', 'mutations'],
+  ['pi_dossiers_juridiques', 'dossiersJuridiques'],
+  ['pi_constructeurs', 'constructeurs'],
+  ['pi_conventions', 'conventions'],
+  ['pi_situations', 'situations'],
+  ['pi_avenants', 'avenants'],
+  ['pi_conceptions', 'conceptions'],
+  ['pi_itineraires', 'itineraires'],
+  ['pi_etapes_itineraire', 'etapes_itineraire'],
+  ['pi_cr_visites', 'cr_visites'],
+  ['pi_biens_amort', 'biens_amort'],
+  ['pi_releves_bank', 'releves_bank'],
+  ['pi_rapprochements', 'rapprochements'],
+  ['pi_permis', 'permis'],
+  ['pi_plans_arch', 'plans_arch'],
+  ['pi_rapports_chantier', 'rapports_chantier'],
+  ['pi_campagnes', 'campagnes'],
+  ['pi_actions_marketing', 'actions_marketing'],
+  ['pi_segments_marketing', 'segments_marketing'],
+  ['pi_documents', 'documents'],
+  ['pi_signatures', 'signatures'],
+  ['pi_evenements_calendrier', 'evenements_calendrier'],
+  ['pi_messages', 'messages'],
+  ['pi_conversations', 'conversations'],
+  ['pi_apporteurs', 'apporteurs'],
+  ['pi_nomenclatures', 'nomenclatures'],
+  ['pi_prix_unitaire', 'prix_unitaire'],
+  ['pi_devis_fournisseurs', 'devis_fournisseurs'],
+  ['pi_plans_morcellement', 'plans_morcellement'],
+  ['pi_parcelles_morcellement', 'parcelles_morcellement'],
+  ['pi_agrement_promoteur', 'agrement_promoteur'],
+  ['pi_agrement_programme', 'agrement_programme'],
+  ['pi_conv_agrement', 'conv_agrement'],
+  ['pi_previsionnels', 'previsionnels'],
+  ['pi_amenageurs', 'amenageurs'],
+  ['pi_conventions_amenagement', 'conventions_amenagement'],
+  ['pi_situations_amenagement', 'situations_amenagement'],
+  ['pi_avenants_amenagement', 'avenants_amenagement'],
+  ['pi_reunions_direction', 'reunions_direction'],
+  ['pi_actions_reunion', 'actions_reunion']
 ];
 
 /* Push global : envoie tous les enregistrements locaux vers Supabase */
 async function syncAllToSupabase() {
   if (!SB.url || !SB.key) { toast('Configurez d\'abord l\'URL et la clé Supabase.', 'error'); return; }
   var out = document.getElementById('sync-result');
+  /* Garde-fou : compter les données locales avant d'envoyer */
+  var totalLocal = 0, vides = [];
+  for (var k = 0; k < SUPA_STORE_MAP.length; k++) {
+    var st = SUPA_STORE_MAP[k][1];
+    var n = (DATA[st] || []).length;
+    totalLocal += n;
+    if (!n) vides.push(st);
+  }
+  if (totalLocal === 0) {
+    if (out) out.innerHTML = '<span style="color:var(--or);">⚠️ Aucune donnée locale à envoyer. Récupérez d\'abord depuis le Cloud (⬇️).</span>';
+    toast('Rien à envoyer : ce poste est vide. Utilisez « Récupérer depuis Cloud ».', 'info');
+    return;
+  }
+  if (totalLocal < 5) {
+    if (!confirm('Ce poste ne contient que ' + totalLocal + ' enregistrement(s). Voulez-vous vraiment l\'envoyer vers le Cloud ?\n\nSi ce poste n\'est pas celui qui a les bonnes données, annulez et faites plutôt « Récupérer depuis Cloud ».')) {
+      if (out) out.textContent = 'Envoi annulé.';
+      return;
+    }
+  }
   var total = 0, erreurs = 0;
   for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
     var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
     var rows = DATA[store] || [];
+    if (!rows.length) continue;                 // table vide : on n'envoie rien (n'écrase jamais le Cloud)
     if (out) out.textContent = '⬆️ ' + store + ' (' + rows.length + ')…';
     for (var j = 0; j < rows.length; j++) {
       var ok = await syncToSupabase(table, rows[j]);
@@ -10701,9 +10776,14 @@ async function syncFromSupabase() {
     for (var j = 0; j < rows.length; j++) {
       var r = _supaUnwrap(table, rows[j]);
       if (!r || !r.id) continue;
-      byId[r.id] = r;
-      try { await dbPut(store, r); } catch(e) {}
-      total++;
+      var ex = byId[r.id];
+      /* Le plus récent gagne : on n'écrase le local que si le cloud est plus récent
+         (ou si l'enregistrement n'existe pas encore en local). */
+      if (!ex || _ts(r) >= _ts(ex)) {
+        byId[r.id] = r;
+        try { await dbPut(store, r); } catch(e) {}
+        total++;
+      }
     }
     DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
   }
