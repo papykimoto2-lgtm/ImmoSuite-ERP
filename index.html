@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v17.1 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v17.2 · 2026-06-07';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -24,6 +24,15 @@ window.IMMOSUITE_VERSION = 'v17.1 · 2026-06-07';
         keys.forEach(function (k) { caches.delete(k); });
       }).catch(function () {});
     }
+    /* Suivi de version : détecte un nouveau déploiement et le journalise */
+    try {
+      var KEY = 'immosuite_version';
+      var last = localStorage.getItem(KEY);
+      if (last !== window.IMMOSUITE_VERSION) {
+        localStorage.setItem(KEY, window.IMMOSUITE_VERSION);
+        if (last) console.log('%cImmoSuite mis à jour : ' + last + ' → ' + window.IMMOSUITE_VERSION, 'color:#4AC47A;font-weight:bold;');
+      }
+    } catch (e) {}
     console.log('%cImmoSuite ' + window.IMMOSUITE_VERSION, 'color:#B87333;font-weight:bold;');
   } catch (e) {}
 })();
@@ -9685,7 +9694,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <!-- Dropzone photos -->
         <div id="rch-photo-dropzone" class="plan-dropzone"
-          ondragover="planDragOver(event)" ondragleave="planDragLeave(event)"
+          ondragover="rchDragOver(event)" ondragleave="rchDragLeave(event)"
           ondrop="rchPhotoDrop(event)" style="margin-bottom:14px;">
           <div class="plan-dropzone-inner">
             <div style="font-size:36px;margin-bottom:8px;">📸</div>
@@ -9700,7 +9709,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               </button>
             </div>
             <input type="file" id="rch-photo-input" multiple accept="image/*"
-              style="display:none;" capture="" onchange="rchAjouterPhotos(this)">
+              style="display:none;" onchange="rchAjouterPhotos(this)">
           </div>
         </div>
 
@@ -22927,7 +22936,7 @@ function updateRapportGauge(){var r=parseInt((document.getElementById('rch-avanc
 async function saveRapportChantier(){var convId=document.getElementById('rch-convention').value;if(!convId){toast('Sélectionnez une convention.','error');return;}var av=parseInt(document.getElementById('rch-avancement').value)||0;var r={id:APP.editingId||uid(),convention_id:convId,numero:document.getElementById('rch-numero').value.trim(),date_debut:document.getElementById('rch-date-debut').value,date_fin:document.getElementById('rch-date-fin').value,avancement:av,avancement_prevu:parseInt(document.getElementById('rch-avancement-prevu').value)||0,nb_ouvriers:parseInt(document.getElementById('rch-ouvriers').value)||0,meteo:document.getElementById('rch-meteo').value,travaux_realises:document.getElementById('rch-travaux-realises').value.trim(),travaux_prevus:document.getElementById('rch-travaux-prevus').value.trim(),difficultes:document.getElementById('rch-difficultes').value.trim(),depenses:parseFloat(document.getElementById('rch-depenses').value)||0,budget_cumul:parseFloat(document.getElementById('rch-budget-cumul').value)||0,observations:document.getElementById('rch-observations').value.trim(),valideur:document.getElementById('rch-valideur').value.trim(),statut:document.getElementById('rch-statut').value,created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.rapports_chantier.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.rapports_chantier[idx]=r;}else DATA.rapports_chantier.push(r);await dbPut('rapports_chantier',r);var conv=DATA.conventions.find(function(c){return c.id===convId;});if(conv&&av>=(conv.avancement||0)){conv.avancement=av;await dbPut('conventions',conv);}closeModal('modal-rapport-chantier');renderChantiersDashboard();renderRapports();renderConventions();toast('Rapport enregistré.','success');}
 function editRapportChantier(id){APP.editingId=id;openRapportChantier();setTimeout(function(){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=v||'';};el('rch-convention',r.convention_id);el('rch-numero',r.numero);el('rch-date-debut',r.date_debut);el('rch-date-fin',r.date_fin);el('rch-avancement',r.avancement);el('rch-avancement-prevu',r.avancement_prevu);el('rch-ouvriers',r.nb_ouvriers);el('rch-meteo',r.meteo);el('rch-travaux-realises',r.travaux_realises);el('rch-travaux-prevus',r.travaux_prevus);el('rch-difficultes',r.difficultes);el('rch-depenses',r.depenses);el('rch-budget-cumul',r.budget_cumul);el('rch-observations',r.observations);el('rch-valideur',r.valideur);el('rch-statut',r.statut);document.getElementById('rch-modal-title').textContent='Modifier rapport';updateRapportGauge();},120);}
 async function deleteRapport(id){if(!confirm('Supprimer ce rapport ?'))return;DATA.rapports_chantier=DATA.rapports_chantier.filter(function(r){return r.id!==id;});await dbDelete('rapports_chantier',id);renderRapports();toast('Supprimé.','info');}
-function printRapportId(id){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var conv=DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:'—',objet:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var societe=DATA.params.societe||'ImmoSuite ERP';var ec=r.avancement-(r.avancement_prevu||r.avancement);var win=window.open('','','width=850,height=750');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:16px 0 8px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #ddd;border-radius:8px;padding:10px 18px;margin:4px;text-align:center;min-width:90px;}.kv{font-size:18px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#888;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div><h1>📋 Rapport Hebdomadaire — Semaine du '+r.date_debut+(r.date_fin?' au '+r.date_fin:'')+'</h1><table><tr><td><strong>Convention :</strong> '+conv.numero+'</td><td><strong>Constructeur :</strong> '+constr.raison_sociale+'</td></tr></table><div><span class="kpi"><div class="kv">'+r.avancement+'%</div><div class="kl">Réalisé</div></span><span class="kpi"><div class="kv">'+(r.avancement_prevu||r.avancement)+'%</div><div class="kl">Prévu</div></span><span class="kpi"><div class="kv" style="color:'+(ec>=0?'#1A6B3A':'#C93535')+'">'+(ec>=0?'+':'')+ec+'%</div><div class="kl">Écart</div></span><span class="kpi"><div class="kv">'+r.nb_ouvriers+'</div><div class="kl">Ouvriers</div></span></div><h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'+(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')+'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');win.document.close();win.print();}
+function printRapportId(id){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var conv=DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:'—',objet:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var societe=DATA.params.societe||'ImmoSuite ERP';var ec=r.avancement-(r.avancement_prevu||r.avancement);/* [AUDIT FIX v17] Photos dans impression */var photosHtml='';if(r.photos&&r.photos.length){photosHtml='<h3>\u{1F4F8} Photos de chantier ('+r.photos.length+')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;">'+(r.photos.slice(0,9).map(function(p){return'<div style="text-align:center;"><img src="'+p.data+'" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"><div style="font-size:10px;color:#666;margin-top:2px;">'+p.legende+'</div></div>';}).join(''))+'</div>';}var win=window.open('','','width=850,height=750');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:16px 0 8px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #ddd;border-radius:8px;padding:10px 18px;margin:4px;text-align:center;min-width:90px;}.kv{font-size:18px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#888;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div><h1>📋 Rapport Hebdomadaire — Semaine du '+r.date_debut+(r.date_fin?' au '+r.date_fin:'')+'</h1><table><tr><td><strong>Convention :</strong> '+conv.numero+'</td><td><strong>Constructeur :</strong> '+constr.raison_sociale+'</td></tr></table><div><span class="kpi"><div class="kv">'+r.avancement+'%</div><div class="kl">Réalisé</div></span><span class="kpi"><div class="kv">'+(r.avancement_prevu||r.avancement)+'%</div><div class="kl">Prévu</div></span><span class="kpi"><div class="kv" style="color:'+(ec>=0?'#1A6B3A':'#C93535')+'">'+(ec>=0?'+':'')+ec+'%</div><div class="kl">Écart</div></span><span class="kpi"><div class="kv">'+r.nb_ouvriers+'</div><div class="kl">Ouvriers</div></span></div><h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'+(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')+photosHtml+'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');win.document.close();win.print();}
 function exportRapportsChantier(){var rows=['Rapport,Convention,Date début,Avancement,Prévu,Ouvriers,Statut'];DATA.rapports_chantier.forEach(function(r){rows.push([r.numero,(DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:''}).numero,r.date_debut,r.avancement+'%',(r.avancement_prevu||r.avancement)+'%',r.nb_ouvriers,r.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rapports_chantier.csv';a.click();toast('Export rapports chantier.','success');}
 function printRapportChantier(){var id=APP.editingId;if(id)printRapportId(id);else toast('Enregistrez d\'abord le rapport.','info');}
 
@@ -25883,7 +25892,7 @@ function renderChantiersDashboard() {
   }).join('');
 }
 
-function openRapportChantier() { toast('Sélectionnez une convention pour mettre à jour son avancement.', 'info'); }
+/* [AUDIT] Stub openRapportChantier supprimé — utilise la version complète avec gestion photos (IIFE à la fin du script) */
 
 /* ══════════════════════════════════════════════════════
    MODULE PIPELINE COMMERCIAL — CRM LEADS
@@ -32114,9 +32123,21 @@ function rchUpdateBadgePhotos() {
 ──────────────────────────────────────────────── */
 function rchPhotoDrop(e) {
   e.preventDefault();
-  document.getElementById('plan-dropzone') && document.getElementById('plan-dropzone').classList.remove('drag-over');
   document.getElementById('rch-photo-dropzone') && document.getElementById('rch-photo-dropzone').classList.remove('drag-over');
   rchTraiterPhotos(Array.from(e.dataTransfer.files));
+}
+
+/* ─────────────────────────────────────────────
+   DRAG HANDLERS SPÉCIFIQUES dropzone photos
+──────────────────────────────────────────────── */
+function rchDragOver(e) {
+  e.preventDefault();
+  var dz = document.getElementById('rch-photo-dropzone');
+  if (dz) dz.classList.add('drag-over');
+}
+function rchDragLeave(e) {
+  var dz = document.getElementById('rch-photo-dropzone');
+  if (dz) dz.classList.remove('drag-over');
 }
 
 function rchAjouterPhotos(input) {
