@@ -10513,14 +10513,15 @@ async function loadAllData() {
     } else {
       /* Admin pré-créé par défaut (identifiant: admin / mot de passe: admin123) — à changer après connexion */
       var adminDefaut = {
-        id: 1, login: 'admin', nom: 'Administrateur', role: 'admin', statut: 'actif',
+        id: 'admin', login: 'admin', nom: 'Administrateur', role: 'admin', statut: 'actif',
         salt: '5a6e69784945524d4f3230323673656c61646d696e696d6d6f7375697465',
         password_hash: '011e29bd84e41cfda1319a7c924df0692ca7f61b09455393657365efc60b0b60',
         must_change: true,
         created_at: new Date().toISOString()
       };
       DATA.users = [adminDefaut];
-      try { await dbPut('users', adminDefaut); } catch(e) {}
+      try { await dbPut('users', adminDefaut);
+ if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', adminDefaut); } catch(e) {}
     }
   } catch(e) {}
 }
@@ -10531,8 +10532,17 @@ async function loadAllData() {
 var SB = { url: '', key: '' };
 
 function getSBConfig() {
-  SB.url = localStorage.getItem('sb_url') || '';
-  SB.key = localStorage.getItem('sb_key') || '';
+  SB.url = localStorage.getItem('sb_url') || 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+  SB.key = localStorage.getItem('sb_key') || 'sb_publishable_IVhJiZJ8vSlmkou1QBCdXw_psNob1WK';
+}
+
+/* Récupère un utilisateur partagé depuis Supabase par identifiant (auth multi-appareils) */
+async function fetchUserFromCloud(login) {
+  if (!SB.url || !SB.key || !navigator.onLine) return null;
+  try {
+    var rows = await sbFetch('pi_users?login=eq.' + encodeURIComponent(login) + '&select=*&limit=1', 'GET');
+    return (rows && rows.length) ? rows[0] : null;
+  } catch (e) { return null; }
 }
 
 function saveConfig() {
@@ -10592,12 +10602,17 @@ function _outboxEnqueue(entry) {
   _outboxWrite(q);
 }
 
+/* pi_users reste à plat (requête login par colonne). Les autres tables stockent
+   l'enregistrement complet en JSON dans la colonne "data" → aucun souci de colonnes. */
+function _supaRow(table, obj) { return table === 'pi_users' ? obj : { id: obj.id, data: obj }; }
+function _supaUnwrap(table, row) { return (table === 'pi_users') ? row : (row && row.data ? row.data : row); }
+
 async function syncToSupabase(table, obj) {
   if (!SB.url || !SB.key) return;
   if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return; }
   try {
     await sbFetch(table + '?id=eq.' + obj.id, 'DELETE');
-    var res = await sbFetch(table, 'POST', obj);
+    var res = await sbFetch(table, 'POST', _supaRow(table, obj));
     if (res === null) _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj });
   } catch(e) {
     _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj });
@@ -10617,6 +10632,7 @@ async function deleteFromSupabase(table, id) {
 
 /* Correspondance table Supabase ↔ store local (IndexedDB / DATA) */
 var SUPA_STORE_MAP = [
+  ['pi_users',           'users'],
   ['pi_programmes',       'programmes'],
   ['pi_lots',            'lots'],
   ['pi_terrains',        'terrains'],
@@ -10661,7 +10677,8 @@ async function syncFromSupabase() {
     var byId = {};
     DATA[store].forEach(function(x){ byId[x.id] = x; });
     for (var j = 0; j < rows.length; j++) {
-      var r = rows[j];
+      var r = _supaUnwrap(table, rows[j]);
+      if (!r || !r.id) continue;
       byId[r.id] = r;
       try { await dbPut(store, r); } catch(e) {}
       total++;
@@ -10691,7 +10708,7 @@ async function flushSyncOutbox() {
           ok = (await sbFetch(e.table + '?id=eq.' + e.id, 'DELETE')) !== null;
         } else {
           await sbFetch(e.table + '?id=eq.' + e.id, 'DELETE');
-          ok = (await sbFetch(e.table, 'POST', e.obj)) !== null;
+          ok = (await sbFetch(e.table, 'POST', _supaRow(e.table, e.obj))) !== null;
         }
       } catch(err) { ok = false; }
       if (!ok) break;            // réseau toujours indisponible → on garde la file
@@ -10712,16 +10729,20 @@ if (typeof window !== 'undefined') {
 }
 
 async function testConnection() {
-  var url = document.getElementById('param-sb-url').value.trim();
-  var key = document.getElementById('param-sb-key').value.trim();
+  var url = (document.getElementById('param-sb-url').value || SB.url || '').trim().replace(/\/+$/, '');
+  var key = (document.getElementById('param-sb-key').value || SB.key || '').trim();
   var res = document.getElementById('conn-result');
   if (!url || !key) { res.innerHTML = '<span style="color:var(--rouge)">Champs manquants.</span>'; return; }
+  res.innerHTML = '<span style="color:var(--blanc-dim)">⏳ Test en cours…</span>';
   try {
-    var resp = await fetch(url + '/rest/v1/', { headers: { 'apikey': key, 'Authorization': 'Bearer ' + key } });
-    if (resp.ok) res.innerHTML = '<span style="color:var(--vert)">✔ Connexion réussie</span>';
-    else res.innerHTML = '<span style="color:var(--rouge)">✘ Erreur : ' + resp.status + '</span>';
+    var resp = await fetch(url + '/rest/v1/pi_users?select=id&limit=1', { headers: { 'apikey': key, 'Authorization': 'Bearer ' + key } });
+    if (resp.ok) {
+      res.innerHTML = '<span style="color:var(--vert)">✔ Connexion réussie (table pi_users accessible)</span>';
+    } else {
+      res.innerHTML = '<span style="color:var(--rouge)">✘ Réponse Supabase : ' + resp.status + ' — vérifiez la clé ou les règles RLS.</span>';
+    }
   } catch(e) {
-    res.innerHTML = '<span style="color:var(--rouge)">✘ Hors ligne ou URL invalide</span>';
+    res.innerHTML = '<span style="color:var(--rouge)">✘ Échec réseau : ' + ((e && e.message) ? e.message : 'connexion impossible') + '</span>';
   }
 }
 
@@ -10803,6 +10824,7 @@ async function reinitialiserTousMotsDePasse(nouveauMdp) {
     delete u.password;
     u.must_change = true;
     await dbPut('users', u);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', u);
     n++;
   }
   console.log('[SEC] ' + n + ' mot(s) de passe réinitialisé(s) → « ' + nouveauMdp + ' »');
@@ -10886,6 +10908,7 @@ async function migratePasswords() {
       u.password_hash = await hashPassword(u.password, u.salt);
       delete u.password;
       await dbPut('users', u);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', u);
       migrated++;
     }
   }
@@ -10959,7 +10982,8 @@ async function creerPremierAdmin() {
     created_at: new Date().toISOString()
   };
   DATA.users = [admin];
-  try { await dbPut('users', admin); } catch(e) {}
+  try { await dbPut('users', admin);
+ if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', admin); } catch(e) {}
 
   // Bascule vers la connexion normale, pré-remplie
   document.getElementById('setup-form').style.display = 'none';
@@ -11003,8 +11027,16 @@ async function doLogin() {
     return;
   }
 
-  // ── Recherche de l'utilisateur ────────────────────────────────────────
+  // ── Recherche de l'utilisateur (cloud partagé prioritaire, sinon local) ──
   var user = DATA.users.find(function(x){ return x.login === u; });
+  var cloudUser = await fetchUserFromCloud(u);
+  if (cloudUser) {
+    user = cloudUser;
+    var idx = DATA.users.findIndex(function(x){ return x.id === cloudUser.id || x.login === cloudUser.login; });
+    if (idx >= 0) DATA.users[idx] = cloudUser; else DATA.users.push(cloudUser);
+    try { await dbPut('users', cloudUser);
+ if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', cloudUser); } catch(e) {}
+  }
   if (!user) {
     attempts[bfKey] = attCount + 1;
     localStorage.setItem('pici_login_attempts', JSON.stringify(attempts));
@@ -11032,6 +11064,7 @@ async function doLogin() {
       user.password_hash = await hashPassword(p, user.salt);
       delete user.password;
       await dbPut('users', user);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', user);
       console.log('[SEC] Mot de passe de « ' + u + ' » migré vers SHA-256.');
     }
   }
@@ -15870,7 +15903,8 @@ async function deleteCustomRole(rid) {
   var msg = 'Supprimer le role ' + r.label + ' ?';
   if (concerned.length) msg += '\n\n' + concerned.length + ' utilisateur(s) seront passes en commercial.';
   if (!confirm(msg)) return;
-  for (var i = 0; i < concerned.length; i++) { concerned[i].role = 'commercial'; await dbPut('users', concerned[i]); }
+  for (var i = 0; i < concerned.length; i++) { concerned[i].role = 'commercial'; await dbPut('users', concerned[i]);
+ if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', concerned[i]); }
   DATA.users.forEach(function(u){ if (u.role === rid) u.role = 'commercial'; });
   delete CUSTOM_ROLES[rid];
   await dbDelete('custom_roles', rid);
@@ -15967,6 +16001,7 @@ async function createUserFromModal() {
   var user = { id: uid(), nom: nom.trim(), login: login.trim(), password_hash: hash, salt: salt, role: role, email: email.trim(), tel: tel.trim() };
   DATA.users.push(user);
   await dbPut('users', user);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', user);
   await ajouterHistorique('user', user.id, 'creation', 'Créé par ' + APP.currentUser.nom);
   closeModal('modal-user-create');
   loadParams();
@@ -15988,7 +16023,7 @@ async function deleteUser(userId) {
   if (!u) return;
   if (!confirm('Supprimer l\'utilisateur « ' + u.nom + ' » ?\nCette action est irréversible.')) return;
   DATA.users = DATA.users.filter(function(x){ return x.id !== userId; });
-  await dbDelete('users', userId);
+  await dbDelete('users', userId); if (typeof deleteFromSupabase === 'function') deleteFromSupabase('pi_users', userId);
   await ajouterHistorique('user', userId, 'suppression', 'Supprimé par ' + APP.currentUser.nom);
   loadParams();
   toast('Utilisateur supprimé.', 'success');
@@ -16019,6 +16054,7 @@ async function changeUserPassword(userId) {
   target.password_hash = await hashPassword(newPwd, target.salt);
   delete target.password;
   await dbPut('users', target);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', target);
   await ajouterHistorique('user', userId, 'changement_mdp', 'Modifié par ' + APP.currentUser.nom);
   toast('✅ Mot de passe mis à jour.', 'success');
 }
@@ -33607,6 +33643,7 @@ function togglePwdVisibility(inputId, eyeId) {
         delete user.password;
       }
       await dbPut('users', user);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', user);
       await ajouterHistorique('user', user.id, 'modification', 'Modifié par '+APP.currentUser.nom);
       closeModal('modal-user-create');
       loadParams();
@@ -33619,6 +33656,7 @@ function togglePwdVisibility(inputId, eyeId) {
         password_hash:hash, salt:salt };
       DATA.users.push(newUser);
       await dbPut('users', newUser);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', newUser);
       await ajouterHistorique('user', newUser.id, 'creation', 'Créé par '+APP.currentUser.nom);
       closeModal('modal-user-create');
       loadParams();
@@ -33693,6 +33731,7 @@ async function toggleUserStatut(userId) {
   if (APP.currentUser && APP.currentUser.id === userId) { toast('⚠️ Impossible de modifier votre propre statut.', 'error'); return; }
   u.statut = u.statut === 'inactif' ? 'actif' : 'inactif';
   await dbPut('users', u);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', u);
   await ajouterHistorique('user', u.id, 'statut_'+(u.statut), (u.statut==='actif'?'Activé':'Désactivé')+' par '+APP.currentUser.nom);
   loadParams();
   toast((u.statut==='actif'?'✅ Compte activé':'⛔ Compte désactivé')+' — '+u.nom, 'success');
@@ -34049,7 +34088,8 @@ function _sousVerifyToken(token) {
       created_at: new Date().toISOString()
     };
     DATA.users = [admin];
-    try { await dbPut('users', admin); } catch(e) {}
+    try { await dbPut('users', admin);
+ if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', admin); } catch(e) {}
     document.getElementById('setup-form').style.display='none';
     document.getElementById('login-form').style.display='block';
     var lu=document.getElementById('login-user'); if(lu) lu.value=login;
