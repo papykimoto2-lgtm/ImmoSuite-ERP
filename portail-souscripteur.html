@@ -5,12 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>Espace Souscripteur – ImmoSuite ERP</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     :root {
       --bg: #F5F7FB;
       --card: #FFFFFF;
@@ -25,310 +20,92 @@
       --info: #3B82F6;
       --radius: 12px;
     }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
     /* Login */
-    #login-screen {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #1E2A3A 0%, #2563EB 100%);
-      padding: 20px;
-    }
-    .login-card {
-      background: white;
-      border-radius: 28px;
-      padding: 32px 24px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    }
-    .logo {
-      text-align: center;
-      margin-bottom: 28px;
-    }
-    .logo-icon {
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 12px;
-      font-size: 28px;
-      box-shadow: 0 10px 15px -3px rgba(184,115,51,0.3);
-    }
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      color: #0F172A;
-    }
-    .login-field {
-      margin-bottom: 18px;
-    }
-    .login-field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: #475569;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      display: block;
-      margin-bottom: 6px;
-    }
-    .login-field input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1px solid #E2E8F0;
-      border-radius: 14px;
-      font-size: 16px;
-      background: #F8FAFC;
-      transition: all 0.2s;
-    }
-    .login-field input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(184,115,51,0.2);
-    }
-    .btn {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      border: none;
-      border-radius: 14px;
-      color: white;
-      font-weight: 700;
-      font-size: 16px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
+    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #1E2A3A 0%, #2563EB 100%); padding: 20px; }
+    .login-card { background: white; border-radius: 28px; padding: 32px 24px; width: 100%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+    .logo { text-align: center; margin-bottom: 28px; }
+    .logo-icon { width: 64px; height: 64px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 28px; box-shadow: 0 10px 15px -3px rgba(184,115,51,0.3); }
+    h1 { font-size: 22px; font-weight: 700; color: #0F172A; }
+    .login-field { margin-bottom: 18px; }
+    .login-field label { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+    .login-field input { width: 100%; padding: 14px 16px; border: 1px solid #E2E8F0; border-radius: 14px; font-size: 16px; background: #F8FAFC; transition: all 0.2s; }
+    .login-field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(184,115,51,0.2); }
+    .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; border-radius: 14px; color: white; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.2s; }
     .btn:active { transform: scale(0.98); }
-    .error-msg {
-      color: var(--danger);
-      font-size: 13px;
-      margin-top: 12px;
-      text-align: center;
-    }
+    .error-msg { color: var(--danger); font-size: 13px; margin-top: 12px; text-align: center; }
+
     /* App */
-    #app {
-      display: none;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-    .topbar {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 12px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .topbar-brand {
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--primary);
-    }
-    .topbar-user {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .avatar {
-      width: 36px;
-      height: 36px;
-      background: var(--primary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-    }
-    .tabs {
-      display: flex;
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 0 12px;
-      gap: 4px;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 14px 8px;
-      background: none;
-      border: none;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-light);
-      border-bottom: 3px solid transparent;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-    .content {
-      padding: 20px;
-      flex: 1;
-    }
-    .tab-pane {
-      display: none;
-    }
-    .tab-pane.active {
-      display: block;
-    }
-    .card {
-      background: var(--card);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 18px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .kpi {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px;
-      text-align: center;
-      border-top: 3px solid var(--primary);
-    }
-    .kpi-label {
-      font-size: 12px;
-      color: var(--text-light);
-      text-transform: uppercase;
-    }
-    .kpi-value {
-      font-size: 22px;
-      font-weight: 700;
-      margin-top: 6px;
-    }
-    .table-wrap {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th, td {
-      padding: 12px 8px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    th {
-      font-weight: 600;
-      color: var(--text-light);
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
+    #app { display: none; flex-direction: column; min-height: 100vh; }
+    .topbar { background: white; border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
+    .topbar-brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+    .topbar-user { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 36px; height: 36px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+    .tabs { display: flex; background: white; border-bottom: 1px solid var(--border); padding: 0 12px; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+    .tab-btn { flex: 1; padding: 14px 8px; background: none; border: none; font-size: 14px; font-weight: 600; color: var(--text-light); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .content { padding: 20px; flex: 1; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .kpi { background: var(--card); border-radius: 14px; padding: 14px; text-align: center; border-top: 3px solid var(--primary); }
+    .kpi-label { font-size: 12px; color: var(--text-light); text-transform: uppercase; }
+    .kpi-value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text-light); }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
     .badge-success { background: #D1FAE5; color: #065F46; }
     .badge-warning { background: #FEF3C7; color: #92400E; }
     .badge-danger { background: #FEE2E2; color: #991B1B; }
     .badge-info { background: #DBEAFE; color: #1E40AF; }
-    .progress-bar {
-      height: 6px;
-      background: var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-      margin: 6px 0;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      border-radius: 4px;
-    }
-    .doc-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-      background: #F8FAFC;
-      border-radius: 12px;
-      margin-bottom: 8px;
-    }
-    .photos-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 10px;
-    }
-    .photo-card {
-      background: var(--card);
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      cursor: pointer;
-    }
-    .photo-card img {
-      width: 100%;
-      height: 120px;
-      object-fit: cover;
-    }
-    .photo-caption {
-      padding: 8px;
-      font-size: 11px;
-      text-align: center;
-      color: var(--text-light);
-    }
-    .lightbox {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.9);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      flex-direction: column;
-    }
-    .lightbox img {
-      max-width: 90%;
-      max-height: 80%;
-      border-radius: 8px;
-    }
-    .lightbox-close {
-      position: absolute;
-      top: 20px;
-      right: 30px;
-      font-size: 32px;
-      color: white;
-      cursor: pointer;
-    }
-    .logout-btn {
-      background: none;
-      border: none;
-      color: var(--danger);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    .progress-bar { height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 6px 0; }
+    .progress-fill { height: 100%; background: var(--primary); border-radius: 4px; }
+    .doc-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #F8FAFC; border-radius: 12px; margin-bottom: 8px; }
+    .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .photo-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
+    .photo-card img { width: 100%; height: 120px; object-fit: cover; }
+    .photo-caption { padding: 8px; font-size: 11px; text-align: center; color: var(--text-light); }
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
+    .lightbox img { max-width: 90%; max-height: 80%; border-radius: 8px; }
+    .lightbox-close { position: absolute; top: 20px; right: 30px; font-size: 32px; color: white; cursor: pointer; }
+    .logout-btn { background: none; border: none; color: var(--danger); font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    /* Messagerie */
+    .msg-container { display: flex; flex-direction: column; height: 60vh; min-height: 400px; background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+    .msg-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #F8FAFC; }
+    .msg-bubble { max-width: 80%; padding: 10px 14px; border-radius: 18px; background: white; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .msg-bubble.mine { background: var(--primary); color: white; border: none; align-self: flex-end; }
+    .msg-bubble .sender { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--primary-dark); }
+    .msg-bubble.mine .sender { color: rgba(255,255,255,0.8); }
+    .msg-bubble .text { font-size: 14px; word-break: break-word; }
+    .msg-bubble .time { font-size: 10px; margin-top: 4px; text-align: right; color: var(--text-light); }
+    .msg-bubble.mine .time { color: rgba(255,255,255,0.7); }
+    .msg-composer { display: flex; gap: 8px; padding: 12px; background: white; border-top: 1px solid var(--border); }
+    .msg-composer textarea { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 24px; resize: none; font-family: inherit; font-size: 14px; }
+    .msg-composer button { width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 20px; cursor: pointer; }
+    .no-conversation { text-align: center; padding: 40px; color: var(--text-light); }
+
+    /* Formulaire demande */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: var(--text-light); text-transform: uppercase; }
+    .form-control { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; background: var(--card); }
+    .demande-item { background: #F8FAFC; border-radius: 10px; padding: 12px; margin-bottom: 8px; border-left: 4px solid var(--warning); }
+    .demande-item.validee { border-left-color: var(--success); }
+    .demande-item.rejetee { border-left-color: var(--danger); }
+
     @media (max-width: 500px) {
       .kpi-value { font-size: 18px; }
       .tab-btn { font-size: 12px; padding: 12px 4px; }
       .content { padding: 16px; }
+      .msg-bubble { max-width: 90%; }
     }
   </style>
 </head>
 <body>
+<!-- Écran de connexion -->
 <div id="login-screen">
   <div class="login-card">
     <div class="logo"><div class="logo-icon">🏠</div><h1>Espace Souscripteur</h1><p style="font-size:13px;margin-top:8px;color:#64748B;">ImmoSuite ERP</p></div>
@@ -339,34 +116,93 @@
     <div style="margin-top:16px;font-size:12px;text-align:center;color:#94A3B8;">🔒 Sécurisé · Accès privé</div>
   </div>
 </div>
+
+<!-- Application après login -->
 <div id="app">
-  <div class="topbar"><div class="topbar-brand">Mon espace ImmoSuite</div><div class="topbar-user"><span id="welcome-name"></span><button class="logout-btn" id="logout-btn">Déconnexion</button></div></div>
-  <div class="tabs" id="tabs"><button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button><button class="tab-btn" data-tab="echeances">📅 Échéancier</button><button class="tab-btn" data-tab="versements">💳 Versements</button><button class="tab-btn" data-tab="documents">📁 Documents</button><button class="tab-btn" data-tab="photos">📸 Chantier</button></div>
+  <div class="topbar">
+    <div class="topbar-brand">Mon espace ImmoSuite</div>
+    <div class="topbar-user">
+      <span id="welcome-name"></span>
+      <button class="logout-btn" id="logout-btn">Déconnexion</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button>
+    <button class="tab-btn" data-tab="echeances">📅 Échéancier</button>
+    <button class="tab-btn" data-tab="versements">💳 Versements</button>
+    <button class="tab-btn" data-tab="documents">📁 Documents</button>
+    <button class="tab-btn" data-tab="photos">📸 Chantier</button>
+    <button class="tab-btn" data-tab="demandes">📝 Demande de versement</button>
+    <button class="tab-btn" data-tab="messagerie">💬 Messagerie</button>
+  </div>
   <div class="content">
-    <div id="tab-dashboard" class="tab-pane active"><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Montant souscrit</div><div class="kpi-value" id="kpi-total">0 F</div></div><div class="kpi"><div class="kpi-label">Déjà versé</div><div class="kpi-value" id="kpi-versé">0 F</div></div><div class="kpi"><div class="kpi-label">Reste à payer</div><div class="kpi-value" id="kpi-reste">0 F</div></div><div class="kpi"><div class="kpi-label">Avancement</div><div class="kpi-value" id="kpi-pct">0%</div></div></div><div class="card"><div style="font-weight:700;margin-bottom:8px;">Informations dossier</div><div id="client-info"></div></div><div class="card"><div style="font-weight:700;margin-bottom:8px;">📈 Avancement du programme</div><div id="programme-avancement"></div></div></div>
-    <div id="tab-echeances" class="tab-pane"><div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
-    <div id="tab-versements" class="tab-pane"><div class="card"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead><tbody id="versements-body"></tbody></table></div></div></div>
+    <!-- Dashboard -->
+    <div id="tab-dashboard" class="tab-pane active">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Montant souscrit</div><div class="kpi-value" id="kpi-total">0 F</div></div>
+        <div class="kpi"><div class="kpi-label">Déjà versé</div><div class="kpi-value" id="kpi-versé">0 F</div></div>
+        <div class="kpi"><div class="kpi-label">Reste à payer</div><div class="kpi-value" id="kpi-reste">0 F</div></div>
+        <div class="kpi"><div class="kpi-label">Avancement</div><div class="kpi-value" id="kpi-pct">0%</div></div>
+      </div>
+      <div class="card"><div style="font-weight:700;margin-bottom:8px;">Informations dossier</div><div id="client-info"></div></div>
+      <div class="card"><div style="font-weight:700;margin-bottom:8px;">📈 Avancement du programme</div><div id="programme-avancement"></div></div>
+    </div>
+    <!-- Échéancier -->
+    <div id="tab-echeances" class="tab-pane">
+      <div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
+    </div>
+    <!-- Versements -->
+    <div id="tab-versements" class="tab-pane">
+      <div class="card"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead><tbody id="versements-body"></tbody></table></div></div></div>
+    </div>
+    <!-- Documents -->
     <div id="tab-documents" class="tab-pane"><div id="documents-list" class="card"></div></div>
+    <!-- Photos -->
     <div id="tab-photos" class="tab-pane"><div id="photos-list" class="photos-grid"></div></div>
+    <!-- Demandes de versement -->
+    <div id="tab-demandes" class="tab-pane">
+      <div class="card">
+        <div class="form-group"><label>Montant (FCFA)</label><input type="number" id="demande-montant" class="form-control" placeholder="Ex: 250000" min="1000" step="1000"></div>
+        <div class="form-group"><label>Mode de paiement</label><select id="demande-mode" class="form-control"><option value="virement">Virement bancaire</option><option value="wave">Wave</option><option value="orange_money">Orange Money</option><option value="mtn">MTN MoMo</option><option value="especes">Espèces (agence)</option></select></div>
+        <div class="form-group"><label>Message (optionnel)</label><textarea id="demande-message" class="form-control" rows="2" placeholder="Précisez l'échéance concernée..."></textarea></div>
+        <button class="btn" id="btn-demande" style="margin-top:8px;">📤 Envoyer la demande</button>
+        <div id="demande-result" style="margin-top:12px;"></div>
+      </div>
+      <div class="card"><div style="font-weight:700; margin-bottom:8px;">📋 Historique des demandes</div><div id="demandes-liste"></div></div>
+    </div>
+    <!-- Messagerie -->
+    <div id="tab-messagerie" class="tab-pane">
+      <div class="msg-container" id="msg-container">
+        <div class="msg-messages" id="messages-list"><div class="no-conversation">Chargement de la conversation...</div></div>
+        <div class="msg-composer">
+          <textarea id="msg-input" placeholder="Écrivez votre message..." rows="1"></textarea>
+          <button id="msg-send">📨</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- Lightbox -->
 <div id="lightbox" class="lightbox" onclick="closeLightbox()"><span class="lightbox-close">&times;</span><img id="lightbox-img" src=""></div>
+
 <script>
-  // ======================= CONFIGURATION SUPABASE (intégrée) =======================
+  // ======================= CONFIGURATION SUPABASE =======================
   const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
 
-  // ==============================================================================
+  // ======================= INDEXEDDB & DATA =======================
   const DB_NAME = 'ImmoSuiteDB';
   const DB_VERSION = 109;
   let db = null;
-  let DATA = { clients: [], versements: [], programmes: [], conventions: [], rapports_chantier: [], documents: [], lots: [] };
+  let DATA = { clients: [], versements: [], programmes: [], conventions: [], rapports_chantier: [], documents: [], lots: [], demandes_versement: [], conversations: [], messages: [] };
   let currentClient = null;
+  let currentConversationId = null;
+  let msgPollTimer = null;
 
-  // Fonctions IndexedDB
   function openDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, DB_VERSION); req.onsuccess = () => { db = req.result; resolve(); }; req.onerror = () => reject(req.error); }); }
-  async function dbGetAll(storeName) { if (!db || !db.objectStoreNames.contains(storeName)) return []; const tx = db.transaction(storeName, 'readonly'); const store = tx.objectStore(storeName); return new Promise((resolve) => { const req = store.getAll(); req.onsuccess = () => resolve(req.result || []); req.onerror = () => resolve([]); }); }
-  async function dbPut(store, obj) { if (!db || !db.objectStoreNames.contains(store)) return; const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(obj); return new Promise(resolve => { tx.oncomplete = resolve; }); }
+  async function dbGetAll(store) { if (!db || !db.objectStoreNames.contains(store)) return []; const tx = db.transaction(store, 'readonly'); return new Promise(r => { tx.objectStore(store).getAll().onsuccess = e => r(e.target.result || []); }); }
+  async function dbPut(store, obj) { if (!db || !db.objectStoreNames.contains(store)) return; const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(obj); return new Promise(r => { tx.oncomplete = r; }); }
 
   async function loadAllData() {
     DATA.clients = await dbGetAll('clients');
@@ -376,9 +212,12 @@
     DATA.rapports_chantier = await dbGetAll('rapports_chantier');
     DATA.documents = await dbGetAll('documents');
     DATA.lots = await dbGetAll('lots');
+    DATA.demandes_versement = await dbGetAll('demandes_versement');
+    DATA.conversations = await dbGetAll('conversations');
+    DATA.messages = await dbGetAll('messages');
   }
 
-  // Hachage SHA256 (identique à l'ERP)
+  // ======================= HACHAGE & AUTH =======================
   async function hashPassword(password, salt) {
     const enc = new TextEncoder();
     const data = enc.encode(password + salt);
@@ -402,7 +241,7 @@
     return false;
   }
 
-  // Session persistante (localStorage)
+  // ======================= SESSION =======================
   function saveSession(client) { localStorage.setItem('souscripteur_session', JSON.stringify({ id: client.id, dossier: client.dossier, expire: Date.now() + 24*3600000 })); }
   function loadSession() {
     const raw = localStorage.getItem('souscripteur_session');
@@ -418,7 +257,7 @@
     return null;
   }
 
-  // Synchronisation Supabase (directe, sans localStorage)
+  // ======================= SUPABASE SYNC =======================
   let SB = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY };
   async function sbFetch(path, method, body) {
     if (!SB.url || !SB.key) return null;
@@ -436,7 +275,8 @@
     const tables = [
       ['pi_clients', 'clients'], ['pi_versements', 'versements'], ['pi_programmes', 'programmes'],
       ['pi_conventions', 'conventions'], ['pi_rapports_chantier', 'rapports_chantier'],
-      ['pi_documents', 'documents'], ['pi_lots', 'lots']
+      ['pi_documents', 'documents'], ['pi_lots', 'lots'], ['pi_demandes_versement', 'demandes_versement'],
+      ['pi_conversations', 'conversations'], ['pi_messages', 'messages']
     ];
     for (const [table, store] of tables) {
       const rows = await sbFetch(table + '?select=*', 'GET');
@@ -457,8 +297,14 @@
       DATA[store] = Object.values(byId);
     }
   }
+  async function pushDemandeToCloud(demande) {
+    if (!SB.url || !SB.key) return;
+    try { await sbFetch('pi_demandes_versement', 'POST', demande); } catch(e) { console.warn(e); } }
+  async function pushMessageToCloud(msg) {
+    if (!SB.url || !SB.key) return;
+    try { await sbFetch('pi_messages', 'POST', msg); } catch(e) { console.warn(e); } }
 
-  // Rendu des données
+  // ======================= RENDU (Dashboard, Échéancier, etc.) =======================
   function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
   function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
   function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
@@ -476,7 +322,13 @@
     document.getElementById('kpi-pct').innerText = pct + '%';
     const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
     const lot = DATA.lots.find(l => l.id === currentClient.lot_id);
-    document.getElementById('client-info').innerHTML = `<div><strong>${escapeHtml(currentClient.nom)} ${escapeHtml(currentClient.prenoms || '')}</strong></div><div>Dossier: ${escapeHtml(currentClient.dossier || '—')}</div><div>Programme: ${escapeHtml(prog ? prog.nom : '—')}</div><div>Lot: ${escapeHtml(lot ? lot.numero : '—')} (${escapeHtml(lot?.type || '—')})</div><div>Mode livraison: ${currentClient.mode_livraison === 'cle_en_main' ? 'Clé en main' : 'Gros œuvre'}</div>`;
+    document.getElementById('client-info').innerHTML = `
+      <div><strong>${escapeHtml(currentClient.nom)} ${escapeHtml(currentClient.prenoms || '')}</strong></div>
+      <div>Dossier: ${escapeHtml(currentClient.dossier || '—')}</div>
+      <div>Programme: ${escapeHtml(prog ? prog.nom : '—')}</div>
+      <div>Lot: ${escapeHtml(lot ? lot.numero : '—')} (${escapeHtml(lot?.type || '—')})</div>
+      <div>Mode livraison: ${currentClient.mode_livraison === 'cle_en_main' ? 'Clé en main' : 'Gros œuvre'}</div>
+    `;
     let avHtml = '<div style="font-size:13px;">Chargement...</div>';
     if (prog) {
       const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
@@ -487,6 +339,7 @@
     }
     document.getElementById('programme-avancement').innerHTML = avHtml;
   }
+
   function renderEcheancier() {
     if (!currentClient) return;
     const total = parseFloat(currentClient.montant_total) || 0;
@@ -510,20 +363,28 @@
     }
     document.getElementById('echeancier-body').innerHTML = rows;
   }
+
   function renderVersements() {
     if (!currentClient) return;
     const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
     const tbody = document.getElementById('versements-body');
-    if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>'; return; }
+    if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.</td></tr>'; return; }
     tbody.innerHTML = vers.map(v => `<tr><td>${formatDate(v.date)}</td><td>${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
   }
+
   async function renderDocuments() {
     if (!currentClient) return;
     const docs = DATA.documents.filter(d => d.entity_type === 'client' && d.entity_id === currentClient.id);
     const container = document.getElementById('documents-list');
     if (!docs.length) { container.innerHTML = '<div class="card" style="text-align:center;">Aucun document disponible.</div>'; return; }
-    container.innerHTML = docs.map(doc => `<div class="doc-item"><div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div><a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:12px;">Télécharger</a></div>`).join('');
+    container.innerHTML = docs.map(doc => `
+      <div class="doc-item">
+        <div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div>
+        <a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:12px;">Télécharger</a>
+      </div>
+    `).join('');
   }
+
   async function renderPhotos() {
     if (!currentClient) return;
     const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
@@ -536,15 +397,196 @@
     if (!allPhotos.length) { container.innerHTML = '<div class="card">Aucune photo de chantier disponible pour le moment.</div>'; return; }
     container.innerHTML = allPhotos.map((photo, idx) => `<div class="photo-card" onclick="openLightbox('${photo.data.replace(/'/g, "\\'")}', '${escapeHtml(photo.legende)}')"><img src="${photo.data}" alt="Photo chantier" loading="lazy"><div class="photo-caption">${escapeHtml(photo.legende)}<br><small>${formatDate(photo.date)}</small></div></div>`).join('');
   }
+
+  async function renderDemandes() {
+    if (!currentClient) return;
+    const demandes = DATA.demandes_versement.filter(d => d.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const container = document.getElementById('demandes-liste');
+    if (!demandes.length) { container.innerHTML = '<div style="color:var(--text-light);font-size:13px;">Aucune demande effectuée.</div>'; return; }
+    const statutLabel = { en_attente:'⏳ En attente', validee:'✅ Validée', rejetee:'❌ Rejetée' };
+    container.innerHTML = demandes.map(d => `
+      <div class="demande-item ${d.statut}">
+        <div style="display:flex; justify-content:space-between;"><strong>${formatFCFA(d.montant)}</strong><span class="badge ${d.statut==='validee'?'badge-success':d.statut==='rejetee'?'badge-danger':'badge-warning'}">${statutLabel[d.statut]}</span></div>
+        <div style="font-size:12px; margin-top:4px;">Mode: ${d.mode} · ${formatDate(d.date)}</div>
+        ${d.message ? `<div style="font-size:12px; color:var(--text-light); margin-top:4px;">${escapeHtml(d.message)}</div>` : ''}
+        ${d.reponse ? `<div style="font-size:12px; border-top:1px solid var(--border); margin-top:6px; padding-top:4px;">📌 Réponse: ${escapeHtml(d.reponse)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ======================= MESSAGERIE =======================
+  async function getOrCreateConversation() {
+    // Identifiant unique pour le souscripteur (préfixe "client_")
+    const clientId = `client_${currentClient.id}`;
+    // Rechercher une conversation avec un participant staff (commercial ou admin)
+    const staffUser = currentClient.commercial_id || (DATA.employes ? DATA.employes.find(e => e.role === 'admin')?.id : null) || 'admin';
+    const participants = [clientId, staffUser];
+    let conv = DATA.conversations.find(c => c.type === 'direct' && c.participants && c.participants.length === 2 && c.participants.includes(clientId));
+    if (!conv) {
+      conv = {
+        id: 'conv_' + Date.now(),
+        type: 'direct',
+        participants: participants,
+        date_creation: new Date().toISOString(),
+        nom: `Souscripteur ${currentClient.nom}`
+      };
+      DATA.conversations.push(conv);
+      await dbPut('conversations', conv);
+      // Envoyer vers cloud
+      if (SB.url && SB.key) { try { await sbFetch('pi_conversations', 'POST', conv); } catch(e) { console.warn(e); } }
+    }
+    return conv;
+  }
+
+  async function loadMessages() {
+    if (!currentConversationId) return;
+    const msgs = DATA.messages.filter(m => m.conversation_id === currentConversationId).sort((a,b) => new Date(a.date) - new Date(b.date));
+    const container = document.getElementById('messages-list');
+    if (!container) return;
+    if (!msgs.length) { container.innerHTML = '<div class="no-conversation">Aucun message. Écrivez votre premier message ci-dessous.</div>'; return; }
+    const currentParticipantId = `client_${currentClient.id}`;
+    container.innerHTML = msgs.map(m => `
+      <div class="msg-bubble ${m.expediteur_id === currentParticipantId ? 'mine' : ''}">
+        <div class="sender">${escapeHtml(m.expediteur_nom || (m.expediteur_id === currentParticipantId ? 'Moi' : 'Support'))}</div>
+        <div class="text">${escapeHtml(m.contenu)}</div>
+        <div class="time">${new Date(m.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</div>
+      </div>
+    `).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text || !currentConversationId) return;
+    const clientParticipantId = `client_${currentClient.id}`;
+    const msg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
+      conversation_id: currentConversationId,
+      expediteur_id: clientParticipantId,
+      expediteur_nom: currentClient.nom + ' ' + (currentClient.prenoms || ''),
+      contenu: text,
+      date: new Date().toISOString(),
+      lu: false,
+      fichiers: []
+    };
+    DATA.messages.push(msg);
+    await dbPut('messages', msg);
+    await pushMessageToCloud(msg);
+    input.value = '';
+    loadMessages();
+    // Notifier le staff via push (dans l'ERP, on peut aussi envoyer une notification)
+    if (Notification.permission === 'granted') {
+      new Notification('Message envoyé', { body: text.substring(0, 50), icon: '' });
+    }
+  }
+
+  async function initMessaging() {
+    const conv = await getOrCreateConversation();
+    currentConversationId = conv.id;
+    await loadMessages();
+    // Polling léger des nouveaux messages
+    if (msgPollTimer) clearInterval(msgPollTimer);
+    msgPollTimer = setInterval(async () => {
+      await pullFromCloudSilent();
+      await loadMessages();
+    }, 10000);
+  }
+
+  // ======================= DEMANDE DE VERSEMENT =======================
+  async function envoyerDemande() {
+    if (!currentClient) return;
+    const montant = parseFloat(document.getElementById('demande-montant').value);
+    if (isNaN(montant) || montant <= 0) { alert('Montant invalide'); return; }
+    const mode = document.getElementById('demande-mode').value;
+    const message = document.getElementById('demande-message').value.trim();
+    const demande = {
+      id: 'dem_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
+      client_id: currentClient.id,
+      dossier: currentClient.dossier,
+      nom: currentClient.nom + ' ' + (currentClient.prenoms || ''),
+      montant: montant,
+      mode: mode,
+      message: message,
+      date: new Date().toISOString(),
+      statut: 'en_attente',
+      reponse: null
+    };
+    DATA.demandes_versement.push(demande);
+    await dbPut('demandes_versement', demande);
+    await pushDemandeToCloud(demande);
+    document.getElementById('demande-montant').value = '';
+    document.getElementById('demande-message').value = '';
+    document.getElementById('demande-result').innerHTML = '<div style="background:#D1FAE5; padding:10px; border-radius:8px;">✅ Demande envoyée. Vous serez notifié une fois traitée.</div>';
+    setTimeout(() => { document.getElementById('demande-result').innerHTML = ''; }, 4000);
+    renderDemandes();
+    if (Notification.permission === 'granted') {
+      new Notification('Demande de versement envoyée', { body: `${formatFCFA(montant)} - ${mode}`, icon: '' });
+    }
+  }
+
+  // ======================= NOTIFICATIONS PUSH =======================
+  async function demanderNotification() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') return;
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') { new Notification('🔔 Notifications activées', { body: 'Vous recevrez les alertes importantes.' }); }
+  }
+
+  function verifierEcheances() {
+    if (!currentClient) return;
+    const total = parseFloat(currentClient.montant_total) || 0;
+    const apport = parseFloat(currentClient.apport) || 0;
+    const duree = parseInt(currentClient.duree) || 60;
+    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
+    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+    const verseMap = {};
+    versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
+    const today = new Date();
+    let prochainMois = null;
+    for (let i = 0; i < duree; i++) {
+      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      const paye = verseMap[moisKey] || 0;
+      if (paye < mensualite && d >= today) { prochainMois = d; break; }
+    }
+    if (prochainMois && Notification.permission === 'granted') {
+      const diffDays = Math.ceil((prochainMois - today) / (1000*60*60*24));
+      if (diffDays <= 3 && diffDays >= 0) {
+        new Notification('📅 Échéance à venir', { body: `Mensualité de ${formatFCFA(mensualite)} à payer avant le ${prochainMois.toLocaleDateString('fr-FR')}.` });
+      }
+    }
+  }
+
+  // ======================= LIGHTBOX & TABS =======================
   window.openLightbox = function(src, caption) { const lb = document.getElementById('lightbox'); const img = document.getElementById('lightbox-img'); img.src = src; img.alt = caption; lb.style.display = 'flex'; };
   window.closeLightbox = function() { document.getElementById('lightbox').style.display = 'none'; };
-  function attachTabEvents() { document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => { const tabId = btn.dataset.tab; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active')); document.getElementById(`tab-${tabId}`).classList.add('active'); if (tabId === 'echeances') renderEcheancier(); else if (tabId === 'versements') renderVersements(); else if (tabId === 'documents') renderDocuments(); else if (tabId === 'photos') renderPhotos(); else if (tabId === 'dashboard') renderDashboard(); }; }); }
+  function attachTabEvents() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const tabId = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        if (tabId === 'echeances') renderEcheancier();
+        else if (tabId === 'versements') renderVersements();
+        else if (tabId === 'documents') renderDocuments();
+        else if (tabId === 'photos') renderPhotos();
+        else if (tabId === 'demandes') renderDemandes();
+        else if (tabId === 'messagerie') { await initMessaging(); }
+        else if (tabId === 'dashboard') renderDashboard();
+      };
+    });
+  }
 
-  // Login
+  // ======================= LOGIN & START =======================
   const loginScreen = document.getElementById('login-screen');
   const appDiv = document.getElementById('app');
   const loginBtn = document.getElementById('login-btn');
   const loginError = document.getElementById('login-error');
+
   async function doLogin() {
     const identifier = document.getElementById('login-identifier').value.trim();
     const code = document.getElementById('login-code').value.trim();
@@ -557,36 +599,58 @@
     loginScreen.style.display = 'none';
     appDiv.style.display = 'flex';
     document.getElementById('welcome-name').innerText = client.prenoms ? `${client.prenoms} ${client.nom}` : client.nom;
+    await demanderNotification();
     await renderDashboard();
     renderEcheancier();
     renderVersements();
     renderDocuments();
     renderPhotos();
+    renderDemandes();
     attachTabEvents();
+    document.getElementById('btn-demande').onclick = envoyerDemande;
+    document.getElementById('msg-send').onclick = sendMessage;
+    document.getElementById('msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
+    verifierEcheances();
   }
+
   loginBtn.onclick = doLogin;
   document.getElementById('login-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('login-identifier').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-  document.getElementById('logout-btn').onclick = () => { localStorage.removeItem('souscripteur_session'); currentClient = null; appDiv.style.display = 'none'; loginScreen.style.display = 'flex'; document.getElementById('login-identifier').value = ''; document.getElementById('login-code').value = ''; };
+  document.getElementById('logout-btn').onclick = () => {
+    if (msgPollTimer) clearInterval(msgPollTimer);
+    localStorage.removeItem('souscripteur_session');
+    currentClient = null;
+    appDiv.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    document.getElementById('login-identifier').value = '';
+    document.getElementById('login-code').value = '';
+  };
 
-  // Démarrage
   async function start() {
     await openDB();
     await loadAllData();
-    if (navigator.onLine) await pullFromCloudSilent(); // synchronisation cloud automatique
-    await loadAllData(); // recharger après sync
+    if (navigator.onLine) await pullFromCloudSilent();
+    await loadAllData();
     const sessionClient = loadSession();
     if (sessionClient) {
       currentClient = sessionClient;
       loginScreen.style.display = 'none';
       appDiv.style.display = 'flex';
       document.getElementById('welcome-name').innerText = currentClient.prenoms ? `${currentClient.prenoms} ${currentClient.nom}` : currentClient.nom;
+      await demanderNotification();
       await renderDashboard();
       renderEcheancier();
       renderVersements();
       renderDocuments();
       renderPhotos();
+      renderDemandes();
       attachTabEvents();
+      document.getElementById('btn-demande').onclick = envoyerDemande;
+      document.getElementById('msg-send').onclick = sendMessage;
+      document.getElementById('msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+      setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
+      verifierEcheances();
     } else {
       loginScreen.style.display = 'flex';
       appDiv.style.display = 'none';
