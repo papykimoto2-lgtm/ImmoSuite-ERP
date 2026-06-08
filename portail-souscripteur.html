@@ -191,10 +191,11 @@
     .kpi-label { font-size: 11px; color: var(--text-light); text-transform: uppercase; }
     .kpi-value { font-size: 18px; font-weight: 700; margin-top: 4px; word-break: break-word; }
 
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 400px; }
     th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
     th { font-weight: 600; color: var(--text-light); }
+    .text-right { text-align: right; }
 
     .badge {
       display: inline-block;
@@ -269,7 +270,7 @@
       cursor: pointer;
     }
 
-    /* Formulaire demande (mobile) */
+    /* Formulaire demande */
     .form-group { margin-bottom: 14px; }
     .form-group label {
       display: block;
@@ -383,6 +384,18 @@
       font-size: 13px;
     }
 
+    /* Relevé de compte : entête synthèse */
+    .releve-synthese {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .releve-synthese .card {
+      margin-bottom: 0;
+      text-align: center;
+    }
+
     @media (max-width: 480px) {
       .content { padding: 12px; }
       .kpi-value { font-size: 16px; }
@@ -394,7 +407,7 @@
   </style>
 </head>
 <body>
-<!-- Écran de connexion (identique) -->
+<!-- Écran de connexion -->
 <div id="login-screen">
   <div class="login-card">
     <div class="logo"><div class="logo-icon">🏠</div><h1>Espace Souscripteur</h1><p style="font-size:13px;margin-top:8px;color:#64748B;">ImmoSuite ERP</p></div>
@@ -419,6 +432,7 @@
     <button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button>
     <button class="tab-btn" data-tab="echeances">📅 Échéancier</button>
     <button class="tab-btn" data-tab="versements">💳 Versements</button>
+    <button class="tab-btn" data-tab="releve">📋 Relevé de compte</button>
     <button class="tab-btn" data-tab="documents">📁 Documents</button>
     <button class="tab-btn" data-tab="photos">📸 Chantier</button>
     <button class="tab-btn" data-tab="demandes">📝 Demande de versement</button>
@@ -443,6 +457,27 @@
     <!-- Versements -->
     <div id="tab-versements" class="tab-pane">
       <div class="card"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead><tbody id="versements-body"></tbody></table></div></div></div>
+    </div>
+    <!-- Relevé de compte tiers -->
+    <div id="tab-releve" class="tab-pane">
+      <div class="releve-synthese">
+        <div class="card"><div class="kpi-label">Montant total dû</div><div class="kpi-value" id="releve-total-du">0 F</div></div>
+        <div class="card"><div class="kpi-label">Total versé</div><div class="kpi-value" id="releve-total-versé">0 F</div></div>
+        <div class="card"><div class="kpi-label">Solde restant</div><div class="kpi-value" id="releve-solde">0 F</div></div>
+        <div class="card"><div class="kpi-label">Statut</div><div class="kpi-value" id="releve-statut">—</div></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700; margin-bottom:10px;">📄 Historique des transactions</div>
+        <div class="table-wrap">
+          <table id="releve-table">
+            <thead><tr><th>Date</th><th>Libellé</th><th class="text-right">Montant (F)</th><th>Mode</th><th class="text-right">Solde après</th></tr></thead>
+            <tbody id="releve-tbody"></tbody>
+          </table>
+        </div>
+        <div style="text-align:right; margin-top:8px;">
+          <button class="btn btn-secondary btn-sm" id="export-releve-pdf" style="background:#E2E8F0; color:#1E293B; width:auto; padding:8px 16px;">📄 Exporter PDF</button>
+        </div>
+      </div>
     </div>
     <!-- Documents -->
     <div id="tab-documents" class="tab-pane"><div id="documents-list" class="card"></div></div>
@@ -648,7 +683,7 @@
       const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
       let badgeClass = statut==='payé'?'badge-success':statut==='partiel'?'badge-warning':statut==='retard'?'badge-danger':'badge-info';
       const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
-      rows += `<tr><td style="text-align:center;">${i+1}</td><td>${d.toLocaleDateString('fr-FR', { month:'short', year:'numeric' })}</td><td style="text-align:right;">${formatFCFA(mensualite)}</td><td style="text-align:right;">${paye ? formatFCFA(paye) : '—'}</td><td style="text-align:center;"><span class="badge ${badgeClass}">${label}</span></td></tr>`;
+      rows += `<tr><td style="text-align:center;">${i+1}</td><td>${d.toLocaleDateString('fr-FR', { month:'short', year:'numeric' })}</td><td class="text-right">${formatFCFA(mensualite)}</td><td class="text-right">${paye ? formatFCFA(paye) : '—'}</td><td style="text-align:center;"><span class="badge ${badgeClass}">${label}</span></td></tr>`;
     }
     document.getElementById('echeancier-body').innerHTML = rows;
   }
@@ -658,7 +693,38 @@
     const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
     const tbody = document.getElementById('versements-body');
     if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>'; return; }
-    tbody.innerHTML = vers.map(v => `<td><td>${formatDate(v.date)}</td><td style="text-align:right;">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
+    tbody.innerHTML = vers.map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
+  }
+
+  // Relevé de compte détaillé
+  async function renderReleve() {
+    if (!currentClient) return;
+    const totalDu = parseFloat(currentClient.montant_total) || 0;
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => new Date(a.date) - new Date(b.date));
+    let totalVerse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
+    let solde = totalDu - totalVerse;
+    document.getElementById('releve-total-du').innerText = formatFCFA(totalDu);
+    document.getElementById('releve-total-versé').innerText = formatFCFA(totalVerse);
+    document.getElementById('releve-solde').innerText = formatFCFA(solde);
+    const statut = solde <= 0 ? 'Soldé' : (solde > 0 ? 'En cours' : 'Créditeur');
+    document.getElementById('releve-statut').innerHTML = `<span class="badge ${solde<=0?'badge-success':'badge-warning'}">${statut}</span>`;
+
+    let soldeCourant = 0;
+    const rows = [];
+    // Ajouter une ligne d'ouverture (montant initial)
+    rows.push(`<tr><td>${formatDate(currentClient.date_debut || '—')}</td><td>Souscription initiale</td><td class="text-right">${formatFCFA(totalDu)}</td><td>—</td><td class="text-right">${formatFCFA(totalDu)}</td></tr>`);
+    soldeCourant = totalDu;
+    for (const v of versements) {
+      const montant = parseFloat(v.montant) || 0;
+      soldeCourant -= montant;
+      rows.push(`<tr><td>${formatDate(v.date)}</td><td>Versement - ${escapeHtml(v.mode || '')} ${v.ref ? '('+v.ref+')' : ''}</td><td class="text-right">- ${formatFCFA(montant)}</td><td>${escapeHtml(v.mode)}</td><td class="text-right">${formatFCFA(soldeCourant)}</td></tr>`);
+    }
+    if (soldeCourant > 0) {
+      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Solde restant dû</strong></td><td class="text-right"><strong>${formatFCFA(soldeCourant)}</strong></td></tr>`);
+    } else if (soldeCourant < 0) {
+      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Trop-perçu (crédit client)</strong></td><td class="text-right"><strong>${formatFCFA(-soldeCourant)}</strong></td></tr>`);
+    }
+    document.getElementById('releve-tbody').innerHTML = rows.join('');
   }
 
   async function renderDocuments() {
@@ -859,6 +925,7 @@
         document.getElementById(`tab-${tabId}`).classList.add('active');
         if (tabId === 'echeances') renderEcheancier();
         else if (tabId === 'versements') renderVersements();
+        else if (tabId === 'releve') renderReleve();
         else if (tabId === 'documents') renderDocuments();
         else if (tabId === 'photos') renderPhotos();
         else if (tabId === 'demandes') renderDemandes();
@@ -866,6 +933,30 @@
         else if (tabId === 'dashboard') renderDashboard();
       };
     });
+  }
+
+  // Export PDF simple (impression)
+  function exportRelevePDF() {
+    if (!currentClient) return;
+    const win = window.open('', '_blank');
+    const contenu = document.getElementById('releve-table').cloneNode(true);
+    const totalDu = document.getElementById('releve-total-du').innerText;
+    const totalVersé = document.getElementById('releve-total-versé').innerText;
+    const solde = document.getElementById('releve-solde').innerText;
+    const nomClient = `${currentClient.nom} ${currentClient.prenoms || ''}`;
+    win.document.write(`
+      <html><head><title>Relevé de compte - ${nomClient}</title>
+      <style>body{font-family:Arial;padding:20px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;text-align:left;} .text-right{text-align:right;}</style>
+      </head><body>
+      <h2>Relevé de compte - ${nomClient}</h2>
+      <p>Dossier: ${currentClient.dossier} | Programme: ${DATA.programmes.find(p=>p.id===currentClient.programme_id)?.nom || '—'}</p>
+      <div style="margin:10px 0;">Montant total dû: ${totalDu}<br>Total versé: ${totalVersé}<br>Solde restant: ${solde}</div>
+      ${contenu.outerHTML}
+      <p>Généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+      </body></html>
+    `);
+    win.document.close();
+    win.print();
   }
 
   // ======================= LOGIN & START =======================
@@ -890,13 +981,15 @@
     await renderDashboard();
     renderEcheancier();
     renderVersements();
-    renderDocuments();
-    renderPhotos();
-    renderDemandes();
+    await renderReleve();
+    await renderDocuments();
+    await renderPhotos();
+    await renderDemandes();
     attachTabEvents();
     document.getElementById('btn-demande').onclick = envoyerDemande;
     document.getElementById('msg-send').onclick = sendMessage;
     document.getElementById('msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    document.getElementById('export-releve-pdf').onclick = exportRelevePDF;
     setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
     verifierEcheances();
   }
@@ -929,13 +1022,15 @@
       await renderDashboard();
       renderEcheancier();
       renderVersements();
-      renderDocuments();
-      renderPhotos();
-      renderDemandes();
+      await renderReleve();
+      await renderDocuments();
+      await renderPhotos();
+      await renderDemandes();
       attachTabEvents();
       document.getElementById('btn-demande').onclick = envoyerDemande;
       document.getElementById('msg-send').onclick = sendMessage;
       document.getElementById('msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+      document.getElementById('export-releve-pdf').onclick = exportRelevePDF;
       setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
       verifierEcheances();
     } else {
