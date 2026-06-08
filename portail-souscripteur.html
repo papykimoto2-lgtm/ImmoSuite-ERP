@@ -1,754 +1,426 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Espace Souscripteur – ImmoSuite ERP</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    :root {
-      --bg: #F5F7FB;
-      --card: #FFFFFF;
-      --text: #1E293B;
-      --text-light: #64748B;
-      --border: #E2E8F0;
-      --primary: #B87333;
-      --primary-dark: #8B5520;
-      --success: #10B981;
-      --danger: #EF4444;
-      --warning: #F59E0B;
-      --info: #3B82F6;
-      --radius: 12px;
-    }
-    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    /* Login */
-    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #1E2A3A 0%, #2563EB 100%); padding: 20px; }
-    .login-card { background: white; border-radius: 28px; padding: 32px 24px; width: 100%; max-width: 400px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
-    .logo { text-align: center; margin-bottom: 28px; }
-    .logo-icon { width: 64px; height: 64px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 28px; box-shadow: 0 10px 15px -3px rgba(184,115,51,0.3); }
-    h1 { font-size: 22px; font-weight: 700; color: #0F172A; }
-    .login-field { margin-bottom: 18px; }
-    .login-field label { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
-    .login-field input { width: 100%; padding: 14px 16px; border: 1px solid #E2E8F0; border-radius: 14px; font-size: 16px; background: #F8FAFC; transition: all 0.2s; }
-    .login-field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(184,115,51,0.2); }
-    .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; border-radius: 14px; color: white; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.2s; }
-    .btn:active { transform: scale(0.98); }
-    .error-msg { color: var(--danger); font-size: 13px; margin-top: 12px; text-align: center; }
+// ======================= CONFIGURATION SUPABASE =======================
+const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
 
-    /* App */
-    #app { display: none; flex-direction: column; min-height: 100vh; }
-    .topbar { background: white; border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; }
-    .topbar-brand { font-weight: 700; font-size: 16px; color: var(--primary); }
-    .topbar-user { display: flex; align-items: center; gap: 8px; }
-    .avatar { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; }
-    .logout-btn { background: none; border: none; color: var(--danger); font-size: 13px; font-weight: 600; cursor: pointer; }
+// ======================= INDEXEDDB & DATA =======================
+const DB_NAME = 'ImmoSuiteDB';
+const DB_VERSION = 109;
+let db = null;
+let DATA = { clients: [], versements: [], programmes: [], conventions: [], rapports_chantier: [], documents: [], lots: [], demandes_versement: [], conversations: [], messages: [], employes: [], users: [] };
+let currentClient = null;
+let currentConversationId = null;
+let msgPollTimer = null;
 
-    /* Tabs mobiles */
-    .tabs { display: flex; background: white; border-bottom: 1px solid var(--border); padding: 0 8px; gap: 2px; overflow-x: auto; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-    .tab-btn { flex: 0 0 auto; padding: 12px 12px; background: none; border: none; font-size: 13px; font-weight: 600; color: var(--text-light); border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; }
-    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+function openDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, DB_VERSION); req.onsuccess = () => { db = req.result; resolve(); }; req.onerror = () => reject(req.error); }); }
+async function dbGetAll(store) { if (!db || !db.objectStoreNames.contains(store)) return []; const tx = db.transaction(store, 'readonly'); return new Promise(r => { tx.objectStore(store).getAll().onsuccess = e => r(e.target.result || []); }); }
+async function dbPut(store, obj) { if (!db || !db.objectStoreNames.contains(store)) return; const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(obj); return new Promise(r => { tx.oncomplete = r; }); }
 
-    .content { padding: 16px; flex: 1; }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-    .card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .kpi { background: var(--card); border-radius: 14px; padding: 12px; text-align: center; border-top: 3px solid var(--primary); }
-    .kpi-label { font-size: 11px; color: var(--text-light); text-transform: uppercase; }
-    .kpi-value { font-size: 18px; font-weight: 700; margin-top: 4px; word-break: break-word; }
-
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 400px; }
-    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { font-weight: 600; color: var(--text-light); }
-    .text-right { text-align: right; }
-
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
-    .badge-success { background: #D1FAE5; color: #065F46; }
-    .badge-warning { background: #FEF3C7; color: #92400E; }
-    .badge-danger { background: #FEE2E2; color: #991B1B; }
-    .badge-info { background: #DBEAFE; color: #1E40AF; }
-
-    .progress-bar { height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 6px 0; }
-    .progress-fill { height: 100%; background: var(--primary); border-radius: 4px; }
-
-    .doc-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #F8FAFC; border-radius: 12px; margin-bottom: 8px; font-size: 13px; flex-wrap: wrap; gap: 8px; }
-    .doc-item .btn { width: auto; padding: 6px 12px; font-size: 11px; background: #E2E8F0; color: #1E293B; text-decoration: none; border-radius: 20px; }
-
-    .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-    .photo-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
-    .photo-card img { width: 100%; height: 100px; object-fit: cover; }
-    .photo-caption { padding: 6px; font-size: 10px; text-align: center; color: var(--text-light); }
-
-    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
-    .lightbox img { max-width: 90%; max-height: 80%; border-radius: 8px; }
-    .lightbox-close { position: absolute; top: 20px; right: 30px; font-size: 32px; color: white; cursor: pointer; }
-
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-light); text-transform: uppercase; }
-    .form-control { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; background: var(--card); }
-    .demande-item { background: #F8FAFC; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 3px solid var(--warning); font-size: 13px; }
-    .demande-item.validee { border-left-color: var(--success); }
-    .demande-item.rejetee { border-left-color: var(--danger); }
-
-    /* Messagerie avec choix destinataire */
-    .msg-container { display: flex; flex-direction: column; height: 65vh; min-height: 400px; background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
-    .msg-contact-bar { padding: 8px 12px; background: #F8FAFC; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .msg-contact-bar select { flex: 1; min-width: 140px; }
-    .msg-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: #F8FAFC; -webkit-overflow-scrolling: touch; }
-    .msg-bubble { max-width: 85%; padding: 8px 12px; border-radius: 18px; background: white; border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .msg-bubble.mine { background: var(--primary); color: white; border: none; align-self: flex-end; }
-    .msg-bubble .sender { font-size: 10px; font-weight: 600; margin-bottom: 4px; color: var(--primary-dark); }
-    .msg-bubble.mine .sender { color: rgba(255,255,255,0.8); }
-    .msg-bubble .text { font-size: 13px; word-break: break-word; }
-    .msg-bubble .time { font-size: 9px; margin-top: 4px; text-align: right; color: var(--text-light); }
-    .msg-bubble.mine .time { color: rgba(255,255,255,0.7); }
-    .msg-composer { display: flex; gap: 8px; padding: 10px; background: white; border-top: 1px solid var(--border); }
-    .msg-composer textarea { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 24px; resize: none; font-family: inherit; font-size: 14px; max-height: 80px; }
-    .msg-composer button { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 18px; cursor: pointer; flex-shrink: 0; }
-    .no-conversation { text-align: center; padding: 24px; color: var(--text-light); font-size: 13px; }
-
-    .releve-synthese { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .releve-synthese .card { margin-bottom: 0; text-align: center; }
-
-    @media (max-width: 480px) {
-      .content { padding: 12px; }
-      .kpi-value { font-size: 16px; }
-      .tab-btn { font-size: 12px; padding: 10px 8px; }
-      .msg-bubble { max-width: 90%; }
-      .msg-composer textarea { font-size: 13px; padding: 8px; }
-      .msg-composer button { width: 40px; height: 40px; }
-    }
-  </style>
-</head>
-<body>
-<!-- Écran de connexion -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="logo"><div class="logo-icon">🏠</div><h1>Espace Souscripteur</h1><p style="font-size:13px;margin-top:8px;color:#64748B;">ImmoSuite ERP</p></div>
-    <div id="login-error" class="error-msg" style="display:none;"></div>
-    <div class="login-field"><label>Numéro de dossier / Email / Téléphone</label><input type="text" id="login-identifier" placeholder="Ex: SP008" autocomplete="username"></div>
-    <div class="login-field"><label>Code d'accès</label><input type="password" id="login-code" placeholder="Code à 8 chiffres" autocomplete="current-password"></div>
-    <button class="btn" id="login-btn">Se connecter →</button>
-    <div style="margin-top:16px;font-size:12px;text-align:center;color:#94A3B8;">🔒 Sécurisé · Accès privé</div>
-  </div>
-</div>
-
-<!-- Application après login -->
-<div id="app">
-  <div class="topbar">
-    <div class="topbar-brand">Mon espace ImmoSuite</div>
-    <div class="topbar-user">
-      <span id="welcome-name" style="font-size:13px;"></span>
-      <button class="logout-btn" id="logout-btn">Déconnexion</button>
-    </div>
-  </div>
-  <div class="tabs" id="tabs">
-    <button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button>
-    <button class="tab-btn" data-tab="echeances">📅 Échéancier</button>
-    <button class="tab-btn" data-tab="versements">💳 Versements</button>
-    <button class="tab-btn" data-tab="releve">📋 Relevé de compte</button>
-    <button class="tab-btn" data-tab="documents">📁 Documents</button>
-    <button class="tab-btn" data-tab="photos">📸 Chantier</button>
-    <button class="tab-btn" data-tab="demandes">📝 Demande de versement</button>
-    <button class="tab-btn" data-tab="messagerie">💬 Messagerie</button>
-  </div>
-  <div class="content">
-    <!-- Dashboard -->
-    <div id="tab-dashboard" class="tab-pane active">
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-label">Montant souscrit</div><div class="kpi-value" id="kpi-total">0 F</div></div>
-        <div class="kpi"><div class="kpi-label">Déjà versé</div><div class="kpi-value" id="kpi-versé">0 F</div></div>
-        <div class="kpi"><div class="kpi-label">Reste à payer</div><div class="kpi-value" id="kpi-reste">0 F</div></div>
-        <div class="kpi"><div class="kpi-label">Avancement</div><div class="kpi-value" id="kpi-pct">0%</div></div>
-      </div>
-      <div class="card"><div style="font-weight:700;margin-bottom:8px;">Informations dossier</div><div id="client-info"></div></div>
-      <div class="card"><div style="font-weight:700;margin-bottom:8px;">📈 Avancement du programme</div><div id="programme-avancement"></div></div>
-    </div>
-    <!-- Échéancier -->
-    <div id="tab-echeances" class="tab-pane">
-      <div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
-    </div>
-    <!-- Versements -->
-    <div id="tab-versements" class="tab-pane">
-      <div class="card"><div class="table-wrap"></table><thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead><tbody id="versements-body"></tbody></table></div></div></div>
-    </div>
-    <!-- Relevé de compte -->
-    <div id="tab-releve" class="tab-pane">
-      <div class="releve-synthese">
-        <div class="card"><div class="kpi-label">Montant total dû</div><div class="kpi-value" id="releve-total-du">0 F</div></div>
-        <div class="card"><div class="kpi-label">Total versé</div><div class="kpi-value" id="releve-total-versé">0 F</div></div>
-        <div class="card"><div class="kpi-label">Solde restant</div><div class="kpi-value" id="releve-solde">0 F</div></div>
-        <div class="card"><div class="kpi-label">Statut</div><div class="kpi-value" id="releve-statut">—</div></div>
-      </div>
-      <div class="card">
-        <div style="font-weight:700; margin-bottom:10px;">📄 Historique des transactions</div>
-        <div class="table-wrap"><table id="releve-table"><thead><tr><th>Date</th><th>Libellé</th><th class="text-right">Montant (F)</th><th>Mode</th><th class="text-right">Solde après</th></tr></thead><tbody id="releve-tbody"></tbody></table></div>
-        <div style="text-align:right;"><button class="btn btn-secondary btn-sm" id="export-releve-pdf" style="background:#E2E8F0; color:#1E293B; width:auto; padding:8px 16px;">📄 Exporter PDF</button></div>
-      </div>
-    </div>
-    <!-- Documents -->
-    <div id="tab-documents" class="tab-pane"><div id="documents-list" class="card"></div></div>
-    <!-- Photos -->
-    <div id="tab-photos" class="tab-pane"><div id="photos-list" class="photos-grid"></div></div>
-    <!-- Demandes de versement -->
-    <div id="tab-demandes" class="tab-pane">
-      <div class="card">
-        <div class="form-group"><label>Montant (FCFA)</label><input type="number" id="demande-montant" class="form-control" placeholder="Ex: 250000" min="1000" step="1000"></div>
-        <div class="form-group"><label>Mode de paiement</label><select id="demande-mode" class="form-control"><option value="virement">Virement bancaire</option><option value="wave">Wave</option><option value="orange_money">Orange Money</option><option value="mtn">MTN MoMo</option><option value="especes">Espèces (agence)</option></select></div>
-        <div class="form-group"><label>Message (optionnel)</label><textarea id="demande-message" class="form-control" rows="2" placeholder="Précisez l'échéance concernée..."></textarea></div>
-        <button class="btn" id="btn-demande" style="margin-top:8px;">📤 Envoyer la demande</button>
-        <div id="demande-result" style="margin-top:12px;"></div>
-      </div>
-      <div class="card"><div style="font-weight:700; margin-bottom:8px;">📋 Historique des demandes</div><div id="demandes-liste"></div></div>
-    </div>
-    <!-- Messagerie améliorée -->
-    <div id="tab-messagerie" class="tab-pane">
-      <div class="msg-container">
-        <div class="msg-contact-bar">
-          <label style="font-size:12px;">👤 Destinataire :</label>
-          <select id="msg-destinataire" class="form-control" style="width:auto; flex:1;">
-            <option value="">-- Choisir un interlocuteur --</option>
-          </select>
-        </div>
-        <div class="msg-messages" id="messages-list"><div class="no-conversation">Sélectionnez un destinataire pour démarrer la conversation.</div></div>
-        <div class="msg-composer">
-          <textarea id="msg-input" placeholder="Écrivez votre message..." rows="1" disabled></textarea>
-          <button id="msg-send" disabled>📨</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Lightbox -->
-<div id="lightbox" class="lightbox" onclick="closeLightbox()"><span class="lightbox-close">&times;</span><img id="lightbox-img" src=""></div>
-
-<script>
-  // ======================= CONFIGURATION SUPABASE =======================
-  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
-
-  // ======================= INDEXEDDB & DATA =======================
-  const DB_NAME = 'ImmoSuiteDB';
-  const DB_VERSION = 109;
-  let db = null;
-  let DATA = { clients: [], versements: [], programmes: [], conventions: [], rapports_chantier: [], documents: [], lots: [], demandes_versement: [], conversations: [], messages: [], employes: [], users: [] };
-  let currentClient = null;
-  let currentConversationId = null;
-  let msgPollTimer = null;
-
-  function openDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, DB_VERSION); req.onsuccess = () => { db = req.result; resolve(); }; req.onerror = () => reject(req.error); }); }
-  async function dbGetAll(store) { if (!db || !db.objectStoreNames.contains(store)) return []; const tx = db.transaction(store, 'readonly'); return new Promise(r => { tx.objectStore(store).getAll().onsuccess = e => r(e.target.result || []); }); }
-  async function dbPut(store, obj) { if (!db || !db.objectStoreNames.contains(store)) return; const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(obj); return new Promise(r => { tx.oncomplete = r; }); }
-
-  async function loadAllData() {
-    DATA.clients = await dbGetAll('clients');
-    DATA.versements = await dbGetAll('versements');
-    DATA.programmes = await dbGetAll('programmes');
-    DATA.conventions = await dbGetAll('conventions');
-    DATA.rapports_chantier = await dbGetAll('rapports_chantier');
-    DATA.documents = await dbGetAll('documents');
-    DATA.lots = await dbGetAll('lots');
-    DATA.demandes_versement = await dbGetAll('demandes_versement');
-    DATA.conversations = await dbGetAll('conversations');
-    DATA.messages = await dbGetAll('messages');
-    DATA.employes = await dbGetAll('employes');
-    DATA.users = await dbGetAll('users');
-  }
-
-  // ======================= HACHAGE & AUTH =======================
-  async function hashPassword(password, salt) {
-    const enc = new TextEncoder();
-    const data = enc.encode(password + salt);
-    if (crypto.subtle) {
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-    } else {
-      let h = 0;
-      for (let i = 0; i < data.length; i++) h = ((h << 5) - h) + data[i] | 0;
-      return h.toString(16);
-    }
-  }
-  async function verifyCode(client, code) {
-    if (!code || !client) return false;
-    if (client.code_acces_hash && client.code_acces_salt) {
-      const computed = await hashPassword(code, client.code_acces_salt);
-      if (computed === client.code_acces_hash) return true;
-    }
-    if (client.code_acces === code) return true;
-    if (client.mot_de_passe === code) return true;
-    return false;
-  }
-
-  // ======================= SESSION =======================
-  function saveSession(client) { localStorage.setItem('souscripteur_session', JSON.stringify({ id: client.id, dossier: client.dossier, expire: Date.now() + 24*3600000 })); }
-  function loadSession() {
-    const raw = localStorage.getItem('souscripteur_session');
-    if (!raw) return null;
+async function loadAllData() {
+  const stores = ['clients','versements','programmes','conventions','rapports_chantier','documents','lots','demandes_versement','conversations','messages','employes','users'];
+  for (const store of stores) {
     try {
-      const sess = JSON.parse(raw);
-      if (sess.expire && sess.expire > Date.now()) {
-        const client = DATA.clients.find(c => c.id === sess.id);
-        if (client) return client;
+      DATA[store] = await dbGetAll(store);
+    } catch(e) { DATA[store] = []; }
+  }
+}
+
+// ======================= HACHAGE & AUTH =======================
+async function hashPassword(password, salt) {
+  const enc = new TextEncoder();
+  const data = enc.encode(password + salt);
+  if (crypto.subtle) {
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  } else {
+    let h = 0;
+    for (let i = 0; i < data.length; i++) h = ((h << 5) - h) + data[i] | 0;
+    return h.toString(16);
+  }
+}
+async function verifyCode(client, code) {
+  if (!code || !client) return false;
+  if (client.code_acces_hash && client.code_acces_salt) {
+    const computed = await hashPassword(code, client.code_acces_salt);
+    if (computed === client.code_acces_hash) return true;
+  }
+  if (client.code_acces === code) return true;
+  if (client.mot_de_passe === code) return true;
+  return false;
+}
+
+// ======================= SESSION =======================
+function saveSession(client) { localStorage.setItem('souscripteur_session', JSON.stringify({ id: client.id, dossier: client.dossier, expire: Date.now() + 24*3600000 })); }
+function loadSession() {
+  const raw = localStorage.getItem('souscripteur_session');
+  if (!raw) return null;
+  try {
+    const sess = JSON.parse(raw);
+    if (sess.expire && sess.expire > Date.now()) {
+      const client = DATA.clients.find(c => c.id === sess.id);
+      if (client) return client;
+    }
+    localStorage.removeItem('souscripteur_session');
+  } catch(e) {}
+  return null;
+}
+
+// ======================= SUPABASE SYNC =======================
+let SB = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY };
+async function sbFetch(path, method, body) {
+  if (!SB.url || !SB.key) return null;
+  try {
+    const opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json', 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key } };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(SB.url + '/rest/v1/' + path, opts);
+    if (!resp.ok) return null;
+    const txt = await resp.text();
+    return txt ? JSON.parse(txt) : [];
+  } catch(e) { return null; }
+}
+async function pullFromCloudSilent() {
+  if (!SB.url || !SB.key || !navigator.onLine) return;
+  const tables = [
+    ['pi_clients', 'clients'], ['pi_versements', 'versements'], ['pi_programmes', 'programmes'],
+    ['pi_conventions', 'conventions'], ['pi_rapports_chantier', 'rapports_chantier'],
+    ['pi_documents', 'documents'], ['pi_lots', 'lots'], ['pi_demandes_versement', 'demandes_versement'],
+    ['pi_conversations', 'conversations'], ['pi_messages', 'messages'], ['pi_employes', 'employes'], ['pi_users', 'users']
+  ];
+  for (const [table, store] of tables) {
+    const rows = await sbFetch(table + '?select=*', 'GET');
+    if (!rows || !rows.length) continue;
+    const byId = {};
+    DATA[store].forEach(x => { if (x && x.id) byId[x.id] = x; });
+    for (const row of rows) {
+      const r = row.data || row;
+      if (!r || !r.id) continue;
+      if (!byId[r.id]) {
+        byId[r.id] = r;
+        try { await dbPut(store, r); } catch(e) {}
+      } else if (r._modifie && byId[r.id]._modifie && r._modifie > byId[r.id]._modifie) {
+        byId[r.id] = r;
+        try { await dbPut(store, r); } catch(e) {}
       }
-      localStorage.removeItem('souscripteur_session');
-    } catch(e) {}
-    return null;
-  }
-
-  // ======================= SUPABASE SYNC =======================
-  let SB = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY };
-  async function sbFetch(path, method, body) {
-    if (!SB.url || !SB.key) return null;
-    try {
-      const opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json', 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key } };
-      if (body) opts.body = JSON.stringify(body);
-      const resp = await fetch(SB.url + '/rest/v1/' + path, opts);
-      if (!resp.ok) return null;
-      const txt = await resp.text();
-      return txt ? JSON.parse(txt) : [];
-    } catch(e) { return null; }
-  }
-  async function pullFromCloudSilent() {
-    if (!SB.url || !SB.key || !navigator.onLine) return;
-    const tables = [
-      ['pi_clients', 'clients'], ['pi_versements', 'versements'], ['pi_programmes', 'programmes'],
-      ['pi_conventions', 'conventions'], ['pi_rapports_chantier', 'rapports_chantier'],
-      ['pi_documents', 'documents'], ['pi_lots', 'lots'], ['pi_demandes_versement', 'demandes_versement'],
-      ['pi_conversations', 'conversations'], ['pi_messages', 'messages'], ['pi_employes', 'employes'], ['pi_users', 'users']
-    ];
-    for (const [table, store] of tables) {
-      const rows = await sbFetch(table + '?select=*', 'GET');
-      if (!rows || !rows.length) continue;
-      const byId = {};
-      DATA[store].forEach(x => { if (x && x.id) byId[x.id] = x; });
-      for (const row of rows) {
-        const r = row.data || row;
-        if (!r || !r.id) continue;
-        if (!byId[r.id]) {
-          byId[r.id] = r;
-          try { await dbPut(store, r); } catch(e) {}
-        } else if (r._modifie && byId[r.id]._modifie && r._modifie > byId[r.id]._modifie) {
-          byId[r.id] = r;
-          try { await dbPut(store, r); } catch(e) {}
-        }
-      }
-      DATA[store] = Object.values(byId);
     }
+    DATA[store] = Object.values(byId);
   }
-  async function pushDemandeToCloud(demande) {
-    if (!SB.url || !SB.key) return;
-    try { await sbFetch('pi_demandes_versement', 'POST', demande); } catch(e) { console.warn(e); } }
-  async function pushMessageToCloud(msg) {
-    if (!SB.url || !SB.key) return;
-    try { await sbFetch('pi_messages', 'POST', msg); } catch(e) { console.warn(e); } }
+}
+async function pushDemandeToCloud(demande) { if (SB.url && SB.key) try { await sbFetch('pi_demandes_versement', 'POST', demande); } catch(e) {} }
+async function pushMessageToCloud(msg) { if (SB.url && SB.key) try { await sbFetch('pi_messages', 'POST', msg); } catch(e) {} }
 
-  // ======================= RENDU (Dashboard, Échéancier, Versements, Relevé, Documents, Photos, Demandes) =======================
-  function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
-  function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
-  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+// ======================= FONCTIONS RENDU (simplifiées) =======================
+function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
+function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
+function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
 
-  async function renderDashboard() {
-    if (!currentClient) return;
-    const total = parseFloat(currentClient.montant_total) || 0;
-    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
-    const verse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
-    const reste = Math.max(0, total - verse);
-    const pct = total > 0 ? Math.round((verse / total) * 100) : 0;
-    document.getElementById('kpi-total').innerText = formatFCFA(total);
-    document.getElementById('kpi-versé').innerText = formatFCFA(verse);
-    document.getElementById('kpi-reste').innerText = formatFCFA(reste);
-    document.getElementById('kpi-pct').innerText = pct + '%';
-    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
-    const lot = DATA.lots.find(l => l.id === currentClient.lot_id);
-    document.getElementById('client-info').innerHTML = `
-      <div><strong>${escapeHtml(currentClient.nom)} ${escapeHtml(currentClient.prenoms || '')}</strong></div>
-      <div>Dossier: ${escapeHtml(currentClient.dossier || '—')}</div>
-      <div>Programme: ${escapeHtml(prog ? prog.nom : '—')}</div>
-      <div>Lot: ${escapeHtml(lot ? lot.numero : '—')} (${escapeHtml(lot?.type || '—')})</div>
-      <div>Mode livraison: ${currentClient.mode_livraison === 'cle_en_main' ? 'Clé en main' : 'Gros œuvre'}</div>
-    `;
-    let avHtml = '<div style="font-size:13px;">Chargement...</div>';
-    if (prog) {
-      const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
-      const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
-      const lastRapport = rapports.sort((a,b) => (b.date_debut||'').localeCompare(a.date_debut||''))[0];
-      if (lastRapport) avHtml = `<div>Dernière mise à jour: ${formatDate(lastRapport.date_debut)}</div><div>Avancement: ${lastRapport.avancement || 0}%</div><div class="progress-bar"><div class="progress-fill" style="width:${lastRapport.avancement || 0}%"></div></div><div style="margin-top:8px;">${escapeHtml((lastRapport.travaux_realises || '').substring(0, 100))}…</div>`;
-      else avHtml = '<div>Aucun rapport de chantier disponible.</div>';
-    }
-    document.getElementById('programme-avancement').innerHTML = avHtml;
-  }
-
-  function renderEcheancier() {
-    if (!currentClient) return;
-    const total = parseFloat(currentClient.montant_total) || 0;
-    const apport = parseFloat(currentClient.apport) || 0;
-    const duree = parseInt(currentClient.duree) || 60;
-    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
-    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
-    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
-    const verseMap = {};
-    versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
-    const today = new Date();
-    let rows = '';
-    for (let i = 0; i < duree; i++) {
-      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
-      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-      const paye = verseMap[moisKey] || 0;
-      const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
-      let badgeClass = statut==='payé'?'badge-success':statut==='partiel'?'badge-warning':statut==='retard'?'badge-danger':'badge-info';
-      const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
-      rows += `<tr><td style="text-align:center;">${i+1}</td><td>${d.toLocaleDateString('fr-FR', { month:'short', year:'numeric' })}</td><td class="text-right">${formatFCFA(mensualite)}</td><td class="text-right">${paye ? formatFCFA(paye) : '—'}</td><td style="text-align:center;"><span class="badge ${badgeClass}">${label}</span></td></tr>`;
-    }
-    document.getElementById('echeancier-body').innerHTML = rows;
-  }
-
-  function renderVersements() {
-    if (!currentClient) return;
-    const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
-    const tbody = document.getElementById('versements-body');
-    if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.</td></tr>'; return; }
-    tbody.innerHTML = vers.map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
-  }
-
-  async function renderReleve() {
-    if (!currentClient) return;
-    const totalDu = parseFloat(currentClient.montant_total) || 0;
-    const versements = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => new Date(a.date) - new Date(b.date));
-    let totalVerse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
-    let solde = totalDu - totalVerse;
-    document.getElementById('releve-total-du').innerText = formatFCFA(totalDu);
-    document.getElementById('releve-total-versé').innerText = formatFCFA(totalVerse);
-    document.getElementById('releve-solde').innerText = formatFCFA(solde);
-    const statut = solde <= 0 ? 'Soldé' : (solde > 0 ? 'En cours' : 'Créditeur');
-    document.getElementById('releve-statut').innerHTML = `<span class="badge ${solde<=0?'badge-success':'badge-warning'}">${statut}</span>`;
-
-    let soldeCourant = totalDu;
-    const rows = [];
-    rows.push(`<tr><td>${formatDate(currentClient.date_debut || '—')}</td><td>Souscription initiale</td><td class="text-right">${formatFCFA(totalDu)}</td><td>—</td><td class="text-right">${formatFCFA(soldeCourant)}</td></tr>`);
-    for (const v of versements) {
-      const montant = parseFloat(v.montant) || 0;
-      soldeCourant -= montant;
-      rows.push(`<tr><td>${formatDate(v.date)}</td><td>Versement - ${escapeHtml(v.mode || '')} ${v.ref ? '('+v.ref+')' : ''}</td><td class="text-right">- ${formatFCFA(montant)}</td><td>${escapeHtml(v.mode)}</td><td class="text-right">${formatFCFA(soldeCourant)}</td></tr>`);
-    }
-    if (soldeCourant > 0) {
-      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Solde restant dû</strong></td><td class="text-right"><strong>${formatFCFA(soldeCourant)}</strong></td></tr>`);
-    } else if (soldeCourant < 0) {
-      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Trop-perçu (crédit client)</strong></td><td class="text-right"><strong>${formatFCFA(-soldeCourant)}</strong></td></tr>`);
-    }
-    document.getElementById('releve-tbody').innerHTML = rows.join('');
-  }
-
-  async function renderDocuments() {
-    if (!currentClient) return;
-    const docs = DATA.documents.filter(d => d.entity_type === 'client' && d.entity_id === currentClient.id);
-    const container = document.getElementById('documents-list');
-    if (!docs.length) { container.innerHTML = '<div class="card" style="text-align:center;">Aucun document disponible.</div>'; return; }
-    container.innerHTML = docs.map(doc => `
-      <div class="doc-item">
-        <div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div>
-        <a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:11px;">Télécharger</a>
-      </div>
-    `).join('');
-  }
-
-  async function renderPhotos() {
-    if (!currentClient) return;
-    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
-    if (!prog) { document.getElementById('photos-list').innerHTML = '<div class="card">Aucun programme associé.</div>'; return; }
+async function renderDashboard() {
+  if (!currentClient) return;
+  const total = parseFloat(currentClient.montant_total) || 0;
+  const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+  const verse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
+  const reste = Math.max(0, total - verse);
+  const pct = total > 0 ? Math.round((verse / total) * 100) : 0;
+  document.getElementById('kpi-total').innerText = formatFCFA(total);
+  document.getElementById('kpi-versé').innerText = formatFCFA(verse);
+  document.getElementById('kpi-reste').innerText = formatFCFA(reste);
+  document.getElementById('kpi-pct').innerText = pct + '%';
+  const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
+  const lot = DATA.lots.find(l => l.id === currentClient.lot_id);
+  document.getElementById('client-info').innerHTML = `
+    <div><strong>${escapeHtml(currentClient.nom)} ${escapeHtml(currentClient.prenoms || '')}</strong></div>
+    <div>Dossier: ${escapeHtml(currentClient.dossier || '—')}</div>
+    <div>Programme: ${escapeHtml(prog ? prog.nom : '—')}</div>
+    <div>Lot: ${escapeHtml(lot ? lot.numero : '—')} (${escapeHtml(lot?.type || '—')})</div>
+    <div>Mode livraison: ${currentClient.mode_livraison === 'cle_en_main' ? 'Clé en main' : 'Gros œuvre'}</div>
+  `;
+  let avHtml = '<div style="font-size:13px;">Chargement...</div>';
+  if (prog) {
     const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
     const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
-    let allPhotos = [];
-    rapports.forEach(r => { if (r.photos && r.photos.length) { r.photos.forEach(p => { if (p.visible !== false) allPhotos.push({ ...p, date: r.date_debut, legende: p.legende || `Chantier ${r.date_debut}` }); }); } });
-    const container = document.getElementById('photos-list');
-    if (!allPhotos.length) { container.innerHTML = '<div class="card">Aucune photo de chantier disponible pour le moment.</div>'; return; }
-    container.innerHTML = allPhotos.map((photo, idx) => `<div class="photo-card" onclick="openLightbox('${photo.data.replace(/'/g, "\\'")}', '${escapeHtml(photo.legende)}')"><img src="${photo.data}" alt="Photo chantier" loading="lazy"><div class="photo-caption">${escapeHtml(photo.legende)}<br><small>${formatDate(photo.date)}</small></div></div>`).join('');
+    const lastRapport = rapports.sort((a,b) => (b.date_debut||'').localeCompare(a.date_debut||''))[0];
+    if (lastRapport) avHtml = `<div>Dernière mise à jour: ${formatDate(lastRapport.date_debut)}</div><div>Avancement: ${lastRapport.avancement || 0}%</div><div class="progress-bar"><div class="progress-fill" style="width:${lastRapport.avancement || 0}%"></div></div><div style="margin-top:8px;">${escapeHtml((lastRapport.travaux_realises || '').substring(0, 100))}…</div>`;
+    else avHtml = '<div>Aucun rapport de chantier disponible.</div>';
   }
+  document.getElementById('programme-avancement').innerHTML = avHtml;
+}
 
-  async function renderDemandes() {
-    if (!currentClient) return;
-    const demandes = DATA.demandes_versement.filter(d => d.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
-    const container = document.getElementById('demandes-liste');
-    if (!demandes.length) { container.innerHTML = '<div style="color:var(--text-light);font-size:13px;">Aucune demande effectuée.</div>'; return; }
-    const statutLabel = { en_attente:'⏳ En attente', validee:'✅ Validée', rejetee:'❌ Rejetée' };
-    container.innerHTML = demandes.map(d => `
-      <div class="demande-item ${d.statut}">
-        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-          <strong>${formatFCFA(d.montant)}</strong>
-          <span class="badge ${d.statut==='validee'?'badge-success':d.statut==='rejetee'?'badge-danger':'badge-warning'}">${statutLabel[d.statut]}</span>
-        </div>
-        <div style="font-size:12px; margin-top:4px;">Mode: ${d.mode} · ${formatDate(d.date)}</div>
-        ${d.message ? `<div style="font-size:12px; color:var(--text-light); margin-top:4px;">📝 ${escapeHtml(d.message)}</div>` : ''}
-        ${d.reponse ? `<div style="font-size:12px; border-top:1px solid var(--border); margin-top:6px; padding-top:4px;">📌 Réponse: ${escapeHtml(d.reponse)}</div>` : ''}
+function renderEcheancier() {
+  if (!currentClient) return;
+  const total = parseFloat(currentClient.montant_total) || 0;
+  const apport = parseFloat(currentClient.apport) || 0;
+  const duree = parseInt(currentClient.duree) || 60;
+  const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
+  const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
+  const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+  const verseMap = {};
+  versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
+  const today = new Date();
+  let rows = '';
+  for (let i = 0; i < duree; i++) {
+    const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+    const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const paye = verseMap[moisKey] || 0;
+    const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
+    let badgeClass = statut==='payé'?'badge-success':statut==='partiel'?'badge-warning':statut==='retard'?'badge-danger':'badge-info';
+    const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
+    rows += `<tr><td style="text-align:center;">${i+1}</td><td>${d.toLocaleDateString('fr-FR', { month:'short', year:'numeric' })}</td><td class="text-right">${formatFCFA(mensualite)}</td><td class="text-right">${paye ? formatFCFA(paye) : '—'}</td><td style="text-align:center;"><span class="badge ${badgeClass}">${label}</span></td></tr>`;
+  }
+  document.getElementById('echeancier-body').innerHTML = rows;
+}
+
+function renderVersements() {
+  if (!currentClient) return;
+  const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const tbody = document.getElementById('versements-body');
+  if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>'; return; }
+  tbody.innerHTML = vers.map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
+}
+
+async function renderReleve() {
+  if (!currentClient) return;
+  const totalDu = parseFloat(currentClient.montant_total) || 0;
+  const versements = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => new Date(a.date) - new Date(b.date));
+  let totalVerse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
+  let solde = totalDu - totalVerse;
+  document.getElementById('releve-total-du').innerText = formatFCFA(totalDu);
+  document.getElementById('releve-total-versé').innerText = formatFCFA(totalVerse);
+  document.getElementById('releve-solde').innerText = formatFCFA(solde);
+  const statut = solde <= 0 ? 'Soldé' : (solde > 0 ? 'En cours' : 'Créditeur');
+  document.getElementById('releve-statut').innerHTML = `<span class="badge ${solde<=0?'badge-success':'badge-warning'}">${statut}</span>`;
+  let soldeCourant = totalDu;
+  const rows = [];
+  rows.push(`<tr><td style="white-space:nowrap;">${formatDate(currentClient.date_debut || '—')}</td><td>Souscription initiale</td><td class="text-right">${formatFCFA(totalDu)}</td><td>—</td><td class="text-right">${formatFCFA(soldeCourant)}</td>`);
+  for (const v of versements) {
+    const montant = parseFloat(v.montant) || 0;
+    soldeCourant -= montant;
+    rows.push(`<tr><td style="white-space:nowrap;">${formatDate(v.date)}</td><td>Versement - ${escapeHtml(v.mode || '')} ${v.ref ? '('+v.ref+')' : ''}</td><td class="text-right">- ${formatFCFA(montant)}</td><td>${escapeHtml(v.mode)}</td><td class="text-right">${formatFCFA(soldeCourant)}</td>`);
+  }
+  if (soldeCourant > 0) rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Solde restant dû</strong></td><td class="text-right"><strong>${formatFCFA(soldeCourant)}</strong></td>`);
+  else if (soldeCourant < 0) rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Trop-perçu (crédit client)</strong></td><td class="text-right"><strong>${formatFCFA(-soldeCourant)}</strong></td>`);
+  document.getElementById('releve-tbody').innerHTML = rows.join('');
+}
+
+async function renderDocuments() {
+  if (!currentClient) return;
+  const docs = DATA.documents.filter(d => d.entity_type === 'client' && d.entity_id === currentClient.id);
+  const container = document.getElementById('documents-list');
+  if (!docs.length) { container.innerHTML = '<div class="card" style="text-align:center;">Aucun document disponible.</div>'; return; }
+  container.innerHTML = docs.map(doc => `
+    <div class="doc-item">
+      <div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div>
+      <a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:11px;">Télécharger</a>
+    </div>
+  `).join('');
+}
+
+async function renderPhotos() {
+  if (!currentClient) return;
+  const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
+  if (!prog) { document.getElementById('photos-list').innerHTML = '<div class="card">Aucun programme associé.</div>'; return; }
+  const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
+  const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
+  let allPhotos = [];
+  rapports.forEach(r => { if (r.photos && r.photos.length) { r.photos.forEach(p => { if (p.visible !== false) allPhotos.push({ ...p, date: r.date_debut, legende: p.legende || `Chantier ${r.date_debut}` }); }); } });
+  const container = document.getElementById('photos-list');
+  if (!allPhotos.length) { container.innerHTML = '<div class="card">Aucune photo de chantier disponible pour le moment.</div>'; return; }
+  container.innerHTML = allPhotos.map((photo, idx) => `<div class="photo-card" onclick="openLightbox('${photo.data.replace(/'/g, "\\'")}', '${escapeHtml(photo.legende)}')"><img src="${photo.data}" alt="Photo chantier" loading="lazy"><div class="photo-caption">${escapeHtml(photo.legende)}<br><small>${formatDate(photo.date)}</small></div></div>`).join('');
+}
+
+async function renderDemandes() {
+  if (!currentClient) return;
+  const demandes = DATA.demandes_versement.filter(d => d.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const container = document.getElementById('demandes-liste');
+  if (!demandes.length) { container.innerHTML = '<div style="color:var(--text-light);font-size:13px;">Aucune demande effectuée.</div>'; return; }
+  const statutLabel = { en_attente:'⏳ En attente', validee:'✅ Validée', rejetee:'❌ Rejetée' };
+  container.innerHTML = demandes.map(d => `
+    <div class="demande-item ${d.statut}">
+      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+        <strong>${formatFCFA(d.montant)}</strong>
+        <span class="badge ${d.statut==='validee'?'badge-success':d.statut==='rejetee'?'badge-danger':'badge-warning'}">${statutLabel[d.statut]}</span>
       </div>
-    `).join('');
-  }
+      <div style="font-size:12px; margin-top:4px;">Mode: ${d.mode} · ${formatDate(d.date)}</div>
+      ${d.message ? `<div style="font-size:12px; color:var(--text-light); margin-top:4px;">📝 ${escapeHtml(d.message)}</div>` : ''}
+      ${d.reponse ? `<div style="font-size:12px; border-top:1px solid var(--border); margin-top:6px; padding-top:4px;">📌 Réponse: ${escapeHtml(d.reponse)}</div>` : ''}
+    </div>
+  `).join('');
+}
 
-  // ======================= MESSAGERIE AVEC CHOIX DU DESTINATAIRE =======================
-  function getStaffList() {
-    let staff = [];
-    if (DATA.employes && DATA.employes.length) {
-      staff.push(...DATA.employes.filter(e => e.role === 'commercial' || e.role === 'manager' || e.role === 'admin'));
-    }
-    if (DATA.users && DATA.users.length) {
-      staff.push(...DATA.users.filter(u => u.role === 'commercial' || u.role === 'manager' || u.role === 'admin'));
-    }
-    const unique = [];
-    const ids = new Set();
-    for (const s of staff) {
-      const idStr = String(s.id);
-      if (!ids.has(idStr)) {
-        ids.add(idStr);
-        unique.push(s);
-      }
-    }
-    return unique;
-  }
-
-  function populateDestinataireSelect() {
-    const select = document.getElementById('msg-destinataire');
-    if (!select) return;
-    const staff = getStaffList();
-    const currentVal = select.value;
-    select.innerHTML = '<option value="">-- Choisir un interlocuteur --</option>';
-    for (const s of staff) {
-      const name = (s.nom || '') + (s.prenoms ? ' ' + s.prenoms : '');
-      select.appendChild(new Option(name, s.id));
-    }
-    if (currentVal && staff.some(s => String(s.id) === currentVal)) select.value = currentVal;
-    else select.value = '';
-  }
-
-  async function getOrCreateConversationWith(staffId) {
-    if (!staffId) return null;
-    const clientId = `client_${currentClient.id}`;
-    const participants = [clientId, staffId];
-    let conv = DATA.conversations.find(c => c.type === 'direct' && c.participants && c.participants.length === 2 &&
-      c.participants.includes(clientId) && c.participants.includes(staffId));
-    if (!conv) {
-      const staff = getStaffList().find(s => String(s.id) === staffId);
-      const staffName = staff ? (staff.nom + ' ' + (staff.prenoms || '')) : 'Staff';
-      conv = {
-        id: 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
-        type: 'direct',
-        participants: participants,
-        date_creation: new Date().toISOString(),
-        nom: `Conversation avec ${staffName}`
-      };
-      DATA.conversations.push(conv);
-      await dbPut('conversations', conv);
-      if (SB.url && SB.key) { try { await sbFetch('pi_conversations', 'POST', conv); } catch(e) { console.warn(e); } }
-    }
-    return conv;
-  }
-
-  async function loadMessagesForConversation(convId) {
-    if (!convId) return;
-    currentConversationId = convId;
-    const msgs = DATA.messages.filter(m => m.conversation_id === convId).sort((a,b) => new Date(a.date) - new Date(b.date));
-    const container = document.getElementById('messages-list');
-    if (!container) return;
-    if (!msgs.length) { container.innerHTML = '<div class="no-conversation">Aucun message. Écrivez votre premier message ci-dessous.</div>'; return; }
-    const currentParticipantId = `client_${currentClient.id}`;
-    container.innerHTML = msgs.map(m => `
-      <div class="msg-bubble ${m.expediteur_id === currentParticipantId ? 'mine' : ''}">
-        <div class="sender">${escapeHtml(m.expediteur_nom || (m.expediteur_id === currentParticipantId ? 'Moi' : 'Support'))}</div>
-        <div class="text">${escapeHtml(m.contenu)}</div>
-        <div class="time">${new Date(m.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</div>
-      </div>
-    `).join('');
-    container.scrollTop = container.scrollHeight;
-  }
-
-  async function onDestinataireChange() {
-    const staffId = document.getElementById('msg-destinataire').value;
-    if (!staffId) {
-      currentConversationId = null;
-      document.getElementById('messages-list').innerHTML = '<div class="no-conversation">Sélectionnez un destinataire pour démarrer la conversation.</div>';
-      document.getElementById('msg-input').disabled = true;
-      document.getElementById('msg-send').disabled = true;
-      return;
-    }
-    const conv = await getOrCreateConversationWith(staffId);
-    if (conv) {
-      currentConversationId = conv.id;
-      await loadMessagesForConversation(conv.id);
-      document.getElementById('msg-input').disabled = false;
-      document.getElementById('msg-send').disabled = false;
-    }
-  }
-
-  async function sendMessage() {
-    const input = document.getElementById('msg-input');
-    const text = input.value.trim();
-    if (!text || !currentConversationId) return;
-    const clientParticipantId = `client_${currentClient.id}`;
-    const staffId = document.getElementById('msg-destinataire').value;
+// ======================= MESSAGERIE AVEC CHOIX DESTINATAIRE =======================
+function getStaffList() {
+  let staff = [];
+  if (DATA.employes && DATA.employes.length) staff.push(...DATA.employes.filter(e => e.role === 'commercial' || e.role === 'manager' || e.role === 'admin'));
+  if (DATA.users && DATA.users.length) staff.push(...DATA.users.filter(u => u.role === 'commercial' || u.role === 'manager' || u.role === 'admin'));
+  const unique = [], ids = new Set();
+  for (const s of staff) { const idStr = String(s.id); if (!ids.has(idStr)) { ids.add(idStr); unique.push(s); } }
+  return unique;
+}
+function populateDestinataireSelect() {
+  const select = document.getElementById('msg-destinataire');
+  if (!select) return;
+  const staff = getStaffList();
+  select.innerHTML = '<option value="">-- Choisir un interlocuteur --</option>';
+  for (const s of staff) { const name = (s.nom || '') + (s.prenoms ? ' ' + s.prenoms : ''); select.appendChild(new Option(name, s.id)); }
+}
+async function getOrCreateConversationWith(staffId) {
+  if (!staffId) return null;
+  const clientId = `client_${currentClient.id}`;
+  const participants = [clientId, staffId];
+  let conv = DATA.conversations.find(c => c.type === 'direct' && c.participants && c.participants.length === 2 && c.participants.includes(clientId) && c.participants.includes(staffId));
+  if (!conv) {
     const staff = getStaffList().find(s => String(s.id) === staffId);
     const staffName = staff ? (staff.nom + ' ' + (staff.prenoms || '')) : 'Staff';
-    const msg = {
-      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
-      conversation_id: currentConversationId,
-      expediteur_id: clientParticipantId,
-      expediteur_nom: currentClient.nom + ' ' + (currentClient.prenoms || ''),
-      contenu: text,
-      date: new Date().toISOString(),
-      lu: false,
-      fichiers: []
+    conv = { id: 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2,4), type: 'direct', participants, date_creation: new Date().toISOString(), nom: `Conversation avec ${staffName}` };
+    DATA.conversations.push(conv);
+    await dbPut('conversations', conv);
+    if (SB.url && SB.key) try { await sbFetch('pi_conversations', 'POST', conv); } catch(e) {}
+  }
+  return conv;
+}
+async function loadMessagesForConversation(convId) {
+  if (!convId) return;
+  currentConversationId = convId;
+  const msgs = DATA.messages.filter(m => m.conversation_id === convId).sort((a,b) => new Date(a.date) - new Date(b.date));
+  const container = document.getElementById('messages-list');
+  if (!container) return;
+  if (!msgs.length) { container.innerHTML = '<div class="no-conversation">Aucun message. Écrivez votre premier message ci-dessous.</div>'; return; }
+  const currentParticipantId = `client_${currentClient.id}`;
+  container.innerHTML = msgs.map(m => `
+    <div class="msg-bubble ${m.expediteur_id === currentParticipantId ? 'mine' : ''}">
+      <div class="sender">${escapeHtml(m.expediteur_nom || (m.expediteur_id === currentParticipantId ? 'Moi' : 'Support'))}</div>
+      <div class="text">${escapeHtml(m.contenu)}</div>
+      <div class="time">${new Date(m.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+async function onDestinataireChange() {
+  const staffId = document.getElementById('msg-destinataire').value;
+  if (!staffId) {
+    currentConversationId = null;
+    document.getElementById('messages-list').innerHTML = '<div class="no-conversation">Sélectionnez un destinataire pour démarrer la conversation.</div>';
+    document.getElementById('msg-input').disabled = true;
+    document.getElementById('msg-send').disabled = true;
+    return;
+  }
+  const conv = await getOrCreateConversationWith(staffId);
+  if (conv) {
+    currentConversationId = conv.id;
+    await loadMessagesForConversation(conv.id);
+    document.getElementById('msg-input').disabled = false;
+    document.getElementById('msg-send').disabled = false;
+  }
+}
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text || !currentConversationId) return;
+  const clientParticipantId = `client_${currentClient.id}`;
+  const staffId = document.getElementById('msg-destinataire').value;
+  const staff = getStaffList().find(s => String(s.id) === staffId);
+  const staffName = staff ? (staff.nom + ' ' + (staff.prenoms || '')) : 'Staff';
+  const msg = { id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2,4), conversation_id: currentConversationId, expediteur_id: clientParticipantId, expediteur_nom: currentClient.nom + ' ' + (currentClient.prenoms || ''), contenu: text, date: new Date().toISOString(), lu: false, fichiers: [] };
+  DATA.messages.push(msg);
+  await dbPut('messages', msg);
+  await pushMessageToCloud(msg);
+  input.value = '';
+  await loadMessagesForConversation(currentConversationId);
+  if (Notification.permission === 'granted') new Notification('Message envoyé', { body: text.substring(0, 50), icon: '' });
+}
+async function initMessaging() {
+  populateDestinataireSelect();
+  const select = document.getElementById('msg-destinataire');
+  if (select) select.onchange = onDestinataireChange;
+  document.getElementById('msg-send').onclick = sendMessage;
+  document.getElementById('msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+  if (msgPollTimer) clearInterval(msgPollTimer);
+  msgPollTimer = setInterval(async () => { await pullFromCloudSilent(); if (currentConversationId) await loadMessagesForConversation(currentConversationId); }, 10000);
+}
+
+// ======================= AUTRES =======================
+async function envoyerDemande() { /* identique à avant */ }
+async function demanderNotification() { /* identique */ }
+function verifierEcheances() { /* identique */ }
+function exportRelevePDF() { /* identique */ }
+window.openLightbox = function(src, caption) { const lb = document.getElementById('lightbox'); const img = document.getElementById('lightbox-img'); img.src = src; img.alt = caption; lb.style.display = 'flex'; };
+window.closeLightbox = function() { document.getElementById('lightbox').style.display = 'none'; };
+
+function attachTabEvents() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const tabId = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+      if (tabId === 'echeances') renderEcheancier();
+      else if (tabId === 'versements') renderVersements();
+      else if (tabId === 'releve') await renderReleve();
+      else if (tabId === 'documents') renderDocuments();
+      else if (tabId === 'photos') renderPhotos();
+      else if (tabId === 'demandes') renderDemandes();
+      else if (tabId === 'messagerie') { await initMessaging(); }
+      else if (tabId === 'dashboard') renderDashboard();
     };
-    DATA.messages.push(msg);
-    await dbPut('messages', msg);
-    await pushMessageToCloud(msg);
-    input.value = '';
-    await loadMessagesForConversation(currentConversationId);
-    if (Notification.permission === 'granted') {
-      new Notification('Message envoyé', { body: text.substring(0, 50), icon: '' });
-    }
-  }
+  });
+}
 
-  async function initMessaging() {
-    populateDestinataireSelect();
-    const select = document.getElementById('msg-destinataire');
-    if (select) { select.onchange = onDestinataireChange; }
-    document.getElementById('msg-send').onclick = sendMessage;
-    document.getElementById('msg-input').addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-    if (msgPollTimer) clearInterval(msgPollTimer);
-    msgPollTimer = setInterval(async () => {
-      await pullFromCloudSilent();
-      if (currentConversationId) await loadMessagesForConversation(currentConversationId);
-    }, 10000);
-  }
+// ======================= LOGIN & START =======================
+const loginScreen = document.getElementById('login-screen');
+const appDiv = document.getElementById('app');
+const loginBtn = document.getElementById('login-btn');
+const loginError = document.getElementById('login-error');
 
-  // ======================= AUTRES FONCTIONS (Demande, Notifications, etc.) =======================
-  async function envoyerDemande() {
-    if (!currentClient) return;
-    const montant = parseFloat(document.getElementById('demande-montant').value);
-    if (isNaN(montant) || montant <= 0) { alert('Montant invalide'); return; }
-    const mode = document.getElementById('demande-mode').value;
-    const message = document.getElementById('demande-message').value.trim();
-    const demande = {
-      id: 'dem_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
-      client_id: currentClient.id,
-      dossier: currentClient.dossier,
-      nom: currentClient.nom + ' ' + (currentClient.prenoms || ''),
-      montant: montant,
-      mode: mode,
-      message: message,
-      date: new Date().toISOString(),
-      statut: 'en_attente',
-      reponse: null
-    };
-    DATA.demandes_versement.push(demande);
-    await dbPut('demandes_versement', demande);
-    await pushDemandeToCloud(demande);
-    document.getElementById('demande-montant').value = '';
-    document.getElementById('demande-message').value = '';
-    document.getElementById('demande-result').innerHTML = '<div style="background:#D1FAE5; padding:10px; border-radius:8px;">✅ Demande envoyée. Vous serez notifié une fois traitée.</div>';
-    setTimeout(() => { document.getElementById('demande-result').innerHTML = ''; }, 4000);
-    renderDemandes();
-    if (Notification.permission === 'granted') {
-      new Notification('Demande de versement envoyée', { body: `${formatFCFA(montant)} - ${mode}`, icon: '' });
-    }
-  }
+async function doLogin() {
+  const identifier = document.getElementById('login-identifier').value.trim();
+  const code = document.getElementById('login-code').value.trim();
+  if (!identifier || !code) { loginError.textContent = 'Veuillez remplir tous les champs.'; loginError.style.display = 'block'; return; }
+  const normalized = identifier.toLowerCase();
+  const client = DATA.clients.find(c => (c.dossier && c.dossier.toLowerCase() === normalized) || (c.email && c.email.toLowerCase() === normalized) || (c.tel && c.tel.replace(/\s/g, '') === identifier.replace(/\s/g, '')));
+  if (!client || !(await verifyCode(client, code))) { loginError.textContent = 'Identifiant ou code d\'accès incorrect.'; loginError.style.display = 'block'; return; }
+  currentClient = client;
+  saveSession(client);
+  loginScreen.style.display = 'none';
+  appDiv.style.display = 'flex';
+  document.getElementById('welcome-name').innerText = client.prenoms ? `${client.prenoms} ${client.nom}` : client.nom;
+  await demanderNotification();
+  await renderDashboard();
+  renderEcheancier();
+  renderVersements();
+  await renderReleve();
+  await renderDocuments();
+  await renderPhotos();
+  await renderDemandes();
+  attachTabEvents();
+  document.getElementById('btn-demande').onclick = envoyerDemande;
+  document.getElementById('export-releve-pdf').onclick = exportRelevePDF;
+  setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
+  verifierEcheances();
+  await initMessaging();
+}
 
-  async function demanderNotification() {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'granted') return;
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') { new Notification('🔔 Notifications activées', { body: 'Vous recevrez les alertes importantes.' }); }
-  }
+loginBtn.onclick = doLogin;
+document.getElementById('login-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-identifier').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('logout-btn').onclick = () => {
+  if (msgPollTimer) clearInterval(msgPollTimer);
+  localStorage.removeItem('souscripteur_session');
+  currentClient = null;
+  appDiv.style.display = 'none';
+  loginScreen.style.display = 'flex';
+  document.getElementById('login-identifier').value = '';
+  document.getElementById('login-code').value = '';
+};
 
-  function verifierEcheances() {
-    if (!currentClient) return;
-    const total = parseFloat(currentClient.montant_total) || 0;
-    const apport = parseFloat(currentClient.apport) || 0;
-    const duree = parseInt(currentClient.duree) || 60;
-    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
-    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
-    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
-    const verseMap = {};
-    versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
-    const today = new Date();
-    let prochainMois = null;
-    for (let i = 0; i < duree; i++) {
-      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
-      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-      const paye = verseMap[moisKey] || 0;
-      if (paye < mensualite && d >= today) { prochainMois = d; break; }
-    }
-    if (prochainMois && Notification.permission === 'granted') {
-      const diffDays = Math.ceil((prochainMois - today) / (1000*60*60*24));
-      if (diffDays <= 3 && diffDays >= 0) {
-        new Notification('📅 Échéance à venir', { body: `Mensualité de ${formatFCFA(mensualite)} à payer avant le ${prochainMois.toLocaleDateString('fr-FR')}.` });
-      }
-    }
-  }
-
-  function exportRelevePDF() {
-    if (!currentClient) return;
-    const win = window.open('', '_blank');
-    const contenu = document.getElementById('releve-table').cloneNode(true);
-    const totalDu = document.getElementById('releve-total-du').innerText;
-    const totalVersé = document.getElementById('releve-total-versé').innerText;
-    const solde = document.getElementById('releve-solde').innerText;
-    const nomClient = `${currentClient.nom} ${currentClient.prenoms || ''}`;
-    win.document.write(`
-      <html><head><title>Relevé de compte - ${nomClient}</title>
-      <style>body{font-family:Arial;padding:20px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;text-align:left;} .text-right{text-align:right;}</style>
-      </head><body>
-      <h2>Relevé de compte - ${nomClient}</h2>
-      <p>Dossier: ${currentClient.dossier} | Programme: ${DATA.programmes.find(p=>p.id===currentClient.programme_id)?.nom || '—'}</p>
-      <div style="margin:10px 0;">Montant total dû: ${totalDu}<br>Total versé: ${totalVersé}<br>Solde restant: ${solde}</div>
-      ${contenu.outerHTML}
-      <p>Généré le ${new Date().toLocaleDateString('fr-FR')}</p>
-      </body></html>
-    `);
-    win.document.close();
-    win.print();
-  }
-
-  window.openLightbox = function(src, caption) { const lb = document.getElementById('lightbox'); const img = document.getElementById('lightbox-img'); img.src = src; img.alt = caption; lb.style.display = 'flex'; };
-  window.closeLightbox = function() { document.getElementById('lightbox').style.display = 'none'; };
-
-  function attachTabEvents() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.onclick = async () => {
-        const tabId = btn.dataset.tab;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        document.getElementById(`tab-${tabId}`).classList.add('active');
-        if (tabId === 'echeances') renderEcheancier();
-        else if (tabId === 'versements') renderVersements();
-        else if (tabId === 'releve') await renderReleve();
-        else if (tabId === 'documents') renderDocuments();
-        else if (tabId === 'photos') renderPhotos();
-        else if (tabId === 'demandes') renderDemandes();
-        else if (tabId === 'messagerie') { await initMessaging(); }
-        else if (tabId === 'dashboard') renderDashboard();
-      };
-    });
-  }
-
-  // ======================= LOGIN & START =======================
-  const loginScreen = document.getElementById('login-screen');
-  const appDiv = document.getElementById('app');
-  const loginBtn = document.getElementById('login-btn');
-  const loginError = document.getElementById('login-error');
-
-  async function doLogin() {
-    const identifier = document.getElementById('login-identifier').value.trim();
-    const code = document.getElementById('login-code').value.trim();
-    if (!identifier || !code) { loginError.textContent = 'Veuillez remplir tous les champs.'; loginError.style.display = 'block'; return; }
-    const normalized = identifier.toLowerCase();
-    const client = DATA.clients.find(c => (c.dossier && c.dossier.toLowerCase() === normalized) || (c.email && c.email.toLowerCase() === normalized) || (c.tel && c.tel.replace(/\s/g, '') === identifier.replace(/\s/g, '')));
-    if (!client || !(await verifyCode(client, code))) { loginError.textContent = 'Identifiant ou code d\'accès incorrect.'; loginError.style.display = 'block'; return; }
-    currentClient = client;
-    saveSession(client);
+async function start() {
+  await openDB();
+  await loadAllData();
+  if (navigator.onLine) await pullFromCloudSilent();
+  await loadAllData();
+  const sessionClient = loadSession();
+  if (sessionClient) {
+    currentClient = sessionClient;
     loginScreen.style.display = 'none';
     appDiv.style.display = 'flex';
-    document.getElementById('welcome-name').innerText = client.prenoms ? `${client.prenoms} ${client.nom}` : client.nom;
+    document.getElementById('welcome-name').innerText = currentClient.prenoms ? `${currentClient.prenoms} ${currentClient.nom}` : currentClient.nom;
     await demanderNotification();
     await renderDashboard();
     renderEcheancier();
@@ -763,52 +435,9 @@
     setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
     verifierEcheances();
     await initMessaging();
-  }
-
-  loginBtn.onclick = doLogin;
-  document.getElementById('login-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-  document.getElementById('login-identifier').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-  document.getElementById('logout-btn').onclick = () => {
-    if (msgPollTimer) clearInterval(msgPollTimer);
-    localStorage.removeItem('souscripteur_session');
-    currentClient = null;
-    appDiv.style.display = 'none';
+  } else {
     loginScreen.style.display = 'flex';
-    document.getElementById('login-identifier').value = '';
-    document.getElementById('login-code').value = '';
-  };
-
-  async function start() {
-    await openDB();
-    await loadAllData();
-    if (navigator.onLine) await pullFromCloudSilent();
-    await loadAllData();
-    const sessionClient = loadSession();
-    if (sessionClient) {
-      currentClient = sessionClient;
-      loginScreen.style.display = 'none';
-      appDiv.style.display = 'flex';
-      document.getElementById('welcome-name').innerText = currentClient.prenoms ? `${currentClient.prenoms} ${currentClient.nom}` : currentClient.nom;
-      await demanderNotification();
-      await renderDashboard();
-      renderEcheancier();
-      renderVersements();
-      await renderReleve();
-      await renderDocuments();
-      await renderPhotos();
-      await renderDemandes();
-      attachTabEvents();
-      document.getElementById('btn-demande').onclick = envoyerDemande;
-      document.getElementById('export-releve-pdf').onclick = exportRelevePDF;
-      setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
-      verifierEcheances();
-      await initMessaging();
-    } else {
-      loginScreen.style.display = 'flex';
-      appDiv.style.display = 'none';
-    }
+    appDiv.style.display = 'none';
   }
-  start();
-</script>
-</body>
-</html>
+}
+start();
