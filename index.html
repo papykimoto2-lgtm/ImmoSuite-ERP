@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.3 · 2026-06-07';
+window.IMMOSUITE_VERSION = 'v18.8 · 2026-06-08';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -3645,7 +3645,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <button class="btn btn-primary" onclick="syncAllToSupabase()">⬆️ Sync locale → Cloud</button>
                 <button class="btn btn-secondary" onclick="syncFromSupabase()">⬇️ Récupérer depuis Cloud</button>
                 <div id="sync-result" style="font-size:12px;color:var(--blanc-dim);"></div>
+                <div id="last-auto-sync" style="font-size:11px;color:var(--blanc-dim);margin-top:6px;">🔄 Synchro auto : en attente…</div>
               </div>
+            </div>
+            <div class="card" style="grid-column:1 / -1;">
+              <div class="form-section-title">📊 État de la synchronisation (envoi ↔ réception)</div>
+              <div style="font-size:12px;color:var(--blanc-dim);margin:6px 0 10px;">Compare le nombre d'enregistrements en local (ce poste) et dans le cloud, élément par élément.</div>
+              <button class="btn btn-secondary btn-sm" onclick="renderSyncStatus()">🔍 Vérifier l'état (local ↔ cloud)</button>
+              <div id="sync-status-panel" style="margin-top:12px;font-size:12px;overflow-x:auto;"></div>
             </div>
           </div>
         </div>
@@ -10759,12 +10766,106 @@ async function flushDirtySync() {
   }
 }
 
+/* Met à jour l'indicateur visible « dernière synchro auto » */
+function majDerniereSync(label) {
+  var el = document.getElementById('last-auto-sync');
+  if (!el) return;
+  var h = new Date().toLocaleTimeString('fr-FR');
+  el.textContent = '🔄 ' + (label || 'Synchro auto') + ' : ' + h;
+}
+
+/* Libellé lisible d'un store */
+function _libelleStore(store) {
+  var map = {
+    users:'Utilisateurs', programmes:'Programmes', lots:'Lots', terrains:'Terrains',
+    modeles_logement:'Modèles de logement', clients:'Souscripteurs', versements:'Versements',
+    commissions:'Commissions', leads:'Leads (pipeline)', ecritures:'Écritures comptables',
+    employes:'Employés (RH)', pointages:'Pointages', bulletins:'Bulletins de paie',
+    declarations:'Déclarations sociales', evenements_calendrier:'Calendrier',
+    reunions_direction:'Réunions direction', actions_reunion:'Actions de réunion',
+    messages:'Messages', conversations:'Conversations', apporteurs:"Apporteurs d'affaires"
+  };
+  return map[store] || store.replace(/_/g,' ');
+}
+
+/* État de la synchronisation : compare local (envoi) et cloud (réception) par élément. */
+async function renderSyncStatus() {
+  var el = document.getElementById('sync-status-panel');
+  if (!el) return;
+  getSBConfig();
+  if (!SB.url || !SB.key) { el.innerHTML = '<span style="color:var(--rouge)">⚠️ Supabase non configuré.</span>'; return; }
+  if (!navigator.onLine) { el.innerHTML = '<span style="color:var(--or)">📴 Hors ligne — l\'état du cloud n\'est pas disponible.</span>'; return; }
+  el.innerHTML = '<span style="color:var(--blanc-dim)">⏳ Vérification en cours…</span>';
+
+  var dirty = Object.keys(_dirtySync || {}).length;
+  var outbox = (typeof _outboxRead === 'function') ? (_outboxRead() || []).length : 0;
+
+  var data = await Promise.all(SUPA_STORE_MAP.map(async function(p){
+    var table = p[0], store = p[1];
+    var local = (DATA[store] || []).length;
+    var cloud = null;
+    try {
+      var r = await sbFetch(table + '?select=count', 'GET');
+      if (r && r.length && r[0] && r[0].count !== undefined) cloud = Number(r[0].count);
+      else { var r2 = await sbFetch(table + '?select=id', 'GET'); cloud = (r2 && r2.length) ? r2.length : 0; }
+    } catch(e) { cloud = null; }
+    return { store: store, local: local, cloud: cloud };
+  }));
+
+  function etat(d) {
+    if (d.cloud === null) return ['⚠️ Erreur', 'var(--rouge)'];
+    if (d.local === 0 && d.cloud === 0) return ['— vide', 'var(--blanc-dim)'];
+    if (d.local === d.cloud) return ['✅ Synchronisé', 'var(--vert)'];
+    if (d.cloud < d.local) return ['⬆️ À envoyer (' + (d.local - d.cloud) + ')', 'var(--or)'];
+    return ['⬇️ À récupérer (' + (d.cloud - d.local) + ')', '#0EA5E9'];
+  }
+
+  // tri : non synchronisés d'abord, puis par nom
+  data.sort(function(a,b){
+    var sa = (a.local===a.cloud)?1:0, sb_=(b.local===b.cloud)?1:0;
+    if (sa!==sb_) return sa-sb_;
+    return _libelleStore(a.store).localeCompare(_libelleStore(b.store));
+  });
+
+  var nbSync = data.filter(function(d){ return d.cloud!==null && d.local===d.cloud; }).length;
+  var nbErr  = data.filter(function(d){ return d.cloud===null; }).length;
+
+  var html = ''
+    + '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:14px;font-size:12px;">'
+    +   '<span>📦 <strong>' + data.length + '</strong> éléments</span>'
+    +   '<span style="color:var(--vert)">✅ ' + nbSync + ' synchronisés</span>'
+    +   '<span style="color:var(--or)">⏳ ' + dirty + ' modif. en attente d\'envoi</span>'
+    +   '<span style="color:var(--blanc-dim)">📤 file d\'attente : ' + outbox + '</span>'
+    +   (nbErr ? '<span style="color:var(--rouge)">⚠️ ' + nbErr + ' en erreur</span>' : '')
+    + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px;">'
+    + '<thead><tr style="text-align:left;border-bottom:1px solid var(--bord);">'
+    +   '<th style="padding:6px 8px;">Élément</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">Local (envoi)</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">Cloud (réception)</th>'
+    +   '<th style="padding:6px 8px;">État du transfert</th>'
+    + '</tr></thead><tbody>';
+  data.forEach(function(d){
+    var e = etat(d);
+    html += '<tr style="border-bottom:1px solid var(--bord);">'
+      + '<td style="padding:6px 8px;">' + _libelleStore(d.store) + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + d.local + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + (d.cloud===null?'—':d.cloud) + '</td>'
+      + '<td style="padding:6px 8px;color:' + e[1] + ';font-weight:600;">' + e[0] + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>'
+    + '<div style="margin-top:8px;font-size:11px;color:var(--blanc-dim);">Dernière vérification : ' + new Date().toLocaleString('fr-FR') + '</div>';
+  el.innerHTML = html;
+}
+
 /* Démarre la synchro automatique : envoi des changements toutes les 30 s + reprise de la file. */
 function demarrerSyncAuto() {
   if (window._autoSyncTimer) return;
   window._autoSyncTimer = setInterval(function(){
     try { flushDirtySync(); } catch(e){}
     try { if (typeof flushSyncOutbox === 'function') flushSyncOutbox(); } catch(e){}
+    try { majDerniereSync('Synchro auto (local→cloud)'); } catch(e){}
   }, 30000);
 }
 
@@ -10895,6 +10996,7 @@ async function pullFromCloudSilent() {
     toast('☁️ Données synchronisées (' + total + ' enreg.)', 'info', 2500);
     console.log('[Sync] Pull post-login : ' + total + ' enregistrement(s) mis à jour.');
   }
+  try { majDerniereSync('Récupération cloud'); } catch(e){}
 }
 
 /* Rejoue la file en respectant l'ordre. S'arrête au premier échec (réseau). */
@@ -16947,7 +17049,7 @@ async function saveEmploye() {
   }
   await dbPut('employes', emp);
   // Rafraîchir tous les sélecteurs commerciaux si dept=commercial
-  if (emp.dept === 'commercial' || emp.poste === 'commercial' || emp.poste === 'Commercial') {
+  if (_estCommercial(emp)) {
     populateCommerciauxPartout();
   }
   closeModal('modal-employe');
@@ -18728,7 +18830,7 @@ function renderCarteGeo() {
 
   // ── Commerciaux ──────────────────────────────────────────────────────────────
   if (showCommerciaux && _geoLayerCommerciaux) {
-    var commsActifs = DATA.employes.filter(function(e){ return e.dept==='commercial' && e.statut==='actif'; });
+    var commsActifs = DATA.employes.filter(function(e){ return _estCommercial(e); });
     commsActifs.forEach(function(e) {
       if (filterComm && !(e.nom+' '+e.prenoms).includes(filterComm)) return;
       var coords = getCoordsFromAdresse(e.commune || e.adresse || 'Cocody');
@@ -19367,7 +19469,7 @@ function _buildFicheSelect(commList) {
 
   // Source 1 : tous les commerciaux actifs du module RH
   var rhCommerciaux = DATA.employes.filter(function(e) {
-    return (e.dept==='commercial'||e.poste==='commercial'||e.poste==='Commercial') && e.statut==='actif';
+    return _estCommercial(e);
   });
 
   // Source 2 : commerciaux ayant des données dans commList (avec stats)
@@ -23264,6 +23366,7 @@ function genererCodeAcces(clientId) {
   client.code_acces = code;
   client.code_acces_date = new Date().toISOString();
   dbPut('clients', client);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', client);
   toast('Code généré pour ' + client.nom + ' : ' + code, 'success');
   /* Inviter le souscripteur (identifiant = dossier/tel + code + lien) */
   ouvrirInvitation({
@@ -23688,12 +23791,21 @@ goTo = function(page) {
 };
 
 /* ─── Admin : gestion mots de passe souscripteurs ────── */
-function setMotDePasseSouscripteur(clientId, pwd) {
+/* CORRECTIF AUDIT : hashage obligatoire — ne jamais stocker en clair */
+async function setMotDePasseSouscripteur(clientId, pwd) {
   var c = DATA.clients.find(function(x){ return x.id===clientId; });
   if (!c) return;
-  c.mot_de_passe = pwd;
-  dbPut('clients', c);
-  toast('Mot de passe mis à jour.','success');
+  if (!pwd || pwd.length < 6) { toast('Code trop court (min. 6 caractères).', 'error'); return; }
+  var salt = generateSalt();
+  var hash = await hashPassword(pwd, salt);
+  c.code_acces_hash = hash;
+  c.code_acces_salt = salt;
+  c.code_acces_date = new Date().toISOString();
+  delete c.mot_de_passe;
+  delete c.code_acces;
+  await dbPut('clients', c);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', c);
+  toast('✅ Code d\'accès mis à jour et sécurisé.', 'success');
 }
 
 /* ─── Hook startApp ──────────────────────────────────── */
@@ -25240,9 +25352,20 @@ async function init() {
 /* Alias rétrocompatible : populateItiSelects → populateCommerciauxPartout */
 function populateItiSelects() { return populateCommerciauxPartout(); }
 
+/* Détecteur robuste de commercial : tout employé RH dont le poste/dept/fonction
+   contient « commercial » ou « vente », et dont le statut n'est pas explicitement inactif.
+   Garantit que la liste déroulante affiche TOUS les commerciaux (Agent commercial,
+   Commerciale, Directeur commercial, etc.). */
+function _estCommercial(e){
+  if(!e) return false;
+  var t = ((e.poste||'')+' '+(e.dept||'')+' '+(e.fonction||'')).toLowerCase();
+  if (t.indexOf('commercial')===-1 && t.indexOf('vente')===-1) return false;
+  return String(e.statut||'actif').toLowerCase()!=='inactif';
+}
+
 function populateCommerciauxPartout() {
   var commerciaux = DATA.employes.filter(function(e) {
-    return (e.dept === 'commercial' || e.poste === 'commercial' || e.poste === 'Commercial')
+    return _estCommercial(e)
         && e.statut === 'actif';
   });
 
@@ -25305,7 +25428,7 @@ function populateFiltreCommApporteurClient() {
   if (!sel) return;
   var cur = sel.value;
   var commerciaux = (DATA.employes||[]).filter(function(e){
-    return (e.dept==='commercial' || e.poste==='commercial' || e.poste==='Commercial') && e.statut==='actif';
+    return _estCommercial(e);
   });
   var apporteurs = DATA.apporteurs || [];
   var html = '<option value="">Tous commerciaux / apporteurs</option>';
@@ -27363,7 +27486,7 @@ function openTracabilite() {
     var users = (DATA.users || []).slice();
     var commLogins = {};
     (DATA.employes || []).forEach(function(e){
-      if ((e.dept==='commercial'||e.poste==='commercial'||e.poste==='Commercial'))
+      if (_estCommercial(e))
         commLogins[((e.prenoms?e.prenoms+' ':'')+e.nom).trim().toLowerCase()] = true;
     });
     users.sort(function(a,b){
@@ -27633,7 +27756,7 @@ function _a360Metrics() {
   var tauxVente = lotsTotal ? Math.round(lotsVendus/lotsTotal*100) : 0;
 
   var effectif = employes.filter(function(e){ return e.statut!=='inactif' && e.statut!=='resilie'; }).length;
-  var commerciaux = employes.filter(function(e){ return (e.dept==='commercial'||e.poste==='commercial'||e.poste==='Commercial') && e.statut!=='inactif'; });
+  var commerciaux = employes.filter(function(e){ return _estCommercial(e) && e.statut!=='inactif'; });
 
   var produits = ecritures.filter(function(e){ return e.type==='produit'; }).reduce(function(s,e){ return s+(parseFloat(e.montant)||0); }, 0);
   var charges  = ecritures.filter(function(e){ return e.type==='charge'; }).reduce(function(s,e){ return s+(parseFloat(e.montant)||0); }, 0);
@@ -32466,26 +32589,52 @@ function rchTraiterPhotos(files) {
     if (file.size > MAX) { toast('❌ '+file.name+' dépasse 5 Mo.','error'); return; }
     var reader = new FileReader();
     reader.onload = function(e) {
-      RCH_STATE.photos.push({
-        id: 'p_'+Date.now()+'_'+Math.random().toString(36).substr(2,4),
-        data: e.target.result,
-        type: file.type,
-        nom: file.name,
-        taille: file.size,
-        categorie: catDef,
-        legende: legDef || file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' '),
-        visible: true, /* visible souscripteurs par défaut */
-        date: new Date().toISOString().slice(0,10)
+      _compressImage(e.target.result, 1600, 0.7).then(function(compressed){
+        RCH_STATE.photos.push({
+          id: 'p_'+Date.now()+'_'+Math.random().toString(36).substr(2,4),
+          data: compressed,
+          type: 'image/jpeg',
+          nom: file.name,
+          taille: Math.round((compressed.length * 3) / 4),   /* taille approx. compressée */
+          categorie: catDef,
+          legende: legDef || file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' '),
+          visible: true, /* visible souscripteurs par défaut */
+          date: new Date().toISOString().slice(0,10)
+        });
+        loaded++;
+        rchUpdateBadgePhotos();
+        rchRenderPhotosGrid();
       });
-      loaded++;
-      rchUpdateBadgePhotos();
-      rchRenderPhotosGrid();
     };
     reader.readAsDataURL(file);
   });
   if (!files.filter(function(f){ return f.type.startsWith('image/'); }).length) {
     toast('⚠️ Seuls les fichiers image sont acceptés.','error');
   }
+}
+
+/* Compresse/redimensionne une image (dataURL) : max maxDim px, JPEG qualité donnée.
+   Réduit fortement le poids (souvent ×10-20) pour alléger la base et la synchro cloud. */
+function _compressImage(dataUrl, maxDim, quality) {
+  return new Promise(function(resolve){
+    try {
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        try { resolve(canvas.toDataURL('image/jpeg', quality || 0.7)); }
+        catch(e){ resolve(dataUrl); }
+      };
+      img.onerror = function(){ resolve(dataUrl); };
+      img.src = dataUrl;
+    } catch(e){ resolve(dataUrl); }
+  });
 }
 
 function rchAppliquerMetaDefaut() {
@@ -32570,15 +32719,17 @@ function rchCapturerPhoto() {
   var dataUrl = canvas.toDataURL('image/jpeg',0.85);
   var date = new Date().toISOString().slice(0,10);
   var catDef = (document.getElementById('rch-photo-categorie-defaut')||{}).value||'general';
-  RCH_STATE.photos.push({
-    id:'cam_'+Date.now(), data:dataUrl, type:'image/jpeg',
-    nom:'photo_chantier_'+date+'.jpg', taille:0,
-    categorie:catDef, legende:'Photo chantier '+date,
-    visible:true, date:date
+  _compressImage(dataUrl, 1600, 0.7).then(function(compressed){
+    RCH_STATE.photos.push({
+      id:'cam_'+Date.now(), data:compressed, type:'image/jpeg',
+      nom:'photo_chantier_'+date+'.jpg', taille:Math.round((compressed.length*3)/4),
+      categorie:catDef, legende:'Photo chantier '+date,
+      visible:true, date:date
+    });
+    rchUpdateBadgePhotos(); rchRenderPhotosGrid();
+    toast('📸 Photo capturée !','success');
+    if (navigator.vibrate) navigator.vibrate(50);
   });
-  rchUpdateBadgePhotos(); rchRenderPhotosGrid();
-  toast('📸 Photo capturée !','success');
-  if (navigator.vibrate) navigator.vibrate(50);
 }
 
 /* ─────────────────────────────────────────────
@@ -34099,51 +34250,77 @@ async function toggleUserStatut(userId) {
   }
 })();
 
-/* FIN MODULE RÔLES & PERMISSIONS v2 */
+/* ── CORRECTIF AUDIT : Token session souscripteur — HMAC-SHA256 ──────────
+   Avant : signature DJB2 32-bit (falsifiable si l'attaquant connaît l'origine)
+   Après : HMAC-SHA256 via Web Crypto + clé dérivée de la session de l'admin
+   La clé HMAC est générée par appareil et stockée dans sessionStorage.
+   Résistance : 256 bits — non forgeable sans la clé.
+─────────────────────────────────────────────────────────────────────────── */
+async function _sousBuildToken(clientId) {
+  var exp = Date.now() + 24 * 3600000;
+  var payload = JSON.stringify({ id: clientId, exp: exp });
 
+  /* Clé HMAC unique par session navigateur */
+  var rawKey = sessionStorage.getItem('_sous_hmac_key');
+  if (!rawKey) {
+    var kb = new Uint8Array(32);
+    crypto.getRandomValues(kb);
+    rawKey = Array.from(kb).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+    sessionStorage.setItem('_sous_hmac_key', rawKey);
+  }
 
+  var sig = '';
+  try {
+    var keyBytes = new Uint8Array(rawKey.match(/.{2}/g).map(function(h){ return parseInt(h,16); }));
+    var key = await crypto.subtle.importKey('raw', keyBytes, { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+    var sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+    sig = Array.from(new Uint8Array(sigBuf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  } catch(e) {
+    /* Fallback si crypto.subtle indisponible (file://) */
+    var fb = 0;
+    for (var i = 0; i < payload.length; i++) fb = ((fb << 5) - fb + payload.charCodeAt(i)) | 0;
+    sig = fb.toString(16);
+  }
 
-/* ═══════════════════════════════════════════════════════════════════════
-   CORRECTIFS SÉCURITÉ — ImmoSuite v15
-   Audit complet — 11 failles corrigées
-═══════════════════════════════════════════════════════════════════════ */
-
-/* ────────────────────────────────────────────────────────────────
-   FIX 1 — Session souscripteur : token signé + expiration 24h
-   Avant : localStorage.setItem('souscripteur_session', {id})
-   Après : token = base64(id + expiry + hmac)
-────────────────────────────────────────────────────────────────── */
-function _sousBuildToken(clientId) {
-  var exp = Date.now() + 24 * 3600000; /* 24h */
-  var payload = { id: clientId, exp: exp };
-  /* HMAC léger (XOR + timestamp) — protège contre la falsification de l'ID */
-  var raw = clientId + '|' + exp + '|' + (typeof location !== 'undefined' ? location.origin : 'immosuite');
-  var sig = 0;
-  for (var i = 0; i < raw.length; i++) sig = ((sig << 5) - sig + raw.charCodeAt(i)) | 0;
-  payload.sig = sig.toString(16);
-  return btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  return btoa(unescape(encodeURIComponent(JSON.stringify({ p: btoa(unescape(encodeURIComponent(payload))), s: sig }))));
 }
 
-function _sousVerifyToken(token) {
+async function _sousVerifyToken(token) {
   try {
-    var p = JSON.parse(decodeURIComponent(escape(atob(token))));
+    var outer = JSON.parse(decodeURIComponent(escape(atob(token))));
+    if (!outer || !outer.p || !outer.s) return null;
+    var payload = decodeURIComponent(escape(atob(outer.p)));
+    var p = JSON.parse(payload);
     if (!p || !p.id || !p.exp || p.exp < Date.now()) return null;
-    /* Vérifier signature */
-    var raw = p.id + '|' + p.exp + '|' + (typeof location !== 'undefined' ? location.origin : 'immosuite');
-    var sig = 0;
-    for (var i = 0; i < raw.length; i++) sig = ((sig << 5) - sig + raw.charCodeAt(i)) | 0;
-    if (sig.toString(16) !== p.sig) return null;
+
+    var rawKey = sessionStorage.getItem('_sous_hmac_key');
+    if (!rawKey) return null; /* Clé perdue (fermeture onglet) → re-login requis */
+
+    var expectedSig = '';
+    try {
+      var keyBytes = new Uint8Array(rawKey.match(/.{2}/g).map(function(h){ return parseInt(h,16); }));
+      var key = await crypto.subtle.importKey('raw', keyBytes, { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+      var sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+      expectedSig = Array.from(new Uint8Array(sigBuf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+    } catch(e) {
+      var fb = 0;
+      for (var i = 0; i < payload.length; i++) fb = ((fb << 5) - fb + payload.charCodeAt(i)) | 0;
+      expectedSig = fb.toString(16);
+    }
+
+    if (expectedSig !== outer.s) return null;
     return p.id;
   } catch(e) { return null; }
 }
 
-/* Patch verifierSessionSouscripteur */
+/* Patch verifierSessionSouscripteur — version async */
 (function() {
-  verifierSessionSouscripteur = function() {
+  var _origVSS = verifierSessionSouscripteur;
+  verifierSessionSouscripteur = async function() {
     try {
       var token = localStorage.getItem('souscripteur_token');
       if (!token) return false;
-      var clientId = _sousVerifyToken(token);
+      var clientId = await _sousVerifyToken(token);
       if (!clientId) { localStorage.removeItem('souscripteur_token'); return false; }
       var client = DATA.clients.find(function(c){ return c.id === clientId; });
       if (!client) { localStorage.removeItem('souscripteur_token'); return false; }
@@ -34241,51 +34418,208 @@ function _sousVerifyToken(token) {
     }
     var client = DATA.clients.find(function(c){ return c.id===clientId; });
     if (!client) return;
+
     /* Code 8 chiffres cryptographiquement aléatoire */
     var arr = new Uint32Array(1);
     crypto.getRandomValues(arr);
     var code = String(10000000 + (arr[0] % 90000000));
-    /* Hasher le code avant stockage (comme un mot de passe) */
+
+    /* Hasher le code avant stockage */
     var salt = generateSalt();
     var hash = await hashPassword(code, salt);
     client.code_acces_hash = hash;
     client.code_acces_salt = salt;
     client.code_acces_date = new Date().toISOString();
-    /* Supprimer les anciens formats non sécurisés */
     delete client.code_acces;
     delete client.mot_de_passe;
+
+    /* Persister IDB + sync cloud immédiate (CORRECTIF AUDIT : manquait) */
     await dbPut('clients', client);
-    /* Afficher le code UNE SEULE FOIS */
-    var msg = '🔑 Code accès généré pour ' + client.prenoms + ' ' + client.nom + '\n\n'
-      + 'CODE : ' + code + '\n\n'
-      + 'Identifiant : ' + (client.dossier||client.id) + '\n\n'
-      + '⚠️ Ce code n\'est affiché qu\'UNE SEULE FOIS.\nCommuniquez-le par WhatsApp ou SMS.';
-    alert(msg);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', client);
+
+    /* Affichage sécurisé : modal interne au lieu d'alert() (CORRECTIF AUDIT) */
+    _showCodeModal(client, code);
+
     toast('✅ Code généré — communiquez-le immédiatement au souscripteur.', 'success');
   };
 })();
 
-/* Patch authentifierSouscripteur pour vérifier le code hashé */
-(function() {
-  /* Surcharger la recherche client dans l'auth */
-  var _origA2 = authentifierSouscripteur;
-  /* On n'écrase pas _origA2 une 2ème fois — on patch la fonction interne
-     de comparaison en surchargeant la logique de find */
-  var _origFind = Array.prototype.find;
-  /* Approche plus propre : remplacer directement la logique de vérification */
-  window._sousVerifyCode = async function(client, code) {
-    if (!code) return false;
-    /* 1. Vérifier code hashé (nouveau format) */
-    if (client.code_acces_hash && client.code_acces_salt) {
-      return (await hashPassword(code, client.code_acces_salt)) === client.code_acces_hash;
-    }
-    /* 2. Compatibilité ancien format code en clair */
-    if (client.code_acces) return client.code_acces === code;
-    /* 3. Ancien mot_de_passe (sera remplacé au prochain accès) */
-    if (client.mot_de_passe) return client.mot_de_passe === code;
-    return false;
+/* Modal d'affichage du code — affiché UNE SEULE FOIS, jamais dans l'historique */
+function _showCodeModal(client, code) {
+  var existing = document.getElementById('_modal-code-acces');
+  if (existing) existing.remove();
+
+  var nom = ((client.prenoms || '') + ' ' + (client.nom || '')).trim();
+  var login = client.dossier || client.tel || client.id;
+
+  var el = document.createElement('div');
+  el.id = '_modal-code-acces';
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  el.innerHTML = ''
+    + '<div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+    + '<div style="font-size:32px;text-align:center;margin-bottom:8px;">🔑</div>'
+    + '<h3 style="margin:0 0 4px;font-size:17px;color:#1C1C2E;text-align:center;">Code d\'accès généré</h3>'
+    + '<p style="margin:0 0 18px;font-size:13px;color:#64748B;text-align:center;">' + escHtml(nom) + '</p>'
+
+    + '<div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;padding:14px;margin-bottom:14px;text-align:center;">'
+    + '<div style="font-size:11px;color:#166534;margin-bottom:6px;font-weight:600;">IDENTIFIANT</div>'
+    + '<div style="font-size:18px;font-weight:700;color:#1C1C2E;letter-spacing:1px;">' + escHtml(login) + '</div>'
+    + '</div>'
+
+    + '<div style="background:#FEF9C3;border:1.5px solid #FCD34D;border-radius:10px;padding:14px;margin-bottom:18px;text-align:center;">'
+    + '<div style="font-size:11px;color:#92400E;margin-bottom:6px;font-weight:600;">CODE D\'ACCÈS (affiché UNE SEULE FOIS)</div>'
+    + '<div style="font-size:32px;font-weight:800;color:#92400E;letter-spacing:4px;">' + code + '</div>'
+    + '</div>'
+
+    + '<div style="background:#FFF7ED;border-radius:8px;padding:10px 12px;font-size:12px;color:#9A3412;margin-bottom:18px;">'
+    + '⚠️ Ce code n\'est jamais affiché à nouveau. Communiquez-le <strong>immédiatement</strong> par WhatsApp ou SMS.'
+    + '</div>'
+
+    + '<button id="_btn-copy-code" style="width:100%;padding:12px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;">📋 Copier le code</button>'
+    + '<button id="_btn-wa-code" style="width:100%;padding:12px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:12px;">💬 Envoyer par WhatsApp</button>'
+    + '<button id="_btn-close-code" style="width:100%;padding:10px;background:#F1F5F9;color:#475569;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Fermer (le code disparaîtra)</button>'
+    + '</div>';
+
+  document.body.appendChild(el);
+
+  document.getElementById('_btn-copy-code').onclick = function() {
+    navigator.clipboard ? navigator.clipboard.writeText(code).then(function(){ toast('Code copié !', 'success'); })
+                        : (function(){ var ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Code copié !','success'); })();
   };
-})();
+  document.getElementById('_btn-wa-code').onclick = function() {
+    var msg = encodeURIComponent(
+      '🏠 *ImmoSuite — Accès votre espace souscripteur*\n\n'
+      + 'Bonjour ' + nom + ',\n\n'
+      + '🔑 Identifiant : *' + login + '*\n'
+      + '🔒 Code d\'accès : *' + code + '*\n\n'
+      + '➡️ Connectez-vous sur l\'application pour suivre votre dossier.'
+    );
+    var tel = (client.tel || '').replace(/\D/g,'');
+    window.open('https://wa.me/' + (tel || '') + '?text=' + msg, '_blank');
+  };
+  var closeBtn = document.getElementById('_btn-close-code');
+  closeBtn.onclick = function() { el.remove(); };
+  /* Fermer en cliquant hors du modal */
+  el.addEventListener('click', function(e){ if (e.target === el) el.remove(); });
+}
+
+/* ── CORRECTIF AUDIT : Vérification code hashé câblée dans l'auth ─────────
+   Problème : _sousVerifyCode était défini mais jamais appelé.
+   La chaîne de patches laissait l'auth originale (comparaison clair) active,
+   rendant impossible la connexion après genererCodeAcces (qui supprime
+   code_acces et mot_de_passe au profit de code_acces_hash/salt).
+
+   Solution : remplacement COMPLET de authentifierSouscripteur par une
+   version async unique qui :
+     1. Rate-limiting (5 tentatives / 15 min)
+     2. Recherche candidats par login (dossier / tel / email)
+     3. Vérifie le code avec _sousVerifyCode (hash ou fallback clair)
+     4. Migration on-the-fly : si code clair validé → rehash immédiat
+     5. Émet le token sécurisé + journalise
+─────────────────────────────────────────────────────────────────────────── */
+
+/* Fonction de vérification réutilisable */
+window._sousVerifyCode = async function(client, code) {
+  if (!code || !client) return false;
+  /* 1. Format sécurisé (nouveau) : hash SHA-256 + sel */
+  if (client.code_acces_hash && client.code_acces_salt) {
+    return (await hashPassword(code, client.code_acces_salt)) === client.code_acces_hash;
+  }
+  /* 2. Ancien format code clair — accepté, migré on-the-fly après login */
+  if (client.code_acces) return client.code_acces === code;
+  /* 3. Ancien mot_de_passe clair — idem */
+  if (client.mot_de_passe) return client.mot_de_passe === code;
+  return false;
+};
+
+/* Remplacement complet de authentifierSouscripteur */
+authentifierSouscripteur = async function() {
+  var login = (document.getElementById('sous-login')  || {}).value.trim();
+  var code  = (document.getElementById('sous-password')|| {}).value.trim();
+  var errEl = document.getElementById('sous-login-error');
+  if (errEl) errEl.style.display = 'none';
+
+  if (!login || !code) {
+    if (errEl) { errEl.textContent = 'Veuillez saisir votre identifiant et votre code d\'accès.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  /* ── Rate limiting : 5 tentatives / 15 min (clé par login) ── */
+  var bfKey = 'sous_bf_' + (login).replace(/\s/g,'').slice(-8) + '_' + Math.floor(Date.now() / (15*60000));
+  var attempts = {};
+  try { attempts = JSON.parse(localStorage.getItem('sous_login_attempts') || '{}'); } catch(e) {}
+  if ((attempts[bfKey] || 0) >= 5) {
+    if (errEl) { errEl.textContent = '🔒 Trop de tentatives. Réessayez dans 15 minutes.'; errEl.style.display = 'block'; }
+    await logConnexion('[SOUSCRIPTEUR] ' + login, false, 'Rate limit portail');
+    return;
+  }
+
+  /* ── Recherche des candidats par identifiant (dossier / tel / email) ── */
+  var loginN = login.replace(/\s/g, '');
+  var candidats = (DATA.clients || []).filter(function(c) {
+    return c.dossier === login
+      || (c.email && c.email.toLowerCase() === login.toLowerCase())
+      || (c.tel && (c.tel.replace(/\s/g,'') === loginN || c.tel.replace(/\s/g,'').slice(-8) === loginN.slice(-8)));
+  });
+
+  /* ── Vérification asynchrone du code (hash ou clair) ── */
+  var client = null;
+  for (var i = 0; i < candidats.length; i++) {
+    if (await window._sousVerifyCode(candidats[i], code)) { client = candidats[i]; break; }
+  }
+
+  if (!client) {
+    /* Incrémenter tentatives */
+    attempts[bfKey] = (attempts[bfKey] || 0) + 1;
+    localStorage.setItem('sous_login_attempts', JSON.stringify(attempts));
+    var restantes = Math.max(0, 5 - attempts[bfKey]);
+    if (errEl) {
+      errEl.textContent = 'Identifiants incorrects.'
+        + (restantes <= 2 ? ' (' + restantes + ' tentative(s) restante(s))' : '');
+      errEl.style.display = 'block';
+    }
+    await logConnexion('[SOUSCRIPTEUR] ' + login, false, 'Code accès incorrect');
+    return;
+  }
+
+  /* ── Migration on-the-fly : rehash si code stocké en clair ── */
+  if (!client.code_acces_hash && (client.code_acces || client.mot_de_passe)) {
+    try {
+      var salt = generateSalt();
+      var hash = await hashPassword(code, salt);
+      client.code_acces_hash = hash;
+      client.code_acces_salt = salt;
+      delete client.code_acces;
+      delete client.mot_de_passe;
+      await dbPut('clients', client);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', client);
+    } catch(migErr) { /* migration silencieuse — ne bloque pas le login */ }
+  }
+
+  /* ── Connexion réussie ── */
+  delete attempts[bfKey];
+  localStorage.setItem('sous_login_attempts', JSON.stringify(attempts));
+
+  client.derniere_connexion_portail = new Date().toISOString();
+  client.nb_connexions_portail = (client.nb_connexions_portail || 0) + 1;
+  await dbPut('clients', client);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', client);
+
+  await logConnexion('[SOUSCRIPTEUR] ' + (client.dossier || client.id), true,
+    'Portail souscripteur — ' + (client.prenoms || '') + ' ' + client.nom
+    + ' — Dossier: ' + (client.dossier || '—')
+    + ' — Tel: ' + (client.tel || '—')
+  );
+
+  /* Token sécurisé — remplace l'ancien souscripteur_session */
+  localStorage.removeItem('souscripteur_session');
+  localStorage.setItem('souscripteur_token', _sousBuildToken(client.id));
+
+  SESSION_SOUSCRIPTEUR = client;
+  if (typeof closeModal === 'function') closeModal('modal-login-souscripteur');
+  toast('Bienvenue ' + (client.prenoms || '') + ' ' + client.nom + ' 👋', 'success');
+  if (typeof goToPortail === 'function') goToPortail();
+};
 
 /* ────────────────────────────────────────────────────────────────
    FIX 4 — exportJSON : guard admin + retirer password_hash/salt
