@@ -660,7 +660,7 @@
     const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
     const tbody = document.getElementById('versements-body');
     if (!vers.length) {
-      tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>';
       return;
     }
     tbody.innerHTML = vers.map(v => `
