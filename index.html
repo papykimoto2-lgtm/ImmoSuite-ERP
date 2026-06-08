@@ -1187,6 +1187,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   transform: scale(1.01);
 }
 .plan-dropzone-inner { pointer-events: none; }
+.plan-dropzone-inner button,
+.plan-dropzone-inner label,
+.plan-dropzone-inner input,
+.plan-dropzone-inner a { pointer-events: auto; }
 
 /* Grille des slots angles */
 .plan-vues-grid {
@@ -9716,14 +9720,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div style="font-weight:700;font-size:14px;">Glisser des photos ici</div>
             <div style="font-size:12px;color:var(--dim);margin:4px 0 12px;">JPG, PNG, HEIC — max 5 Mo par photo</div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-              <button type="button" class="btn btn-primary btn-sm" onclick="rchOuvrirGalerie()">
+              <label for="rch-photo-input" class="btn btn-primary btn-sm"
+                style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin:0;">
                 📷 Depuis la galerie
-              </button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="rchOuvrirCamera()">
+              </label>
+              <label for="rch-camera-input" class="btn btn-secondary btn-sm"
+                style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin:0;">
                 📱 Prendre une photo
-              </button>
+              </label>
             </div>
             <input type="file" id="rch-photo-input" multiple accept="image/*"
+              style="display:none;" onchange="rchAjouterPhotos(this)">
+            <input type="file" id="rch-camera-input" accept="image/*" capture="environment"
               style="display:none;" onchange="rchAjouterPhotos(this)">
           </div>
         </div>
@@ -10557,7 +10565,7 @@ async function loadAllData() {
 /* ──────────────────────────────────────────────────────
    SUPABASE
 ────────────────────────────────────────────────────── */
-var SB = { url: '', key: '' };
+var SB = { url: '', key: '', _breakerOpen: false, _breakerSince: 0 };
 
 var SB_URL_DEFAUT = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
 var SB_KEY_DEFAUT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
@@ -10599,6 +10607,8 @@ function skipConfig() {
 
 async function sbFetch(path, method, body, prefer) {
   if (!SB.url || !SB.key) return null;
+  var SB_BREAKER_DELAY = 5 * 60 * 1000;
+  if (SB._breakerOpen && (Date.now() - SB._breakerSince) < SB_BREAKER_DELAY) return null;
   try {
     var opts = {
       method: method || 'GET',
@@ -10611,6 +10621,7 @@ async function sbFetch(path, method, body, prefer) {
     };
     if (body) opts.body = JSON.stringify(body);
     var resp = await fetch(SB.url + '/rest/v1/' + path, opts);
+    SB._breakerOpen = false;
     if (!resp.ok) {
       try {
         var t = await resp.text();
@@ -10620,11 +10631,15 @@ async function sbFetch(path, method, body, prefer) {
       return null;
     }
     var txt = await resp.text();
-    if (!txt) return [];                 // réponse vide (return=minimal) = succès
+    if (!txt) return [];
     try { return JSON.parse(txt); } catch(e) { return []; }
   } catch(e) {
-    console.warn('[Supabase] échec réseau ' + path, e);
-    window._lastSupaError = 'réseau : ' + ((e && e.message) ? e.message : 'inconnu');
+    if (!SB._breakerOpen) {
+      SB._breakerOpen = true;
+      SB._breakerSince = Date.now();
+      console.warn('[Supabase] Serveur inaccessible — synchronisation suspendue 5 min.');
+      window._lastSupaError = 'réseau : ' + ((e && e.message) ? e.message : 'inconnu');
+    }
     return null;
   }
 }
@@ -12234,6 +12249,11 @@ function openClientModal(id) {
   APP.editingId = id || null;
   clearClientForm();
   populateProgrammeSelects();
+  /* ── Toujours re-peupler commercial & apporteur depuis RH au moment de l'ouverture
+     (au cas où des employés ont été ajoutés depuis le dernier chargement, ou si
+     populateAllERP() n'avait pas encore été appelé au démarrage). ── */
+  if (typeof populateCommerciauxPartout === 'function') populateCommerciauxPartout();
+  if (typeof populateApporteursPartout  === 'function') populateApporteursPartout();
   if (id) {
     var c = DATA.clients.find(function(x) { return x.id === id; });
     if (!c) return;
@@ -25395,12 +25415,21 @@ function populateCommerciauxPartout() {
     if (!sel) return;
     var cur = currentVal !== undefined ? currentVal : sel.value;
     while (sel.options.length > 1) sel.remove(1);
-    commerciaux.forEach(function(e) {
-      var o = document.createElement('option');
-      o.value = e.id;
-      o.textContent = (e.prenoms ? e.prenoms + ' ' : '') + e.nom;
-      sel.appendChild(o);
-    });
+    if (!commerciaux.length) {
+      /* Aucun employé RH → option d'avertissement non sélectionnable */
+      var warn = document.createElement('option');
+      warn.value = '';
+      warn.disabled = true;
+      warn.textContent = '⚠️ Aucun employé dans le module RH';
+      sel.appendChild(warn);
+    } else {
+      commerciaux.forEach(function(e) {
+        var o = document.createElement('option');
+        o.value = e.id;
+        o.textContent = (e.prenoms ? e.prenoms + ' ' : '') + e.nom;
+        sel.appendChild(o);
+      });
+    }
     if (cur) sel.value = cur;
   };
 
