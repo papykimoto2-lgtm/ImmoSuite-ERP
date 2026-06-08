@@ -5,12 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>Espace Souscripteur – ImmoSuite ERP</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     :root {
       --bg: #F5F7FB;
       --card: #FFFFFF;
@@ -25,13 +20,8 @@
       --info: #3B82F6;
       --radius: 12px;
     }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-    /* Login (inchangé) */
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    /* Login */
     #login-screen {
       display: flex;
       align-items: center;
@@ -174,7 +164,6 @@
       margin-bottom: 16px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    /* KPI mobile : 2 colonnes */
     .kpi-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -452,7 +441,7 @@
     </div>
     <!-- Échéancier -->
     <div id="tab-echeances" class="tab-pane">
-      <div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
+      <div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th><tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
     </div>
     <!-- Versements -->
     <div id="tab-versements" class="tab-pane">
@@ -693,10 +682,9 @@
     const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
     const tbody = document.getElementById('versements-body');
     if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>'; return; }
-    tbody.innerHTML = vers.map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
+    tbody.innerHTML = vers.map(v => `<td><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
   }
 
-  // Relevé de compte détaillé
   async function renderReleve() {
     if (!currentClient) return;
     const totalDu = parseFloat(currentClient.montant_total) || 0;
@@ -709,20 +697,18 @@
     const statut = solde <= 0 ? 'Soldé' : (solde > 0 ? 'En cours' : 'Créditeur');
     document.getElementById('releve-statut').innerHTML = `<span class="badge ${solde<=0?'badge-success':'badge-warning'}">${statut}</span>`;
 
-    let soldeCourant = 0;
+    let soldeCourant = totalDu;
     const rows = [];
-    // Ajouter une ligne d'ouverture (montant initial)
-    rows.push(`<tr><td>${formatDate(currentClient.date_debut || '—')}</td><td>Souscription initiale</td><td class="text-right">${formatFCFA(totalDu)}</td><td>—</td><td class="text-right">${formatFCFA(totalDu)}</td></tr>`);
-    soldeCourant = totalDu;
+    rows.push(`<tr><td>${formatDate(currentClient.date_debut || '—')}</td><td>Souscription initiale</td><td class="text-right">${formatFCFA(totalDu)}</td><td>—</td><td class="text-right">${formatFCFA(soldeCourant)}</td>`);
     for (const v of versements) {
       const montant = parseFloat(v.montant) || 0;
       soldeCourant -= montant;
-      rows.push(`<tr><td>${formatDate(v.date)}</td><td>Versement - ${escapeHtml(v.mode || '')} ${v.ref ? '('+v.ref+')' : ''}</td><td class="text-right">- ${formatFCFA(montant)}</td><td>${escapeHtml(v.mode)}</td><td class="text-right">${formatFCFA(soldeCourant)}</td></tr>`);
+      rows.push(`<tr><td>${formatDate(v.date)}</td><td>Versement - ${escapeHtml(v.mode || '')} ${v.ref ? '('+v.ref+')' : ''}</td><td class="text-right">- ${formatFCFA(montant)}</td><td>${escapeHtml(v.mode)}</td><td class="text-right">${formatFCFA(soldeCourant)}</td>`);
     }
     if (soldeCourant > 0) {
-      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Solde restant dû</strong></td><td class="text-right"><strong>${formatFCFA(soldeCourant)}</strong></td></tr>`);
+      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Solde restant dû</strong></td><td class="text-right"><strong>${formatFCFA(soldeCourant)}</strong></td>`);
     } else if (soldeCourant < 0) {
-      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Trop-perçu (crédit client)</strong></td><td class="text-right"><strong>${formatFCFA(-soldeCourant)}</strong></td></tr>`);
+      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Trop-perçu (crédit client)</strong></td><td class="text-right"><strong>${formatFCFA(-soldeCourant)}</strong></td>`);
     }
     document.getElementById('releve-tbody').innerHTML = rows.join('');
   }
@@ -925,7 +911,7 @@
         document.getElementById(`tab-${tabId}`).classList.add('active');
         if (tabId === 'echeances') renderEcheancier();
         else if (tabId === 'versements') renderVersements();
-        else if (tabId === 'releve') renderReleve();
+        else if (tabId === 'releve') await renderReleve();
         else if (tabId === 'documents') renderDocuments();
         else if (tabId === 'photos') renderPhotos();
         else if (tabId === 'demandes') renderDemandes();
@@ -935,7 +921,6 @@
     });
   }
 
-  // Export PDF simple (impression)
   function exportRelevePDF() {
     if (!currentClient) return;
     const win = window.open('', '_blank');
