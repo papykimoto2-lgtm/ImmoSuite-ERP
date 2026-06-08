@@ -329,140 +329,44 @@
   </style>
 </head>
 <body>
-
-<!-- Écran de connexion -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="logo">
-      <div class="logo-icon">🏠</div>
-      <h1>Espace Souscripteur</h1>
-      <p style="font-size: 13px; margin-top: 8px; color: #64748B;">ImmoSuite ERP</p>
-    </div>
-    <div id="login-error" class="error-msg" style="display: none;"></div>
-    <div class="login-field">
-      <label>Numéro de dossier / Email / Téléphone</label>
-      <input type="text" id="login-identifier" placeholder="Ex: SP008" autocomplete="username">
-    </div>
-    <div class="login-field">
-      <label>Code d'accès</label>
-      <input type="password" id="login-code" placeholder="Code à 8 chiffres" autocomplete="current-password">
-    </div>
+    <div class="logo"><div class="logo-icon">🏠</div><h1>Espace Souscripteur</h1><p style="font-size:13px;margin-top:8px;color:#64748B;">ImmoSuite ERP</p></div>
+    <div id="login-error" class="error-msg" style="display:none;"></div>
+    <div class="login-field"><label>Numéro de dossier / Email / Téléphone</label><input type="text" id="login-identifier" placeholder="Ex: SP008" autocomplete="username"></div>
+    <div class="login-field"><label>Code d'accès</label><input type="password" id="login-code" placeholder="Code à 8 chiffres" autocomplete="current-password"></div>
     <button class="btn" id="login-btn">Se connecter →</button>
-    <div style="margin-top: 16px; font-size: 12px; text-align: center; color: #94A3B8;">
-      🔒 Sécurisé · Accès privé
-    </div>
+    <div style="margin-top:16px;font-size:12px;text-align:center;color:#94A3B8;">🔒 Sécurisé · Accès privé</div>
   </div>
 </div>
-
-<!-- Application (après login) -->
 <div id="app">
-  <div class="topbar">
-    <div class="topbar-brand">Mon espace ImmoSuite</div>
-    <div class="topbar-user">
-      <span id="welcome-name"></span>
-      <button class="logout-btn" id="logout-btn">Déconnexion</button>
-    </div>
-  </div>
-
-  <div class="tabs" id="tabs">
-    <button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button>
-    <button class="tab-btn" data-tab="echeances">📅 Échéancier</button>
-    <button class="tab-btn" data-tab="versements">💳 Versements</button>
-    <button class="tab-btn" data-tab="documents">📁 Documents</button>
-    <button class="tab-btn" data-tab="photos">📸 Chantier</button>
-  </div>
-
+  <div class="topbar"><div class="topbar-brand">Mon espace ImmoSuite</div><div class="topbar-user"><span id="welcome-name"></span><button class="logout-btn" id="logout-btn">Déconnexion</button></div></div>
+  <div class="tabs" id="tabs"><button class="tab-btn active" data-tab="dashboard">📊 Tableau de bord</button><button class="tab-btn" data-tab="echeances">📅 Échéancier</button><button class="tab-btn" data-tab="versements">💳 Versements</button><button class="tab-btn" data-tab="documents">📁 Documents</button><button class="tab-btn" data-tab="photos">📸 Chantier</button></div>
   <div class="content">
-    <!-- Dashboard -->
-    <div id="tab-dashboard" class="tab-pane active">
-      <div class="kpi-grid">
-        <div class="kpi"><div class="kpi-label">Montant souscrit</div><div class="kpi-value" id="kpi-total">0 F</div></div>
-        <div class="kpi"><div class="kpi-label">Déjà versé</div><div class="kpi-value" id="kpi-versé">0 F</div></div>
-        <div class="kpi"><div class="kpi-label">Reste à payer</div><div class="kpi-value" id="kpi-reste">0 F</div></div>
-        <div class="kpi"><div class="kpi-label">Avancement</div><div class="kpi-value" id="kpi-pct">0%</div></div>
-      </div>
-      <div class="card">
-        <div style="font-weight: 700; margin-bottom: 8px;">Informations dossier</div>
-        <div id="client-info"></div>
-      </div>
-      <div class="card">
-        <div style="font-weight: 700; margin-bottom: 8px;">📈 Avancement du programme</div>
-        <div id="programme-avancement"></div>
-      </div>
-    </div>
-
-    <!-- Échéancier -->
-    <div id="tab-echeances" class="tab-pane">
-      <div class="card">
-        <div class="table-wrap">
-          <table id="echeancier-table">
-            <thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead>
-            <tbody id="echeancier-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Versements -->
-    <div id="tab-versements" class="tab-pane">
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead>
-            <tbody id="versements-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Documents -->
-    <div id="tab-documents" class="tab-pane">
-      <div id="documents-list" class="card"></div>
-    </div>
-
-    <!-- Photos chantier -->
-    <div id="tab-photos" class="tab-pane">
-      <div id="photos-list" class="photos-grid"></div>
-    </div>
+    <div id="tab-dashboard" class="tab-pane active"><div class="kpi-grid"><div class="kpi"><div class="kpi-label">Montant souscrit</div><div class="kpi-value" id="kpi-total">0 F</div></div><div class="kpi"><div class="kpi-label">Déjà versé</div><div class="kpi-value" id="kpi-versé">0 F</div></div><div class="kpi"><div class="kpi-label">Reste à payer</div><div class="kpi-value" id="kpi-reste">0 F</div></div><div class="kpi"><div class="kpi-label">Avancement</div><div class="kpi-value" id="kpi-pct">0%</div></div></div><div class="card"><div style="font-weight:700;margin-bottom:8px;">Informations dossier</div><div id="client-info"></div></div><div class="card"><div style="font-weight:700;margin-bottom:8px;">📈 Avancement du programme</div><div id="programme-avancement"></div></div></div>
+    <div id="tab-echeances" class="tab-pane"><div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
+    <div id="tab-versements" class="tab-pane"><div class="card"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead><tbody id="versements-body"></tbody></table></div></div></div>
+    <div id="tab-documents" class="tab-pane"><div id="documents-list" class="card"></div></div>
+    <div id="tab-photos" class="tab-pane"><div id="photos-list" class="photos-grid"></div></div>
   </div>
 </div>
-
-<!-- Lightbox -->
-<div id="lightbox" class="lightbox" onclick="closeLightbox()">
-  <span class="lightbox-close">&times;</span>
-  <img id="lightbox-img" src="">
-</div>
-
+<div id="lightbox" class="lightbox" onclick="closeLightbox()"><span class="lightbox-close">&times;</span><img id="lightbox-img" src=""></div>
 <script>
-  // ========================== CONFIGURATION & VARIABLES GLOBALES ==========================
+  // ======================= CONFIGURATION SUPABASE (intégrée) =======================
+  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
+
+  // ==============================================================================
   const DB_NAME = 'ImmoSuiteDB';
   const DB_VERSION = 109;
   let db = null;
-  let DATA = {
-    clients: [], versements: [], programmes: [], conventions: [],
-    rapports_chantier: [], documents: [], lots: []
-  };
+  let DATA = { clients: [], versements: [], programmes: [], conventions: [], rapports_chantier: [], documents: [], lots: [] };
   let currentClient = null;
 
-  // ========================== FONCTIONS DE BASE ==========================
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onsuccess = () => { db = req.result; resolve(); };
-      req.onerror = () => reject(req.error);
-    });
-  }
-
-  async function dbGetAll(storeName) {
-    if (!db || !db.objectStoreNames.contains(storeName)) return [];
-    const tx = db.transaction(storeName, 'readonly');
-    const store = tx.objectStore(storeName);
-    return new Promise((resolve) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
-  }
+  // Fonctions IndexedDB
+  function openDB() { return new Promise((resolve, reject) => { const req = indexedDB.open(DB_NAME, DB_VERSION); req.onsuccess = () => { db = req.result; resolve(); }; req.onerror = () => reject(req.error); }); }
+  async function dbGetAll(storeName) { if (!db || !db.objectStoreNames.contains(storeName)) return []; const tx = db.transaction(storeName, 'readonly'); const store = tx.objectStore(storeName); return new Promise((resolve) => { const req = store.getAll(); req.onsuccess = () => resolve(req.result || []); req.onerror = () => resolve([]); }); }
+  async function dbPut(store, obj) { if (!db || !db.objectStoreNames.contains(store)) return; const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(obj); return new Promise(resolve => { tx.oncomplete = resolve; }); }
 
   async function loadAllData() {
     DATA.clients = await dbGetAll('clients');
@@ -474,7 +378,7 @@
     DATA.lots = await dbGetAll('lots');
   }
 
-  // ========================== HACHAGE (identique à l'ERP) ==========================
+  // Hachage SHA256 (identique à l'ERP)
   async function hashPassword(password, salt) {
     const enc = new TextEncoder();
     const data = enc.encode(password + salt);
@@ -482,33 +386,24 @@
       const hash = await crypto.subtle.digest('SHA-256', data);
       return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
     } else {
-      // fallback simple (ne devrait pas arriver en HTTPS)
       let h = 0;
       for (let i = 0; i < data.length; i++) h = ((h << 5) - h) + data[i] | 0;
       return h.toString(16);
     }
   }
-
-  // Vérification : priorité au hash, puis fallback code clair (rétrocompatibilité)
   async function verifyCode(client, code) {
     if (!code || !client) return false;
-    // 1. Mode sécurisé (hash)
     if (client.code_acces_hash && client.code_acces_salt) {
       const computed = await hashPassword(code, client.code_acces_salt);
       if (computed === client.code_acces_hash) return true;
     }
-    // 2. Fallback ancien format (code en clair)
     if (client.code_acces === code) return true;
     if (client.mot_de_passe === code) return true;
     return false;
   }
 
-  // ========================== SESSION PERSISTANTE ==========================
-  function saveSession(client) {
-    const sessionData = { id: client.id, dossier: client.dossier, expire: Date.now() + 24 * 3600000 };
-    localStorage.setItem('souscripteur_session', JSON.stringify(sessionData));
-  }
-
+  // Session persistante (localStorage)
+  function saveSession(client) { localStorage.setItem('souscripteur_session', JSON.stringify({ id: client.id, dossier: client.dossier, expire: Date.now() + 24*3600000 })); }
   function loadSession() {
     const raw = localStorage.getItem('souscripteur_session');
     if (!raw) return null;
@@ -523,255 +418,12 @@
     return null;
   }
 
-  // ========================== LOGIN ==========================
-  const loginScreen = document.getElementById('login-screen');
-  const appDiv = document.getElementById('app');
-  const loginBtn = document.getElementById('login-btn');
-  const loginError = document.getElementById('login-error');
-
-  async function doLogin() {
-    const identifier = document.getElementById('login-identifier').value.trim();
-    const code = document.getElementById('login-code').value.trim();
-    if (!identifier || !code) {
-      loginError.textContent = 'Veuillez remplir tous les champs.';
-      loginError.style.display = 'block';
-      return;
-    }
-
-    const normalized = identifier.toLowerCase();
-    const client = DATA.clients.find(c =>
-      (c.dossier && c.dossier.toLowerCase() === normalized) ||
-      (c.email && c.email.toLowerCase() === normalized) ||
-      (c.tel && c.tel.replace(/\s/g, '') === identifier.replace(/\s/g, ''))
-    );
-
-    if (!client || !(await verifyCode(client, code))) {
-      loginError.textContent = 'Identifiant ou code d\'accès incorrect.';
-      loginError.style.display = 'block';
-      return;
-    }
-
-    // Connexion réussie
-    currentClient = client;
-    saveSession(client);
-    loginScreen.style.display = 'none';
-    appDiv.style.display = 'flex';
-    document.getElementById('welcome-name').innerText = client.prenoms ? `${client.prenoms} ${client.nom}` : client.nom;
-    await renderDashboard();
-    renderEcheancier();
-    renderVersements();
-    renderDocuments();
-    renderPhotos();
-    attachTabEvents();
-  }
-
-  loginBtn.onclick = doLogin;
-  document.getElementById('login-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-  document.getElementById('login-identifier').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
-
-  // ========================== AFFICHAGE DES DONNÉES ==========================
-  function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
-  function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
-  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
-
-  async function renderDashboard() {
-    if (!currentClient) return;
-    const total = parseFloat(currentClient.montant_total) || 0;
-    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
-    const verse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
-    const reste = Math.max(0, total - verse);
-    const pct = total > 0 ? Math.round((verse / total) * 100) : 0;
-
-    document.getElementById('kpi-total').innerText = formatFCFA(total);
-    document.getElementById('kpi-versé').innerText = formatFCFA(verse);
-    document.getElementById('kpi-reste').innerText = formatFCFA(reste);
-    document.getElementById('kpi-pct').innerText = pct + '%';
-
-    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
-    const lot = DATA.lots.find(l => l.id === currentClient.lot_id);
-    const infoHtml = `
-      <div><strong>${escapeHtml(currentClient.nom)} ${escapeHtml(currentClient.prenoms || '')}</strong></div>
-      <div>Dossier: ${escapeHtml(currentClient.dossier || '—')}</div>
-      <div>Programme: ${escapeHtml(prog ? prog.nom : '—')}</div>
-      <div>Lot: ${escapeHtml(lot ? lot.numero : '—')} (${escapeHtml(lot?.type || '—')})</div>
-      <div>Mode livraison: ${currentClient.mode_livraison === 'cle_en_main' ? 'Clé en main' : 'Gros œuvre'}</div>
-    `;
-    document.getElementById('client-info').innerHTML = infoHtml;
-
-    // Avancement travaux
-    let avHtml = '<div style="font-size:13px;">Chargement...</div>';
-    if (prog) {
-      const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
-      const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
-      const lastRapport = rapports.sort((a,b) => (b.date_debut||'').localeCompare(a.date_debut||''))[0];
-      if (lastRapport) {
-        avHtml = `
-          <div>Dernière mise à jour: ${formatDate(lastRapport.date_debut)}</div>
-          <div>Avancement: ${lastRapport.avancement || 0}%</div>
-          <div class="progress-bar"><div class="progress-fill" style="width:${lastRapport.avancement || 0}%"></div></div>
-          <div style="margin-top:8px;">${escapeHtml((lastRapport.travaux_realises || '').substring(0, 120))}…</div>
-        `;
-      } else {
-        avHtml = '<div>Aucun rapport de chantier disponible.</div>';
-      }
-    }
-    document.getElementById('programme-avancement').innerHTML = avHtml;
-  }
-
-  function renderEcheancier() {
-    if (!currentClient) return;
-    const total = parseFloat(currentClient.montant_total) || 0;
-    const apport = parseFloat(currentClient.apport) || 0;
-    const duree = parseInt(currentClient.duree) || 60;
-    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
-    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
-    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
-    const verseMap = {};
-    versements.forEach(v => {
-      const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null);
-      if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0);
-    });
-    const today = new Date();
-    let rows = '';
-    for (let i = 0; i < duree; i++) {
-      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
-      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-      const paye = verseMap[moisKey] || 0;
-      const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
-      let badgeClass = '';
-      if (statut === 'payé') badgeClass = 'badge-success';
-      else if (statut === 'partiel') badgeClass = 'badge-warning';
-      else if (statut === 'retard') badgeClass = 'badge-danger';
-      else badgeClass = 'badge-info';
-      const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
-      rows += `<tr>
-        <td>${i+1}</td>
-        <td>${d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })}</td>
-        <td>${formatFCFA(mensualite)}</td>
-        <td>${paye ? formatFCFA(paye) : '—'}</td>
-        <td><span class="badge ${badgeClass}">${label}</span></td>
-      </tr>`;
-    }
-    document.getElementById('echeancier-body').innerHTML = rows;
-  }
-
-  function renderVersements() {
-    if (!currentClient) return;
-    const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
-    const tbody = document.getElementById('versements-body');
-    if (!vers.length) {
-      tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>';
-      return;
-    }
-    tbody.innerHTML = vers.map(v => `
-      <tr>
-        <td>${formatDate(v.date)}</td>
-        <td>${formatFCFA(v.montant)}</td>
-        <td>${escapeHtml(v.mode || '—')}</td>
-        <td>${escapeHtml(v.ref || '—')}</td>
-      </tr>
-    `).join('');
-  }
-
-  async function renderDocuments() {
-    if (!currentClient) return;
-    const docs = DATA.documents.filter(d => d.entity_type === 'client' && d.entity_id === currentClient.id);
-    const container = document.getElementById('documents-list');
-    if (!docs.length) {
-      container.innerHTML = '<div class="card" style="text-align:center;">Aucun document disponible.</div>';
-      return;
-    }
-    container.innerHTML = docs.map(doc => `
-      <div class="doc-item">
-        <div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div>
-        <a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:12px;">Télécharger</a>
-      </div>
-    `).join('');
-  }
-
-  async function renderPhotos() {
-    if (!currentClient) return;
-    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
-    if (!prog) {
-      document.getElementById('photos-list').innerHTML = '<div class="card">Aucun programme associé.</div>';
-      return;
-    }
-    const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
-    const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
-    let allPhotos = [];
-    rapports.forEach(r => {
-      if (r.photos && r.photos.length) {
-        r.photos.forEach(p => {
-          if (p.visible !== false) allPhotos.push({ ...p, date: r.date_debut, legende: p.legende || `Chantier ${r.date_debut}` });
-        });
-      }
-    });
-    const container = document.getElementById('photos-list');
-    if (!allPhotos.length) {
-      container.innerHTML = '<div class="card">Aucune photo de chantier disponible pour le moment.</div>';
-      return;
-    }
-    container.innerHTML = allPhotos.map((photo, idx) => `
-      <div class="photo-card" onclick="openLightbox('${photo.data.replace(/'/g, "\\'")}', '${escapeHtml(photo.legende)}')">
-        <img src="${photo.data}" alt="Photo chantier" loading="lazy">
-        <div class="photo-caption">${escapeHtml(photo.legende)}<br><small>${formatDate(photo.date)}</small></div>
-      </div>
-    `).join('');
-  }
-
-  // Lightbox
-  window.openLightbox = function(src, caption) {
-    const lb = document.getElementById('lightbox');
-    const img = document.getElementById('lightbox-img');
-    img.src = src;
-    img.alt = caption;
-    lb.style.display = 'flex';
-  };
-  window.closeLightbox = function() {
-    document.getElementById('lightbox').style.display = 'none';
-  };
-
-  function attachTabEvents() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.onclick = () => {
-        const tabId = btn.dataset.tab;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-        document.getElementById(`tab-${tabId}`).classList.add('active');
-        if (tabId === 'echeances') renderEcheancier();
-        else if (tabId === 'versements') renderVersements();
-        else if (tabId === 'documents') renderDocuments();
-        else if (tabId === 'photos') renderPhotos();
-        else if (tabId === 'dashboard') renderDashboard();
-      };
-    });
-  }
-
-  // ========================== SYNCHRONISATION SUPABASE (si configurée) ==========================
-  let SB = { url: '', key: '' };
-  function getSBConfig() {
-    const u = localStorage.getItem('sb_url');
-    const k = localStorage.getItem('sb_key');
-    if (u && k && /^https?:\/\/[^ ]+\.supabase\.co\/?$/i.test(u)) {
-      SB.url = u.replace(/\/+$/, '');
-      SB.key = k;
-      return true;
-    }
-    return false;
-  }
-
+  // Synchronisation Supabase (directe, sans localStorage)
+  let SB = { url: SUPABASE_URL, key: SUPABASE_ANON_KEY };
   async function sbFetch(path, method, body) {
     if (!SB.url || !SB.key) return null;
     try {
-      const opts = {
-        method: method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SB.key,
-          'Authorization': 'Bearer ' + SB.key
-        }
-      };
+      const opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json', 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key } };
       if (body) opts.body = JSON.stringify(body);
       const resp = await fetch(SB.url + '/rest/v1/' + path, opts);
       if (!resp.ok) return null;
@@ -779,7 +431,6 @@
       return txt ? JSON.parse(txt) : [];
     } catch(e) { return null; }
   }
-
   async function pullFromCloudSilent() {
     if (!SB.url || !SB.key || !navigator.onLine) return;
     const tables = [
@@ -798,37 +449,132 @@
         if (!byId[r.id]) {
           byId[r.id] = r;
           try { await dbPut(store, r); } catch(e) {}
+        } else if (r._modifie && byId[r.id]._modifie && r._modifie > byId[r.id]._modifie) {
+          byId[r.id] = r;
+          try { await dbPut(store, r); } catch(e) {}
         }
       }
       DATA[store] = Object.values(byId);
     }
   }
 
-  async function dbPut(store, obj) {
-    if (!db || !db.objectStoreNames.contains(store)) return;
-    const tx = db.transaction(store, 'readwrite');
-    tx.objectStore(store).put(obj);
-    return new Promise(resolve => { tx.oncomplete = resolve; });
+  // Rendu des données
+  function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
+  function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
+  function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+
+  async function renderDashboard() {
+    if (!currentClient) return;
+    const total = parseFloat(currentClient.montant_total) || 0;
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+    const verse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
+    const reste = Math.max(0, total - verse);
+    const pct = total > 0 ? Math.round((verse / total) * 100) : 0;
+    document.getElementById('kpi-total').innerText = formatFCFA(total);
+    document.getElementById('kpi-versé').innerText = formatFCFA(verse);
+    document.getElementById('kpi-reste').innerText = formatFCFA(reste);
+    document.getElementById('kpi-pct').innerText = pct + '%';
+    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
+    const lot = DATA.lots.find(l => l.id === currentClient.lot_id);
+    document.getElementById('client-info').innerHTML = `<div><strong>${escapeHtml(currentClient.nom)} ${escapeHtml(currentClient.prenoms || '')}</strong></div><div>Dossier: ${escapeHtml(currentClient.dossier || '—')}</div><div>Programme: ${escapeHtml(prog ? prog.nom : '—')}</div><div>Lot: ${escapeHtml(lot ? lot.numero : '—')} (${escapeHtml(lot?.type || '—')})</div><div>Mode livraison: ${currentClient.mode_livraison === 'cle_en_main' ? 'Clé en main' : 'Gros œuvre'}</div>`;
+    let avHtml = '<div style="font-size:13px;">Chargement...</div>';
+    if (prog) {
+      const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
+      const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
+      const lastRapport = rapports.sort((a,b) => (b.date_debut||'').localeCompare(a.date_debut||''))[0];
+      if (lastRapport) avHtml = `<div>Dernière mise à jour: ${formatDate(lastRapport.date_debut)}</div><div>Avancement: ${lastRapport.avancement || 0}%</div><div class="progress-bar"><div class="progress-fill" style="width:${lastRapport.avancement || 0}%"></div></div><div style="margin-top:8px;">${escapeHtml((lastRapport.travaux_realises || '').substring(0, 120))}…</div>`;
+      else avHtml = '<div>Aucun rapport de chantier disponible.</div>';
+    }
+    document.getElementById('programme-avancement').innerHTML = avHtml;
   }
+  function renderEcheancier() {
+    if (!currentClient) return;
+    const total = parseFloat(currentClient.montant_total) || 0;
+    const apport = parseFloat(currentClient.apport) || 0;
+    const duree = parseInt(currentClient.duree) || 60;
+    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
+    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+    const verseMap = {};
+    versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
+    const today = new Date();
+    let rows = '';
+    for (let i = 0; i < duree; i++) {
+      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      const paye = verseMap[moisKey] || 0;
+      const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
+      let badgeClass = statut==='payé'?'badge-success':statut==='partiel'?'badge-warning':statut==='retard'?'badge-danger':'badge-info';
+      const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
+      rows += `<tr><td>${i+1}</td><td>${d.toLocaleDateString('fr-FR', { month:'long', year:'numeric' })}</td><td>${formatFCFA(mensualite)}</td><td>${paye ? formatFCFA(paye) : '—'}</td><td><span class="badge ${badgeClass}">${label}</span></td></tr>`;
+    }
+    document.getElementById('echeancier-body').innerHTML = rows;
+  }
+  function renderVersements() {
+    if (!currentClient) return;
+    const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const tbody = document.getElementById('versements-body');
+    if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>'; return; }
+    tbody.innerHTML = vers.map(v => `<tr><td>${formatDate(v.date)}</td><td>${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
+  }
+  async function renderDocuments() {
+    if (!currentClient) return;
+    const docs = DATA.documents.filter(d => d.entity_type === 'client' && d.entity_id === currentClient.id);
+    const container = document.getElementById('documents-list');
+    if (!docs.length) { container.innerHTML = '<div class="card" style="text-align:center;">Aucun document disponible.</div>'; return; }
+    container.innerHTML = docs.map(doc => `<div class="doc-item"><div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div><a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:12px;">Télécharger</a></div>`).join('');
+  }
+  async function renderPhotos() {
+    if (!currentClient) return;
+    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
+    if (!prog) { document.getElementById('photos-list').innerHTML = '<div class="card">Aucun programme associé.</div>'; return; }
+    const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
+    const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
+    let allPhotos = [];
+    rapports.forEach(r => { if (r.photos && r.photos.length) { r.photos.forEach(p => { if (p.visible !== false) allPhotos.push({ ...p, date: r.date_debut, legende: p.legende || `Chantier ${r.date_debut}` }); }); } });
+    const container = document.getElementById('photos-list');
+    if (!allPhotos.length) { container.innerHTML = '<div class="card">Aucune photo de chantier disponible pour le moment.</div>'; return; }
+    container.innerHTML = allPhotos.map((photo, idx) => `<div class="photo-card" onclick="openLightbox('${photo.data.replace(/'/g, "\\'")}', '${escapeHtml(photo.legende)}')"><img src="${photo.data}" alt="Photo chantier" loading="lazy"><div class="photo-caption">${escapeHtml(photo.legende)}<br><small>${formatDate(photo.date)}</small></div></div>`).join('');
+  }
+  window.openLightbox = function(src, caption) { const lb = document.getElementById('lightbox'); const img = document.getElementById('lightbox-img'); img.src = src; img.alt = caption; lb.style.display = 'flex'; };
+  window.closeLightbox = function() { document.getElementById('lightbox').style.display = 'none'; };
+  function attachTabEvents() { document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => { const tabId = btn.dataset.tab; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active')); document.getElementById(`tab-${tabId}`).classList.add('active'); if (tabId === 'echeances') renderEcheancier(); else if (tabId === 'versements') renderVersements(); else if (tabId === 'documents') renderDocuments(); else if (tabId === 'photos') renderPhotos(); else if (tabId === 'dashboard') renderDashboard(); }; }); }
 
-  // ========================== DÉMARRAGE ==========================
-  document.getElementById('logout-btn').onclick = () => {
-    localStorage.removeItem('souscripteur_session');
-    currentClient = null;
-    appDiv.style.display = 'none';
-    loginScreen.style.display = 'flex';
-    document.getElementById('login-identifier').value = '';
-    document.getElementById('login-code').value = '';
-  };
+  // Login
+  const loginScreen = document.getElementById('login-screen');
+  const appDiv = document.getElementById('app');
+  const loginBtn = document.getElementById('login-btn');
+  const loginError = document.getElementById('login-error');
+  async function doLogin() {
+    const identifier = document.getElementById('login-identifier').value.trim();
+    const code = document.getElementById('login-code').value.trim();
+    if (!identifier || !code) { loginError.textContent = 'Veuillez remplir tous les champs.'; loginError.style.display = 'block'; return; }
+    const normalized = identifier.toLowerCase();
+    const client = DATA.clients.find(c => (c.dossier && c.dossier.toLowerCase() === normalized) || (c.email && c.email.toLowerCase() === normalized) || (c.tel && c.tel.replace(/\s/g, '') === identifier.replace(/\s/g, '')));
+    if (!client || !(await verifyCode(client, code))) { loginError.textContent = 'Identifiant ou code d\'accès incorrect.'; loginError.style.display = 'block'; return; }
+    currentClient = client;
+    saveSession(client);
+    loginScreen.style.display = 'none';
+    appDiv.style.display = 'flex';
+    document.getElementById('welcome-name').innerText = client.prenoms ? `${client.prenoms} ${client.nom}` : client.nom;
+    await renderDashboard();
+    renderEcheancier();
+    renderVersements();
+    renderDocuments();
+    renderPhotos();
+    attachTabEvents();
+  }
+  loginBtn.onclick = doLogin;
+  document.getElementById('login-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-identifier').addEventListener('keypress', (e) => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('logout-btn').onclick = () => { localStorage.removeItem('souscripteur_session'); currentClient = null; appDiv.style.display = 'none'; loginScreen.style.display = 'flex'; document.getElementById('login-identifier').value = ''; document.getElementById('login-code').value = ''; };
 
+  // Démarrage
   async function start() {
     await openDB();
     await loadAllData();
-    // Synchronisation cloud si configurée
-    if (getSBConfig() && navigator.onLine) {
-      await pullFromCloudSilent();
-      await loadAllData(); // recharger après sync
-    }
+    if (navigator.onLine) await pullFromCloudSilent(); // synchronisation cloud automatique
+    await loadAllData(); // recharger après sync
     const sessionClient = loadSession();
     if (sessionClient) {
       currentClient = sessionClient;
