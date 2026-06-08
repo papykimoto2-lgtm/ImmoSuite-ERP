@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.8 · 2026-06-08';
+window.IMMOSUITE_VERSION = 'v18.10 · 2026-06-08';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -3286,6 +3286,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group">
                   <label>🤝 Comm. apporteur — Régulier (%)</label>
                   <input type="number" id="param-comm-apporteur-regulier" class="form-control" value="5" min="0" max="20" step="0.5">
+                </div>
+                <div class="form-group">
+                  <label>📝 Frais de souscription — non remboursables (FCFA)</label>
+                  <input type="number" id="param-frais-souscription" class="form-control" value="0" min="0" step="1000" placeholder="ex : 50000">
+                </div>
+                <div class="form-group">
+                  <label>📒 Compte produit des frais (SYSCOHADA)</label>
+                  <input type="text" id="param-frais-souscription-compte" class="form-control" value="7088" placeholder="7088">
                 </div>
                 <div class="form-group span-2" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;">
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
@@ -9708,10 +9716,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div style="font-weight:700;font-size:14px;">Glisser des photos ici</div>
             <div style="font-size:12px;color:var(--dim);margin:4px 0 12px;">JPG, PNG, HEIC — max 5 Mo par photo</div>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-              <button class="btn btn-primary btn-sm" onclick="document.getElementById('rch-photo-input').click()">
+              <button type="button" class="btn btn-primary btn-sm" onclick="rchOuvrirGalerie()">
                 📷 Depuis la galerie
               </button>
-              <button class="btn btn-secondary btn-sm" onclick="rchOuvrirCamera()">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="rchOuvrirCamera()">
                 📱 Prendre une photo
               </button>
             </div>
@@ -10589,7 +10597,7 @@ function skipConfig() {
   startApp();
 }
 
-async function sbFetch(path, method, body) {
+async function sbFetch(path, method, body, prefer) {
   if (!SB.url || !SB.key) return null;
   try {
     var opts = {
@@ -10598,7 +10606,7 @@ async function sbFetch(path, method, body) {
         'Content-Type': 'application/json',
         'apikey': SB.key,
         'Authorization': 'Bearer ' + SB.key,
-        'Prefer': 'return=representation'
+        'Prefer': prefer || 'return=representation'
       }
     };
     if (body) opts.body = JSON.stringify(body);
@@ -10611,7 +10619,9 @@ async function sbFetch(path, method, body) {
       } catch(_) {}
       return null;
     }
-    return await resp.json();
+    var txt = await resp.text();
+    if (!txt) return [];                 // réponse vide (return=minimal) = succès
+    try { return JSON.parse(txt); } catch(e) { return []; }
   } catch(e) {
     console.warn('[Supabase] échec réseau ' + path, e);
     window._lastSupaError = 'réseau : ' + ((e && e.message) ? e.message : 'inconnu');
@@ -10659,8 +10669,8 @@ async function syncToSupabase(table, obj) {
   if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
   if (table !== 'pi_users' && obj && typeof obj === 'object') { obj._modifie = new Date().toISOString(); }
   try {
-    await sbFetch(table + '?id=eq.' + obj.id, 'DELETE');
-    var res = await sbFetch(table, 'POST', _supaRow(table, obj));
+    /* Upsert (merge sur la clé id) → plus de conflit 409 "duplicate key". */
+    var res = await sbFetch(table + '?on_conflict=id', 'POST', _supaRow(table, obj), 'resolution=merge-duplicates,return=minimal');
     if (res === null) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
     return true;
   } catch(e) {
@@ -11014,8 +11024,7 @@ async function flushSyncOutbox() {
         if (e.op === 'delete') {
           ok = (await sbFetch(e.table + '?id=eq.' + e.id, 'DELETE')) !== null;
         } else {
-          await sbFetch(e.table + '?id=eq.' + e.id, 'DELETE');
-          ok = (await sbFetch(e.table, 'POST', _supaRow(e.table, e.obj))) !== null;
+          ok = (await sbFetch(e.table + '?on_conflict=id', 'POST', _supaRow(e.table, e.obj), 'resolution=merge-duplicates,return=minimal')) !== null;
         }
       } catch(err) { ok = false; }
       if (!ok) break;            // réseau toujours indisponible → on garde la file
@@ -25364,12 +25373,18 @@ function _estCommercial(e){
 }
 
 function populateCommerciauxPartout() {
-  var commerciaux = DATA.employes.filter(function(e) {
-    return _estCommercial(e)
-        && e.statut === 'actif';
+  // Tous les employés du module RH (actifs), commerciaux affichés en premier.
+  var actifs = (DATA.employes || []).filter(function(e) {
+    return String(e.statut || 'actif').toLowerCase() !== 'inactif';
   });
+  actifs.sort(function(a, b) {
+    var ca = _estCommercial(a) ? 0 : 1, cb = _estCommercial(b) ? 0 : 1;
+    if (ca !== cb) return ca - cb;
+    return ((a.nom || '') + (a.prenoms || '')).localeCompare((b.nom || '') + (b.prenoms || ''));
+  });
+  var commerciaux = actifs;
 
-  // Si aucun commercial dans RH, fallback sur les noms dans DATA.clients
+  // Si aucun employé dans RH, fallback sur les noms dans DATA.clients
   if (!commerciaux.length) {
     var nomsFallback = [];
     DATA.clients.forEach(function(c) { if (c.commercial && !nomsFallback.includes(c.commercial)) nomsFallback.push(c.commercial); });
@@ -25428,12 +25443,12 @@ function populateFiltreCommApporteurClient() {
   if (!sel) return;
   var cur = sel.value;
   var commerciaux = (DATA.employes||[]).filter(function(e){
-    return _estCommercial(e);
+    return String(e.statut||'actif').toLowerCase() !== 'inactif';
   });
   var apporteurs = DATA.apporteurs || [];
   var html = '<option value="">Tous commerciaux / apporteurs</option>';
   if (commerciaux.length) {
-    html += '<optgroup label="Commerciaux (RH)">';
+    html += '<optgroup label="Personnel (RH)">';
     commerciaux.forEach(function(e){
       html += '<option value="comm:'+e.id+'">'+escHtml((e.prenoms?e.prenoms+' ':'')+e.nom)+'</option>';
     });
@@ -32578,6 +32593,21 @@ function rchDragLeave(e) {
 function rchAjouterPhotos(input) {
   rchTraiterPhotos(Array.from(input.files));
   input.value = '';
+}
+
+/* Ouvre le sélecteur de fichiers de façon robuste (repli si l'input statique manque). */
+function rchOuvrirGalerie() {
+  console.log('[RCH] Ouverture galerie photos…');
+  var inp = document.getElementById('rch-photo-input');
+  if (!inp) {
+    inp = document.createElement('input');
+    inp.type = 'file'; inp.multiple = true; inp.accept = 'image/*';
+    inp.style.display = 'none';
+    inp.onchange = function(){ rchAjouterPhotos(inp); };
+    document.body.appendChild(inp);
+  }
+  try { inp.value = ''; inp.click(); }
+  catch(e) { console.warn('[RCH] clic input échoué', e); toast('Impossible d\'ouvrir la galerie sur cet appareil.', 'error'); }
 }
 
 function rchTraiterPhotos(files) {
