@@ -32,7 +32,7 @@
       color: var(--text);
       min-height: 100vh;
     }
-    /* Login (inchangé) */
+    /* Login */
     #login-screen {
       display: flex;
       align-items: center;
@@ -193,7 +193,7 @@
       width: 24px;
       text-align: center;
     }
-    /* Main content avec marge gauche quand sidebar visible sur desktop */
+    /* Main content */
     .main-content {
       flex: 1;
       transition: margin-left 0.2s ease;
@@ -227,30 +227,76 @@
       color: var(--primary);
       border-bottom-color: var(--primary);
     }
-    /* Content */
-    .content { padding: 16px; }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
+    /* Content et corrections d'espacement */
+    .content {
+      padding: 8px 16px;
+    }
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
     .card {
       background: var(--card);
       border-radius: var(--radius);
       border: 1px solid var(--border);
-      padding: 16px;
-      margin-bottom: 16px;
+      padding: 12px;
+      margin-bottom: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .kpi { background: var(--card); border-radius: 14px; padding: 12px; text-align: center; border-top: 3px solid var(--primary); }
+    /* Suppression de l'espace vertical excessif dans les onglets sans titre */
+    .tab-pane:not(#tab-dashboard):not(#tab-demandes) .card:first-child {
+      padding-top: 4px;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kpi {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 12px;
+      text-align: center;
+      border-top: 3px solid var(--primary);
+    }
     .kpi-label { font-size: 11px; color: var(--text-light); text-transform: uppercase; }
     .kpi-value { font-size: 18px; font-weight: 700; margin-top: 4px; word-break: break-word; }
 
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 12px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 400px; }
-    th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { font-weight: 600; color: var(--text-light); }
-    .text-right { text-align: right; }
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 400px;
+    }
+    th, td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text-light);
+    }
+    .text-right {
+      text-align: right;
+    }
 
-    .badge { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
     .badge-success { background: #D1FAE5; color: #065F46; }
     .badge-warning { background: #FEF3C7; color: #92400E; }
     .badge-danger { background: #FEE2E2; color: #991B1B; }
@@ -259,27 +305,114 @@
     .progress-bar { height: 6px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 6px 0; }
     .progress-fill { height: 100%; background: var(--primary); border-radius: 4px; }
 
-    .doc-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #F8FAFC; border-radius: 12px; margin-bottom: 8px; font-size: 13px; flex-wrap: wrap; gap: 8px; }
-    .doc-item .btn { width: auto; padding: 6px 12px; font-size: 11px; background: #E2E8F0; color: #1E293B; text-decoration: none; border-radius: 20px; }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .doc-item .btn {
+      width: auto;
+      padding: 6px 12px;
+      font-size: 11px;
+      background: #E2E8F0;
+      color: #1E293B;
+      text-decoration: none;
+      border-radius: 20px;
+    }
 
-    .photos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-    .photo-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
-    .photo-card img { width: 100%; height: 100px; object-fit: cover; }
-    .photo-caption { padding: 6px; font-size: 10px; text-align: center; color: var(--text-light); }
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .photo-card {
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .photo-card img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+    }
+    .photo-caption {
+      padding: 6px;
+      font-size: 10px;
+      text-align: center;
+      color: var(--text-light);
+    }
 
-    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; flex-direction: column; }
-    .lightbox img { max-width: 90%; max-height: 80%; border-radius: 8px; }
-    .lightbox-close { position: absolute; top: 20px; right: 30px; font-size: 32px; color: white; cursor: pointer; }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      flex-direction: column;
+    }
+    .lightbox img {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 8px;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 32px;
+      color: white;
+      cursor: pointer;
+    }
 
     .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-light); text-transform: uppercase; }
-    .form-control { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; background: var(--card); }
-    .demande-item { background: #F8FAFC; border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 3px solid var(--warning); font-size: 13px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text-light);
+      text-transform: uppercase;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      background: var(--card);
+    }
+    .demande-item {
+      background: #F8FAFC;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-left: 3px solid var(--warning);
+      font-size: 13px;
+    }
     .demande-item.validee { border-left-color: var(--success); }
     .demande-item.rejetee { border-left-color: var(--danger); }
 
-    .releve-synthese { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .releve-synthese .card { margin-bottom: 0; text-align: center; }
+    .releve-synthese {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .releve-synthese .card {
+      margin-bottom: 0;
+      text-align: center;
+    }
 
     /* Responsive desktop */
     @media (min-width: 768px) {
@@ -296,7 +429,7 @@
         display: none;
       }
     }
-    /* Mobile : bouton menu */
+    /* Mobile : bouton menu et ajustements tableaux */
     .topbar-menu-btn {
       background: none;
       border: none;
@@ -315,8 +448,23 @@
       }
     }
     @media (max-width: 480px) {
-      .content { padding: 12px; }
-      .kpi-value { font-size: 16px; }
+      .content {
+        padding: 6px 12px;
+      }
+      .card {
+        padding: 8px;
+      }
+      .tab-pane:not(#tab-dashboard):not(#tab-demandes) .card:first-child {
+        padding-top: 2px;
+      }
+      table {
+        min-width: 100%;
+      }
+      th, td {
+        font-size: 10px;
+        padding: 6px 4px;
+        white-space: normal;
+      }
     }
   </style>
 </head>
@@ -402,11 +550,40 @@
       </div>
       <!-- Échéancier -->
       <div id="tab-echeances" class="tab-pane">
-        <div class="card"><div class="table-wrap"><table id="echeancier-table"><thead><tr><th>#</th><th>Mois</th><th>Mensualité (F)</th><th>Versé (F)</th><th>Statut</th></tr></thead><tbody id="echeancier-body"></tbody></table></div></div></div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="echeancier-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Mois</th>
+                  <th class="text-right">Mensualité (F)</th>
+                  <th class="text-right">Versé (F)</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="echeancier-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <!-- Versements -->
       <div id="tab-versements" class="tab-pane">
-        <div class="card"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Montant (F)</th><th>Mode</th><th>Référence</th></tr></thead><tbody id="versements-body"></tbody></table></div></div></div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="versements-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="text-right">Montant (F)</th>
+                  <th>Mode</th>
+                  <th>Référence</th>
+                </tr>
+              </thead>
+              <tbody id="versements-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <!-- Relevé de compte -->
       <div id="tab-releve" class="tab-pane">
@@ -418,7 +595,20 @@
         </div>
         <div class="card">
           <div style="font-weight:700; margin-bottom:10px;">📄 Historique des transactions</div>
-          <div class="table-wrap"><table id="releve-table"><thead><tr><th>Date</th><th>Libellé</th><th class="text-right">Montant (F)</th><th>Mode</th><th class="text-right">Solde après</th></tr></thead><tbody id="releve-tbody"></tbody></table></div>
+          <div class="table-wrap">
+            <table id="releve-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Libellé</th>
+                  <th class="text-right">Montant (F)</th>
+                  <th>Mode</th>
+                  <th class="text-right">Solde après</th>
+                </tr>
+              </thead>
+              <tbody id="releve-tbody"></tbody>
+            </table>
+          </div>
           <div style="text-align:right;"><button class="btn btn-secondary btn-sm" id="export-releve-pdf" style="background:#E2E8F0; color:#1E293B; width:auto; padding:8px 16px;">📄 Exporter PDF</button></div>
         </div>
       </div>
@@ -554,7 +744,7 @@
   }
   async function pushDemandeToCloud(demande) { if (SB.url && SB.key) try { await sbFetch('pi_demandes_versement', 'POST', demande); } catch(e) {} }
 
-  // ======================= RENDU (identique à avant) =======================
+  // ======================= RENDU =======================
   function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
   function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
   function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
@@ -608,17 +798,224 @@
     document.getElementById('programme-avancement').innerHTML = avHtml;
   }
 
-  function renderEcheancier() { /* identique */ }
-  function renderVersements() { /* identique */ }
-  async function renderReleve() { /* identique */ }
-  async function renderDocuments() { /* identique */ }
-  async function renderPhotos() { /* identique */ }
-  async function renderDemandes() { /* identique */ }
+  function renderEcheancier() {
+    if (!currentClient) return;
+    const total = parseFloat(currentClient.montant_total) || 0;
+    const apport = parseFloat(currentClient.apport) || 0;
+    const duree = parseInt(currentClient.duree) || 60;
+    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
+    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+    const verseMap = {};
+    versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
+    const today = new Date();
+    let rows = '';
+    for (let i = 0; i < duree; i++) {
+      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      const paye = verseMap[moisKey] || 0;
+      const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
+      let badgeClass = statut==='payé'?'badge-success':statut==='partiel'?'badge-warning':statut==='retard'?'badge-danger':'badge-info';
+      const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
+      rows += `<tr>
+        <td style="text-align:center;">${i+1}</td>
+        <td>${d.toLocaleDateString('fr-FR', { month:'short', year:'numeric' })}</td>
+        <td class="text-right">${formatFCFA(mensualite)}</td>
+        <td class="text-right">${paye ? formatFCFA(paye) : '—'}</td>
+        <td style="text-align:center;"><span class="badge ${badgeClass}">${label}</span></td>
+      </tr>`;
+    }
+    document.getElementById('echeancier-body').innerHTML = rows;
+  }
 
-  // Copie des fonctions de rendu inchangées (pour éviter la répétition, je les ai raccourcies mais elles existent)
-  // En production, reprendre les fonctions complètes du fichier stable.
+  function renderVersements() {
+    if (!currentClient) return;
+    const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const tbody = document.getElementById('versements-body');
+    if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.</td></tr>'; return; }
+    tbody.innerHTML = vers.map(v => `<tr>
+      <td>${formatDate(v.date)}</td>
+      <td class="text-right">${formatFCFA(v.montant)}</td>
+      <td>${escapeHtml(v.mode || '—')}</td>
+      <td>${escapeHtml(v.ref || '—')}</td>
+    </tr>`).join('');
+  }
 
-  // ======================= NAVIGATION SIDEBAR & TABS =======================
+  async function renderReleve() {
+    if (!currentClient) return;
+    const totalDu = parseFloat(currentClient.montant_total) || 0;
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => new Date(a.date) - new Date(b.date));
+    let totalVerse = versements.reduce((s, v) => s + (parseFloat(v.montant) || 0), 0);
+    let solde = totalDu - totalVerse;
+    document.getElementById('releve-total-du').innerText = formatFCFA(totalDu);
+    document.getElementById('releve-total-versé').innerText = formatFCFA(totalVerse);
+    document.getElementById('releve-solde').innerText = formatFCFA(solde);
+    const statut = solde <= 0 ? 'Soldé' : (solde > 0 ? 'En cours' : 'Créditeur');
+    document.getElementById('releve-statut').innerHTML = `<span class="badge ${solde<=0?'badge-success':'badge-warning'}">${statut}</span>`;
+    let soldeCourant = totalDu;
+    const rows = [];
+    rows.push(`<tr>
+      <td>${formatDate(currentClient.date_debut || '—')}</td>
+      <td>Souscription initiale</td>
+      <td class="text-right">${formatFCFA(totalDu)}</td>
+      <td>—</td>
+      <td class="text-right">${formatFCFA(soldeCourant)}</td>
+    </tr>`);
+    for (const v of versements) {
+      const montant = parseFloat(v.montant) || 0;
+      soldeCourant -= montant;
+      rows.push(`<tr>
+        <td>${formatDate(v.date)}</td>
+        <td>Versement - ${escapeHtml(v.mode || '')} ${v.ref ? '('+v.ref+')' : ''}</td>
+        <td class="text-right">- ${formatFCFA(montant)}</td>
+        <td>${escapeHtml(v.mode)}</td>
+        <td class="text-right">${formatFCFA(soldeCourant)}</td>
+      </tr>`);
+    }
+    if (soldeCourant > 0) {
+      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Solde restant dû</strong></td><td class="text-right"><strong>${formatFCFA(soldeCourant)}</strong></td></tr>`);
+    } else if (soldeCourant < 0) {
+      rows.push(`<tr style="border-top:2px solid var(--border);"><td colspan="4"><strong>Trop-perçu (crédit client)</strong></td><td class="text-right"><strong>${formatFCFA(-soldeCourant)}</strong></td></tr>`);
+    }
+    document.getElementById('releve-tbody').innerHTML = rows.join('');
+  }
+
+  async function renderDocuments() {
+    if (!currentClient) return;
+    const docs = DATA.documents.filter(d => d.entity_type === 'client' && d.entity_id === currentClient.id);
+    const container = document.getElementById('documents-list');
+    if (!docs.length) { container.innerHTML = '<div class="card" style="text-align:center;">Aucun document disponible.</div>'; return; }
+    container.innerHTML = docs.map(doc => `
+      <div class="doc-item">
+        <div><span class="doc-icon">📄</span> <span class="doc-name">${escapeHtml(doc.name)}</span><br><small>${formatDate(doc.upload_date)} · ${(doc.size/1024).toFixed(0)} KB</small></div>
+        <a href="${doc.blob}" download="${doc.name}" class="btn" style="background:#E2E8F0; color:#1E293B; padding:6px 12px; text-decoration:none; border-radius:20px; font-size:11px;">Télécharger</a>
+      </div>
+    `).join('');
+  }
+
+  async function renderPhotos() {
+    if (!currentClient) return;
+    const prog = DATA.programmes.find(p => p.id === currentClient.programme_id);
+    if (!prog) { document.getElementById('photos-list').innerHTML = '<div class="card">Aucun programme associé.</div>'; return; }
+    const convs = DATA.conventions.filter(c => c.programme_id === prog.id);
+    const rapports = DATA.rapports_chantier.filter(r => convs.some(c => c.id === r.convention_id) && r.visibilite !== 'interne');
+    let allPhotos = [];
+    rapports.forEach(r => { if (r.photos && r.photos.length) { r.photos.forEach(p => { if (p.visible !== false) allPhotos.push({ ...p, date: r.date_debut, legende: p.legende || `Chantier ${r.date_debut}` }); }); } });
+    const container = document.getElementById('photos-list');
+    if (!allPhotos.length) { container.innerHTML = '<div class="card">Aucune photo de chantier disponible pour le moment.</div>'; return; }
+    container.innerHTML = allPhotos.map((photo, idx) => `<div class="photo-card" onclick="openLightbox('${photo.data.replace(/'/g, "\\'")}', '${escapeHtml(photo.legende)}')"><img src="${photo.data}" alt="Photo chantier" loading="lazy"><div class="photo-caption">${escapeHtml(photo.legende)}<br><small>${formatDate(photo.date)}</small></div></div>`).join('');
+  }
+
+  async function renderDemandes() {
+    if (!currentClient) return;
+    const demandes = DATA.demandes_versement.filter(d => d.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    const container = document.getElementById('demandes-liste');
+    if (!demandes.length) { container.innerHTML = '<div style="color:var(--text-light);font-size:13px;">Aucune demande effectuée.</div>'; return; }
+    const statutLabel = { en_attente:'⏳ En attente', validee:'✅ Validée', rejetee:'❌ Rejetée' };
+    container.innerHTML = demandes.map(d => `
+      <div class="demande-item ${d.statut}">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <strong>${formatFCFA(d.montant)}</strong>
+          <span class="badge ${d.statut==='validee'?'badge-success':d.statut==='rejetee'?'badge-danger':'badge-warning'}">${statutLabel[d.statut]}</span>
+        </div>
+        <div style="font-size:12px; margin-top:4px;">Mode: ${d.mode} · ${formatDate(d.date)}</div>
+        ${d.message ? `<div style="font-size:12px; color:var(--text-light); margin-top:4px;">📝 ${escapeHtml(d.message)}</div>` : ''}
+        ${d.reponse ? `<div style="font-size:12px; border-top:1px solid var(--border); margin-top:6px; padding-top:4px;">📌 Réponse: ${escapeHtml(d.reponse)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ======================= DEMANDE DE VERSEMENT =======================
+  async function envoyerDemande() {
+    if (!currentClient) return;
+    const montant = parseFloat(document.getElementById('demande-montant').value);
+    if (isNaN(montant) || montant <= 0) { alert('Montant invalide'); return; }
+    const mode = document.getElementById('demande-mode').value;
+    const message = document.getElementById('demande-message').value.trim();
+    const demande = {
+      id: 'dem_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
+      client_id: currentClient.id,
+      dossier: currentClient.dossier,
+      nom: currentClient.nom + ' ' + (currentClient.prenoms || ''),
+      montant: montant,
+      mode: mode,
+      message: message,
+      date: new Date().toISOString(),
+      statut: 'en_attente',
+      reponse: null
+    };
+    DATA.demandes_versement.push(demande);
+    await dbPut('demandes_versement', demande);
+    await pushDemandeToCloud(demande);
+    document.getElementById('demande-montant').value = '';
+    document.getElementById('demande-message').value = '';
+    document.getElementById('demande-result').innerHTML = '<div style="background:#D1FAE5; padding:10px; border-radius:8px;">✅ Demande envoyée. Vous serez notifié une fois traitée.</div>';
+    setTimeout(() => { document.getElementById('demande-result').innerHTML = ''; }, 4000);
+    renderDemandes();
+    if (Notification.permission === 'granted') new Notification('Demande de versement envoyée', { body: `${formatFCFA(montant)} - ${mode}`, icon: '' });
+  }
+
+  // ======================= NOTIFICATIONS PUSH =======================
+  async function demanderNotification() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') return;
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') new Notification('🔔 Notifications activées', { body: 'Vous recevrez les alertes importantes.' });
+  }
+
+  function verifierEcheances() {
+    if (!currentClient) return;
+    const total = parseFloat(currentClient.montant_total) || 0;
+    const apport = parseFloat(currentClient.apport) || 0;
+    const duree = parseInt(currentClient.duree) || 60;
+    const mensualite = duree > 0 ? Math.ceil((total - apport) / duree) : 0;
+    const debut = currentClient.date_debut ? new Date(currentClient.date_debut) : new Date();
+    const versements = DATA.versements.filter(v => v.client_id === currentClient.id);
+    const verseMap = {};
+    versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
+    const today = new Date();
+    let prochainMois = null;
+    for (let i = 0; i < duree; i++) {
+      const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+      const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+      const paye = verseMap[moisKey] || 0;
+      if (paye < mensualite && d >= today) { prochainMois = d; break; }
+    }
+    if (prochainMois && Notification.permission === 'granted') {
+      const diffDays = Math.ceil((prochainMois - today) / (1000*60*60*24));
+      if (diffDays <= 3 && diffDays >= 0) {
+        new Notification('📅 Échéance à venir', { body: `Mensualité de ${formatFCFA(mensualite)} à payer avant le ${prochainMois.toLocaleDateString('fr-FR')}.` });
+      }
+    }
+  }
+
+  function exportRelevePDF() {
+    if (!currentClient) return;
+    const win = window.open('', '_blank');
+    const contenu = document.getElementById('releve-table').cloneNode(true);
+    const totalDu = document.getElementById('releve-total-du').innerText;
+    const totalVersé = document.getElementById('releve-total-versé').innerText;
+    const solde = document.getElementById('releve-solde').innerText;
+    const nomClient = `${currentClient.nom} ${currentClient.prenoms || ''}`;
+    win.document.write(`
+      <html><head><title>Relevé de compte - ${nomClient}</title>
+      <style>body{font-family:Arial;padding:20px;} table{border-collapse:collapse;width:100%;} th,td{border:1px solid #ccc;padding:8px;text-align:left;} .text-right{text-align:right;}</style>
+      </head><body>
+      <h2>Relevé de compte - ${nomClient}</h2>
+      <p>Dossier: ${currentClient.dossier} | Programme: ${DATA.programmes.find(p=>p.id===currentClient.programme_id)?.nom || '—'}</p>
+      <div style="margin:10px 0;">Montant total dû: ${totalDu}<br>Total versé: ${totalVersé}<br>Solde restant: ${solde}</div>
+      ${contenu.outerHTML}
+      <p>Généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+      </body></html>
+    `);
+    win.document.close();
+    win.print();
+  }
+
+  window.openLightbox = function(src, caption) { const lb = document.getElementById('lightbox'); const img = document.getElementById('lightbox-img'); img.src = src; img.alt = caption; lb.style.display = 'flex'; };
+  window.closeLightbox = function() { document.getElementById('lightbox').style.display = 'none'; };
+
+  // ======================= NAVIGATION =======================
   function switchTab(tabId) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     const targetPane = document.getElementById(`tab-${tabId}`);
@@ -630,7 +1027,7 @@
     document.querySelectorAll('.sidebar-item').forEach(item => {
       item.classList.toggle('active', item.dataset.tab === tabId);
     });
-    // Appeler les rendus spécifiques si nécessaire
+    // Appeler les rendus spécifiques
     if (tabId === 'echeances') renderEcheancier();
     else if (tabId === 'versements') renderVersements();
     else if (tabId === 'releve') renderReleve();
@@ -639,14 +1036,6 @@
     else if (tabId === 'demandes') renderDemandes();
     else if (tabId === 'dashboard') renderDashboard();
   }
-
-  // ======================= AUTRES FONCTIONS =======================
-  async function envoyerDemande() { /* identique */ }
-  async function demanderNotification() { /* identique */ }
-  function verifierEcheances() { /* identique */ }
-  function exportRelevePDF() { /* identique */ }
-  window.openLightbox = function(src, caption) { const lb = document.getElementById('lightbox'); const img = document.getElementById('lightbox-img'); img.src = src; img.alt = caption; lb.style.display = 'flex'; };
-  window.closeLightbox = function() { document.getElementById('lightbox').style.display = 'none'; };
 
   function attachEvents() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -670,11 +1059,10 @@
     if (overlay) {
       overlay.onclick = () => closeSidebar();
     }
-    window.closeSidebar = closeSidebar;
-    function closeSidebar() {
+    window.closeSidebar = function closeSidebar() {
       sidebar.classList.remove('open');
       overlay.classList.remove('open');
-    }
+    };
   }
 
   // ======================= LOGIN & START =======================
