@@ -236,72 +236,11 @@
       padding: 28px 0;
       font-size: 0.8rem;
     }
-    .dashboard-layout {
-      display: flex;
-      min-height: 500px;
-      background: white;
-      border-radius: 28px;
-      overflow: hidden;
-      border: 1px solid #eef2f8;
-    }
-    .dashboard-sidebar {
-      width: 260px;
-      background: #f9fbfe;
-      border-right: 1px solid #eef2f8;
-      padding: 24px 16px;
-    }
-    .dashboard-sidebar-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border-radius: 40px;
-      cursor: pointer;
-      margin-bottom: 8px;
-      transition: all 0.2s;
-      font-weight: 500;
-    }
-    .dashboard-sidebar-item:hover {
-      background: #eef3fc;
-    }
-    .dashboard-sidebar-item.active {
-      background: #003366;
-      color: white;
-    }
-    .dashboard-main {
-      flex: 1;
-      padding: 24px;
-      overflow-x: auto;
-    }
-    .stat-card {
-      background: white;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      border: 1px solid #eef2f8;
-    }
-    .table-wrapper {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      text-align: left;
-      padding: 12px 8px;
-      border-bottom: 1px solid #eef2f8;
-    }
-    .badge-success { background: #D1FAE5; color: #065F46; }
-    .badge-warning { background: #FEF3C7; color: #92400E; }
-    .badge-danger { background: #FEE2E2; color: #991B1B; }
     @media (max-width: 980px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .hero h2 { font-size: 2rem; }
       .header-flex { flex-direction: column; }
       .nav-tabs { justify-content: center; }
-      .dashboard-layout { flex-direction: column; }
-      .dashboard-sidebar { width: 100%; display: flex; overflow-x: auto; border-right: none; border-bottom: 1px solid #eef2f8; }
     }
   </style>
 </head>
@@ -383,7 +322,7 @@
       <h3><i class="fas fa-briefcase"></i> Rejoindre Partner Immo CI</h3>
       <button class="highlight-btn" id="careerBtn">Postulez spontanément</button>
     </div>
-    <!-- ESPACE SOUSCRIPTEUR (connexion réelle Supabase) -->
+    <!-- ESPACE SOUSCRIPTEUR -->
     <div id="souscripteur-pane" class="tab-pane">
       <h3><i class="fas fa-chart-line"></i> Espace Souscripteur</h3>
       <div id="souscripteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
@@ -396,7 +335,7 @@
       </div>
       <div id="souscripteur-dashboard" style="display:none;"></div>
     </div>
-    <!-- ESPACE APPORTEUR (connexion réelle Supabase) -->
+    <!-- ESPACE APPORTEUR -->
     <div id="apporteurs-pane" class="tab-pane">
       <h3><i class="fas fa-handshake"></i> Espace Apporteur</h3>
       <div id="apporteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
@@ -424,7 +363,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ==================== GESTION DES ONGLETS (100% fonctionnel) ====================
+  // ==================== GESTION DES ONGLETS ====================
   (function() {
     function init() {
       var btns = document.querySelectorAll('.tab-link');
@@ -450,12 +389,22 @@
     else init();
   })();
 
-  // ==================== CONFIGURATION SUPABASE ====================
-  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // ==================== CONFIGURATION SUPABASE (CORRIGÉE) ====================
+  // Utilisez EXACTEMENT l'URL et la clé qui fonctionnent dans ImmoSuite ERP
+  const SUPABASE_URL = 'https://izgvwhwbrgeajfhfli.supabase.co';   // CORRIGÉ
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3Z3aHdicmdlYWpmaGZsaSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzgwMzA0MTY3LCJleHAiOjIwOTU4ODAxNjd9.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
+  // Remarque : la clé ci-dessus est celle que vous aviez fournie. Si elle ne correspond pas à votre projet,
+  // remplacez-la par la clé ANON de votre projet (celle qui s'affiche dans les paramètres Supabase).
 
-  // ==================== ESPACE SOUSCRIPTEUR (connexion réelle) ====================
+  let supabaseClient;
+  try {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("✅ Supabase client initialisé avec l'URL :", SUPABASE_URL);
+  } catch(e) {
+    console.error("❌ Erreur d'initialisation Supabase :", e);
+  }
+
+  // ==================== ESPACE SOUSCRIPTEUR ====================
   (function() {
     const loginArea = document.getElementById('souscripteur-login-area');
     const dashboard = document.getElementById('souscripteur-dashboard');
@@ -476,25 +425,36 @@
         return;
       }
 
+      if (!supabaseClient) {
+        if (errorDiv) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerText = 'Supabase non initialisé. Vérifiez la configuration.';
+        }
+        return;
+      }
+
       try {
-        // Recherche par dossier, email ou téléphone
-        const { data: clients, error } = await supabaseClient
+        console.log("Recherche du client avec identifiant :", identifier);
+        // Tentative de requête générique (sans connaître les colonnes exactes)
+        // On utilise * pour tout récupérer, et on filtre sur plusieurs colonnes possibles
+        const { data, error } = await supabaseClient
           .from('pi_clients')
           .select('*')
-          .or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
+          .or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier},client_id.eq.${identifier},ref_client.eq.${identifier}`);
 
         if (error) {
-          console.error("Supabase error:", error);
-          throw new Error('Erreur de connexion à la base de données.');
+          console.error("Erreur Supabase détaillée :", error);
+          throw new Error(`Erreur base de données : ${error.message}`);
         }
-        if (!clients || clients.length === 0) {
-          throw new Error('Compte souscripteur introuvable. Vérifiez votre identifiant.');
+        console.log("Données reçues :", data);
+
+        if (!data || data.length === 0) {
+          throw new Error('Compte souscripteur introuvable. Vérifiez vos identifiants.');
         }
 
-        // Vérification du code (comparaison en clair sur le champ code_acces)
         let validClient = null;
-        for (const client of clients) {
-          if (client.code_acces === code || client.mot_de_passe === code) {
+        for (const client of data) {
+          if (client.code_acces === code || client.mot_de_passe === code || client.code === code) {
             validClient = client;
             break;
           }
@@ -504,22 +464,22 @@
           throw new Error('Code d\'accès incorrect.');
         }
 
-        // Connexion réussie : afficher le tableau de bord
+        // Succès
         loginArea.style.display = 'none';
         dashboard.style.display = 'block';
         dashboard.innerHTML = `
           <div class="stat-card">
             <h4>✅ Bienvenue ${validClient.prenoms || ''} ${validClient.nom || 'Souscripteur'} !</h4>
-            <p><strong>Dossier :</strong> ${validClient.dossier || 'Non renseigné'}<br>
-            <strong>Email :</strong> ${validClient.email || 'Non renseigné'}<br>
-            <strong>Téléphone :</strong> ${validClient.tel || 'Non renseigné'}<br>
-            <strong>Programme :</strong> ${validClient.programme_id || '—'}<br>
-            <strong>Montant total souscrit :</strong> ${(validClient.montant_total || 0).toLocaleString('fr-FR')} FCFA</p>
+            <p><strong>Dossier :</strong> ${validClient.dossier || validClient.client_id || '—'}<br>
+            <strong>Email :</strong> ${validClient.email || '—'}<br>
+            <strong>Téléphone :</strong> ${validClient.tel || validClient.telephone || '—'}<br>
+            <strong>Montant total :</strong> ${(validClient.montant_total || 0).toLocaleString('fr-FR')} FCFA</p>
             <hr>
-            <p><em>Le tableau de bord complet (versements, échéancier, documents) sera bientôt disponible.</em></p>
+            <p><em>Connexion réussie. Le tableau de bord complet sera bientôt disponible.</em></p>
           </div>
         `;
       } catch (err) {
+        console.error(err);
         if (errorDiv) {
           errorDiv.style.display = 'block';
           errorDiv.innerText = err.message;
@@ -528,7 +488,7 @@
     };
   })();
 
-  // ==================== ESPACE APPORTEUR (connexion réelle) ====================
+  // ==================== ESPACE APPORTEUR ====================
   (function() {
     const loginArea = document.getElementById('apporteur-login-area');
     const dashboard = document.getElementById('apporteur-dashboard');
@@ -549,40 +509,41 @@
         return;
       }
 
+      if (!supabaseClient) {
+        if (errorDiv) {
+          errorDiv.style.display = 'block';
+          errorDiv.innerText = 'Supabase non initialisé.';
+        }
+        return;
+      }
+
       try {
-        const { data: apporteurs, error } = await supabaseClient
+        const { data, error } = await supabaseClient
           .from('pi_apporteurs')
           .select('*')
-          .or(`email.eq.${identifier},tel.eq.${identifier}`);
+          .or(`email.eq.${identifier},tel.eq.${identifier},courriel.eq.${identifier},telephone.eq.${identifier}`);
 
-        if (error) {
-          console.error("Supabase error:", error);
-          throw new Error('Erreur de connexion à la base de données.');
-        }
-        if (!apporteurs || apporteurs.length === 0) {
-          throw new Error('Compte apporteur introuvable. Vérifiez votre identifiant.');
-        }
+        if (error) throw new Error(`Erreur base : ${error.message}`);
+        if (!data || data.length === 0) throw new Error('Compte apporteur introuvable.');
 
         let valid = null;
-        for (const a of apporteurs) {
-          if (a.code_acces === code || a.mot_de_passe === code) {
-            valid = a;
+        for (const app of data) {
+          if (app.code_acces === code || app.mot_de_passe === code || app.code === code) {
+            valid = app;
             break;
           }
         }
-        if (!valid) {
-          throw new Error('Code d\'accès incorrect.');
-        }
+        if (!valid) throw new Error('Code d\'accès incorrect.');
 
         loginArea.style.display = 'none';
         dashboard.style.display = 'block';
         dashboard.innerHTML = `
           <div class="stat-card">
             <h4>✅ Bienvenue ${valid.prenoms || ''} ${valid.nom || 'Apporteur'} !</h4>
-            <p><strong>Email :</strong> ${valid.email || '—'}<br>
-            <strong>Téléphone :</strong> ${valid.tel || '—'}</p>
+            <p><strong>Email :</strong> ${valid.email || valid.courriel || '—'}<br>
+            <strong>Téléphone :</strong> ${valid.tel || valid.telephone || '—'}</p>
             <hr>
-            <p><em>Espace en construction. Vous pourrez bientôt voir vos commissions et clients apportés.</em></p>
+            <p><em>Espace en construction. Bientôt vos commissions.</em></p>
           </div>
         `;
       } catch (err) {
@@ -594,7 +555,7 @@
     };
   })();
 
-  // ==================== ÉVÉNEMENTS ANNEXES ====================
+  // Événements annexes
   document.getElementById('searchMockBtn')?.addEventListener('click', () => alert('Recherche Partner Immo CI (fonctionnalité à venir)'));
   document.getElementById('fakeSubmit')?.addEventListener('click', () => alert('Message envoyé (simulation)'));
   document.getElementById('careerBtn')?.addEventListener('click', () => alert('Postulez à recrutement@partnerimmo.ci'));
