@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>ImmoSuite – Votre promoteur immobilier de référence</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ---------- STYLES (version compacte mais complète) ---------- */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #B87333;
+      --primary-dark: #8B5520;
+      --gray-50: #F9FAFB;
+      --gray-200: #E5E7EB;
+      --gray-800: #1F2937;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+    }
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 0.75rem 1.8rem;
+      border-radius: 2.5rem;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .navbar {
+      background: white;
+      padding: 1rem 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-link { cursor: pointer; margin: 0 1rem; }
+    .hero {
+      background: linear-gradient(120deg, #1E2A3A 0%, #2D3A4A 100%);
+      color: white;
+      padding: 4rem 0;
+    }
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: white;
+      max-width: 450px;
+      width: 90%;
+      border-radius: 2rem;
+      padding: 2rem;
+    }
+    .portal-tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: #F3F4F6;
+      padding: 0.25rem;
+      border-radius: 3rem;
+      margin-bottom: 1.5rem;
+    }
+    .portal-tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .portal-tab.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05);
+    }
+    .input-group { margin-bottom: 1rem; }
+    .input-group input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 1rem;
+    }
+    .dashboard-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 260px;
+      background: white;
+      border-right: 1px solid var(--gray-200);
+      padding: 1.5rem;
+    }
+    .sidebar-item {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      border-radius: 0.75rem;
+    }
+    .sidebar-item.active {
+      background: var(--primary);
+      color: white;
+    }
+    .main-panel { flex: 1; padding: 1.5rem; }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1F2937;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 2rem;
+      z-index: 200;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar container" style="display: flex;">
+    <div class="text-2xl font-serif font-bold text-primary">ImmoSuite</div>
+    <div>
+      <a class="nav-link" onclick="showLoginModal('souscripteur')">Espace souscripteur</a>
+      <a class="nav-link" onclick="showLoginModal('apporteur')">Espace apporteur</a>
+      <button class="btn-primary" onclick="showLoginModal('souscripteur')">Connexion</button>
+    </div>
+  </nav>
+
+  <!-- Hero (raccourcie) -->
+  <section class="hero">
+    <div class="container">
+      <h1 class="text-4xl font-bold">Votre projet immobilier, notre passion</h1>
+      <button class="btn-primary mt-4" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">Je souhaite souscrire</button>
+    </div>
+  </section>
+
+  <!-- Formulaire de souscription (simplifié pour l’exemple) -->
+  <div id="form-section" class="container" style="margin: 3rem auto;">
+    <div style="background: white; padding: 2rem; border-radius: 2rem;">
+      <h3 class="text-2xl font-bold text-center">📝 Demande de souscription</h3>
+      <form id="preSouscriptionForm">
+        <div class="input-group"><input type="text" id="preNom" placeholder="Nom complet *" required></div>
+        <div class="input-group"><input type="tel" id="preTel" placeholder="Téléphone *" required></div>
+        <div class="input-group"><input type="email" id="preEmail" placeholder="Email"></div>
+        <div class="input-group"><select id="preProgramme"><option value="">Programme souhaité</option></select></div>
+        <button type="submit" class="btn-primary">Envoyer</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de connexion -->
+  <div id="loginModal" class="modal">
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Connexion</h3><button onclick="closeModal()" style="font-size:1.5rem;">&times;</button></div>
+      <div class="portal-tabs" id="loginTabs">
+        <div class="portal-tab active" data-type="souscripteur">Souscripteur</div>
+        <div class="portal-tab" data-type="apporteur">Apporteur</div>
+      </div>
+      <form id="loginForm">
+        <div class="input-group"><label>Identifiant (email / téléphone / dossier)</label><input type="text" id="loginIdentifier" required></div>
+        <div class="input-group"><label>Code d'accès</label><input type="password" id="loginCode" required></div>
+        <div id="loginError" class="text-red-600 text-sm mb-3" style="display:none;"></div>
+        <button type="submit" class="btn-primary w-full">Se connecter →</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dashboard container -->
+  <div id="dashboardContainer" style="display: none;"></div>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Configuration Supabase (identique)
+    const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+
+    // Helper
+    function showToast(msg, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    // Hachage (identique)
+    async function hashPassword(password, salt) {
+      const enc = new TextEncoder();
+      const data = enc.encode(password + salt);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function verifyCode(entity, code) {
+      if (!code || !entity) return false;
+      if (entity.code_acces_hash && entity.code_acces_salt) {
+        const computed = await hashPassword(code, entity.code_acces_salt);
+        if (computed === entity.code_acces_hash) return true;
+      }
+      if (entity.code_acces === code) return true;
+      if (entity.mot_de_passe === code) return true;
+      return false;
+    }
+
+    // Programmes dans le select
+    async function loadProgrammesSelect() {
+      const { data } = await supabase.from('pi_programmes').select('id,nom');
+      const select = document.getElementById('preProgramme');
+      if (data) select.innerHTML = '<option value="">-- Sélectionnez --</option>' + data.map(p => `<option value="${p.id}">${p.nom}</option>`).join('');
+    }
+    loadProgrammesSelect();
+
+    // Formulaire de pré‑souscription
+    document.getElementById('preSouscriptionForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nom = document.getElementById('preNom').value.trim();
+      const tel = document.getElementById('preTel').value.trim();
+      if (!nom || !tel) { showToast('Nom et téléphone requis', 'error'); return; }
+      const { error } = await supabase.from('pi_pre_souscriptions').insert({
+        nom, telephone: tel, email: document.getElementById('preEmail').value.trim(),
+        programme_id: document.getElementById('preProgramme').value || null,
+        date_demande: new Date().toISOString(), statut: 'nouveau'
+      });
+      if (error) showToast('Erreur', 'error');
+      else { showToast('Demande envoyée !', 'success'); e.target.reset(); }
+    });
+
+    // ---------- GESTION MODALE ----------
+    const modal = document.getElementById('loginModal');
+    function openModal() { modal.classList.add('active'); }
+    window.closeModal = () => modal.classList.remove('active');
+    window.showLoginModal = (type) => {
+      // Activer l'onglet correspondant
+      document.querySelectorAll('#loginTabs .portal-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.type === type);
+      });
+      document.getElementById('loginIdentifier').value = '';
+      document.getElementById('loginCode').value = '';
+      document.getElementById('loginError').style.display = 'none';
+      openModal();
+    };
+
+    // Gestion du changement d'onglet
+    document.querySelectorAll('#loginTabs .portal-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('#loginTabs .portal-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      });
+    });
+
+    // Soumission du formulaire de connexion
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const identifier = document.getElementById('loginIdentifier').value.trim();
+      const code = document.getElementById('loginCode').value.trim();
+      const type = document.querySelector('#loginTabs .portal-tab.active').dataset.type;
+      const errorDiv = document.getElementById('loginError');
+      if (!identifier || !code) {
+        errorDiv.textContent = 'Veuillez remplir tous les champs.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      let userData = null;
+      if (type === 'souscripteur') {
+        const { data, error } = await supabase.from('pi_clients').select('*').or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
+        if (error || !data || data.length === 0) {
+          errorDiv.textContent = 'Compte souscripteur introuvable.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        for (const client of data) {
+          if (await verifyCode(client, code)) { userData = client; break; }
+        }
+        if (userData) currentUser = { type: 'souscripteur', data: userData };
+      } else {
+        const { data, error } = await supabase.from('pi_apporteurs').select('*').or(`email.eq.${identifier},tel.eq.${identifier}`);
+        if (error || !data || data.length === 0) {
+          errorDiv.textContent = 'Compte apporteur introuvable.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        for (const apporteur of data) {
+          if (await verifyCode(apporteur, code)) { userData = apporteur; break; }
+        }
+        if (userData) currentUser = { type: 'apporteur', data: userData };
+      }
+
+      if (!userData) {
+        errorDiv.textContent = 'Code d\'accès incorrect.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      // Connexion réussie – masquer la page d'accueil et afficher le dashboard
+      closeModal();
+      document.querySelector('.navbar').style.display = 'none';
+      document.querySelector('.hero').style.display = 'none';
+      document.getElementById('form-section').style.display = 'none';
+      document.querySelector('footer')?.remove?.(); // supprimer le footer s'il existe
+      const dashboardContainer = document.getElementById('dashboardContainer');
+      dashboardContainer.style.display = 'block';
+
+      // Afficher un dashboard simple pour tester (vous remplacerez par vos vrais dashboards)
+      if (currentUser.type === 'souscripteur') {
+        dashboardContainer.innerHTML = `
+          <div class="dashboard-layout">
+            <div class="sidebar">
+              <div class="sidebar-item active" data-tab="dashboard">Tableau de bord</div>
+              <div class="sidebar-item" data-tab="echeances">Échéancier</div>
+            </div>
+            <div class="main-panel" id="sousMainPanel">
+              <h2>Bienvenue ${escapeHtml(currentUser.data.nom)}</h2>
+              <p>Dashboard souscripteur – fonctionnalités à implémenter.</p>
+            </div>
+          </div>
+        `;
+      } else {
+        dashboardContainer.innerHTML = `
+          <div class="dashboard-layout">
+            <div class="sidebar">
+              <div class="sidebar-item active">Tableau de bord</div>
+              <div class="sidebar-item">Clients</div>
+            </div>
+            <div class="main-panel">
+              <h2>Bienvenue ${escapeHtml(currentUser.data.nom)}</h2>
+              <p>Dashboard apporteur – fonctionnalités à implémenter.</p>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    function escapeHtml(str) { return (str || '').replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+  </script>
+</body>
+</html>
