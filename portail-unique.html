@@ -9,6 +9,7 @@
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
   <style>
+    /* ---------- STYLES GLOBAUX (thème vitrine) ---------- */
     * {
       margin: 0;
       padding: 0;
@@ -70,9 +71,6 @@
       list-style: none;
       align-items: center;
     }
-    .nav-tabs li {
-      margin: 0;
-    }
     .tab-link {
       display: inline-flex;
       align-items: center;
@@ -87,7 +85,6 @@
       cursor: pointer;
       transition: all 0.2s ease;
       font-family: inherit;
-      letter-spacing: 0.3px;
     }
     .tab-link i {
       font-size: 0.9rem;
@@ -105,18 +102,10 @@
     .tab-link.active i {
       color: white;
     }
-    .fr-badge {
-      background: #f0f4f9;
-      border-radius: 30px;
-      padding: 6px 12px;
-      font-weight: 700;
-      font-size: 0.8rem;
-    }
 
     /* HERO */
     .hero {
       background: linear-gradient(105deg, #001f3f 0%, #005a8c 100%);
-      margin-top: 0;
       padding: 60px 0 70px;
       color: white;
       text-align: center;
@@ -145,7 +134,6 @@
       font-weight: 700;
       letter-spacing: -0.02em;
       margin-bottom: 20px;
-      text-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .hero p {
       font-size: 1.1rem;
@@ -162,10 +150,6 @@
       align-items: center;
       padding: 4px 8px 4px 20px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    }
-    .search-area i {
-      color: #2c7cb6;
-      font-size: 1.2rem;
     }
     .search-area input {
       flex: 1;
@@ -184,13 +168,9 @@
       border-radius: 50px;
       font-weight: 600;
       cursor: pointer;
-      transition: 0.2s;
-    }
-    .search-area button:hover {
-      background: #002244;
     }
 
-    /* CONTENT */
+    /* CONTENEUR PRINCIPAL */
     .content-section {
       background: white;
       border-radius: 28px;
@@ -211,6 +191,7 @@
       to { opacity: 1; transform: translateY(0);}
     }
 
+    /* Cartes & grilles */
     .grid-2, .grid-3 {
       display: grid;
       gap: 28px;
@@ -222,24 +203,7 @@
       background: #f9fbfe;
       border-radius: 20px;
       padding: 24px;
-      transition: 0.2s;
       border: 1px solid #eef2f8;
-    }
-    .card i {
-      font-size: 2rem;
-      color: #005f8c;
-      margin-bottom: 16px;
-    }
-    .card h4 {
-      font-size: 1.25rem;
-      margin-bottom: 12px;
-      font-weight: 700;
-    }
-    .badge-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin: 20px 0 10px;
     }
     .badge {
       background: #e5f0fa;
@@ -247,54 +211,13 @@
       border-radius: 40px;
       font-size: 0.8rem;
       font-weight: 500;
+      display: inline-block;
     }
-    .contact-form {
+    .badge-list {
       display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-width: 600px;
-      margin-top: 20px;
-    }
-    .contact-form input, .contact-form textarea {
-      padding: 14px 18px;
-      border: 1px solid #cfdfed;
-      border-radius: 18px;
-      font-family: inherit;
-      background: #ffffff;
-    }
-    .contact-form button {
-      background: #003366;
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 40px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    footer {
-      background: #0a2a3b;
-      color: #cddfea;
-      text-align: center;
-      padding: 28px 0;
-      font-size: 0.8rem;
-      border-top: 1px solid #1d435b;
-    }
-    @media (max-width: 980px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .hero h2 { font-size: 2rem; }
-      .header-flex { flex-direction: column; align-items: stretch; text-align: center; }
-      .nav-tabs { justify-content: center; }
-      .tab-link { padding: 8px 10px; font-size: 0.7rem; }
-      .content-section { padding: 28px 20px; }
-    }
-    hr {
-      margin: 24px 0;
-      border-color: #e2edf7;
-    }
-    .stat-number {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #003366;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 20px 0 10px;
     }
     .highlight-btn {
       background: #003366;
@@ -308,6 +231,136 @@
     }
     .highlight-btn:hover {
       background: #001f4f;
+    }
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+      margin-top: 20px;
+    }
+    .contact-form input, .contact-form textarea {
+      padding: 14px 18px;
+      border: 1px solid #cfdfed;
+      border-radius: 18px;
+      font-family: inherit;
+    }
+    footer {
+      background: #0a2a3b;
+      color: #cddfea;
+      text-align: center;
+      padding: 28px 0;
+      font-size: 0.8rem;
+    }
+
+    /* DASHBOARD (espaces sécurisés) */
+    .dashboard-layout {
+      display: flex;
+      min-height: 500px;
+      background: white;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1px solid #eef2f8;
+    }
+    .dashboard-sidebar {
+      width: 260px;
+      background: #f9fbfe;
+      border-right: 1px solid #eef2f8;
+      padding: 24px 16px;
+    }
+    .dashboard-sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 40px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .dashboard-sidebar-item:hover {
+      background: #eef3fc;
+    }
+    .dashboard-sidebar-item.active {
+      background: #003366;
+      color: white;
+    }
+    .dashboard-main {
+      flex: 1;
+      padding: 24px;
+      overflow-x: auto;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid #eef2f8;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 8px;
+      border-bottom: 1px solid #eef2f8;
+    }
+    .badge-success { background: #D1FAE5; color: #065F46; }
+    .badge-warning { background: #FEF3C7; color: #92400E; }
+    .badge-danger { background: #FEE2E2; color: #991B1B; }
+    .msg-container {
+      height: 60vh;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #eef2f8;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .msg-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background: #f9fbfe;
+    }
+    .msg-bubble {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      background: white;
+      border: 1px solid #eef2f8;
+    }
+    .msg-bubble.mine {
+      background: #003366;
+      color: white;
+      margin-left: auto;
+    }
+    .msg-composer {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: white;
+      border-top: 1px solid #eef2f8;
+    }
+    .msg-composer textarea {
+      flex: 1;
+      border: 1px solid #eef2f8;
+      border-radius: 30px;
+      padding: 10px 16px;
+      resize: none;
+    }
+    @media (max-width: 980px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .hero h2 { font-size: 2rem; }
+      .header-flex { flex-direction: column; }
+      .nav-tabs { justify-content: center; }
+      .dashboard-layout { flex-direction: column; }
+      .dashboard-sidebar { width: 100%; display: flex; overflow-x: auto; border-right: none; border-bottom: 1px solid #eef2f8; }
     }
   </style>
 </head>
@@ -330,7 +383,7 @@
       <li><button class="tab-link" data-tab="nous-rejoindre"><i class="fas fa-user-plus"></i> NOUS REJOINDRE</button></li>
       <li><button class="tab-link" data-tab="souscripteur"><i class="fas fa-chart-line"></i> SOUSCRIPTEUR</button></li>
       <li><button class="tab-link" data-tab="apporteurs"><i class="fas fa-handshake"></i> APPORTEURS</button></li>
-      <li><button class="tab-link fr-btn" data-tab="fr"><i class="fas fa-flag-checkered"></i> FR</button></li>
+      <li><button class="tab-link" data-tab="fr"><i class="fas fa-flag-checkered"></i> FR</button></li>
     </ul>
   </div>
 </header>
@@ -341,7 +394,7 @@
     <p>Partner Immo CI — solutions d’investissement sur mesure et partenariat gagnant-gagnant pour souscripteurs et apporteurs d’affaires.</p>
     <div class="search-area">
       <i class="fas fa-search"></i>
-      <input type="text" placeholder="Tapez ici pour effectuer une recherche (programmes, opportunités, contacts...)" id="searchInput">
+      <input type="text" placeholder="Tapez ici pour effectuer une recherche" id="searchInput">
       <button id="searchMockBtn"><i class="fas fa-arrow-right"></i></button>
     </div>
   </div>
@@ -349,7 +402,7 @@
 
 <div class="container">
   <div class="content-section">
-    <!-- ACTIVITÉS -->
+    <!-- ========== ONGLETS VITRINE (contenu statique) ========== -->
     <div id="activites-pane" class="tab-pane active-pane">
       <h3><i class="fas fa-hard-hat"></i> Nos activités immobilières</h3>
       <p>Partner Immo CI accompagne les investisseurs, promoteurs et institutionnels dans la création de valeur immobilière en Côte d’Ivoire et à l’international.</p>
@@ -361,222 +414,337 @@
       <div class="badge-list"><span class="badge">+15 ans d'expertise</span><span class="badge">+250 M€ de projets</span><span class="badge">100% dédié Afrique & Europe</span></div>
     </div>
 
-    <!-- RÉALISATIONS -->
     <div id="realisations-pane" class="tab-pane">
       <h3><i class="fas fa-medal"></i> Nos réalisations & programmes phares</h3>
       <p>Des livraisons exemplaires et des retours sur investissement satisfaisants.</p>
-      <div class="grid-2">
-        <div class="card"><i class="fas fa-hotel"></i><h4>Résidence Les Flamboyants – Abidjan</h4><p>63 appartements livrés en 2024, rendement locatif 8% net. Projet certifié HQE.</p></div>
-        <div class="card"><i class="fas fa-chart-line"></i><h4>Fonds SCPI IMPACT 2025</h4><p>Collecte de 12M€ auprès de 340 souscripteurs, objectif 5% de dividende annuel.</p></div>
-        <div class="card"><i class="fas fa-city"></i><h4>Le WAVE – Plateau, bureaux A+</h4><p>Opération phare d’apport d’affaires récompensée : 15 000 m² loués à des groupes internationaux.</p></div>
-        <div class="card"><i class="fas fa-arrow-trend-up"></i><h4>Programme Terra Preta</h4><p>Partenariat avec 12 apporteurs d’affaires locaux, 9M€ de commissions distribuées.</p></div>
-      </div>
+      <div class="grid-2"><div class="card"><i class="fas fa-hotel"></i><h4>Résidence Les Flamboyants – Abidjan</h4><p>63 appartements livrés en 2024, rendement locatif 8% net.</p></div><div class="card"><i class="fas fa-chart-line"></i><h4>Fonds SCPI IMPACT 2025</h4><p>Collecte de 12M€ auprès de 340 souscripteurs.</p></div></div>
       <div class="stat-number" style="margin-top:16px">+120 projets accompagnés depuis 2018</div>
     </div>
 
-    <!-- ENGAGEMENTS -->
     <div id="engagements-pane" class="tab-pane">
       <h3><i class="fas fa-globe"></i> Nos engagements RSE & transparence</h3>
-      <p>Investissement responsable, éthique des affaires et développement local.</p>
-      <div class="grid-3">
-        <div class="card"><i class="fas fa-leaf"></i><h4>Bâtiments bas carbone</h4><p>Utilisation de matériaux locaux et conception bioclimatique.</p></div>
-        <div class="card"><i class="fas fa-hand-holding-usd"></i><h4>Souscripteur protégé</h4><p>Fonds sécurisés, reporting trimestriel, conformité aux normes AMF-CI.</p></div>
-        <div class="card"><i class="fas fa-people-arrows"></i><h4>Équité apporteurs</h4><p>Rémunération transparente (jusqu’à 6% du montant d’affaire).</p></div>
-      </div>
-      <p>🔵 Membre de l’API-CI (Association des Professionnels Immobiliers de Côte d'Ivoire)</p>
+      <div class="grid-3"><div class="card"><i class="fas fa-leaf"></i><h4>Bâtiments bas carbone</h4></div><div class="card"><i class="fas fa-hand-holding-usd"></i><h4>Souscripteur protégé</h4></div><div class="card"><i class="fas fa-people-arrows"></i><h4>Équité apporteurs</h4></div></div>
     </div>
 
-    <!-- PRÉSENCE -->
     <div id="presence-pane" class="tab-pane">
       <h3><i class="fas fa-map-marker-alt"></i> Présence & implantation</h3>
-      <p>Des bureaux à Abidjan, Paris, et Dakar. Un réseau de partenaires locaux.</p>
-      <div class="grid-2">
-        <div><div class="card"><i class="fas fa-map-pin"></i><h4>Côte d’Ivoire (siège)</h4><p>Cocody – Angré, 7ème tranche. Équipe dédiée aux souscripteurs et apporteurs.</p></div></div>
-        <div><div class="card"><i class="fas fa-globe-africa"></i><h4>International</h4><p>France, Sénégal, Ghana. Développement de programmes mixtes.</p></div></div>
-      </div>
-      <div class="badge-list"><span class="badge">45 collaborateurs</span><span class="badge">+300 souscripteurs actifs</span><span class="badge">87 apporteurs référencés</span></div>
+      <p>Cocody – Angré (Abidjan), Paris, Dakar. +45 collaborateurs, +300 souscripteurs actifs, 87 apporteurs référencés.</p>
     </div>
 
-    <!-- SOURCE (actualités) -->
     <div id="source-pane" class="tab-pane">
       <h3><i class="fas fa-rss"></i> Source — Actualités & Ressources</h3>
-      <p>Retrouvez les dernières opportunités, communiqués financiers et études de marché.</p>
-      <div class="grid-2">
-        <div class="card"><i class="fas fa-chart-simple"></i><h4>Rapport semestriel 2026</h4><p>Performance des SCPI et indicateurs clés pour souscripteurs.</p><span class="badge">Finance</span></div>
-        <div class="card"><i class="fas fa-users"></i><h4>Webinaire “Apporteur d’affaires : mode d’emploi”</h4><p>Replay & guide pratique pour maximiser vos commissions.</p><span class="badge">Partenariat</span></div>
-        <div class="card"><i class="fas fa-gavel"></i><h4>Appel à projets fonciers</h4><p>Zones éligibles : Grand Abidjan, Yamoussoukro, San Pedro. Dépôt avant 30/09.</p><span class="badge">Opportunité</span></div>
-        <div class="card"><i class="fas fa-file-invoice"></i><h4>Kit souscripteur</h4><p>Documentation juridique, simulateur de rendement et conditions générales.</p><span class="badge">Ressource</span></div>
-      </div>
+      <div class="grid-2"><div class="card"><i class="fas fa-chart-simple"></i><h4>Rapport semestriel 2026</h4></div><div class="card"><i class="fas fa-users"></i><h4>Webinaire “Apporteur d’affaires”</h4></div></div>
     </div>
 
-    <!-- NOUS CONNAÎTRE -->
     <div id="nous-connaitre-pane" class="tab-pane">
       <h3><i class="fas fa-users"></i> Qui sommes-nous ?</h3>
-      <p>Partner Immo CI, expert de l’investissement immobilier et du partenariat d’affaires, fondé en 2012 par des professionnels reconnus.</p>
-      <div class="grid-2">
-        <div class="card"><i class="fas fa-chart-simple"></i><h4>Chiffres clés</h4><p>45 salariés · 180M€ d’actifs sous gestion · 98% de clients satisfaits · 3 agences.</p></div>
-        <div class="card"><i class="fas fa-gem"></i><h4>Nos valeurs</h4><p>Transparence, performance durable, relation de confiance avec souscripteurs et apporteurs.</p></div>
-      </div>
-      <hr>
-      <p><strong>Mission :</strong> démocratiser l’investissement immobilier en Afrique francophone et créer un écosystème vertueux où chaque acteur (souscripteur, apporteur, promoteur) progresse ensemble.</p>
+      <p>Partner Immo CI, expert de l’investissement immobilier et du partenariat d’affaires, fondé en 2012.</p>
+      <div class="card"><i class="fas fa-chart-simple"></i><h4>Chiffres clés</h4><p>45 salariés · 180M€ d’actifs sous gestion · 98% de clients satisfaits.</p></div>
     </div>
 
-    <!-- CONTACT -->
     <div id="nous-contacter-pane" class="tab-pane">
       <h3><i class="fas fa-comment-dots"></i> Contactez nos équipes</h3>
-      <p>Un projet, une demande de souscription ou vous souhaitez devenir apporteur d’affaires ? Écrivez-nous.</p>
-      <div class="contact-form">
-        <input type="text" placeholder="Nom & Prénom" id="contactName">
-        <input type="email" placeholder="Adresse e-mail" id="contactEmail">
-        <textarea rows="3" placeholder="Votre message (précisez souscripteur ou apporteur d'affaires)"></textarea>
-        <button id="fakeSubmit">Envoyer la demande <i class="fas fa-paper-plane"></i></button>
-        <p style="font-size:0.8rem; color:#1e6f5c;"><i class="fas fa-phone-alt"></i> +225 27 22 52 14 00 · contact@partnerimmo.ci</p>
-        <p><i class="fas fa-map-pin"></i> Immeuble Horizon, Boulevard Lagunaire, Cocody – Abidjan, Côte d’Ivoire</p>
-      </div>
+      <div class="contact-form"><input type="text" placeholder="Nom & Prénom" id="contactName"><input type="email" placeholder="Email" id="contactEmail"><textarea rows="3" placeholder="Votre message"></textarea><button id="fakeSubmit" class="highlight-btn">Envoyer</button></div>
     </div>
 
-    <!-- NOUS REJOINDRE (carrières) -->
     <div id="nous-rejoindre-pane" class="tab-pane">
       <h3><i class="fas fa-briefcase"></i> Rejoindre Partner Immo CI</h3>
-      <p>Nous recrutons des talents passionnés par l’immobilier, la finance et le partenariat.</p>
-      <div class="grid-2">
-        <div class="card"><i class="fas fa-graduation-cap"></i><h4>Stages & alternances</h4><p>Chargé d’études immobilières, analyste financier, assistant commercial.</p></div>
-        <div class="card"><i class="fas fa-chalkboard-user"></i><h4>Métiers experts</h4><p>Gestionnaire de portefeuille, responsable apporteurs d’affaires, promoteur.</p></div>
-      </div>
-      <div class="badge-list"><span class="badge">Télétravail partiel</span><span class="badge">Formation continue</span><span class="badge">Participation aux résultats</span></div>
-      <button class="highlight-btn" id="careerBtn">Postulez spontanément <i class="fas fa-arrow-right"></i></button>
+      <button class="highlight-btn" id="careerBtn">Postulez spontanément</button>
     </div>
 
-    <!-- SOUSCRIPTEUR (nouvel onglet) -->
+    <!-- ========== ONGLET SOUSCRIPTEUR (espace sécurisé avec authentification) ========== -->
     <div id="souscripteur-pane" class="tab-pane">
-      <h3><i class="fas fa-chart-line"></i> Accès Souscripteur — investir avec Partner Immo CI</h3>
-      <p>Devenez souscripteur et accédez à des programmes immobiliers exclusifs, des SCPI à fort potentiel et un suivi personnalisé.</p>
-      <div class="grid-2">
-        <div class="card"><i class="fas fa-coins"></i><h4>Pourquoi souscrire ?</h4><p>Rendements attractifs (5 à 9% nets par an), diversification Afrique/Europe, sortie flexible.</p><span class="badge">Simulateur en ligne</span></div>
-        <div class="card"><i class="fas fa-laptop"></i><h4>Espace souscripteur sécurisé</h4><p>Suivez vos versements, dividendes et documents fiscaux 24/7.</p><span class="badge">Accès membre</span></div>
+      <h3><i class="fas fa-chart-line"></i> Espace Souscripteur</h3>
+      <div id="souscripteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
+        <div class="card"><h4>Connexion souscripteur</h4>
+          <input type="text" id="sousLogin" placeholder="Numéro dossier / Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+          <input type="password" id="sousCode" placeholder="Code d'accès" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+          <div id="sousError" class="badge-danger" style="display:none; margin:8px 0; padding:8px; border-radius:30px;"></div>
+          <button id="sousLoginBtn" class="highlight-btn">Se connecter</button>
+        </div>
       </div>
-      <div class="card" style="margin-top: 16px;">
-        <i class="fas fa-file-signature"></i>
-        <h4>Devenir souscripteur : 3 étapes</h4>
-        <p>1. Remplir le formulaire d’adhésion <br>2. Choisir votre support (SCPI, crowdfunding, foncier) <br>3. Versement initial à partir de 5 000€.</p>
-        <button class="highlight-btn" id="souscrireBtn">Demander mon dossier souscripteur</button>
-      </div>
-      <div class="badge-list"><span class="badge">Agrément ORIAS-CI</span><span class="badge">Garantie fonds dédiés</span></div>
+      <div id="souscripteur-dashboard" style="display:none;"></div>
     </div>
 
-    <!-- APPORTEURS D'AFFAIRES (nouvel onglet) -->
+    <!-- ========== ONGLET APPORTEURS (espace sécurisé avec authentification) ========== -->
     <div id="apporteurs-pane" class="tab-pane">
-      <h3><i class="fas fa-handshake"></i> Accès Apporteurs d’affaires — Devenez partenaire</h3>
-      <p>Vous avez des contacts, des terrains ou des projets immobiliers ? Gagnez des commissions attractives en nous recommandant des opportunités.</p>
-      <div class="grid-2">
-        <div class="card"><i class="fas fa-percent"></i><h4>Rémunération transparente</h4><p>Jusqu’à 6% du montant d’affaire + prime à la signature pour tout apport validé.</p><span class="badge">Paiement rapide</span></div>
-        <div class="card"><i class="fas fa-chalkboard"></i><h4>Accompagnement dédié</h4><p>Une équipe dédiée vous forme, vous fournit des supports et valide les deals ensemble.</p></div>
+      <h3><i class="fas fa-handshake"></i> Espace Apporteur</h3>
+      <div id="apporteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
+        <div class="card"><h4>Connexion apporteur</h4>
+          <input type="text" id="appLogin" placeholder="Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+          <input type="password" id="appCode" placeholder="Code d'accès" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+          <div id="appError" class="badge-danger" style="display:none; margin:8px 0; padding:8px; border-radius:30px;"></div>
+          <button id="appLoginBtn" class="highlight-btn">Se connecter</button>
+        </div>
       </div>
-      <div class="card" style="margin-top: 16px;">
-        <i class="fas fa-bullhorn"></i>
-        <h4>Comment ça marche ?</h4>
-        <p>1. Inscription gratuite en tant qu’apporteur <br>2. Proposez un projet (terrain, promoteur, investisseur) via notre extranet <br>3. Validation et commission jusqu’à 6% dès la finalisation.</p>
-        <button class="highlight-btn" id="apporteurBtn">Devenir apporteur d’affaires</button>
-      </div>
-      <div class="badge-list"><span class="badge">+87 apporteurs actifs</span><span class="badge">+12M€ commissionnés en 2025</span></div>
+      <div id="apporteur-dashboard" style="display:none;"></div>
     </div>
 
-    <!-- FR (langue & conformité) -->
     <div id="fr-pane" class="tab-pane">
       <h3><i class="fas fa-flag-checkered"></i> Version française | Mentions légales</h3>
-      <p>Partner Immo CI exerce en conformité avec la réglementation ivoirienne et européenne. Tous nos contrats sont rédigés en français.</p>
-      <div class="card" style="background:#f1f9fe;">
-        <i class="fas fa-language"></i>
-        <p><strong>Langue et gouvernance :</strong> français exclusif pour les documents contractuels. Service client bilingue (français/anglais).</p>
-        <hr>
-        <p><i class="fas fa-check-circle"></i> Agrément n°2025-032/CIPM. Protection des données personnelles conforme au RGPD.</p>
-        <p>📍 Partner Immo CI – SAS au capital de 1 000 000 000 FCFA.</p>
-      </div>
+      <div class="card"><p>Partner Immo CI – SAS au capital de 1 000 000 000 FCFA. Agrément n°2025-032/CIPM.</p></div>
     </div>
   </div>
 </div>
 
 <footer>
   <div class="container">
-    <p>© Partner Immo CI 2026 — Investir et faire grandir l’immobilier ensemble. | Mentions légales | Protection des données | Accessibilité</p>
-    <p style="margin-top:8px"><i class="fab fa-linkedin"></i> <i class="fab fa-twitter"></i> <i class="fab fa-whatsapp"></i> Suivez l’actualité des souscripteurs et apporteurs</p>
+    <p>© Partner Immo CI 2026 — Investir et faire grandir l’immobilier ensemble. | Mentions légales</p>
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  (function() {
-    // Gestion des onglets
-    const tabButtons = document.querySelectorAll('.tab-link');
-    const panes = document.querySelectorAll('.tab-pane');
+  // ======================= CONFIGURATION SUPABASE (identique à l'ERP) =======================
+  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function switchTab(tabId) {
-      panes.forEach(pane => pane.classList.remove('active-pane'));
-      const activePane = document.getElementById(`${tabId}-pane`);
-      if (activePane) activePane.classList.add('active-pane');
+  // Fonctions utilitaires
+  async function hashPassword(password, salt) {
+    const enc = new TextEncoder();
+    const data = enc.encode(password + salt);
+    if (crypto.subtle) {
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    return password; // fallback (non utilisé en prod)
+  }
+  async function verifyCode(entity, code) {
+    if (!code || !entity) return false;
+    if (entity.code_acces_hash && entity.code_acces_salt) {
+      const computed = await hashPassword(code, entity.code_acces_salt);
+      if (computed === entity.code_acces_hash) return true;
+    }
+    return (entity.code_acces === code) || (entity.mot_de_passe === code);
+  }
 
-      tabButtons.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-tab') === tabId) {
-          btn.classList.add('active');
+  // Gestion des onglets (vitrine)
+  const tabButtons = document.querySelectorAll('.tab-link');
+  const panes = document.querySelectorAll('.tab-pane');
+  function switchTab(tabId) {
+    panes.forEach(p => p.classList.remove('active-pane'));
+    const activePane = document.getElementById(`${tabId}-pane`);
+    if (activePane) activePane.classList.add('active-pane');
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+  tabButtons.forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab'))));
+
+  // ======================= ESPACE SOUSCRIPTEUR =======================
+  let currentSouscripteur = null;
+  const sousLoginArea = document.getElementById('souscripteur-login-area');
+  const sousDashboard = document.getElementById('souscripteur-dashboard');
+  const sousLoginBtn = document.getElementById('sousLoginBtn');
+  const sousError = document.getElementById('sousError');
+
+  async function loadSouscripteurDashboard(client) {
+    const [versRes, programmesRes, lotsRes, rapportsRes, docsRes, convsRes] = await Promise.all([
+      supabase.from('pi_versements').select('*').eq('client_id', client.id),
+      supabase.from('pi_programmes').select('*'),
+      supabase.from('pi_lots').select('*'),
+      supabase.from('pi_rapports_chantier').select('*'),
+      supabase.from('pi_documents').select('*').eq('entity_type', 'client').eq('entity_id', client.id),
+      supabase.from('pi_conversations').select('*')
+    ]);
+    const versements = versRes.data || [];
+    const programmes = programmesRes.data || [];
+    const lots = lotsRes.data || [];
+    const rapports = rapportsRes.data || [];
+    const docs = docsRes.data || [];
+    const conversations = convsRes.data || [];
+    const total = client.montant_total || 0;
+    const verse = versements.reduce((s,v) => s + (v.montant || 0), 0);
+    const reste = Math.max(0, total - verse);
+    const pct = total > 0 ? Math.round(verse / total * 100) : 0;
+    const prog = programmes.find(p => p.id === client.programme_id);
+    const lot = lots.find(l => l.id === client.lot_id);
+    const lastRapport = rapports.filter(r => r.visibilite !== 'interne').sort((a,b)=>new Date(b.date_debut)-new Date(a.date_debut))[0];
+
+    sousDashboard.innerHTML = `
+      <div class="dashboard-layout">
+        <div class="dashboard-sidebar">
+          <div class="dashboard-sidebar-item active" data-sous-tab="dashboard">📊 Tableau de bord</div>
+          <div class="dashboard-sidebar-item" data-sous-tab="echeances">📅 Échéancier</div>
+          <div class="dashboard-sidebar-item" data-sous-tab="versements">💳 Versements</div>
+          <div class="dashboard-sidebar-item" data-sous-tab="documents">📁 Documents</div>
+          <div class="dashboard-sidebar-item" data-sous-tab="photos">📸 Chantier</div>
+          <div class="dashboard-sidebar-item" data-sous-tab="messagerie">💬 Messagerie</div>
+        </div>
+        <div class="dashboard-main" id="sousMainPanel"></div>
+      </div>
+    `;
+    const renderSousTab = (tab) => {
+      const main = document.getElementById('sousMainPanel');
+      if (tab === 'dashboard') {
+        main.innerHTML = `<div class="grid-2" style="margin-bottom:20px;">
+          <div class="stat-card"><strong>Montant souscrit</strong><br><span class="stat-number">${formatFCFA(total)}</span></div>
+          <div class="stat-card"><strong>Déjà versé</strong><br><span class="stat-number">${formatFCFA(verse)}</span></div>
+          <div class="stat-card"><strong>Reste à payer</strong><br><span class="stat-number">${formatFCFA(reste)}</span></div>
+          <div class="stat-card"><strong>Avancement</strong><br><span class="stat-number">${pct}%</span></div>
+        </div><div class="stat-card">Dossier: ${client.dossier}<br>Programme: ${prog?.nom || '—'} Lot ${lot?.numero || '—'}<br>${lastRapport ? `Avancement travaux: ${lastRapport.avancement}%` : ''}</div>`;
+      } else if (tab === 'echeances') {
+        const duree = client.duree || 60;
+        const mensualite = duree > 0 ? Math.ceil((total - (client.apport || 0)) / duree) : 0;
+        const debut = client.date_debut ? new Date(client.date_debut) : new Date();
+        const verseMap = {};
+        versements.forEach(v => { const m = v.date.slice(0,7); verseMap[m] = (verseMap[m] || 0) + (v.montant || 0); });
+        let rows = '', cumulVerse = 0, cumulDu = 0;
+        for (let i = 0; i < duree; i++) {
+          const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+          const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+          cumulDu += mensualite;
+          cumulVerse += verseMap[moisKey] || 0;
+          const statut = cumulVerse >= cumulDu ? 'À jour' : (cumulVerse > 0 ? 'Partiel' : (d <= new Date() ? 'Retard' : 'À venir'));
+          const badge = statut === 'À jour' ? 'badge-success' : (statut === 'Partiel' ? 'badge-warning' : (statut === 'Retard' ? 'badge-danger' : 'badge-info'));
+          rows += `<tr><td>${i+1}</td><td>${d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}</td><td class="text-right">${formatFCFA(mensualite)}</td><td class="text-right">${formatFCFA(cumulDu)}</td><td class="text-right">${formatFCFA(cumulVerse)}</td><td><span class="badge ${badge}">${statut}</span></td></tr>`;
         }
-      });
-    }
-
-    tabButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const tabValue = btn.getAttribute('data-tab');
-        if (tabValue) switchTab(tabValue);
-      });
+        main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>#</th><th>Mois</th><th>Mensualité</th><th>Cumul dû</th><th>Cumul versé</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      } else if (tab === 'versements') {
+        const rows = versements.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${v.mode || '—'}</td><td>${v.ref || '—'}</td></tr>`).join('');
+        main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Montant</th><th>Mode</th><th>Référence</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Aucun versement</td></tr>'}</tbody></table></div></div>`;
+      } else if (tab === 'documents') {
+        const docsHtml = docs.map(d => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;"><span>${escapeHtml(d.name)}</span><a href="${d.blob}" download class="badge">Télécharger</a></div>`).join('');
+        main.innerHTML = `<div class="stat-card">${docsHtml || '<p>Aucun document.</p>'}</div>`;
+      } else if (tab === 'photos') {
+        const photos = [];
+        rapports.forEach(r => { if (r.photos && r.photos.length && r.visibilite !== 'interne') r.photos.forEach(p => { if (p.visible !== false) photos.push(p.data); }); });
+        const photosHtml = photos.slice(0,6).map(src => `<div style="width:100px; height:100px; overflow:hidden; border-radius:12px;"><img src="${src}" style="width:100%; height:100%; object-fit:cover;" onclick="window.open('${src}')"></div>`).join('');
+        main.innerHTML = `<div class="stat-card"><div style="display:flex; gap:12px; flex-wrap:wrap;">${photosHtml || '<p>Aucune photo</p>'}</div></div>`;
+      } else if (tab === 'messagerie') {
+        const commercialId = client.commercial_id || (await supabase.from('pi_employes').select('id').eq('role', 'commercial').limit(1)).data?.[0]?.id;
+        if (!commercialId) { main.innerHTML = '<div class="stat-card">Aucun commercial assigné.</div>'; return; }
+        const clientConvId = `client_${client.id}`;
+        let conv = conversations.find(c => c.type === 'direct' && c.participants && c.participants.includes(clientConvId) && c.participants.includes(commercialId));
+        if (!conv) {
+          const { data: newConv } = await supabase.from('pi_conversations').insert({ type: 'direct', participants: [clientConvId, commercialId], date_creation: new Date().toISOString() }).select().single();
+          if (newConv) conv = newConv;
+        }
+        if (conv) {
+          const { data: messages } = await supabase.from('pi_messages').select('*').eq('conversation_id', conv.id).order('date', { ascending: true });
+          const msgsHtml = (messages || []).map(m => `<div class="msg-bubble ${m.expediteur_id === clientConvId ? 'mine' : ''}"><div>${escapeHtml(m.contenu)}</div><div class="text-xs opacity-70">${new Date(m.date).toLocaleTimeString()}</div></div>`).join('');
+          main.innerHTML = `
+            <div class="msg-container">
+              <div class="msg-messages" id="msgList">${msgsHtml || 'Aucun message'}</div>
+              <div class="msg-composer"><textarea id="msgInput" rows="1" placeholder="Votre message..."></textarea><button id="sendMsgBtn" class="badge">Envoyer</button></div>
+            </div>`;
+          const send = async () => {
+            const text = document.getElementById('msgInput').value.trim();
+            if (!text) return;
+            await supabase.from('pi_messages').insert({ conversation_id: conv.id, expediteur_id: clientConvId, expediteur_nom: `${client.nom} ${client.prenoms || ''}`, contenu: text, date: new Date().toISOString(), lu: false });
+            document.getElementById('msgInput').value = '';
+            const { data: newMsgs } = await supabase.from('pi_messages').select('*').eq('conversation_id', conv.id).order('date', { ascending: true });
+            document.getElementById('msgList').innerHTML = newMsgs.map(m => `<div class="msg-bubble ${m.expediteur_id === clientConvId ? 'mine' : ''}"><div>${escapeHtml(m.contenu)}</div><div class="text-xs opacity-70">${new Date(m.date).toLocaleTimeString()}</div></div>`).join('');
+          };
+          document.getElementById('sendMsgBtn').onclick = send;
+        } else { main.innerHTML = '<div class="stat-card">Erreur messagerie</div>'; }
+      }
+    };
+    document.querySelectorAll('[data-sous-tab]').forEach(el => {
+      el.onclick = () => {
+        document.querySelectorAll('[data-sous-tab]').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        renderSousTab(el.getAttribute('data-sous-tab'));
+      };
     });
+    renderSousTab('dashboard');
+  }
 
-    // recherche simulée
-    const searchBtn = document.getElementById('searchMockBtn');
-    const searchInput = document.getElementById('searchInput');
-    if (searchBtn) {
-      searchBtn.addEventListener('click', () => {
-        const query = searchInput.value.trim();
-        if(query) alert(`Recherche Partner Immo CI : "${query}"\nNous vous proposerons les meilleures opportunités pour souscripteurs et apporteurs.`);
-        else alert("Veuillez saisir un mot-clé (programme, commission, souscription)");
-      });
-    }
-    if (searchInput) {
-      searchInput.addEventListener('keypress', (e) => {
-        if(e.key === 'Enter') searchBtn.click();
-      });
-    }
+  sousLoginBtn.onclick = async () => {
+    const identifier = document.getElementById('sousLogin').value.trim();
+    const code = document.getElementById('sousCode').value.trim();
+    if (!identifier || !code) { sousError.style.display = 'block'; sousError.innerText = 'Veuillez remplir tous les champs.'; return; }
+    const { data, error } = await supabase.from('pi_clients').select('*').or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
+    if (error || !data || data.length === 0) { sousError.style.display = 'block'; sousError.innerText = 'Compte souscripteur introuvable.'; return; }
+    let client = null;
+    for (const c of data) if (await verifyCode(c, code)) { client = c; break; }
+    if (!client) { sousError.style.display = 'block'; sousError.innerText = 'Code d\'accès incorrect.'; return; }
+    currentSouscripteur = client;
+    sousLoginArea.style.display = 'none';
+    sousDashboard.style.display = 'block';
+    await loadSouscripteurDashboard(client);
+  };
 
-    // formulaire contact
-    const submitBtn = document.getElementById('fakeSubmit');
-    if(submitBtn){
-      submitBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('contactName')?.value || '';
-        const email = document.getElementById('contactEmail')?.value || '';
-        if(name && email) alert(`Merci ${name}, un conseiller Partner Immo CI (souscripteurs/apporteurs) vous recontactera sous 24h.`);
-        else alert("Veuillez renseigner votre nom et email.");
-      });
-    }
+  // ======================= ESPACE APPORTEUR =======================
+  let currentApporteur = null;
+  const appLoginArea = document.getElementById('apporteur-login-area');
+  const appDashboard = document.getElementById('apporteur-dashboard');
+  const appLoginBtn = document.getElementById('appLoginBtn');
+  const appError = document.getElementById('appError');
 
-    // carrière
-    const careerBtn = document.getElementById('careerBtn');
-    if(careerBtn) careerBtn.addEventListener('click', () => alert("Merci de nous envoyer votre CV à recrutement@partnerimmo.ci — Rejoignez l'aventure Partner Immo CI !"));
+  async function loadApporteurDashboard(apporteur) {
+    const [clientsRes, commissionsRes, docsRes] = await Promise.all([
+      supabase.from('pi_clients').select('*').eq('apporteur_id', apporteur.id),
+      supabase.from('pi_commissions').select('*').eq('type_beneficiaire', 'apporteur').eq('beneficiaire_id', apporteur.id),
+      supabase.from('pi_documents').select('*').eq('entity_type', 'apporteur').eq('entity_id', apporteur.id)
+    ]);
+    const clients = clientsRes.data || [];
+    const commissions = commissionsRes.data || [];
+    const docs = docsRes.data || [];
+    const totalCA = clients.reduce((s,c) => s + (c.montant_total || 0), 0);
+    const dues = commissions.filter(c => c.statut === 'a_payer').reduce((s,c) => s + (c.montant_comm || 0), 0);
+    const payees = commissions.filter(c => c.statut === 'payee').reduce((s,c) => s + (c.montant_comm || 0), 0);
+    appDashboard.innerHTML = `
+      <div class="dashboard-layout">
+        <div class="dashboard-sidebar">
+          <div class="dashboard-sidebar-item active" data-app-tab="dashboard">📊 Tableau de bord</div>
+          <div class="dashboard-sidebar-item" data-app-tab="clients">👥 Clients apportés</div>
+          <div class="dashboard-sidebar-item" data-app-tab="commissions">💰 Commissions</div>
+          <div class="dashboard-sidebar-item" data-app-tab="documents">📁 Documents</div>
+        </div>
+        <div class="dashboard-main" id="appMainPanel"></div>
+      </div>
+    `;
+    const renderAppTab = (tab) => {
+      const main = document.getElementById('appMainPanel');
+      if (tab === 'dashboard') {
+        main.innerHTML = `<div class="grid-2"><div class="stat-card"><strong>Clients apportés</strong><br>${clients.length}</div><div class="stat-card"><strong>CA généré</strong><br>${formatFCFA(totalCA)}</div><div class="stat-card"><strong>Commissions dues</strong><br>${formatFCFA(dues)}</div><div class="stat-card"><strong>Commissions payées</strong><br>${formatFCFA(payees)}</div></div><div class="stat-card">${apporteur.nom} ${apporteur.prenoms || ''}<br>Email: ${apporteur.email || '—'}</div>`;
+      } else if (tab === 'clients') {
+        const rows = clients.map(c => `<tr><td>${escapeHtml(c.nom)} ${escapeHtml(c.prenoms || '')}</td><td>${escapeHtml(c.dossier || '—')}</td><td class="text-right">${formatFCFA(c.montant_total || 0)}</td></tr>`).join('');
+        main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Client</th><th>Dossier</th><th>Montant souscrit</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Aucun client</td></tr>'}</tbody></table></div></div>`;
+      } else if (tab === 'commissions') {
+        const rows = commissions.sort((a,b)=>new Date(b.date_versement)-new Date(a.date_versement)).map(c => `<tr><td>${formatDate(c.date_versement)}</td><td>${escapeHtml(clients.find(cl=>cl.id===c.client_id)?.nom || '—')}</td><td class="text-right">${formatFCFA(c.montant_base)}</td><td>${c.taux}%</td><td class="text-right">${formatFCFA(c.montant_comm)}</td><td><span class="badge ${c.statut === 'payee' ? 'badge-success' : 'badge-warning'}">${c.statut === 'payee' ? 'Payée' : 'À payer'}</span></td></tr>`).join('');
+        main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Client</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Aucune commission</td></tr>'}</tbody></table></div></div>`;
+      } else if (tab === 'documents') {
+        const docsHtml = docs.map(d => `<div style="display:flex; justify-content:space-between; padding:8px 0;"><span>${escapeHtml(d.name)}</span><a href="${d.blob}" download class="badge">Télécharger</a></div>`).join('');
+        main.innerHTML = `<div class="stat-card">${docsHtml || '<p>Aucun document.</p>'}</div>`;
+      }
+    };
+    document.querySelectorAll('[data-app-tab]').forEach(el => {
+      el.onclick = () => {
+        document.querySelectorAll('[data-app-tab]').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        renderAppTab(el.getAttribute('data-app-tab'));
+      };
+    });
+    renderAppTab('dashboard');
+  }
 
-    // souscripteur action
-    const souscrireBtn = document.getElementById('souscrireBtn');
-    if(souscrireBtn) souscrireBtn.addEventListener('click', () => alert("✅ Dossier souscripteur : nos équipes vous envoient le kit complet par email sous 2h. Bienvenue chez Partner Immo CI."));
+  appLoginBtn.onclick = async () => {
+    const identifier = document.getElementById('appLogin').value.trim();
+    const code = document.getElementById('appCode').value.trim();
+    if (!identifier || !code) { appError.style.display = 'block'; appError.innerText = 'Veuillez remplir tous les champs.'; return; }
+    const { data, error } = await supabase.from('pi_apporteurs').select('*').or(`email.eq.${identifier},tel.eq.${identifier}`);
+    if (error || !data || data.length === 0) { appError.style.display = 'block'; appError.innerText = 'Compte apporteur introuvable.'; return; }
+    let apporteur = null;
+    for (const a of data) if (await verifyCode(a, code)) { apporteur = a; break; }
+    if (!apporteur) { appError.style.display = 'block'; appError.innerText = 'Code d\'accès incorrect.'; return; }
+    currentApporteur = apporteur;
+    appLoginArea.style.display = 'none';
+    appDashboard.style.display = 'block';
+    await loadApporteurDashboard(apporteur);
+  };
 
-    // apporteur action
-    const apporteurBtn = document.getElementById('apporteurBtn');
-    if(apporteurBtn) apporteurBtn.addEventListener('click', () => alert("🚀 Devenez apporteur d’affaires : inscrivez-vous via notre extranet partenaire. Jusqu’à 6% de commission !"));
+  // Utilitaires communs
+  function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
+  function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
+  function escapeHtml(str) { return (str || '').replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
 
-    // Si hash URL initial
-    const urlTab = window.location.hash.slice(1);
-    const validTabs = ['activites','realisations','engagements','presence','source','nous-connaitre','nous-contacter','nous-rejoindre','souscripteur','apporteurs','fr'];
-    if(urlTab && validTabs.includes(urlTab)){
-      switchTab(urlTab);
-    }
-  })();
+  // Gestion des interactions vitrine
+  document.getElementById('searchMockBtn')?.addEventListener('click', () => alert('Recherche Partner Immo CI (fonctionnalité à venir)'));
+  document.getElementById('fakeSubmit')?.addEventListener('click', () => alert('Message envoyé (simulation)'));
+  document.getElementById('careerBtn')?.addEventListener('click', () => alert('Postulez à recrutement@partnerimmo.ci'));
 </script>
 </body>
 </html>
