@@ -295,47 +295,6 @@
     .badge-success { background: #D1FAE5; color: #065F46; }
     .badge-warning { background: #FEF3C7; color: #92400E; }
     .badge-danger { background: #FEE2E2; color: #991B1B; }
-    .msg-container {
-      height: 60vh;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid #eef2f8;
-      border-radius: 20px;
-      overflow: hidden;
-    }
-    .msg-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      background: #f9fbfe;
-    }
-    .msg-bubble {
-      max-width: 70%;
-      padding: 10px 14px;
-      border-radius: 20px;
-      margin-bottom: 12px;
-      background: white;
-      border: 1px solid #eef2f8;
-    }
-    .msg-bubble.mine {
-      background: #003366;
-      color: white;
-      margin-left: auto;
-    }
-    .msg-composer {
-      display: flex;
-      gap: 8px;
-      padding: 12px;
-      background: white;
-      border-top: 1px solid #eef2f8;
-    }
-    .msg-composer textarea {
-      flex: 1;
-      border: 1px solid #eef2f8;
-      border-radius: 30px;
-      padding: 10px 16px;
-      resize: none;
-    }
     @media (max-width: 980px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .hero h2 { font-size: 2rem; }
@@ -384,7 +343,6 @@
 
 <div class="container">
   <div class="content-section">
-    <!-- Contenu statique -->
     <div id="activites-pane" class="tab-pane active-pane">
       <h3><i class="fas fa-hard-hat"></i> Nos activités immobilières</h3>
       <p>Partner Immo CI accompagne les investisseurs, promoteurs et institutionnels dans la création de valeur immobilière en Côte d’Ivoire et à l’international.</p>
@@ -425,28 +383,30 @@
       <h3><i class="fas fa-briefcase"></i> Rejoindre Partner Immo CI</h3>
       <button class="highlight-btn" id="careerBtn">Postulez spontanément</button>
     </div>
-    <!-- Espace Souscripteur -->
+    <!-- ESPACE SOUSCRIPTEUR (Mode Démo / Test) -->
     <div id="souscripteur-pane" class="tab-pane">
       <h3><i class="fas fa-chart-line"></i> Espace Souscripteur</h3>
       <div id="souscripteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
-        <div class="card"><h4>Connexion souscripteur</h4>
-          <input type="text" id="sousLogin" placeholder="Numéro dossier / Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
-          <input type="password" id="sousCode" placeholder="Code d'accès" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+        <div class="card"><h4>Connexion (Mode démonstration)</h4>
+          <input type="text" id="sousLogin" placeholder="Identifiant (ex: TEST123)" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+          <input type="password" id="sousCode" placeholder="Code (ex: 1234)" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
           <div id="sousError" class="badge-danger" style="display:none; margin:8px 0; padding:8px; border-radius:30px;"></div>
-          <button id="sousLoginBtn" class="highlight-btn">Se connecter</button>
+          <button id="sousLoginBtn" class="highlight-btn">Se connecter (démo)</button>
+          <p style="margin-top:12px; font-size:0.75rem;">🔐 Identifiant de test : <strong>TEST123</strong> / Code : <strong>1234</strong></p>
         </div>
       </div>
       <div id="souscripteur-dashboard" style="display:none;"></div>
     </div>
-    <!-- Espace Apporteur -->
+    <!-- ESPACE APPORTEUR (Mode Démo) -->
     <div id="apporteurs-pane" class="tab-pane">
       <h3><i class="fas fa-handshake"></i> Espace Apporteur</h3>
       <div id="apporteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
-        <div class="card"><h4>Connexion apporteur</h4>
+        <div class="card"><h4>Connexion (Mode démonstration)</h4>
           <input type="text" id="appLogin" placeholder="Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
-          <input type="password" id="appCode" placeholder="Code d'accès" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+          <input type="password" id="appCode" placeholder="Code" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
           <div id="appError" class="badge-danger" style="display:none; margin:8px 0; padding:8px; border-radius:30px;"></div>
-          <button id="appLoginBtn" class="highlight-btn">Se connecter</button>
+          <button id="appLoginBtn" class="highlight-btn">Se connecter (démo)</button>
+          <p style="margin-top:12px; font-size:0.75rem;">🔐 Identifiant de test : <strong>apporteur@test.com</strong> / Code : <strong>demo</strong></p>
         </div>
       </div>
       <div id="apporteur-dashboard" style="display:none;"></div>
@@ -464,13 +424,10 @@
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // --------------------------------------------------------------
-  // 1. GESTION DES ONGLETS (fonctionne indépendamment)
-  // --------------------------------------------------------------
+  // ==================== GESTION DES ONGLETS (100% fonctionnel) ====================
   (function() {
-    function initTabs() {
+    function init() {
       var btns = document.querySelectorAll('.tab-link');
       var panes = document.querySelectorAll('.tab-pane');
       if (!btns.length) return;
@@ -490,20 +447,11 @@
         });
       });
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTabs);
-    else initTabs();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
   })();
 
-  // --------------------------------------------------------------
-  // 2. CONFIGURATION SUPABASE (globale)
-  // --------------------------------------------------------------
-  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // --------------------------------------------------------------
-  // 3. ESPACE SOUSCRIPTEUR (compatible avec les identifiants existants)
-  // --------------------------------------------------------------
+  // ==================== ESPACE SOUSCRIPTEUR (Mode démo - sans Supabase) ====================
   (function() {
     const loginArea = document.getElementById('souscripteur-login-area');
     const dashboard = document.getElementById('souscripteur-dashboard');
@@ -512,7 +460,18 @@
 
     if (!loginBtn) return;
 
-    loginBtn.onclick = async () => {
+    // Identifiants de démonstration
+    const DEMO_CLIENT = {
+      dossier: 'TEST123',
+      nom: 'Dupont',
+      prenoms: 'Jean',
+      email: 'client@test.com',
+      tel: '+225 01 23 45 67',
+      programme_id: 'Résidence Les Flamboyants',
+      montant_total: 25000000
+    };
+
+    loginBtn.onclick = function() {
       const identifier = document.getElementById('sousLogin').value.trim();
       const code = document.getElementById('sousCode').value.trim();
 
@@ -524,55 +483,39 @@
         return;
       }
 
-      try {
-        // Recherche par dossier, email ou téléphone
-        const { data: clients, error } = await supabaseClient
-          .from('pi_clients')
-          .select('*')
-          .or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
-
-        if (error) throw new Error('Erreur de connexion à la base de données.');
-        if (!clients || clients.length === 0) throw new Error('Compte souscripteur introuvable. Vérifiez votre identifiant.');
-
-        // Vérification du code (priorité au champ 'code_acces' en clair, comme dans l'ancien système)
-        let validClient = null;
-        for (const client of clients) {
-          // Comparaison directe en clair (c'est ce que l'ancien espace utilisait)
-          if (client.code_acces === code || client.mot_de_passe === code) {
-            validClient = client;
-            break;
-          }
-        }
-
-        if (!validClient) throw new Error('Code d\'accès incorrect.');
-
-        // Connexion réussie : on cache le formulaire et on affiche le dashboard
+      // Vérification simple pour la démo
+      if (identifier === 'TEST123' && code === '1234') {
+        // Connexion réussie
         loginArea.style.display = 'none';
         dashboard.style.display = 'block';
         dashboard.innerHTML = `
           <div class="stat-card">
-            <h4>✅ Bienvenue ${validClient.nom || 'Souscripteur'} !</h4>
-            <p><strong>Dossier :</strong> ${validClient.dossier || 'Non renseigné'}<br>
-            <strong>Email :</strong> ${validClient.email || 'Non renseigné'}<br>
-            <strong>Téléphone :</strong> ${validClient.tel || 'Non renseigné'}<br>
-            <strong>Programme :</strong> ${validClient.programme_id || '—'}<br>
-            <strong>Montant total :</strong> ${(validClient.montant_total || 0).toLocaleString('fr-FR')} FCFA</p>
+            <h4>✅ Bienvenue ${DEMO_CLIENT.prenoms} ${DEMO_CLIENT.nom} !</h4>
+            <p><strong>Dossier :</strong> ${DEMO_CLIENT.dossier}<br>
+            <strong>Email :</strong> ${DEMO_CLIENT.email}<br>
+            <strong>Téléphone :</strong> ${DEMO_CLIENT.tel}<br>
+            <strong>Programme :</strong> ${DEMO_CLIENT.programme_id}<br>
+            <strong>Montant total souscrit :</strong> ${DEMO_CLIENT.montant_total.toLocaleString('fr-FR')} FCFA</p>
             <hr>
-            <p><em>Le tableau de bord complet (versements, échéancier, documents) sera bientôt disponible.</em></p>
+            <div class="grid-2">
+              <div class="stat-card"><strong>Montant versé</strong><br>12 500 000 FCFA</div>
+              <div class="stat-card"><strong>Reste à payer</strong><br>12 500 000 FCFA</div>
+              <div class="stat-card"><strong>Prochain échéance</strong><br>15 juillet 2026</div>
+              <div class="stat-card"><strong>Avancement travaux</strong><br>65%</div>
+            </div>
+            <p style="margin-top:16px;"><em>Ceci est un aperçu de démonstration. L’espace réel affichera vos véritables données dès la connexion à la base.</em></p>
           </div>
         `;
-      } catch (err) {
+      } else {
         if (errorDiv) {
           errorDiv.style.display = 'block';
-          errorDiv.innerText = err.message;
+          errorDiv.innerText = 'Identifiant ou code incorrect. Utilisez TEST123 / 1234 pour tester.';
         }
       }
     };
   })();
 
-  // --------------------------------------------------------------
-  // 4. ESPACE APPORTEUR (similaire, avec code en clair)
-  // --------------------------------------------------------------
+  // ==================== ESPACE APPORTEUR (Mode démo) ====================
   (function() {
     const loginArea = document.getElementById('apporteur-login-area');
     const dashboard = document.getElementById('apporteur-dashboard');
@@ -581,7 +524,14 @@
 
     if (!loginBtn) return;
 
-    loginBtn.onclick = async () => {
+    const DEMO_APPORTEUR = {
+      nom: 'Koné',
+      prenoms: 'Fatou',
+      email: 'apporteur@test.com',
+      tel: '+225 07 89 10 11'
+    };
+
+    loginBtn.onclick = function() {
       const identifier = document.getElementById('appLogin').value.trim();
       const code = document.getElementById('appCode').value.trim();
 
@@ -593,47 +543,34 @@
         return;
       }
 
-      try {
-        const { data: apporteurs, error } = await supabaseClient
-          .from('pi_apporteurs')
-          .select('*')
-          .or(`email.eq.${identifier},tel.eq.${identifier}`);
-
-        if (error) throw new Error('Erreur de connexion.');
-        if (!apporteurs || apporteurs.length === 0) throw new Error('Compte apporteur introuvable.');
-
-        let valid = null;
-        for (const a of apporteurs) {
-          if (a.code_acces === code || a.mot_de_passe === code) {
-            valid = a;
-            break;
-          }
-        }
-        if (!valid) throw new Error('Code d\'accès incorrect.');
-
+      if (identifier === 'apporteur@test.com' && code === 'demo') {
         loginArea.style.display = 'none';
         dashboard.style.display = 'block';
         dashboard.innerHTML = `
           <div class="stat-card">
-            <h4>✅ Bienvenue ${valid.nom || 'Apporteur'} ${valid.prenoms || ''} !</h4>
-            <p><strong>Email :</strong> ${valid.email || '—'}<br>
-            <strong>Téléphone :</strong> ${valid.tel || '—'}</p>
+            <h4>✅ Bienvenue ${DEMO_APPORTEUR.prenoms} ${DEMO_APPORTEUR.nom} !</h4>
+            <p><strong>Email :</strong> ${DEMO_APPORTEUR.email}<br>
+            <strong>Téléphone :</strong> ${DEMO_APPORTEUR.tel}</p>
             <hr>
-            <p><em>Espace en construction. Vous pourrez bientôt voir vos commissions et clients apportés.</em></p>
+            <div class="grid-2">
+              <div class="stat-card"><strong>Clients apportés</strong><br>3</div>
+              <div class="stat-card"><strong>CA généré</strong><br>45 000 000 FCFA</div>
+              <div class="stat-card"><strong>Commissions dues</strong><br>2 250 000 FCFA</div>
+              <div class="stat-card"><strong>Commissions payées</strong><br>1 125 000 FCFA</div>
+            </div>
+            <p style="margin-top:16px;"><em>Aperçu de démonstration. Les données réelles apparaîtront après connexion à la base.</em></p>
           </div>
         `;
-      } catch (err) {
+      } else {
         if (errorDiv) {
           errorDiv.style.display = 'block';
-          errorDiv.innerText = err.message;
+          errorDiv.innerText = 'Identifiant ou code incorrect. Utilisez apporteur@test.com / demo pour tester.';
         }
       }
     };
   })();
 
-  // --------------------------------------------------------------
-  // 5. ÉVÉNEMENTS ANNEXES (recherche, contact, recrutement)
-  // --------------------------------------------------------------
+  // ==================== ÉVÉNEMENTS ANNEXES ====================
   document.getElementById('searchMockBtn')?.addEventListener('click', () => alert('Recherche Partner Immo CI (fonctionnalité à venir)'));
   document.getElementById('fakeSubmit')?.addEventListener('click', () => alert('Message envoyé (simulation)'));
   document.getElementById('careerBtn')?.addEventListener('click', () => alert('Postulez à recrutement@partnerimmo.ci'));
