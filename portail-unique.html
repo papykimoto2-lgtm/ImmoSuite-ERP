@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Partner Immo CI | Investissement & Partenariat Immobilier</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -384,7 +384,7 @@
 
 <div class="container">
   <div class="content-section">
-    <!-- Contenu des onglets statiques -->
+    <!-- Contenu statique -->
     <div id="activites-pane" class="tab-pane active-pane">
       <h3><i class="fas fa-hard-hat"></i> Nos activités immobilières</h3>
       <p>Partner Immo CI accompagne les investisseurs, promoteurs et institutionnels dans la création de valeur immobilière en Côte d’Ivoire et à l’international.</p>
@@ -466,343 +466,295 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // Attendre que tout le DOM soit chargé avant d'exécuter le script
-  document.addEventListener('DOMContentLoaded', function() {
-    // Configuration Supabase
-    const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    window.supabase = supabaseClient; // pour débogage
+  // ==================== 1. GESTION OBLIGATOIRE DES ONGLETS (indépendante) ====================
+  (function initTabs() {
+    // Si le DOM est déjà chargé, on exécute, sinon on attend
+    const run = () => {
+      const tabBtns = document.querySelectorAll('.tab-link');
+      const panes = document.querySelectorAll('.tab-pane');
+      if (!tabBtns.length) return;
 
-    // ---------- Gestion des onglets (vitrine + espaces) ----------
-    const tabButtons = document.querySelectorAll('.tab-link');
-    const panes = document.querySelectorAll('.tab-pane');
-
-    function switchTab(tabId) {
-      console.log('Changement d’onglet vers :', tabId);
-      // Désactiver tous les panneaux
-      panes.forEach(pane => pane.classList.remove('active-pane'));
-      // Activer le panneau correspondant
-      const activePane = document.getElementById(`${tabId}-pane`);
-      if (activePane) {
-        activePane.classList.add('active-pane');
-      } else {
-        console.error(`Panneau introuvable : ${tabId}-pane`);
+      function switchTab(tabId) {
+        panes.forEach(pane => pane.classList.remove('active-pane'));
+        const target = document.getElementById(`${tabId}-pane`);
+        if (target) target.classList.add('active-pane');
+        tabBtns.forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
       }
-      // Mettre à jour l'état actif des boutons
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      const activeBtn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
-      if (activeBtn) activeBtn.classList.add('active');
-    }
 
-    // Ajouter les écouteurs à chaque bouton d'onglet
-    tabButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const tabId = btn.getAttribute('data-tab');
-        if (tabId) switchTab(tabId);
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const tabId = btn.getAttribute('data-tab');
+          if (tabId) switchTab(tabId);
+        });
       });
-    });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+    else run();
+  })();
 
-    // ---------- Utilitaires ----------
-    async function hashPassword(password, salt) {
-      if (!crypto.subtle) {
-        console.warn("crypto.subtle non disponible, fallback dangereux");
-        return password + salt;
-      }
-      const enc = new TextEncoder();
-      const data = enc.encode(password + salt);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  // ==================== 2. FONCTIONS UTILITAIRES & SUPABASE ====================
+  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
+  let supabaseClient = null;
+  try {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch(e) { console.warn("Supabase non chargé", e); }
+
+  async function hashPassword(password, salt) {
+    if (!crypto.subtle) return password + salt;
+    const enc = new TextEncoder();
+    const data = enc.encode(password + salt);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function verifyCode(entity, code) {
+    if (!code || !entity) return false;
+    if (entity.code_acces_hash && entity.code_acces_salt) {
+      const computed = await hashPassword(code, entity.code_acces_salt);
+      if (computed === entity.code_acces_hash) return true;
     }
+    return (entity.code_acces === code) || (entity.mot_de_passe === code);
+  }
+  function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
+  function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
+  function escapeHtml(str) { return (str || '').replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
 
-    async function verifyCode(entity, code) {
-      if (!code || !entity) return false;
-      if (entity.code_acces_hash && entity.code_acces_salt) {
-        const computed = await hashPassword(code, entity.code_acces_salt);
-        if (computed === entity.code_acces_hash) return true;
-      }
-      return (entity.code_acces === code) || (entity.mot_de_passe === code);
-    }
+  // ==================== 3. ESPACE SOUSCRIPTEUR ====================
+  let currentSouscripteur = null;
+  const sousLoginArea = document.getElementById('souscripteur-login-area');
+  const sousDashboard = document.getElementById('souscripteur-dashboard');
+  const sousLoginBtn = document.getElementById('sousLoginBtn');
+  const sousError = document.getElementById('sousError');
 
-    function formatFCFA(n) { return (Math.round(n) || 0).toLocaleString('fr-FR') + ' FCFA'; }
-    function formatDate(str) { if (!str) return '—'; const d = new Date(str); return d.toLocaleDateString('fr-FR'); }
-    function escapeHtml(str) { return (str || '').replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+  async function loadSouscripteurDashboard(client) {
+    if (!supabaseClient) { sousDashboard.innerHTML = '<div class="stat-card">Service indisponible. Contactez le support.</div>'; return; }
+    try {
+      const [versRes, programmesRes, lotsRes, rapportsRes, docsRes, convsRes] = await Promise.all([
+        supabaseClient.from('pi_versements').select('*').eq('client_id', client.id),
+        supabaseClient.from('pi_programmes').select('*'),
+        supabaseClient.from('pi_lots').select('*'),
+        supabaseClient.from('pi_rapports_chantier').select('*'),
+        supabaseClient.from('pi_documents').select('*').eq('entity_type', 'client').eq('entity_id', client.id),
+        supabaseClient.from('pi_conversations').select('*')
+      ]);
+      const versements = versRes.data || [];
+      const programmes = programmesRes.data || [];
+      const lots = lotsRes.data || [];
+      const rapports = rapportsRes.data || [];
+      const docs = docsRes.data || [];
+      const conversations = convsRes.data || [];
+      const total = client.montant_total || 0;
+      const verse = versements.reduce((s,v) => s + (v.montant || 0), 0);
+      const reste = Math.max(0, total - verse);
+      const pct = total > 0 ? Math.round(verse / total * 100) : 0;
+      const prog = programmes.find(p => p.id === client.programme_id);
+      const lot = lots.find(l => l.id === client.lot_id);
+      const lastRapport = rapports.filter(r => r.visibilite !== 'interne').sort((a,b)=>new Date(b.date_debut)-new Date(a.date_debut))[0];
 
-    // ---------- SOUSCRIPTEUR ----------
-    let currentSouscripteur = null;
-    const sousLoginArea = document.getElementById('souscripteur-login-area');
-    const sousDashboard = document.getElementById('souscripteur-dashboard');
-    const sousLoginBtn = document.getElementById('sousLoginBtn');
-    const sousError = document.getElementById('sousError');
-
-    async function loadSouscripteurDashboard(client) {
-      try {
-        const [versRes, programmesRes, lotsRes, rapportsRes, docsRes, convsRes] = await Promise.all([
-          supabaseClient.from('pi_versements').select('*').eq('client_id', client.id),
-          supabaseClient.from('pi_programmes').select('*'),
-          supabaseClient.from('pi_lots').select('*'),
-          supabaseClient.from('pi_rapports_chantier').select('*'),
-          supabaseClient.from('pi_documents').select('*').eq('entity_type', 'client').eq('entity_id', client.id),
-          supabaseClient.from('pi_conversations').select('*')
-        ]);
-        const versements = versRes.data || [];
-        const programmes = programmesRes.data || [];
-        const lots = lotsRes.data || [];
-        const rapports = rapportsRes.data || [];
-        const docs = docsRes.data || [];
-        const conversations = convsRes.data || [];
-        const total = client.montant_total || 0;
-        const verse = versements.reduce((s,v) => s + (v.montant || 0), 0);
-        const reste = Math.max(0, total - verse);
-        const pct = total > 0 ? Math.round(verse / total * 100) : 0;
-        const prog = programmes.find(p => p.id === client.programme_id);
-        const lot = lots.find(l => l.id === client.lot_id);
-        const lastRapport = rapports.filter(r => r.visibilite !== 'interne').sort((a,b)=>new Date(b.date_debut)-new Date(a.date_debut))[0];
-
-        sousDashboard.innerHTML = `
-          <div class="dashboard-layout">
-            <div class="dashboard-sidebar">
-              <div class="dashboard-sidebar-item active" data-sous-tab="dashboard">📊 Tableau de bord</div>
-              <div class="dashboard-sidebar-item" data-sous-tab="echeances">📅 Échéancier</div>
-              <div class="dashboard-sidebar-item" data-sous-tab="versements">💳 Versements</div>
-              <div class="dashboard-sidebar-item" data-sous-tab="documents">📁 Documents</div>
-              <div class="dashboard-sidebar-item" data-sous-tab="photos">📸 Chantier</div>
-              <div class="dashboard-sidebar-item" data-sous-tab="messagerie">💬 Messagerie</div>
-            </div>
-            <div class="dashboard-main" id="sousMainPanel"></div>
+      sousDashboard.innerHTML = `
+        <div class="dashboard-layout">
+          <div class="dashboard-sidebar">
+            <div class="dashboard-sidebar-item active" data-sous-tab="dashboard">📊 Tableau de bord</div>
+            <div class="dashboard-sidebar-item" data-sous-tab="echeances">📅 Échéancier</div>
+            <div class="dashboard-sidebar-item" data-sous-tab="versements">💳 Versements</div>
+            <div class="dashboard-sidebar-item" data-sous-tab="documents">📁 Documents</div>
+            <div class="dashboard-sidebar-item" data-sous-tab="photos">📸 Chantier</div>
+            <div class="dashboard-sidebar-item" data-sous-tab="messagerie">💬 Messagerie</div>
           </div>
-        `;
-
-        const renderSousTab = (tab) => {
-          const main = document.getElementById('sousMainPanel');
-          if (!main) return;
-          if (tab === 'dashboard') {
-            main.innerHTML = `<div class="grid-2" style="margin-bottom:20px;">
-              <div class="stat-card"><strong>Montant souscrit</strong><br><span>${formatFCFA(total)}</span></div>
-              <div class="stat-card"><strong>Déjà versé</strong><br><span>${formatFCFA(verse)}</span></div>
-              <div class="stat-card"><strong>Reste à payer</strong><br><span>${formatFCFA(reste)}</span></div>
-              <div class="stat-card"><strong>Avancement</strong><br><span>${pct}%</span></div>
-            </div><div class="stat-card">Dossier: ${escapeHtml(client.dossier)}<br>Programme: ${escapeHtml(prog?.nom || '—')} Lot ${escapeHtml(lot?.numero || '—')}<br>${lastRapport ? `Avancement travaux: ${lastRapport.avancement}%` : ''}</div>`;
-          } else if (tab === 'echeances') {
-            const duree = client.duree || 60;
-            const mensualite = duree > 0 ? Math.ceil((total - (client.apport || 0)) / duree) : 0;
-            const debut = client.date_debut ? new Date(client.date_debut) : new Date();
-            const verseMap = {};
-            versements.forEach(v => { const m = v.date.slice(0,7); verseMap[m] = (verseMap[m] || 0) + (v.montant || 0); });
-            let rows = '', cumulVerse = 0, cumulDu = 0;
-            for (let i = 0; i < duree; i++) {
-              const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
-              const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-              cumulDu += mensualite;
-              cumulVerse += verseMap[moisKey] || 0;
-              const statut = cumulVerse >= cumulDu ? 'À jour' : (cumulVerse > 0 ? 'Partiel' : (d <= new Date() ? 'Retard' : 'À venir'));
-              const badge = statut === 'À jour' ? 'badge-success' : (statut === 'Partiel' ? 'badge-warning' : (statut === 'Retard' ? 'badge-danger' : 'badge-info'));
-              rows += `<tr><td>${i+1}</td><td>${d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}</td><td class="text-right">${formatFCFA(mensualite)}</td><td class="text-right">${formatFCFA(cumulDu)}</td><td class="text-right">${formatFCFA(cumulVerse)}</td><td><span class="badge ${badge}">${statut}</span></td></tr>`;
-            }
-            main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>#</th><th>Mois</th><th>Mensualité</th><th>Cumul dû</th><th>Cumul versé</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
-          } else if (tab === 'versements') {
-            const rows = versements.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
-            main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Montant</th><th>Mode</th><th>Référence</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Aucun versement</td></tr>'}</tbody></table></div></div>`;
-          } else if (tab === 'documents') {
-            const docsHtml = docs.map(d => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;"><span>${escapeHtml(d.name)}</span><a href="${d.blob}" download class="badge">Télécharger</a></div>`).join('');
-            main.innerHTML = `<div class="stat-card">${docsHtml || '<p>Aucun document.</p>'}</div>`;
-          } else if (tab === 'photos') {
-            const photos = [];
-            rapports.forEach(r => { if (r.photos && r.photos.length && r.visibilite !== 'interne') r.photos.forEach(p => { if (p.visible !== false) photos.push(p.data); }); });
-            const photosHtml = photos.slice(0,6).map(src => `<div style="width:100px; height:100px; overflow:hidden; border-radius:12px;"><img src="${src}" style="width:100%; height:100%; object-fit:cover;" onclick="window.open('${src}')"></div>`).join('');
-            main.innerHTML = `<div class="stat-card"><div style="display:flex; gap:12px; flex-wrap:wrap;">${photosHtml || '<p>Aucune photo</p>'}</div></div>`;
-          } else if (tab === 'messagerie') {
-            // Récupération du commercial
-            let commercialId = client.commercial_id;
-            if (!commercialId) {
-              const { data: empData } = await supabaseClient.from('pi_employes').select('id').eq('role', 'commercial').limit(1);
-              commercialId = empData?.[0]?.id;
-            }
-            if (!commercialId) { main.innerHTML = '<div class="stat-card">Aucun commercial assigné.</div>'; return; }
-            const clientConvId = `client_${client.id}`;
-            let conv = conversations.find(c => c.type === 'direct' && c.participants && c.participants.includes(clientConvId) && c.participants.includes(commercialId));
-            if (!conv) {
-              const { data: newConv } = await supabaseClient.from('pi_conversations').insert({ type: 'direct', participants: [clientConvId, commercialId], date_creation: new Date().toISOString() }).select().single();
-              if (newConv) conv = newConv;
-            }
-            if (conv) {
-              const { data: messages } = await supabaseClient.from('pi_messages').select('*').eq('conversation_id', conv.id).order('date', { ascending: true });
-              const msgsHtml = (messages || []).map(m => `<div class="msg-bubble ${m.expediteur_id === clientConvId ? 'mine' : ''}"><div>${escapeHtml(m.contenu)}</div><div class="text-xs opacity-70">${new Date(m.date).toLocaleTimeString()}</div></div>`).join('');
-              main.innerHTML = `
-                <div class="msg-container">
-                  <div class="msg-messages" id="msgList">${msgsHtml || 'Aucun message'}</div>
-                  <div class="msg-composer"><textarea id="msgInput" rows="1" placeholder="Votre message..."></textarea><button id="sendMsgBtn" class="badge">Envoyer</button></div>
-                </div>`;
-              const send = async () => {
-                const text = document.getElementById('msgInput').value.trim();
-                if (!text) return;
-                await supabaseClient.from('pi_messages').insert({ conversation_id: conv.id, expediteur_id: clientConvId, expediteur_nom: `${client.nom} ${client.prenoms || ''}`, contenu: text, date: new Date().toISOString(), lu: false });
-                document.getElementById('msgInput').value = '';
-                const { data: newMsgs } = await supabaseClient.from('pi_messages').select('*').eq('conversation_id', conv.id).order('date', { ascending: true });
-                document.getElementById('msgList').innerHTML = newMsgs.map(m => `<div class="msg-bubble ${m.expediteur_id === clientConvId ? 'mine' : ''}"><div>${escapeHtml(m.contenu)}</div><div class="text-xs opacity-70">${new Date(m.date).toLocaleTimeString()}</div></div>`).join('');
-              };
-              document.getElementById('sendMsgBtn').onclick = send;
-            } else { main.innerHTML = '<div class="stat-card">Erreur messagerie</div>'; }
+          <div class="dashboard-main" id="sousMainPanel"></div>
+        </div>
+      `;
+      const renderSousTab = (tab) => {
+        const main = document.getElementById('sousMainPanel');
+        if (!main) return;
+        if (tab === 'dashboard') {
+          main.innerHTML = `<div class="grid-2" style="margin-bottom:20px;">
+            <div class="stat-card"><strong>Montant souscrit</strong><br>${formatFCFA(total)}</div>
+            <div class="stat-card"><strong>Déjà versé</strong><br>${formatFCFA(verse)}</div>
+            <div class="stat-card"><strong>Reste à payer</strong><br>${formatFCFA(reste)}</div>
+            <div class="stat-card"><strong>Avancement</strong><br>${pct}%</div>
+          </div><div class="stat-card">Dossier: ${escapeHtml(client.dossier)}<br>Programme: ${escapeHtml(prog?.nom || '—')} Lot ${escapeHtml(lot?.numero || '—')}<br>${lastRapport ? `Avancement travaux: ${lastRapport.avancement}%` : ''}</div>`;
+        } else if (tab === 'echeances') {
+          const duree = client.duree || 60;
+          const mensualite = duree > 0 ? Math.ceil((total - (client.apport || 0)) / duree) : 0;
+          const debut = client.date_debut ? new Date(client.date_debut) : new Date();
+          const verseMap = {};
+          versements.forEach(v => { const m = v.date.slice(0,7); verseMap[m] = (verseMap[m] || 0) + (v.montant || 0); });
+          let rows = '', cumulVerse = 0, cumulDu = 0;
+          for (let i = 0; i < duree; i++) {
+            const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
+            const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+            cumulDu += mensualite;
+            cumulVerse += verseMap[moisKey] || 0;
+            const statut = cumulVerse >= cumulDu ? 'À jour' : (cumulVerse > 0 ? 'Partiel' : (d <= new Date() ? 'Retard' : 'À venir'));
+            const badge = statut === 'À jour' ? 'badge-success' : (statut === 'Partiel' ? 'badge-warning' : (statut === 'Retard' ? 'badge-danger' : 'badge-info'));
+            rows += `<tr><td>${i+1}</td><td>${d.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}</td><td class="text-right">${formatFCFA(mensualite)}</td><td class="text-right">${formatFCFA(cumulDu)}</td><td class="text-right">${formatFCFA(cumulVerse)}</td><td><span class="badge ${badge}">${statut}</span></td></tr>`;
           }
-        };
-
-        document.querySelectorAll('[data-sous-tab]').forEach(el => {
-          el.onclick = () => {
-            document.querySelectorAll('[data-sous-tab]').forEach(e => e.classList.remove('active'));
-            el.classList.add('active');
-            renderSousTab(el.getAttribute('data-sous-tab'));
-          };
-        });
-        renderSousTab('dashboard');
-      } catch (err) {
-        console.error("Erreur chargement dashboard souscripteur", err);
-        sousDashboard.innerHTML = '<div class="stat-card">Erreur technique. Veuillez réessayer.</div>';
-      }
-    }
-
-    if (sousLoginBtn) {
-      sousLoginBtn.onclick = async () => {
-        const identifier = document.getElementById('sousLogin').value.trim();
-        const code = document.getElementById('sousCode').value.trim();
-        if (!identifier || !code) {
-          sousError.style.display = 'block';
-          sousError.innerText = 'Veuillez remplir tous les champs.';
-          return;
-        }
-        try {
-          const { data, error } = await supabaseClient.from('pi_clients').select('*').or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
-          if (error || !data || data.length === 0) {
-            sousError.style.display = 'block';
-            sousError.innerText = 'Compte souscripteur introuvable.';
-            return;
+          main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>#</th><th>Mois</th><th>Mensualité</th><th>Cumul dû</th><th>Cumul versé</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+        } else if (tab === 'versements') {
+          const rows = versements.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(v => `<tr><td>${formatDate(v.date)}</td><td class="text-right">${formatFCFA(v.montant)}</td><td>${escapeHtml(v.mode || '—')}</td><td>${escapeHtml(v.ref || '—')}</td></tr>`).join('');
+          main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Montant</th><th>Mode</th><th>Référence</th></tr></thead><tbody>${rows || '<tr><td colspan="4">Aucun versement</td></tr>'}</tbody></table></div></div>`;
+        } else if (tab === 'documents') {
+          const docsHtml = docs.map(d => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;"><span>${escapeHtml(d.name)}</span><a href="${d.blob}" download class="badge">Télécharger</a></div>`).join('');
+          main.innerHTML = `<div class="stat-card">${docsHtml || '<p>Aucun document.</p>'}</div>`;
+        } else if (tab === 'photos') {
+          const photos = [];
+          rapports.forEach(r => { if (r.photos && r.photos.length && r.visibilite !== 'interne') r.photos.forEach(p => { if (p.visible !== false) photos.push(p.data); }); });
+          const photosHtml = photos.slice(0,6).map(src => `<div style="width:100px; height:100px; overflow:hidden; border-radius:12px;"><img src="${src}" style="width:100%; height:100%; object-fit:cover;" onclick="window.open('${src}')"></div>`).join('');
+          main.innerHTML = `<div class="stat-card"><div style="display:flex; gap:12px; flex-wrap:wrap;">${photosHtml || '<p>Aucune photo</p>'}</div></div>`;
+        } else if (tab === 'messagerie') {
+          let commercialId = client.commercial_id;
+          if (!commercialId) {
+            const { data: empData } = await supabaseClient.from('pi_employes').select('id').eq('role', 'commercial').limit(1);
+            commercialId = empData?.[0]?.id;
           }
-          let client = null;
-          for (const c of data) if (await verifyCode(c, code)) { client = c; break; }
-          if (!client) {
-            sousError.style.display = 'block';
-            sousError.innerText = 'Code d\'accès incorrect.';
-            return;
+          if (!commercialId) { main.innerHTML = '<div class="stat-card">Aucun commercial assigné.</div>'; return; }
+          const clientConvId = `client_${client.id}`;
+          let conv = conversations.find(c => c.type === 'direct' && c.participants && c.participants.includes(clientConvId) && c.participants.includes(commercialId));
+          if (!conv) {
+            const { data: newConv } = await supabaseClient.from('pi_conversations').insert({ type: 'direct', participants: [clientConvId, commercialId], date_creation: new Date().toISOString() }).select().single();
+            if (newConv) conv = newConv;
           }
-          currentSouscripteur = client;
-          sousLoginArea.style.display = 'none';
-          sousDashboard.style.display = 'block';
-          await loadSouscripteurDashboard(client);
-        } catch (err) {
-          console.error(err);
-          sousError.style.display = 'block';
-          sousError.innerText = 'Erreur de connexion. Vérifiez votre réseau.';
+          if (conv) {
+            const { data: messages } = await supabaseClient.from('pi_messages').select('*').eq('conversation_id', conv.id).order('date', { ascending: true });
+            const msgsHtml = (messages || []).map(m => `<div class="msg-bubble ${m.expediteur_id === clientConvId ? 'mine' : ''}"><div>${escapeHtml(m.contenu)}</div><div class="text-xs opacity-70">${new Date(m.date).toLocaleTimeString()}</div></div>`).join('');
+            main.innerHTML = `
+              <div class="msg-container">
+                <div class="msg-messages" id="msgList">${msgsHtml || 'Aucun message'}</div>
+                <div class="msg-composer"><textarea id="msgInput" rows="1" placeholder="Votre message..."></textarea><button id="sendMsgBtn" class="badge">Envoyer</button></div>
+              </div>`;
+            const send = async () => {
+              const text = document.getElementById('msgInput').value.trim();
+              if (!text) return;
+              await supabaseClient.from('pi_messages').insert({ conversation_id: conv.id, expediteur_id: clientConvId, expediteur_nom: `${client.nom} ${client.prenoms || ''}`, contenu: text, date: new Date().toISOString(), lu: false });
+              document.getElementById('msgInput').value = '';
+              const { data: newMsgs } = await supabaseClient.from('pi_messages').select('*').eq('conversation_id', conv.id).order('date', { ascending: true });
+              document.getElementById('msgList').innerHTML = newMsgs.map(m => `<div class="msg-bubble ${m.expediteur_id === clientConvId ? 'mine' : ''}"><div>${escapeHtml(m.contenu)}</div><div class="text-xs opacity-70">${new Date(m.date).toLocaleTimeString()}</div></div>`).join('');
+            };
+            document.getElementById('sendMsgBtn').onclick = send;
+          } else { main.innerHTML = '<div class="stat-card">Erreur messagerie</div>'; }
         }
       };
-    }
-
-    // ---------- APPORTEUR ----------
-    let currentApporteur = null;
-    const appLoginArea = document.getElementById('apporteur-login-area');
-    const appDashboard = document.getElementById('apporteur-dashboard');
-    const appLoginBtn = document.getElementById('appLoginBtn');
-    const appError = document.getElementById('appError');
-
-    async function loadApporteurDashboard(apporteur) {
-      try {
-        const [clientsRes, commissionsRes, docsRes] = await Promise.all([
-          supabaseClient.from('pi_clients').select('*').eq('apporteur_id', apporteur.id),
-          supabaseClient.from('pi_commissions').select('*').eq('type_beneficiaire', 'apporteur').eq('beneficiaire_id', apporteur.id),
-          supabaseClient.from('pi_documents').select('*').eq('entity_type', 'apporteur').eq('entity_id', apporteur.id)
-        ]);
-        const clients = clientsRes.data || [];
-        const commissions = commissionsRes.data || [];
-        const docs = docsRes.data || [];
-        const totalCA = clients.reduce((s,c) => s + (c.montant_total || 0), 0);
-        const dues = commissions.filter(c => c.statut === 'a_payer').reduce((s,c) => s + (c.montant_comm || 0), 0);
-        const payees = commissions.filter(c => c.statut === 'payee').reduce((s,c) => s + (c.montant_comm || 0), 0);
-        appDashboard.innerHTML = `
-          <div class="dashboard-layout">
-            <div class="dashboard-sidebar">
-              <div class="dashboard-sidebar-item active" data-app-tab="dashboard">📊 Tableau de bord</div>
-              <div class="dashboard-sidebar-item" data-app-tab="clients">👥 Clients apportés</div>
-              <div class="dashboard-sidebar-item" data-app-tab="commissions">💰 Commissions</div>
-              <div class="dashboard-sidebar-item" data-app-tab="documents">📁 Documents</div>
-            </div>
-            <div class="dashboard-main" id="appMainPanel"></div>
-          </div>
-        `;
-        const renderAppTab = (tab) => {
-          const main = document.getElementById('appMainPanel');
-          if (!main) return;
-          if (tab === 'dashboard') {
-            main.innerHTML = `<div class="grid-2"><div class="stat-card"><strong>Clients apportés</strong><br>${clients.length}</div><div class="stat-card"><strong>CA généré</strong><br>${formatFCFA(totalCA)}</div><div class="stat-card"><strong>Commissions dues</strong><br>${formatFCFA(dues)}</div><div class="stat-card"><strong>Commissions payées</strong><br>${formatFCFA(payees)}</div></div><div class="stat-card">${escapeHtml(apporteur.nom)} ${escapeHtml(apporteur.prenoms || '')}<br>Email: ${escapeHtml(apporteur.email || '—')}</div>`;
-          } else if (tab === 'clients') {
-            const rows = clients.map(c => `<tr><td>${escapeHtml(c.nom)} ${escapeHtml(c.prenoms || '')}</td><td>${escapeHtml(c.dossier || '—')}</td><td class="text-right">${formatFCFA(c.montant_total || 0)}</td></tr>`).join('');
-            main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Client</th><th>Dossier</th><th>Montant souscrit</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Aucun client</td></tr>'}</tbody></table></div></div>`;
-          } else if (tab === 'commissions') {
-            const rows = commissions.sort((a,b)=>new Date(b.date_versement)-new Date(a.date_versement)).map(c => {
-              const clientNom = clients.find(cl=>cl.id===c.client_id)?.nom || '—';
-              return `<tr><td>${formatDate(c.date_versement)}</td><td>${escapeHtml(clientNom)}</td><td class="text-right">${formatFCFA(c.montant_base)}</td><td>${c.taux}%</td><td class="text-right">${formatFCFA(c.montant_comm)}</td><td><span class="badge ${c.statut === 'payee' ? 'badge-success' : 'badge-warning'}">${c.statut === 'payee' ? 'Payée' : 'À payer'}</span></td></tr>`;
-            }).join('');
-            main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Client</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Aucune commission</td></tr>'}</tbody></table></div></div>`;
-          } else if (tab === 'documents') {
-            const docsHtml = docs.map(d => `<div style="display:flex; justify-content:space-between; padding:8px 0;"><span>${escapeHtml(d.name)}</span><a href="${d.blob}" download class="badge">Télécharger</a></div>`).join('');
-            main.innerHTML = `<div class="stat-card">${docsHtml || '<p>Aucun document.</p>'}</div>`;
-          }
+      document.querySelectorAll('[data-sous-tab]').forEach(el => {
+        el.onclick = () => {
+          document.querySelectorAll('[data-sous-tab]').forEach(e => e.classList.remove('active'));
+          el.classList.add('active');
+          renderSousTab(el.getAttribute('data-sous-tab'));
         };
-        document.querySelectorAll('[data-app-tab]').forEach(el => {
-          el.onclick = () => {
-            document.querySelectorAll('[data-app-tab]').forEach(e => e.classList.remove('active'));
-            el.classList.add('active');
-            renderAppTab(el.getAttribute('data-app-tab'));
-          };
-        });
-        renderAppTab('dashboard');
-      } catch (err) {
-        console.error(err);
-        appDashboard.innerHTML = '<div class="stat-card">Erreur technique</div>';
-      }
-    }
+      });
+      renderSousTab('dashboard');
+    } catch(err) { console.error(err); sousDashboard.innerHTML = '<div class="stat-card">Erreur technique</div>'; }
+  }
 
-    if (appLoginBtn) {
-      appLoginBtn.onclick = async () => {
-        const identifier = document.getElementById('appLogin').value.trim();
-        const code = document.getElementById('appCode').value.trim();
-        if (!identifier || !code) {
-          appError.style.display = 'block';
-          appError.innerText = 'Veuillez remplir tous les champs.';
-          return;
-        }
-        try {
-          const { data, error } = await supabaseClient.from('pi_apporteurs').select('*').or(`email.eq.${identifier},tel.eq.${identifier}`);
-          if (error || !data || data.length === 0) {
-            appError.style.display = 'block';
-            appError.innerText = 'Compte apporteur introuvable.';
-            return;
-          }
-          let apporteur = null;
-          for (const a of data) if (await verifyCode(a, code)) { apporteur = a; break; }
-          if (!apporteur) {
-            appError.style.display = 'block';
-            appError.innerText = 'Code d\'accès incorrect.';
-            return;
-          }
-          currentApporteur = apporteur;
-          appLoginArea.style.display = 'none';
-          appDashboard.style.display = 'block';
-          await loadApporteurDashboard(apporteur);
-        } catch (err) {
-          console.error(err);
-          appError.style.display = 'block';
-          appError.innerText = 'Erreur de connexion.';
+  if (sousLoginBtn) {
+    sousLoginBtn.onclick = async () => {
+      if (!supabaseClient) { sousError.style.display = 'block'; sousError.innerText = 'Connexion impossible, service indisponible.'; return; }
+      const identifier = document.getElementById('sousLogin').value.trim();
+      const code = document.getElementById('sousCode').value.trim();
+      if (!identifier || !code) { sousError.style.display = 'block'; sousError.innerText = 'Veuillez remplir tous les champs.'; return; }
+      try {
+        const { data, error } = await supabaseClient.from('pi_clients').select('*').or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
+        if (error || !data || data.length === 0) throw new Error('Compte introuvable');
+        let client = null;
+        for (const c of data) if (await verifyCode(c, code)) { client = c; break; }
+        if (!client) throw new Error('Code incorrect');
+        currentSouscripteur = client;
+        sousLoginArea.style.display = 'none';
+        sousDashboard.style.display = 'block';
+        await loadSouscripteurDashboard(client);
+      } catch(err) { sousError.style.display = 'block'; sousError.innerText = err.message; }
+    };
+  }
+
+  // ==================== 4. ESPACE APPORTEUR ====================
+  let currentApporteur = null;
+  const appLoginArea = document.getElementById('apporteur-login-area');
+  const appDashboard = document.getElementById('apporteur-dashboard');
+  const appLoginBtn = document.getElementById('appLoginBtn');
+  const appError = document.getElementById('appError');
+
+  async function loadApporteurDashboard(apporteur) {
+    if (!supabaseClient) { appDashboard.innerHTML = '<div class="stat-card">Service indisponible</div>'; return; }
+    try {
+      const [clientsRes, commissionsRes, docsRes] = await Promise.all([
+        supabaseClient.from('pi_clients').select('*').eq('apporteur_id', apporteur.id),
+        supabaseClient.from('pi_commissions').select('*').eq('type_beneficiaire', 'apporteur').eq('beneficiaire_id', apporteur.id),
+        supabaseClient.from('pi_documents').select('*').eq('entity_type', 'apporteur').eq('entity_id', apporteur.id)
+      ]);
+      const clients = clientsRes.data || [];
+      const commissions = commissionsRes.data || [];
+      const docs = docsRes.data || [];
+      const totalCA = clients.reduce((s,c) => s + (c.montant_total || 0), 0);
+      const dues = commissions.filter(c => c.statut === 'a_payer').reduce((s,c) => s + (c.montant_comm || 0), 0);
+      const payees = commissions.filter(c => c.statut === 'payee').reduce((s,c) => s + (c.montant_comm || 0), 0);
+      appDashboard.innerHTML = `
+        <div class="dashboard-layout">
+          <div class="dashboard-sidebar">
+            <div class="dashboard-sidebar-item active" data-app-tab="dashboard">📊 Tableau de bord</div>
+            <div class="dashboard-sidebar-item" data-app-tab="clients">👥 Clients apportés</div>
+            <div class="dashboard-sidebar-item" data-app-tab="commissions">💰 Commissions</div>
+            <div class="dashboard-sidebar-item" data-app-tab="documents">📁 Documents</div>
+          </div>
+          <div class="dashboard-main" id="appMainPanel"></div>
+        </div>
+      `;
+      const renderAppTab = (tab) => {
+        const main = document.getElementById('appMainPanel');
+        if (!main) return;
+        if (tab === 'dashboard') {
+          main.innerHTML = `<div class="grid-2"><div class="stat-card"><strong>Clients apportés</strong><br>${clients.length}</div><div class="stat-card"><strong>CA généré</strong><br>${formatFCFA(totalCA)}</div><div class="stat-card"><strong>Commissions dues</strong><br>${formatFCFA(dues)}</div><div class="stat-card"><strong>Commissions payées</strong><br>${formatFCFA(payees)}</div></div><div class="stat-card">${escapeHtml(apporteur.nom)} ${escapeHtml(apporteur.prenoms || '')}<br>Email: ${escapeHtml(apporteur.email || '—')}</div>`;
+        } else if (tab === 'clients') {
+          const rows = clients.map(c => `<tr><td>${escapeHtml(c.nom)} ${escapeHtml(c.prenoms || '')}</td><td>${escapeHtml(c.dossier || '—')}</td><td class="text-right">${formatFCFA(c.montant_total || 0)}</td></tr>`).join('');
+          main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Client</th><th>Dossier</th><th>Montant souscrit</th></tr></thead><tbody>${rows || '<tr><td colspan="3">Aucun client</td></tr>'}</tbody></table></div></div>`;
+        } else if (tab === 'commissions') {
+          const rows = commissions.sort((a,b)=>new Date(b.date_versement)-new Date(a.date_versement)).map(c => {
+            const clientNom = clients.find(cl=>cl.id===c.client_id)?.nom || '—';
+            return `<tr><td>${formatDate(c.date_versement)}</td><td>${escapeHtml(clientNom)}</td><td class="text-right">${formatFCFA(c.montant_base)}</td><td>${c.taux}%</td><td class="text-right">${formatFCFA(c.montant_comm)}</td><td><span class="badge ${c.statut === 'payee' ? 'badge-success' : 'badge-warning'}">${c.statut === 'payee' ? 'Payée' : 'À payer'}</span></td></tr>`;
+          }).join('');
+          main.innerHTML = `<div class="stat-card"><div class="table-wrapper"><table><thead><tr><th>Date</th><th>Client</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>${rows || '<tr><td colspan="6">Aucune commission</td></tr>'}</tbody></table></div></div>`;
+        } else if (tab === 'documents') {
+          const docsHtml = docs.map(d => `<div style="display:flex; justify-content:space-between; padding:8px 0;"><span>${escapeHtml(d.name)}</span><a href="${d.blob}" download class="badge">Télécharger</a></div>`).join('');
+          main.innerHTML = `<div class="stat-card">${docsHtml || '<p>Aucun document.</p>'}</div>`;
         }
       };
-    }
+      document.querySelectorAll('[data-app-tab]').forEach(el => {
+        el.onclick = () => {
+          document.querySelectorAll('[data-app-tab]').forEach(e => e.classList.remove('active'));
+          el.classList.add('active');
+          renderAppTab(el.getAttribute('data-app-tab'));
+        };
+      });
+      renderAppTab('dashboard');
+    } catch(err) { console.error(err); appDashboard.innerHTML = '<div class="stat-card">Erreur chargement</div>'; }
+  }
 
-    // Événements secondaires (recherche, contact, recrutement)
-    const searchBtn = document.getElementById('searchMockBtn');
-    if (searchBtn) searchBtn.addEventListener('click', () => alert('Recherche Partner Immo CI (fonctionnalité à venir)'));
-    const fakeSubmit = document.getElementById('fakeSubmit');
-    if (fakeSubmit) fakeSubmit.addEventListener('click', () => alert('Message envoyé (simulation)'));
-    const careerBtn = document.getElementById('careerBtn');
-    if (careerBtn) careerBtn.addEventListener('click', () => alert('Postulez à recrutement@partnerimmo.ci'));
-  });
+  if (appLoginBtn) {
+    appLoginBtn.onclick = async () => {
+      if (!supabaseClient) { appError.style.display = 'block'; appError.innerText = 'Service indisponible.'; return; }
+      const identifier = document.getElementById('appLogin').value.trim();
+      const code = document.getElementById('appCode').value.trim();
+      if (!identifier || !code) { appError.style.display = 'block'; appError.innerText = 'Veuillez remplir tous les champs.'; return; }
+      try {
+        const { data, error } = await supabaseClient.from('pi_apporteurs').select('*').or(`email.eq.${identifier},tel.eq.${identifier}`);
+        if (error || !data || data.length === 0) throw new Error('Compte introuvable');
+        let apporteur = null;
+        for (const a of data) if (await verifyCode(a, code)) { apporteur = a; break; }
+        if (!apporteur) throw new Error('Code incorrect');
+        currentApporteur = apporteur;
+        appLoginArea.style.display = 'none';
+        appDashboard.style.display = 'block';
+        await loadApporteurDashboard(apporteur);
+      } catch(err) { appError.style.display = 'block'; appError.innerText = err.message; }
+    };
+  }
+
+  // ==================== 5. ÉVÉNEMENTS SECONDAIRES ====================
+  document.getElementById('searchMockBtn')?.addEventListener('click', () => alert('Recherche Partner Immo CI (fonctionnalité à venir)'));
+  document.getElementById('fakeSubmit')?.addEventListener('click', () => alert('Message envoyé (simulation)'));
+  document.getElementById('careerBtn')?.addEventListener('click', () => alert('Postulez à recrutement@partnerimmo.ci'));
 </script>
 </body>
 </html>
