@@ -274,7 +274,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      min-width: 400px;
+      min-width: 500px;
     }
     th, td {
       padding: 10px 8px;
@@ -663,7 +663,16 @@
         <div class="card">
           <div class="table-wrap">
             <table id="echeancier-table">
-              <thead><tr><th>#</th><th>Mois</th><th class="text-right">Mensualité (F)</th><th class="text-right">Versé (F)</th><th>Statut</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Mois</th>
+                  <th class="text-right">Mensualité (F)</th>
+                  <th class="text-right">Versé (F)</th>
+                  <th class="text-right">Cumul (F)</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
               <tbody id="echeancier-body"></tbody>
             </table>
           </div>
@@ -898,6 +907,7 @@
     document.getElementById('programme-avancement').innerHTML = avHtml;
   }
 
+  // Échéancier avec colonne Cumul
   function renderEcheancier() {
     if (!currentClient) return;
     const total = parseFloat(currentClient.montant_total) || 0;
@@ -909,11 +919,13 @@
     const verseMap = {};
     versements.forEach(v => { const moisKey = v.mois || (v.date ? v.date.slice(0,7) : null); if (moisKey) verseMap[moisKey] = (verseMap[moisKey] || 0) + (parseFloat(v.montant) || 0); });
     const today = new Date();
+    let cumul = 0;
     let rows = '';
     for (let i = 0; i < duree; i++) {
       const d = new Date(debut.getFullYear(), debut.getMonth() + i, 1);
       const moisKey = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
       const paye = verseMap[moisKey] || 0;
+      cumul += paye;
       const statut = paye >= mensualite ? 'payé' : (paye > 0 ? 'partiel' : (d <= today ? 'retard' : 'à venir'));
       let badgeClass = statut==='payé'?'badge-success':statut==='partiel'?'badge-warning':statut==='retard'?'badge-danger':'badge-info';
       const label = {payé:'Payé', partiel:'Partiel', retard:'En retard', 'à venir':'À venir'}[statut];
@@ -922,6 +934,7 @@
         <td>${d.toLocaleDateString('fr-FR', { month:'short', year:'numeric' })}</td>
         <td class="text-right">${formatFCFA(mensualite)}</td>
         <td class="text-right">${paye ? formatFCFA(paye) : '—'}</td>
+        <td class="text-right">${formatFCFA(cumul)}</td>
         <td style="text-align:center;"><span class="badge ${badgeClass}">${label}</span></td>
       </tr>`;
     }
@@ -932,7 +945,7 @@
     if (!currentClient) return;
     const vers = DATA.versements.filter(v => v.client_id === currentClient.id).sort((a,b) => (b.date||'').localeCompare(a.date||''));
     const tbody = document.getElementById('versements-body');
-    if (!vers.length) { tbody.innerHTML = '</table><td colspan="4">Aucun versement enregistré.?</div>'; return; }
+    if (!vers.length) { tbody.innerHTML = '<tr><td colspan="4">Aucun versement enregistré.?</div>'; return; }
     tbody.innerHTML = vers.map(v => `<tr>
       <td>${formatDate(v.date)}</td>
       <td class="text-right">${formatFCFA(v.montant)}</td>
@@ -960,7 +973,7 @@
       <td class="text-right">${formatFCFA(totalDu)}</td>
       <td>—</td>
       <td class="text-right">${formatFCFA(soldeCourant)}</td>
-    </tr>`);
+    </table>`);
     for (const v of versements) {
       const montant = parseFloat(v.montant) || 0;
       soldeCourant -= montant;
@@ -1247,7 +1260,6 @@
     document.querySelectorAll('.sidebar-item').forEach(item => {
       item.classList.toggle('active', item.dataset.tab === tabId);
     });
-    // Appeler les rendus spécifiques
     if (tabId === 'echeances') renderEcheancier();
     else if (tabId === 'versements') renderVersements();
     else if (tabId === 'releve') renderReleve();
@@ -1317,8 +1329,6 @@
     document.getElementById('export-releve-pdf').onclick = exportRelevePDF;
     setInterval(verifierEcheances, 24 * 60 * 60 * 1000);
     verifierEcheances();
-    // Initialisation de la messagerie lors du premier clic sur l'onglet
-    // (déjà gérée dans switchTab)
   }
 
   loginBtn.onclick = doLogin;
