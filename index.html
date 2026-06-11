@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>ImmoSuite ERP v1.0 — Logiciel de Gestion Immobilière</title>
+<title>ImmoSuite ERP v19 — Logiciel de Gestion Immobilière</title>
 <script>
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.16 · 2026-06-08';
+window.IMMOSUITE_VERSION = 'v19.0 · 2026-06-11';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -1737,6 +1737,179 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   .kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .modal-footer .btn { flex: 1 1 100%; }
   .page-title { font-size: 18px; }
+}
+
+/* ══════════════════════════════════════════════════════
+   MODULE JURIDIQUE v19 — DOCUMENTS & ANALYSE IA
+══════════════════════════════════════════════════════ */
+
+/* Zone d'upload drag-and-drop */
+.jur-upload-zone {
+  border: 2px dashed var(--bord2);
+  border-radius: var(--r2);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--card2);
+  position: relative;
+}
+.jur-upload-zone:hover,
+.jur-upload-zone.drag-over {
+  border-color: var(--or);
+  background: var(--or-glow);
+}
+.jur-upload-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.jur-upload-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+.jur-upload-label { font-size: 13px; color: var(--dim); }
+.jur-upload-label strong { color: var(--or); }
+
+/* Grille des documents uploadés */
+.jur-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.jur-doc-card {
+  background: var(--card);
+  border: 1px solid var(--bord);
+  border-radius: var(--r);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  transition: box-shadow 0.15s;
+}
+.jur-doc-card:hover { box-shadow: 0 4px 16px rgba(184,115,51,0.18); border-color: var(--or); }
+.jur-doc-icon { font-size: 36px; line-height: 1; }
+.jur-doc-name { font-size: 11px; color: var(--blanc); text-align: center; word-break: break-all; font-weight: 600; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.jur-doc-size { font-size: 10px; color: var(--dim); }
+.jur-doc-date { font-size: 10px; color: var(--dim); }
+.jur-doc-actions { display: flex; gap: 6px; margin-top: 4px; }
+.jur-doc-del {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--rouge); color: #fff;
+  border: none; border-radius: 50%; width: 20px; height: 20px;
+  font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.15s;
+}
+.jur-doc-card:hover .jur-doc-del { opacity: 1; }
+.jur-doc-preview {
+  cursor: pointer; font-size: 11px;
+  color: var(--bleu); text-decoration: underline;
+  background: none; border: none; padding: 0;
+}
+
+/* Badge document count */
+.jur-doc-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bleu); color: #fff;
+  border-radius: 10px; font-size: 10px; font-weight: 700;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  margin-left: 4px;
+}
+
+/* IA Analyse Panel */
+.jur-ia-panel {
+  background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%);
+  border: 1px solid rgba(139,82,224,0.35);
+  border-radius: var(--r2);
+  padding: 0;
+  overflow: hidden;
+}
+.jur-ia-header {
+  background: linear-gradient(90deg, rgba(139,82,224,0.3) 0%, rgba(74,148,224,0.2) 100%);
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid rgba(139,82,224,0.2);
+}
+.jur-ia-logo { font-size: 24px; }
+.jur-ia-title { font-size: 14px; font-weight: 700; color: #E2E8F0; }
+.jur-ia-sub { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+.jur-ia-body { padding: 18px; }
+.jur-ia-loading {
+  display: flex; align-items: center; gap: 12px;
+  color: #94A3B8; font-size: 13px; padding: 20px 0;
+}
+.jur-ia-spinner {
+  width: 24px; height: 24px;
+  border: 3px solid rgba(139,82,224,0.3);
+  border-top-color: #8A52E0;
+  border-radius: 50%;
+  animation: jur-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes jur-spin { to { transform: rotate(360deg); } }
+
+/* Résultat de l'analyse IA */
+.jur-ia-result { color: #CBD5E1; font-size: 13px; line-height: 1.65; }
+.jur-ia-section {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--r);
+  border-left: 3px solid;
+}
+.jur-ia-section.positif { background: rgba(74,196,122,0.08); border-color: #4AC47A; }
+.jur-ia-section.risque  { background: rgba(224,82,82,0.08);  border-color: #E05252; }
+.jur-ia-section.strategie { background: rgba(74,148,224,0.08); border-color: #4A94E0; }
+.jur-ia-section.action  { background: rgba(184,115,51,0.08); border-color: var(--or); }
+.jur-ia-section-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.jur-ia-section.positif  .jur-ia-section-title { color: #4AC47A; }
+.jur-ia-section.risque   .jur-ia-section-title { color: #E05252; }
+.jur-ia-section.strategie .jur-ia-section-title { color: #4A94E0; }
+.jur-ia-section.action   .jur-ia-section-title { color: var(--or); }
+.jur-ia-section ul { padding-left: 18px; margin: 0; }
+.jur-ia-section li { margin-bottom: 5px; }
+.jur-ia-score {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: rgba(139,82,224,0.12);
+  border-radius: var(--r);
+  margin-bottom: 14px;
+}
+.jur-ia-score-label { font-size: 12px; color: #94A3B8; }
+.jur-ia-score-bar {
+  flex: 1; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden;
+}
+.jur-ia-score-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #4AC47A, #4A94E0);
+  transition: width 0.8s ease;
+}
+.jur-ia-score-val { font-size: 16px; font-weight: 800; color: #E2E8F0; min-width: 36px; text-align: right; }
+.jur-ia-btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+/* Modal details dossier juridique */
+#modal-jur-details .modal { max-width: 820px; width: 96vw; }
+.jur-detail-header {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 18px; background: var(--card2);
+  border-bottom: 1px solid var(--bord); border-radius: var(--r2) var(--r2) 0 0;
+}
+.jur-detail-ref {
+  font-family: monospace; font-size: 18px; font-weight: 800;
+  color: var(--or); letter-spacing: 1px;
+}
+.jur-detail-objet { font-size: 14px; color: var(--blanc); margin-top: 3px; }
+.jur-detail-meta { font-size: 11px; color: var(--dim); margin-top: 5px; display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Progress bar upload */
+.jur-upload-progress {
+  height: 4px; background: var(--bord2); border-radius: 2px; margin-top: 8px; overflow: hidden;
+  display: none;
+}
+.jur-upload-progress-fill {
+  height: 100%; background: var(--or);
+  border-radius: 2px; transition: width 0.3s;
 }
 </style>
 <!-- EmailJS SDK -->
@@ -4391,7 +4564,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="card">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Référence</th><th>Type</th><th>Objet</th><th>Interlocuteur</th><th>Date ouverture</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Référence</th><th>Type</th><th>Objet</th><th>Interlocuteur</th><th>Date ouverture</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th>Docs</th><th>Actions</th></tr></thead>
                 <tbody id="tbody-dossiers-jur"></tbody>
               </table>
             </div>
@@ -8735,6 +8908,110 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   </div>
 </div>
 
+<!-- ══ MODAL DETAILS DOSSIER JURIDIQUE — Documents & IA ══ -->
+<div class="modal-overlay" id="modal-jur-details">
+  <div class="modal" style="max-width:840px;width:96vw;padding:0;overflow:hidden;">
+    <div class="modal-header" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+      <div style="flex:1;">
+        <div id="jur-det-ref" style="font-family:monospace;font-size:16px;font-weight:800;color:var(--or);"></div>
+        <div id="jur-det-objet" style="font-size:13px;color:var(--blanc);margin-top:2px;"></div>
+        <div id="jur-det-meta" style="font-size:11px;color:var(--dim);margin-top:4px;display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-jur-details')" style="flex-shrink:0;">✕</button>
+    </div>
+    <div style="padding:0 18px 4px;">
+      <div class="tab-nav" style="margin-bottom:0;">
+        <button class="tab-btn active" id="tab-btn-jur-det-docs" onclick="switchTab('jur-det','docs')">📎 Documents</button>
+        <button class="tab-btn" id="tab-btn-jur-det-ia" onclick="switchTab('jur-det','ia');lancerAnalyseIA()">🤖 Analyse IA</button>
+        <button class="tab-btn" id="tab-btn-jur-det-chronologie" onclick="switchTab('jur-det','chronologie')">📅 Chronologie</button>
+      </div>
+    </div>
+
+    <div class="tab-pane active" id="tab-jur-det-docs" style="padding:16px 18px;max-height:65vh;overflow-y:auto;">
+      <div class="jur-upload-zone" id="jur-upload-zone"
+           ondragover="jurDragOver(event)" ondragleave="jurDragLeave(event)" ondrop="jurDrop(event)">
+        <input type="file" id="jur-file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.txt,.zip"
+               onchange="jurHandleFiles(this.files)">
+        <span class="jur-upload-icon">📁</span>
+        <div class="jur-upload-label">
+          <strong>Cliquer pour uploader</strong> ou glisser-déposer<br>
+          <span style="font-size:11px;">PDF, Images (JPG/PNG), Word, Excel, ZIP — max 10 Mo/fichier</span>
+        </div>
+        <div class="jur-upload-progress" id="jur-upload-progress">
+          <div class="jur-upload-progress-fill" id="jur-upload-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div id="jur-docs-grid" class="jur-docs-grid"></div>
+      <div id="jur-docs-empty" style="text-align:center;padding:28px;color:var(--dim);font-size:13px;display:none;">
+        <div style="font-size:36px;margin-bottom:8px;">📂</div>
+        Aucun document attaché à ce dossier.<br>
+        <span style="font-size:11px;">Uploadez des pièces : contrats, jugements, photos, actes notariés...</span>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-jur-det-ia" style="padding:16px 18px;max-height:65vh;overflow-y:auto;">
+      <div class="jur-ia-panel">
+        <div class="jur-ia-header">
+          <span class="jur-ia-logo">🤖</span>
+          <div>
+            <div class="jur-ia-title">Analyse IA — Conseiller Juridique Intelligent</div>
+            <div class="jur-ia-sub">Droit OHADA · Côte d'Ivoire · Analyse des risques &amp; stratégies de succès</div>
+          </div>
+        </div>
+        <div class="jur-ia-body">
+          <div id="jur-ia-idle" style="text-align:center;padding:24px 0;color:#64748B;">
+            <div style="font-size:40px;margin-bottom:10px;">⚖️</div>
+            <div style="font-size:13px;">Cliquez sur <strong style="color:#8A52E0;">Lancer l'analyse</strong> pour obtenir<br>une analyse juridique complète et des stratégies de succès.</div>
+            <button class="btn btn-primary" style="margin-top:16px;background:linear-gradient(135deg,#7C3AED,#4A94E0);border:none;" onclick="lancerAnalyseIA(true)">
+              🤖 Lancer l'analyse IA
+            </button>
+          </div>
+          <div id="jur-ia-loading" class="jur-ia-loading" style="display:none;">
+            <div class="jur-ia-spinner"></div>
+            <span id="jur-ia-loading-msg">Analyse en cours par le conseiller IA...</span>
+          </div>
+          <div id="jur-ia-result" style="display:none;"></div>
+          <div id="jur-ia-error" style="display:none;color:#E05252;padding:12px;background:rgba(224,82,82,0.08);border-radius:8px;font-size:13px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-jur-det-chronologie" style="padding:16px 18px;max-height:65vh;overflow-y:auto;">
+      <div id="jur-chronologie-content"></div>
+    </div>
+
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-secondary btn-sm" onclick="imprimerFicheDossier()">🖨️ Imprimer fiche</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="openDossierJuridique(APP._jurDetId);closeModal('modal-jur-details')">✏️ Modifier dossier</button>
+        <button class="btn btn-secondary" onclick="closeModal('modal-jur-details')">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal visionneuse document juridique -->
+<div class="modal-overlay" id="modal-jur-viewer">
+  <div class="modal" style="max-width:92vw;width:92vw;height:92vh;display:flex;flex-direction:column;padding:0;">
+    <div class="modal-header" style="padding:12px 16px;flex-shrink:0;">
+      <h3 id="jur-viewer-title" style="font-size:14px;font-weight:600;max-width:80%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aperçu document</h3>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="jurDownloadDoc()">&#8659; Télécharger</button>
+        <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-jur-viewer')">✕</button>
+      </div>
+    </div>
+    <div style="flex:1;overflow:auto;background:#1a1a2e;display:flex;align-items:center;justify-content:center;">
+      <iframe id="jur-viewer-frame" style="width:100%;height:100%;border:none;display:none;"></iframe>
+      <img id="jur-viewer-img" style="max-width:100%;max-height:100%;object-fit:contain;display:none;" alt="Document">
+      <div id="jur-viewer-fallback" style="display:none;text-align:center;color:#94A3B8;padding:24px;">
+        <div style="font-size:48px;margin-bottom:12px;">📄</div>
+        <div style="font-size:14px;">Aperçu non disponible pour ce type de fichier.</div>
+        <button class="btn btn-primary" style="margin-top:14px;" onclick="jurDownloadDoc()">&#8659; Télécharger le fichier</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Constructeur -->
 <div class="modal-overlay" id="modal-constructeur">
   <div class="modal modal-lg">
@@ -10418,6 +10695,7 @@ var DATA = {
   parcelles: [],
   mutations: [],
   dossiersJuridiques: [],
+  docsJuridiques: [],
   constructeurs: [],
   conventions: [],
   situations: [],
@@ -10462,7 +10740,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 111; /* v111: store portail_messages (messagerie souscripteurs/apporteurs) — migration additive */
+var DB_VERSION = 112; /* v112: store docs_juridiques — upload documents par dossier juridique */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -10499,7 +10777,9 @@ var ALL_STORES = [
   /* v110 — Médias du portail (photos/documents publiables) */
   'portail_medias',
   /* v111 — Messagerie portail (souscripteurs/apporteurs) */
-  'portail_messages'
+  'portail_messages',
+  /* v112 — Documents joints aux dossiers juridiques */
+  'docs_juridiques'
 ];
 
 function initDB() {
@@ -10625,7 +10905,9 @@ async function loadAllData() {
   /* v110 */
   'portail_medias',
   /* v111 */
-  'portail_messages'
+  'portail_messages',
+  /* v112 — Documents juridiques */
+  'docs_juridiques'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -10636,6 +10918,8 @@ async function loadAllData() {
       DATA[store] = DATA[store] || [];
     }
   }
+  // Alias docs_juridiques → DATA.docsJuridiques
+  DATA.docsJuridiques = DATA['docs_juridiques'] || [];
   try {
     var prows = await dbGetAll('params');
     if (prows.length) DATA.params = Object.assign(DATA.params || {}, prows[0]);
@@ -10823,6 +11107,7 @@ var SUPA_STORE_MAP = [
   ['pi_parcelles', 'parcelles'],
   ['pi_mutations', 'mutations'],
   ['pi_dossiers_juridiques', 'dossiersJuridiques'],
+  ['pi_docs_juridiques',     'docs_juridiques'],
   ['pi_constructeurs', 'constructeurs'],
   ['pi_conventions', 'conventions'],
   ['pi_situations', 'situations'],
@@ -26180,11 +26465,13 @@ function renderDossiersJuridiques() {
     return (!q || (d.ref+' '+d.objet+' '+(d.interlocuteur||'')).toLowerCase().includes(q))
       && (!type || d.type===type) && (!prio || d.priorite===prio);
   }).sort(function(a,b){ var pr={urgente:0,haute:1,normale:2,basse:3}; return (pr[a.priorite]||2)-(pr[b.priorite]||2); });
-  if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucun dossier juridique</td></tr>'; return; }
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucun dossier juridique</td></tr>'; return; }
   var prioMap = { urgente:'badge-rouge', haute:'badge-or', normale:'badge-bleu', basse:'badge-vert' };
   var statMap = { ouvert:'badge-or', en_instruction:'badge-bleu', en_attente:'badge-violet', clos_favorable:'badge-vert', clos_defavorable:'badge-rouge' };
   tbody.innerHTML = list.map(function(d) {
     var echeance = d.date_ech ? (new Date(d.date_ech) < new Date() ? '<span style="color:var(--rouge);">⚠ ' + d.date_ech + '</span>' : d.date_ech) : '—';
+    var nbDocs = (DATA.docsJuridiques||[]).filter(function(doc){return doc.dossier_id===d.id;}).length;
+    var docsBadge = nbDocs > 0 ? '<span class="jur-doc-badge">'+nbDocs+'</span>' : '';
     return '<tr>'
       + '<td style="font-weight:700;color:var(--or);font-family:monospace;">' + d.ref + '</td>'
       + '<td style="font-size:11px;">' + d.type.replace(/_/g,' ') + '</td>'
@@ -26194,7 +26481,12 @@ function renderDossiersJuridiques() {
       + '<td style="font-size:11px;">' + echeance + '</td>'
       + '<td><span class="badge ' + (prioMap[d.priorite]||'badge-bleu') + '">' + d.priorite + '</span></td>'
       + '<td><span class="badge ' + (statMap[d.statut]||'badge-bleu') + '">' + d.statut.replace(/_/g,' ') + '</span></td>'
-      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="openDossierJuridique(\'' + d.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteDossierJur(\'' + d.id + '\')">🗑</button></td>'
+      + '<td style="text-align:center;"><button class="btn btn-secondary btn-sm" title="Documents & Analyse IA" onclick="openDossierDetails(\'' + d.id + '\')" style="font-size:11px;padding:3px 8px;">📎'+docsBadge+'</button></td>'
+      + '<td style="white-space:nowrap;">'
+        + '<button class="btn btn-secondary btn-sm btn-icon" title="Modifier" onclick="openDossierJuridique(\'' + d.id + '\')">✏️</button> '
+        + '<button class="btn btn-primary btn-sm" title="Analyse IA" onclick="openDossierDetails(\'' + d.id + '\',\'ia\')" style="padding:3px 8px;font-size:11px;background:linear-gradient(135deg,#7C3AED,#4A94E0);border:none;">🤖</button> '
+        + '<button class="btn btn-danger btn-sm btn-icon" title="Supprimer" onclick="deleteDossierJur(\'' + d.id + '\')">🗑</button>'
+      + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -26242,10 +26534,511 @@ async function saveDossierJuridique() {
 }
 
 async function deleteDossierJur(id) {
-  if (!confirm('Supprimer ce dossier ?')) return;
+  if (!confirm('Supprimer ce dossier et tous ses documents ?')) return;
   DATA.dossiersJuridiques=DATA.dossiersJuridiques.filter(function(d){return d.id!==id;});
-  await dbDelete('dossiersJuridiques', id); renderDossiersJuridiques();
+  await dbDelete('dossiersJuridiques', id);
+  // Supprimer les docs liés
+  var docsLies = (DATA.docsJuridiques||[]).filter(function(d){return d.dossier_id===id;});
+  for (var i=0;i<docsLies.length;i++) {
+    await dbDelete('docs_juridiques', docsLies[i].id);
+  }
+  DATA.docsJuridiques = (DATA.docsJuridiques||[]).filter(function(d){return d.dossier_id!==id;});
+  renderDossiersJuridiques();
   toast('Dossier supprimé.', 'info');
+}
+
+/* ══════════════════════════════════════════════════════
+   MODAL DÉTAIL DOSSIER — DOCUMENTS
+══════════════════════════════════════════════════════ */
+
+APP._jurDetId = null;
+APP._jurViewerDoc = null;
+APP._jurIADone = false;
+
+function openDossierDetails(id, tab) {
+  var d = DATA.dossiersJuridiques.find(function(x){return x.id===id;});
+  if (!d) return;
+  APP._jurDetId = id;
+  APP._jurIADone = false;
+
+  // Remplir l'en-tête
+  document.getElementById('jur-det-ref').textContent = d.ref;
+  document.getElementById('jur-det-objet').textContent = d.objet;
+  var prioColors = {urgente:'#E05252',haute:'#F59E0B',normale:'#4A94E0',basse:'#4AC47A'};
+  var statLabels = {ouvert:'Ouvert',en_instruction:'En instruction',en_attente:'En attente',clos_favorable:'✅ Favorable',clos_defavorable:'❌ Défavorable'};
+  document.getElementById('jur-det-meta').innerHTML =
+    '<span>📂 ' + d.type.replace(/_/g,' ') + '</span>'
+    + (d.interlocuteur ? '<span>👤 '+d.interlocuteur+'</span>' : '')
+    + (d.avocat ? '<span>⚖️ '+d.avocat+'</span>' : '')
+    + (d.date_ech ? '<span>📅 Échéance : '+d.date_ech+'</span>' : '')
+    + '<span style="color:'+(prioColors[d.priorite]||'#4A94E0')+';">● '+d.priorite+'</span>'
+    + '<span style="color:var(--dim);">'+( statLabels[d.statut]||d.statut)+'</span>'
+    + (d.montant>0 ? '<span>💰 '+new Intl.NumberFormat('fr-CI').format(d.montant)+' FCFA</span>' : '');
+
+  // Activer le bon onglet
+  ['docs','ia','chronologie'].forEach(function(t){
+    var pane = document.getElementById('tab-jur-det-'+t);
+    var btn = document.getElementById('tab-btn-jur-det-'+t);
+    if(pane) pane.classList.toggle('active', t===(tab||'docs'));
+    if(btn) btn.classList.toggle('active', t===(tab||'docs'));
+  });
+
+  // Charger les docs
+  renderJurDocs(id);
+
+  // Chronologie
+  renderJurChronologie(id);
+
+  // IA : reset si on n'ouvre pas directement l'onglet ia
+  if (tab !== 'ia') {
+    document.getElementById('jur-ia-idle').style.display='block';
+    document.getElementById('jur-ia-loading').style.display='none';
+    document.getElementById('jur-ia-result').style.display='none';
+    document.getElementById('jur-ia-error').style.display='none';
+  }
+
+  document.getElementById('modal-jur-details').classList.add('open');
+
+  if (tab === 'ia') { setTimeout(function(){ lancerAnalyseIA(true); }, 300); }
+}
+
+function renderJurDocs(dossierId) {
+  var docs = (DATA.docsJuridiques||[]).filter(function(d){return d.dossier_id===dossierId;});
+  var grid = document.getElementById('jur-docs-grid');
+  var empty = document.getElementById('jur-docs-empty');
+  if (!grid) return;
+  if (!docs.length) {
+    grid.innerHTML = '';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  grid.innerHTML = docs.map(function(doc) {
+    var ico = jurDocIcon(doc.type, doc.name);
+    return '<div class="jur-doc-card" id="doc-card-'+doc.id+'">'
+      + '<button class="jur-doc-del" onclick="deleteJurDoc(\''+doc.id+'\',\''+dossierId+'\')" title="Supprimer">✕</button>'
+      + '<div class="jur-doc-icon">'+ico+'</div>'
+      + '<div class="jur-doc-name" title="'+escHtml(doc.name)+'">'+escHtml(doc.name)+'</div>'
+      + '<div class="jur-doc-size">'+jurFormatSize(doc.size)+'</div>'
+      + '<div class="jur-doc-date">'+doc.date+'</div>'
+      + '<div class="jur-doc-actions">'
+        + '<button class="jur-doc-preview" onclick="jurViewDoc(\''+doc.id+'\')">👁 Voir</button>'
+        + '<button class="jur-doc-preview" onclick="jurDownloadDocById(\''+doc.id+'\')">⬇ DL</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function jurDocIcon(mimeType, fileName) {
+  var ext = (fileName||'').split('.').pop().toLowerCase();
+  if (mimeType && mimeType.startsWith('image/')) return '🖼️';
+  if (mimeType === 'application/pdf' || ext === 'pdf') return '📕';
+  if (ext === 'doc' || ext === 'docx') return '📝';
+  if (ext === 'xls' || ext === 'xlsx') return '📊';
+  if (ext === 'zip' || ext === 'rar') return '🗜️';
+  if (ext === 'txt') return '📄';
+  return '📎';
+}
+
+function jurFormatSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' o';
+  if (bytes < 1024*1024) return Math.round(bytes/1024) + ' Ko';
+  return (bytes/(1024*1024)).toFixed(1) + ' Mo';
+}
+
+/* Upload handlers */
+function jurDragOver(e) { e.preventDefault(); document.getElementById('jur-upload-zone').classList.add('drag-over'); }
+function jurDragLeave(e) { document.getElementById('jur-upload-zone').classList.remove('drag-over'); }
+function jurDrop(e) { e.preventDefault(); document.getElementById('jur-upload-zone').classList.remove('drag-over'); jurHandleFiles(e.dataTransfer.files); }
+
+async function jurHandleFiles(files) {
+  if (!APP._jurDetId) return;
+  var maxSize = 10 * 1024 * 1024; // 10 Mo
+  var progress = document.getElementById('jur-upload-progress');
+  var progressFill = document.getElementById('jur-upload-progress-fill');
+  if(progress) progress.style.display='block';
+  var total = files.length, done = 0;
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (file.size > maxSize) { toast('⚠️ Fichier trop lourd : '+file.name+' (max 10 Mo)', 'error'); done++; continue; }
+    try {
+      var b64 = await jurReadFileAsBase64(file);
+      var doc = {
+        id: uid(),
+        dossier_id: APP._jurDetId,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        date: today(),
+        data: b64
+      };
+      if (!DATA.docsJuridiques) DATA.docsJuridiques = [];
+      DATA.docsJuridiques.push(doc);
+      await dbPut('docs_juridiques', doc);
+      done++;
+      if(progressFill) progressFill.style.width = Math.round((done/total)*100)+'%';
+    } catch(e) { toast('Erreur upload : '+file.name, 'error'); done++; }
+  }
+  setTimeout(function(){ if(progress) progress.style.display='none'; if(progressFill) progressFill.style.width='0%'; }, 600);
+  renderJurDocs(APP._jurDetId);
+  renderDossiersJuridiques();
+  toast(done+' fichier(s) ajouté(s) avec succès.', 'success');
+}
+
+function jurReadFileAsBase64(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload = function(e) { resolve(e.target.result); };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function deleteJurDoc(docId, dossierId) {
+  if (!confirm('Supprimer ce document ?')) return;
+  DATA.docsJuridiques = (DATA.docsJuridiques||[]).filter(function(d){return d.id!==docId;});
+  await dbDelete('docs_juridiques', docId);
+  renderJurDocs(dossierId);
+  renderDossiersJuridiques();
+  toast('Document supprimé.', 'info');
+}
+
+function jurViewDoc(docId) {
+  var doc = (DATA.docsJuridiques||[]).find(function(d){return d.id===docId;});
+  if (!doc) return;
+  APP._jurViewerDoc = doc;
+  document.getElementById('jur-viewer-title').textContent = doc.name;
+  var frame = document.getElementById('jur-viewer-frame');
+  var img = document.getElementById('jur-viewer-img');
+  var fallback = document.getElementById('jur-viewer-fallback');
+  frame.style.display='none'; img.style.display='none'; fallback.style.display='none';
+  if (doc.type && doc.type.startsWith('image/')) {
+    img.src = doc.data; img.style.display='block';
+  } else if (doc.type === 'application/pdf' || doc.name.toLowerCase().endsWith('.pdf')) {
+    frame.src = doc.data; frame.style.display='block';
+  } else {
+    fallback.style.display='block';
+  }
+  document.getElementById('modal-jur-viewer').classList.add('open');
+}
+
+function jurDownloadDoc() { if(APP._jurViewerDoc) jurDownloadDocById(APP._jurViewerDoc.id); }
+function jurDownloadDocById(docId) {
+  var doc = (DATA.docsJuridiques||[]).find(function(d){return d.id===docId;});
+  if (!doc) return;
+  var a = document.createElement('a');
+  a.href = doc.data; a.download = doc.name; a.click();
+}
+
+/* Chronologie */
+function renderJurChronologie(dossierId) {
+  var d = DATA.dossiersJuridiques.find(function(x){return x.id===dossierId;});
+  var docs = (DATA.docsJuridiques||[]).filter(function(dc){return dc.dossier_id===dossierId;});
+  var box = document.getElementById('jur-chronologie-content');
+  if (!box || !d) return;
+  var events = [];
+  if (d.created_at||d.date_ouv) events.push({ date: d.date_ouv||d.created_at, type:'ouverture', label:'📂 Dossier ouvert', detail: d.objet });
+  docs.forEach(function(dc){ events.push({ date: dc.date, type:'doc', label:'📎 Document ajouté', detail: dc.name }); });
+  if (d.notes) events.push({ date: d.date_ouv, type:'note', label:'📝 Notes initiales', detail: d.notes.substring(0,120)+(d.notes.length>120?'...':'') });
+  if (d.date_ech) events.push({ date: d.date_ech, type:'echeance', label: new Date(d.date_ech)<new Date()?'⚠️ Échéance dépassée':'⏰ Échéance fixée', detail:'Deadline : '+d.date_ech });
+  events.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  if (!events.length) { box.innerHTML='<div style="color:var(--dim);text-align:center;padding:24px;">Aucun événement enregistré.</div>'; return; }
+  var colorMap = { ouverture:'var(--or)', doc:'var(--bleu)', note:'var(--vert)', echeance:'var(--rouge)' };
+  box.innerHTML = '<div style="position:relative;padding-left:24px;">'
+    + '<div style="position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--bord2);border-radius:1px;"></div>'
+    + events.map(function(ev){
+        return '<div style="position:relative;margin-bottom:14px;">'
+          + '<div style="position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:'+(colorMap[ev.type]||'var(--dim)')+'"></div>'
+          + '<div style="font-size:12px;color:var(--dim);">'+ev.date+'</div>'
+          + '<div style="font-size:13px;font-weight:600;color:var(--blanc);">'+ev.label+'</div>'
+          + '<div style="font-size:12px;color:var(--dim);">'+escHtml(ev.detail||'')+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+/* Impression fiche dossier */
+function imprimerFicheDossier() {
+  var d = DATA.dossiersJuridiques.find(function(x){return x.id===APP._jurDetId;});
+  if (!d) return;
+  var docs = (DATA.docsJuridiques||[]).filter(function(dc){return dc.dossier_id===d.id;});
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Dossier '+d.ref+'</title>'
+    + '<style>body{font-family:Arial,sans-serif;padding:24px;font-size:13px;color:#1C1C2E;}'
+    + 'h1{color:#B87333;border-bottom:2px solid #B87333;padding-bottom:8px;margin-bottom:16px;}'
+    + 'table{border-collapse:collapse;width:100%;margin:10px 0;}td,th{border:1px solid #ccc;padding:7px 12px;text-align:left;}'
+    + 'th{background:#FFF7ED;color:#92400E;font-size:12px;}'
+    + '.badge{padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}'
+    + '</style></head><body>'
+    + '<h1>⚖️ FICHE DOSSIER JURIDIQUE — '+d.ref+'</h1>'
+    + '<table><tr><th>Référence</th><td>'+d.ref+'</td><th>Type</th><td>'+d.type.replace(/_/g,' ')+'</td></tr>'
+    + '<tr><th>Objet</th><td colspan="3">'+d.objet+'</td></tr>'
+    + '<tr><th>Interlocuteur</th><td>'+( d.interlocuteur||'—')+'</td><th>Avocat/Notaire</th><td>'+(d.avocat||'—')+'</td></tr>'
+    + '<tr><th>Date ouverture</th><td>'+(d.date_ouv||'—')+'</td><th>Échéance</th><td>'+(d.date_ech||'—')+'</td></tr>'
+    + '<tr><th>Priorité</th><td>'+d.priorite+'</td><th>Statut</th><td>'+d.statut.replace(/_/g,' ')+'</td></tr>'
+    + '<tr><th>Montant litige</th><td colspan="3">'+new Intl.NumberFormat('fr-CI').format(d.montant||0)+' FCFA</td></tr>'
+    + '</table>'
+    + (d.notes ? '<h2>Notes & Historique</h2><p style="white-space:pre-wrap;background:#f9f9f9;padding:10px;border-radius:4px;">'+d.notes+'</p>' : '')
+    + '<h2>Documents attachés ('+docs.length+')</h2>'
+    + (docs.length ? '<ul>'+docs.map(function(dc){ return '<li>'+dc.name+' — '+jurFormatSize(dc.size)+' — '+dc.date+'</li>'; }).join('')+'</ul>' : '<p>Aucun document joint.</p>')
+    + '<p style="margin-top:24px;font-size:11px;color:#999;">Édité le '+today()+' — ImmoSuite ERP v19.0</p>'
+    + '</body></html>';
+  var w = window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); setTimeout(function(){w.print();},400); }
+}
+
+/* ══════════════════════════════════════════════════════
+   ANALYSE IA JURIDIQUE — ANTHROPIC API
+══════════════════════════════════════════════════════ */
+
+var _jurIARunning = false;
+
+async function lancerAnalyseIA(force) {
+  if (!APP._jurDetId) return;
+  if (APP._jurIADone && !force) return; // déjà analysé
+  if (_jurIARunning) return;
+  _jurIARunning = true;
+
+  var d = DATA.dossiersJuridiques.find(function(x){return x.id===APP._jurDetId;});
+  if (!d) { _jurIARunning=false; return; }
+
+  // Switcher sur l'onglet IA
+  switchTab('jur-det','ia');
+  var btnIA = document.getElementById('tab-btn-jur-det-ia');
+  if(btnIA) btnIA.classList.add('active');
+
+  // UI : loading
+  document.getElementById('jur-ia-idle').style.display='none';
+  document.getElementById('jur-ia-result').style.display='none';
+  document.getElementById('jur-ia-error').style.display='none';
+  document.getElementById('jur-ia-loading').style.display='flex';
+
+  var docs = (DATA.docsJuridiques||[]).filter(function(dc){return dc.dossier_id===d.id;});
+  var docsDesc = docs.length
+    ? docs.map(function(dc){return '- '+dc.name+' ('+dc.type+', '+jurFormatSize(dc.size)+')';}).join('\n')
+    : 'Aucun document joint.';
+
+  var loadingMsgs = [
+    'Analyse des faits juridiques...',
+    'Évaluation des risques OHADA...',
+    'Identification des arguments clés...',
+    'Élaboration des stratégies...',
+    'Finalisation des recommandations...'
+  ];
+  var msgEl = document.getElementById('jur-ia-loading-msg');
+  var msgIdx = 0;
+  var msgInterval = setInterval(function(){
+    msgIdx = (msgIdx+1) % loadingMsgs.length;
+    if(msgEl) msgEl.textContent = loadingMsgs[msgIdx];
+  }, 2200);
+
+  var prompt = [
+    'Tu es un conseiller juridique expert spécialisé en droit OHADA, droit ivoirien (droit des affaires, immobilier, foncier, contentieux civil et commercial).',
+    'Analyse ce dossier juridique et fournis une analyse complète en JSON structuré.',
+    '',
+    '## DOSSIER JURIDIQUE',
+    '- Référence : '+d.ref,
+    '- Type : '+d.type.replace(/_/g,' '),
+    '- Objet : '+d.objet,
+    '- Interlocuteur/Partie adverse : '+(d.interlocuteur||'Non précisé'),
+    '- Avocat/Notaire en charge : '+(d.avocat||'Non précisé'),
+    '- Date d\'ouverture : '+(d.date_ouv||'—'),
+    '- Date d\'échéance : '+(d.date_ech||'—'),
+    '- Priorité : '+d.priorite,
+    '- Statut actuel : '+d.statut.replace(/_/g,' '),
+    '- Montant du litige : '+new Intl.NumberFormat('fr-CI').format(d.montant||0)+' FCFA',
+    '- Notes/Historique : '+(d.notes||'Aucune note'),
+    '',
+    '## DOCUMENTS DISPONIBLES',
+    docsDesc,
+    '',
+    '## CONTEXTE JURIDICTIONNEL',
+    'Droit applicable : OHADA, droit civil ivoirien, jurisprudence Côte d\'Ivoire.',
+    'Juridiction : Tribunaux ivoiriens (TAAC, TPI, Cour d\'Appel Abidjan).',
+    '',
+    'Réponds UNIQUEMENT en JSON valide avec cette structure :',
+    '{',
+    '  "score_succes": <number 0-100>,',
+    '  "evaluation_globale": "<string 1-2 phrases>",',
+    '  "points_forts": ["<string>", ...],',
+    '  "risques": ["<string>", ...],',
+    '  "strategies": [{"titre":"<string>","detail":"<string>","priorite":"haute|moyenne|faible"}, ...],',
+    '  "actions_immediates": ["<string>", ...],',
+    '  "documents_a_obtenir": ["<string>", ...],',
+    '  "delais_importants": ["<string>", ...],',
+    '  "jurisprudence_applicable": ["<string>", ...],',
+    '  "avertissement": "<string>"',
+    '}'
+  ].join('\n');
+
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role:'user', content: prompt }]
+      })
+    });
+    clearInterval(msgInterval);
+    if (!resp.ok) { throw new Error('API error '+resp.status); }
+    var data = await resp.json();
+    var rawText = (data.content||[]).map(function(b){return b.type==='text'?b.text:'';}).join('');
+    // Nettoyer le JSON
+    var jsonStr = rawText.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    var result;
+    try { result = JSON.parse(jsonStr); } catch(e) {
+      // Tentative extraction JSON brut
+      var m = jsonStr.match(/\{[\s\S]*\}/);
+      if (m) result = JSON.parse(m[0]);
+      else throw new Error('Réponse IA non parseable : '+rawText.substring(0,200));
+    }
+    afficherResultatIA(result, d);
+    APP._jurIADone = true;
+  } catch(e) {
+    clearInterval(msgInterval);
+    document.getElementById('jur-ia-loading').style.display='none';
+    var errEl = document.getElementById('jur-ia-error');
+    errEl.style.display='block';
+    errEl.innerHTML = '⚠️ Erreur lors de l\'analyse IA.<br><small>'+escHtml(e.message)+'</small>'
+      + '<br><br><button class="btn btn-secondary btn-sm" onclick="lancerAnalyseIA(true)">🔄 Réessayer</button>';
+  } finally { _jurIARunning = false; }
+}
+
+function afficherResultatIA(result, dossier) {
+  document.getElementById('jur-ia-loading').style.display='none';
+  var box = document.getElementById('jur-ia-result');
+  box.style.display='block';
+
+  var score = Math.min(100, Math.max(0, result.score_succes||50));
+  var scoreColor = score>=70 ? '#4AC47A' : score>=40 ? '#F59E0B' : '#E05252';
+  var scoreLabel = score>=70 ? 'Favorable' : score>=40 ? 'Incertain' : 'Défavorable';
+
+  var html = '';
+
+  // Score global
+  html += '<div class="jur-ia-score">'
+    + '<div>'
+      + '<div class="jur-ia-score-label">Score de succès estimé</div>'
+      + '<div style="font-size:10px;color:#64748B;margin-top:2px;">'+scoreLabel+'</div>'
+    + '</div>'
+    + '<div class="jur-ia-score-bar"><div class="jur-ia-score-fill" style="width:'+score+'%;background:linear-gradient(90deg,'+scoreColor+','+scoreColor+'99)"></div></div>'
+    + '<div class="jur-ia-score-val" style="color:'+scoreColor+'">'+score+'%</div>'
+    + '</div>';
+
+  // Évaluation globale
+  html += '<div style="font-size:13px;color:#CBD5E1;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;margin-bottom:14px;line-height:1.6;">'
+    + '<strong style="color:#E2E8F0;">📋 Évaluation globale :</strong><br>'
+    + escHtml(result.evaluation_globale||'')
+    + '</div>';
+
+  // Points forts
+  if (result.points_forts && result.points_forts.length) {
+    html += '<div class="jur-ia-section positif"><div class="jur-ia-section-title">✅ Points forts du dossier</div>'
+      + '<ul>'+result.points_forts.map(function(p){return '<li>'+escHtml(p)+'</li>';}).join('')+'</ul></div>';
+  }
+
+  // Risques
+  if (result.risques && result.risques.length) {
+    html += '<div class="jur-ia-section risque"><div class="jur-ia-section-title">⚠️ Risques identifiés</div>'
+      + '<ul>'+result.risques.map(function(r){return '<li>'+escHtml(r)+'</li>';}).join('')+'</ul></div>';
+  }
+
+  // Stratégies
+  if (result.strategies && result.strategies.length) {
+    html += '<div class="jur-ia-section strategie"><div class="jur-ia-section-title">🎯 Stratégies recommandées</div>'
+      + '<div style="display:flex;flex-direction:column;gap:10px;">'
+      + result.strategies.map(function(s,i){
+          var prioColor = s.priorite==='haute'?'#E05252':s.priorite==='moyenne'?'#F59E0B':'#4AC47A';
+          return '<div style="background:rgba(74,148,224,0.07);padding:10px 12px;border-radius:6px;">'
+            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">'
+              + '<span style="background:rgba(74,148,224,0.2);color:#4A94E0;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+(i+1)+'</span>'
+              + '<strong style="color:#E2E8F0;font-size:13px;">'+escHtml(s.titre)+'</strong>'
+              + '<span style="margin-left:auto;font-size:10px;font-weight:700;color:'+prioColor+';">'+s.priorite.toUpperCase()+'</span>'
+            + '</div>'
+            + '<div style="font-size:12px;color:#94A3B8;padding-left:30px;">'+escHtml(s.detail)+'</div>'
+            + '</div>';
+        }).join('')
+      + '</div></div>';
+  }
+
+  // Actions immédiates
+  if (result.actions_immediates && result.actions_immediates.length) {
+    html += '<div class="jur-ia-section action"><div class="jur-ia-section-title">⚡ Actions immédiates requises</div>'
+      + '<ul>'+result.actions_immediates.map(function(a){return '<li>'+escHtml(a)+'</li>';}).join('')+'</ul></div>';
+  }
+
+  // Documents à obtenir
+  if (result.documents_a_obtenir && result.documents_a_obtenir.length) {
+    html += '<div style="padding:12px 16px;background:rgba(184,115,51,0.06);border-radius:8px;margin-bottom:12px;border-left:3px solid var(--or);">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--or);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">📂 Documents à constituer</div>'
+      + '<ul style="padding-left:18px;margin:0;">'+result.documents_a_obtenir.map(function(d){return '<li style="font-size:12px;color:#CBD5E1;margin-bottom:4px;">'+escHtml(d)+'</li>';}).join('')+'</ul></div>';
+  }
+
+  // Délais importants
+  if (result.delais_importants && result.delais_importants.length) {
+    html += '<div style="padding:12px 16px;background:rgba(224,82,82,0.06);border-radius:8px;margin-bottom:12px;border-left:3px solid #E05252;">'
+      + '<div style="font-size:12px;font-weight:700;color:#E05252;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">⏱ Délais &amp; Prescriptions</div>'
+      + '<ul style="padding-left:18px;margin:0;">'+result.delais_importants.map(function(d){return '<li style="font-size:12px;color:#CBD5E1;margin-bottom:4px;">'+escHtml(d)+'</li>';}).join('')+'</ul></div>';
+  }
+
+  // Jurisprudence
+  if (result.jurisprudence_applicable && result.jurisprudence_applicable.length) {
+    html += '<div style="padding:12px 16px;background:rgba(139,82,224,0.06);border-radius:8px;margin-bottom:12px;border-left:3px solid #8A52E0;">'
+      + '<div style="font-size:12px;font-weight:700;color:#8A52E0;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">📚 Textes &amp; Jurisprudence applicables</div>'
+      + '<ul style="padding-left:18px;margin:0;">'+result.jurisprudence_applicable.map(function(j){return '<li style="font-size:12px;color:#CBD5E1;margin-bottom:4px;">'+escHtml(j)+'</li>';}).join('')+'</ul></div>';
+  }
+
+  // Avertissement
+  html += '<div style="padding:10px 14px;background:rgba(100,116,139,0.12);border-radius:8px;margin-top:8px;">'
+    + '<div style="font-size:11px;color:#64748B;line-height:1.5;">'
+    + '⚠️ <em>'+escHtml(result.avertissement||'Cette analyse est fournie à titre indicatif. Consultez un avocat qualifié pour toute décision juridique.')+'</em>'
+    + '</div></div>';
+
+  // Boutons d'action
+  html += '<div class="jur-ia-btn-row">'
+    + '<button class="btn btn-secondary btn-sm" onclick="lancerAnalyseIA(true)">🔄 Relancer l\'analyse</button>'
+    + '<button class="btn btn-secondary btn-sm" onclick="exporterAnalyseIA()" id="btn-export-ia">📄 Exporter PDF</button>'
+    + '</div>';
+
+  box.innerHTML = html;
+  // Store result for export
+  APP._jurIAResult = result;
+  APP._jurIADossier = dossier;
+}
+
+function exporterAnalyseIA() {
+  var result = APP._jurIAResult;
+  var d = APP._jurIADossier;
+  if (!result || !d) return;
+  var score = Math.min(100, Math.max(0, result.score_succes||50));
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Analyse IA — '+d.ref+'</title>'
+    + '<style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;color:#1C1C2E;max-width:820px;margin:0 auto;}'
+    + 'h1{color:#7C3AED;border-bottom:2px solid #7C3AED;padding-bottom:8px;}'
+    + 'h2{color:#2563EB;margin-top:20px;font-size:14px;}'
+    + '.score-box{background:#F3F0FF;padding:14px 18px;border-radius:8px;display:flex;align-items:center;gap:16px;margin:16px 0;}'
+    + '.score-num{font-size:32px;font-weight:900;color:#7C3AED;}'
+    + 'ul{margin:6px 0;padding-left:22px;}li{margin-bottom:5px;}'
+    + '.section{padding:12px 16px;border-radius:6px;margin-bottom:12px;border-left:4px solid #7C3AED;background:#F8F7FF;}'
+    + '.warn{font-size:11px;color:#666;font-style:italic;margin-top:20px;padding:10px;background:#f5f5f5;border-radius:4px;}'
+    + '</style></head><body>'
+    + '<h1>🤖 ANALYSE IA JURIDIQUE — '+d.ref+'</h1>'
+    + '<p><strong>Objet :</strong> '+d.objet+' | <strong>Type :</strong> '+d.type.replace(/_/g,' ')+'</p>'
+    + '<p><strong>Interlocuteur :</strong> '+(d.interlocuteur||'—')+' | <strong>Avocat :</strong> '+(d.avocat||'—')+'</p>'
+    + '<p><strong>Date d\'analyse :</strong> '+today()+'</p>'
+    + '<div class="score-box"><div class="score-num">'+score+'%</div><div><strong>Score de succès estimé</strong><br><span style="color:#666;font-size:12px;">'+result.evaluation_globale+'</span></div></div>'
+    + (result.points_forts&&result.points_forts.length ? '<h2>✅ Points forts</h2><ul>'+result.points_forts.map(function(p){return '<li>'+p+'</li>';}).join('')+'</ul>' : '')
+    + (result.risques&&result.risques.length ? '<h2>⚠️ Risques</h2><ul>'+result.risques.map(function(r){return '<li>'+r+'</li>';}).join('')+'</ul>' : '')
+    + (result.strategies&&result.strategies.length ? '<h2>🎯 Stratégies recommandées</h2>'+result.strategies.map(function(s,i){return '<div class="section"><strong>'+(i+1)+'. '+s.titre+'</strong> ['+s.priorite.toUpperCase()+']<br>'+s.detail+'</div>';}).join('') : '')
+    + (result.actions_immediates&&result.actions_immediates.length ? '<h2>⚡ Actions immédiates</h2><ul>'+result.actions_immediates.map(function(a){return '<li>'+a+'</li>';}).join('')+'</ul>' : '')
+    + (result.delais_importants&&result.delais_importants.length ? '<h2>⏱ Délais &amp; Prescriptions</h2><ul>'+result.delais_importants.map(function(dl){return '<li>'+dl+'</li>';}).join('')+'</ul>' : '')
+    + (result.jurisprudence_applicable&&result.jurisprudence_applicable.length ? '<h2>📚 Textes applicables</h2><ul>'+result.jurisprudence_applicable.map(function(j){return '<li>'+j+'</li>';}).join('')+'</ul>' : '')
+    + '<div class="warn">⚠️ '+( result.avertissement||'Analyse indicative. Consultez un avocat qualifié.')+'</div>'
+    + '<p style="font-size:11px;color:#999;margin-top:20px;">Généré par ImmoSuite ERP v19.0 — IA Juridique — '+today()+'</p>'
+    + '</body></html>';
+  var w = window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); setTimeout(function(){w.print();},500); }
 }
 
 function loadAgrementInfo() {
