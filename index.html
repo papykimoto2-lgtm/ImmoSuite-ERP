@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.14 · 2026-06-08';
+window.IMMOSUITE_VERSION = 'v18.15 · 2026-06-08';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -3165,7 +3165,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
 
         <div class="card">
-          <h3 style="margin-bottom:12px;">🗂️ Médias du portail</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <h3 style="margin:0;">🗂️ Médias du portail</h3>
+            <select id="pm-filter-cat" class="form-control" onchange="pmRender()" style="max-width:220px;">
+              <option value="">Toutes catégories</option>
+              <option value="eden">Cité EDEN</option>
+              <option value="chantier">Chantier</option>
+              <option value="catalogue">Catalogue</option>
+              <option value="document">Documents</option>
+            </select>
+          </div>
           <div id="pm-liste"></div>
         </div>
       </div>
@@ -3340,6 +3349,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group">
                   <label>📒 Compte produit des frais (SYSCOHADA)</label>
                   <input type="text" id="param-frais-souscription-compte" class="form-control" value="7088" placeholder="7088">
+                </div>
+                <div class="form-group">
+                  <label>🎨 Couleur du bandeau (portail)</label>
+                  <input type="color" id="param-bandeau-couleur" class="form-control" value="#003366" style="height:42px;padding:4px;">
+                </div>
+                <div class="form-group span-2">
+                  <label>📢 Message supplémentaire du bandeau (portail, optionnel)</label>
+                  <input type="text" id="param-bandeau-texte" class="form-control" placeholder="Ex : Offre spéciale ce mois — contactez-nous !">
                 </div>
                 <div class="form-group span-2" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;">
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
@@ -4702,6 +4719,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="page-subtitle">CRM · Prospects · Visites · Réservations · Tunnel de conversion</div>
           </div>
           <div class="spacer"></div>
+          <select class="form-control" id="pipeline-filter-source" onchange="renderPipeline()" style="max-width:200px;">
+            <option value="">🔎 Toutes sources</option>
+            <option value="site_web">🌐 Réservations en ligne</option>
+            <option value="bouche_oreille">Bouche-à-oreille</option>
+            <option value="reseaux_sociaux">Réseaux sociaux</option>
+            <option value="commercial">Agent commercial</option>
+            <option value="partenaire">Partenaire</option>
+            <option value="salon">Salon</option>
+            <option value="affichage">Affichage</option>
+          </select>
           <button class="btn btn-secondary btn-sm" onclick="exportLeads()">⬇ Export</button>
           <button class="btn btn-primary" onclick="openLead()">+ Nouveau prospect</button>
         </div>
@@ -15934,13 +15961,32 @@ async function saveParams() {
     comm_apporteur_regulier_pct:  parseFloat(gv('param-comm-apporteur-regulier'))||5,
     frais_souscription:           parseFloat(gv('param-frais-souscription'))||0,
     compte_frais_souscription:    gv('param-frais-souscription-compte')||'7088',
+    bandeau_couleur:              gv('param-bandeau-couleur')||'#003366',
+    bandeau_texte:                gv('param-bandeau-texte')||'',
     auto_compta_commissions: document.getElementById('param-auto-compta-comm') ? document.getElementById('param-auto-compta-comm').checked : true,
     penalites_pct: parseFloat(gv('param-penalites'))||0.5,
     banque:      gv('param-banque'),
     exercice:    gv('param-exercice'),
   });
   await dbPut('params', DATA.params);
+  if (typeof publierParamsPortail === 'function') publierParamsPortail();
   toast('Paramètres société enregistrés.','success');
+}
+
+/* Publie UNIQUEMENT les paramètres publics (bandeau, slogan, société) vers le portail.
+   On n'expose jamais les paramètres sensibles (paie, taux, clés). */
+function publierParamsPortail(){
+  if (typeof syncToSupabase !== 'function') return;
+  var p = DATA.params || {};
+  syncToSupabase('pi_params', {
+    id: 'portail',
+    bandeau_couleur: p.bandeau_couleur || '#003366',
+    bandeau_texte:   p.bandeau_texte || '',
+    societe:         p.societe || 'Partner Immo CI',
+    slogan_principal:p.slogan_principal || '',
+    hero_texte:      p.hero_texte || '',
+    frais_souscription: p.frais_souscription || 0
+  });
 }
 
 async function saveObjectifs() {
@@ -15998,6 +16044,8 @@ function loadParamFields() {
   sv('param-comm-apporteur-regulier', p.comm_apporteur_regulier_pct||5);
   sv('param-frais-souscription', p.frais_souscription||0);
   sv('param-frais-souscription-compte', p.compte_frais_souscription||'7088');
+  sv('param-bandeau-couleur', p.bandeau_couleur||'#003366');
+  sv('param-bandeau-texte', p.bandeau_texte||'');
   var autoComptaEl = document.getElementById('param-auto-compta-comm');
   if (autoComptaEl) autoComptaEl.checked = p.auto_compta_commissions !== false; sv('param-penalites',p.penalites_pct||0.5);
   sv('param-banque',p.banque); sv('param-exercice',p.exercice||'2025');
@@ -23557,7 +23605,8 @@ async function pmAjouterDocument(input){
 
 function pmRender(){
   var el=document.getElementById('pm-liste'); if(!el) return;
-  var list=(DATA.portail_medias||[]).slice().sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  var fcat=(document.getElementById('pm-filter-cat')||{}).value||'';
+  var list=(DATA.portail_medias||[]).filter(function(m){ return !fcat || m.categorie===fcat; }).slice().sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
   if(!list.length){ el.innerHTML='<div style="color:#6B6B9A;">Aucun média. Ajoutez des photos ou documents ci-dessus.</div>'; return; }
   el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">'+list.map(function(m){
     var vis = m.visible!==false;
@@ -26552,8 +26601,9 @@ function renderPipeline() {
   if (!board) return;
 
   var byStade = {};
+  var _pipeSrc = (document.getElementById('pipeline-filter-source')||{}).value || '';
   PIPELINE_STADES.forEach(function(st){
-    byStade[st.id] = DATA.leads.filter(function(l){ return l.stade === st.id; });
+    byStade[st.id] = DATA.leads.filter(function(l){ return l.stade === st.id && (!_pipeSrc || l.source === _pipeSrc); });
   });
   var base = byStade[PIPELINE_STADES[0].id].length || DATA.leads.length || 1;
 
@@ -26584,6 +26634,8 @@ function renderPipeline() {
       var comm = l.commercial_nom || (l.commercial_id ? _itiResolveCommercial(l.commercial_id) : '');
       var due = _plRelanceDue(l);
       var chips = '';
+      if (l.source === 'site_web') chips += '<span class="pl-chip" style="background:#dbeafe;color:#1e40af;">🌐 Réservation en ligne</span>';
+      if (l.pays && String(l.pays).toLowerCase().indexOf('ivoire')===-1 && l.pays.trim()) chips += '<span class="pl-chip" style="background:#fef3c7;color:#92400e;">🌍 Diaspora · ' + escHtml(l.pays) + '</span>';
       if (l.type_logement) chips += '<span class="pl-chip">🏠 ' + escHtml(l.type_logement) + '</span>';
       if (l.budget)        chips += '<span class="pl-chip budget">💰 ' + fmtF(l.budget) + ' F</span>';
       if (prog)            chips += '<span class="pl-chip">📍 ' + escHtml(prog.nom) + '</span>';
@@ -26687,7 +26739,7 @@ async function saveLead() {
     notes: document.getElementById('ld-notes').value.trim(),
     created_at: APP.editingId ? undefined : today()
   };
-  if (APP.editingId){var idx=DATA.leads.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.leads[idx]=l;}
+  if (APP.editingId){var idx=DATA.leads.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.leads[idx]=Object.assign({}, DATA.leads[idx], l);}
   else DATA.leads.push(l);
   await dbPut('leads', l);
   closeModal('modal-lead'); renderPipeline();
@@ -26721,11 +26773,14 @@ async function convertirEnSouscripteur() {
   if (!nom) { toast('Complétez le nom du prospect.', 'error'); return; }
   /* Récupérer toutes les infos du prospect pour les reporter */
   var g = function(id){ var e=document.getElementById(id); return e ? e.value : ''; };
+  var _leadObj = (DATA.leads||[]).find(function(x){ return x.id === APP.editingId; }) || {};
   var data = {
     nom: nom, tel: tel,
     email: g('ld-email'), profession: g('ld-profession'),
     programme: g('ld-programme'), type: g('ld-type-logement'),
-    budget: g('ld-budget'), commercial: g('ld-commercial')
+    budget: g('ld-budget'), commercial: g('ld-commercial'),
+    prenoms: _leadObj.prenoms || '', pays: _leadObj.pays || '', ville: _leadObj.ville || '',
+    mode_livraison: _leadObj.mode_livraison || ''
   };
   await saveLead();
   closeModal('modal-lead');
@@ -26735,6 +26790,7 @@ async function convertirEnSouscripteur() {
       openClientModal();
       var sv = function(id,val){ var e=document.getElementById(id); if(e && val) e.value = val; };
       sv('c-nom', data.nom); sv('c-tel', data.tel);
+      sv('c-prenoms', data.prenoms);
       sv('c-email', data.email); sv('c-profession', data.profession);
       sv('c-type-logement', data.type);
       sv('c-montant-total', data.budget);
