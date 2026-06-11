@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.15 · 2026-06-08';
+window.IMMOSUITE_VERSION = 'v18.16 · 2026-06-08';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -2014,6 +2014,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
       <div class="nav-item" onclick="goTo('portail')" data-page="portail">
         <span class="nav-icon">🌐</span><span>Site / Portail</span>
+        <span class="nav-badge" id="badge-portail-msg" style="display:none;">0</span>
       </div>
     </nav>
 
@@ -3176,6 +3177,21 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </select>
           </div>
           <div id="pm-liste"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:12px;">💬 Messagerie — souscripteurs & apporteurs</h3>
+          <div class="form-group" style="max-width:480px;">
+            <label>Interlocuteur</label>
+            <select id="pmsg-interlocuteur" class="form-control" onchange="pmsgOuvrir()">
+              <option value="">— Sélectionner un souscripteur ou apporteur —</option>
+            </select>
+          </div>
+          <div id="pmsg-thread" style="display:none;border:1px solid #E0E0EA;border-radius:12px;padding:14px;max-height:380px;overflow-y:auto;background:#FAFAFC;margin-bottom:10px;"></div>
+          <div id="pmsg-compose" style="display:none;gap:8px;">
+            <textarea id="pmsg-input" class="form-control" rows="2" placeholder="Écrire un message…" style="resize:vertical;"></textarea>
+            <button type="button" class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="pmsgEnvoyer()">📨 Envoyer</button>
+          </div>
         </div>
       </div>
 
@@ -10385,6 +10401,7 @@ var APP = {
 var DATA = {
   clients: [],
   portail_medias: [],
+  portail_messages: [],
   versements: [],
   programmes: [],
   lots: [],
@@ -10445,7 +10462,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 110; /* v110: store portail_medias (photos/documents du portail) — migration additive */
+var DB_VERSION = 111; /* v111: store portail_messages (messagerie souscripteurs/apporteurs) — migration additive */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -10480,7 +10497,9 @@ var ALL_STORES = [
   'reunions_direction',
   'actions_reunion',
   /* v110 — Médias du portail (photos/documents publiables) */
-  'portail_medias'
+  'portail_medias',
+  /* v111 — Messagerie portail (souscripteurs/apporteurs) */
+  'portail_messages'
 ];
 
 function initDB() {
@@ -10604,7 +10623,9 @@ async function loadAllData() {
   /* MàJ RH 2026-06-07 : stores désormais synchronisés */
   'custom_roles','logs_connexion',
   /* v110 */
-  'portail_medias'
+  'portail_medias',
+  /* v111 */
+  'portail_messages'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -10784,6 +10805,7 @@ async function deleteFromSupabase(table, id) {
 var SUPA_STORE_MAP = [
   ['pi_users',           'users'],
   ['pi_portail_medias',  'portail_medias'],
+  ['pi_portail_messages','portail_messages'],
   ['pi_programmes',       'programmes'],
   ['pi_lots',            'lots'],
   ['pi_terrains',        'terrains'],
@@ -11098,6 +11120,7 @@ async function pullFromCloudSilent() {
     console.log('[Sync] Pull post-login : ' + total + ' enregistrement(s) mis à jour.');
   }
   try { majDerniereSync('Récupération cloud'); } catch(e){}
+  try { if (typeof updatePortailBadge === 'function') updatePortailBadge(); if (typeof pmsgRender === 'function') pmsgRender(); } catch(e){}
 }
 
 /* Rejoue la file en respectant l'ordre. S'arrête au premier échec (réseau). */
@@ -11550,7 +11573,7 @@ function goTo(page) {
   if (page === 'constructeurs') { renderConstructeurs(); updateConstructeursKPIs(); }
   if (page === 'conventions') { renderConventions(); populateConventionSelects(); }
   if (page === 'avancement') { renderChantiersDashboard(); }
-  if (page === 'portail') { if (typeof pmRender === 'function') pmRender(); }
+  if (page === 'portail') { if (typeof pmRender === 'function') pmRender(); if (typeof pmsgRenderSelect === 'function') pmsgRenderSelect(); }
   if (page === 'leads') { renderPipeline(); if (typeof crmStartPolling === 'function') crmStartPolling(); }
   if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else { renderCarteGeo(); _refreshGeoMap(false); } }, 80); }
   if (page === 'crm-itineraires') { loadPageItineraires(); }
@@ -23638,6 +23661,62 @@ async function pmDelete(id){
   await dbDelete('portail_medias', id);
   if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_portail_medias', id);
   pmRender();
+}
+
+/* ═══ Messagerie portail (staff ↔ souscripteurs/apporteurs) ═══ */
+function _pmsgDate(d){ try{ return new Date(d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function _pmsgUnread(type,id){ return (DATA.portail_messages||[]).filter(function(m){ return m.partie_type===type && m.partie_id===id && m.expediteur==='client' && !m.lu_staff; }).length; }
+
+function pmsgRenderSelect(){
+  var sel=document.getElementById('pmsg-interlocuteur'); if(!sel) return;
+  var cur=sel.value;
+  var subs=(DATA.clients||[]).slice().sort(function(a,b){ return ((a.nom||'')+(a.prenoms||'')).localeCompare((b.nom||'')+(b.prenoms||'')); });
+  var apps=(DATA.apporteurs||[]);
+  var opt='<option value="">— Sélectionner un souscripteur ou apporteur —</option>';
+  if(subs.length){ opt+='<optgroup label="👤 Souscripteurs">'+subs.map(function(c){ var u=_pmsgUnread('souscripteur',c.id); return '<option value="souscripteur:'+c.id+'">'+escHtml((c.prenoms?c.prenoms+' ':'')+(c.nom||c.dossier||c.id))+(u?(' 🔴'+u):'')+'</option>'; }).join('')+'</optgroup>'; }
+  if(apps.length){ opt+='<optgroup label="🤝 Apporteurs">'+apps.map(function(a){ var u=_pmsgUnread('apporteur',a.id); return '<option value="apporteur:'+a.id+'">'+escHtml((a.prenoms?a.prenoms+' ':'')+(a.nom||a.id))+(u?(' 🔴'+u):'')+'</option>'; }).join('')+'</optgroup>'; }
+  sel.innerHTML=opt;
+  if(cur) sel.value=cur;
+  updatePortailBadge();
+}
+
+async function pmsgOuvrir(){
+  var v=(document.getElementById('pmsg-interlocuteur')||{}).value;
+  var thread=document.getElementById('pmsg-thread'), compose=document.getElementById('pmsg-compose');
+  if(!v){ if(thread)thread.style.display='none'; if(compose)compose.style.display='none'; return; }
+  if(thread)thread.style.display='block'; if(compose)compose.style.display='flex';
+  var p=v.split(':'), type=p[0], id=p[1], changed=false;
+  (DATA.portail_messages||[]).forEach(function(m){ if(m.partie_type===type&&m.partie_id===id&&m.expediteur==='client'&&!m.lu_staff){ m.lu_staff=true; changed=true; dbPut('portail_messages',m); if(typeof syncToSupabase==='function') syncToSupabase('pi_portail_messages',m); } });
+  pmsgRender();
+  if(changed) pmsgRenderSelect();
+}
+
+function pmsgRender(){
+  var v=(document.getElementById('pmsg-interlocuteur')||{}).value; var el=document.getElementById('pmsg-thread'); if(!el||!v) return;
+  var p=v.split(':'), type=p[0], id=p[1];
+  var msgs=(DATA.portail_messages||[]).filter(function(m){ return m.partie_type===type&&m.partie_id===id; }).sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+  if(!msgs.length){ el.innerHTML='<div style="color:#6B6B9A;text-align:center;padding:20px 0;">Aucun message. Démarrez la conversation.</div>'; return; }
+  el.innerHTML=msgs.map(function(m){
+    var staff=m.expediteur==='staff';
+    return '<div style="display:flex;justify-content:'+(staff?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:75%;background:'+(staff?'#B87333':'#fff')+';color:'+(staff?'#fff':'#1C1C2E')+';border:1px solid '+(staff?'#B87333':'#E0E0EA')+';border-radius:12px;padding:8px 12px;font-size:13px;"><div>'+escHtml(m.contenu)+'</div><div style="font-size:9px;opacity:.7;margin-top:3px;">'+(staff?'Vous':'Client')+' · '+_pmsgDate(m.date)+'</div></div></div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+
+async function pmsgEnvoyer(){
+  var v=(document.getElementById('pmsg-interlocuteur')||{}).value; if(!v){ toast('Sélectionnez un interlocuteur.','error'); return; }
+  var inp=document.getElementById('pmsg-input'); var txt=(inp.value||'').trim(); if(!txt) return;
+  var p=v.split(':');
+  var msg={ id:uid(), partie_type:p[0], partie_id:p[1], expediteur:'staff', contenu:txt, date:new Date().toISOString(), lu_staff:true, lu_client:false };
+  DATA.portail_messages.push(msg); await dbPut('portail_messages',msg);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_portail_messages',msg);
+  inp.value=''; pmsgRender();
+}
+
+function updatePortailBadge(){
+  var b=document.getElementById('badge-portail-msg'); if(!b) return;
+  var n=(DATA.portail_messages||[]).filter(function(m){ return m.expediteur==='client' && !m.lu_staff; }).length;
+  b.textContent=n; b.style.display = n>0 ? 'inline-flex' : 'none';
 }
 
 // ── Authentification souscripteur ────────────────────────────
