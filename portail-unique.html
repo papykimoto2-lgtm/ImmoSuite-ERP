@@ -329,7 +329,7 @@
   function estDemo(ident,code){ return code==='123456' && ['DEMO','DEMO-001','demo@partnerimmo.ci','apporteur@demo.ci'].indexOf(ident)!==-1; }
 
   /* ═════════════ SOUSCRIPTEUR ═════════════ */
-  var S = { client:null, versements:[], programmes:[], lots:[], rapports:[], conventions:[] };
+  var S = { client:null, versements:[], programmes:[], lots:[], rapports:[], conventions:[], messages:[] };
 
   async function loginSouscripteur(){
     var ident=document.getElementById('sousLogin').value.trim();
@@ -371,6 +371,7 @@
         sb('pi_conventions?select=id,data&data->>client_id=eq.'+cid).catch(function(){return [];})
       ]);
       S.versements=unwrap(r[0]); S.programmes=unwrap(r[1]); S.lots=unwrap(r[2]); S.rapports=unwrap(r[3]); S.conventions=unwrap(r[4]);
+      S.messages=await pmsgFetch('souscripteur', S.client.id);
     }catch(e){ S.versements=S.versements||[]; }
     rendreSouscripteur();
   }
@@ -405,7 +406,8 @@
       +'<button onclick="sSub(this,\'ech\')">Échéancier</button>'
       +'<button onclick="sSub(this,\'ver\')">Versements</button>'
       +'<button onclick="sSub(this,\'tra\')">Travaux</button>'
-      +'<button onclick="sSub(this,\'doc\')">Documents</button></div>';
+      +'<button onclick="sSub(this,\'doc\')">Documents</button>'
+      +'<button onclick="sSub(this,\'msg\')">💬 Messagerie</button></div>';
 
     // FIN
     var prog=S.programmes.find(function(x){return x.id===c.programme_id;})||{};
@@ -426,7 +428,13 @@
     // DOC
     html+='<div class="sub" id="s-doc"><div class="card"><strong>📁 Mes documents</strong><div style="display:flex; flex-direction:column; gap:12px; margin-top:12px; max-width:340px;"><button class="highlight-btn" style="background:#0077b6;" onclick="docEcheancier()">📅 Échéancier personnalisé</button><button class="highlight-btn" style="background:#0077b6;" onclick="docAttestation()">📑 Attestation de versements</button></div></div></div>';
 
+    // MSG
+    html+='<div class="sub" id="s-msg"><div class="card"><strong>💬 Échangez avec Partner Immo CI</strong>'
+      +'<div id="s-msg-thread" style="border:1px solid #cfdfed;border-radius:14px;padding:12px;max-height:340px;overflow-y:auto;background:#f7fbff;margin:12px 0;"></div>'
+      +'<div style="display:flex;gap:8px;align-items:flex-end;"><textarea id="s-msg-input" rows="2" placeholder="Votre message…" style="flex:1;padding:11px 13px;border:1px solid #cfdfed;border-radius:14px;resize:vertical;"></textarea><button class="highlight-btn" onclick="sMsgEnvoyer()">Envoyer</button></div></div></div>';
+
     document.getElementById('sous-dash').innerHTML=html;
+    var sth=document.getElementById('s-msg-thread'); if(sth){ sth.innerHTML=pmsgBubbles(S.messages||[]); sth.scrollTop=sth.scrollHeight; }
   }
   function kpiBox(l,v,st){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v" style="'+(st||'')+'">'+v+'</div></div>'; }
   function sSub(btn,key){
@@ -488,7 +496,7 @@
   }
 
   /* ═════════════ APPORTEUR ═════════════ */
-  var A = { app:null, clients:[], commissions:[], programmes:[] };
+  var A = { app:null, clients:[], commissions:[], programmes:[], messages:[] };
 
   async function loginApporteur(){
     var ident=document.getElementById('appLogin').value.trim();
@@ -528,6 +536,7 @@
         sb('pi_programmes?select=id,data').catch(function(){return [];})
       ]);
       A.clients=unwrap(r[0]); A.commissions=unwrap(r[1]).filter(function(c){return c.type_beneficiaire==='apporteur';}); A.programmes=unwrap(r[2]);
+      A.messages=await pmsgFetch('apporteur', A.app.id);
     }catch(e){}
     rendreApporteur();
   }
@@ -550,7 +559,7 @@
       +kpiBox('Déjà payées',fmt(payees)+' F','color:#16a34a;')
       +kpiBox('Total généré',fmt(totale)+' F','')+'</div>';
 
-    html+='<div class="subnav"><button class="on" onclick="aSub(this,\'cli\')">Clients apportés</button><button onclick="aSub(this,\'com\')">Commissions</button></div>';
+    html+='<div class="subnav"><button class="on" onclick="aSub(this,\'cli\')">Clients apportés</button><button onclick="aSub(this,\'com\')">Commissions</button><button onclick="aSub(this,\'msg\')">💬 Messagerie</button></div>';
 
     // Clients
     var rowsCli=A.clients.length?A.clients.map(function(c){
@@ -568,7 +577,12 @@
     }).join(''):'<tr><td colspan="7">Aucune commission.</td></tr>';
     html+='<div class="sub" id="a-com"><div class="card"><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>'+rowsCom+'</tbody></table></div></div></div>';
 
+    html+='<div class="sub" id="a-msg"><div class="card"><strong>💬 Échangez avec Partner Immo CI</strong>'
+      +'<div id="a-msg-thread" style="border:1px solid #cfdfed;border-radius:14px;padding:12px;max-height:340px;overflow-y:auto;background:#f7fbff;margin:12px 0;"></div>'
+      +'<div style="display:flex;gap:8px;align-items:flex-end;"><textarea id="a-msg-input" rows="2" placeholder="Votre message…" style="flex:1;padding:11px 13px;border:1px solid #cfdfed;border-radius:14px;resize:vertical;"></textarea><button class="highlight-btn" onclick="aMsgEnvoyer()">Envoyer</button></div></div></div>';
+
     document.getElementById('app-dash').innerHTML=html;
+    var ath=document.getElementById('a-msg-thread'); if(ath){ ath.innerHTML=pmsgBubbles(A.messages||[]); ath.scrollTop=ath.scrollHeight; }
   }
   function aSub(btn,key){
     document.querySelectorAll('#app-dash .subnav button').forEach(function(b){ b.classList.remove('on'); });
@@ -701,6 +715,40 @@
   }
   peuplerVillasSelect();
 
+  /* ───── Messagerie portail (souscripteur/apporteur ↔ staff) ───── */
+  async function pmsgFetch(type,id){
+    try{ var rows=await sb('pi_portail_messages?select=id,data&data->>partie_type=eq.'+type+'&data->>partie_id=eq.'+encodeURIComponent(id)); return unwrap(rows).sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
+    catch(e){ return []; }
+  }
+  function pmsgBubbles(msgs){
+    if(!msgs||!msgs.length) return '<div style="color:#4b6a8b;text-align:center;padding:16px 0;">Aucun message. Écrivez à Partner Immo CI ci-dessous.</div>';
+    return msgs.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);}).map(function(m){
+      var mine=m.expediteur==='client';
+      return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:78%;background:'+(mine?'#003366':'#fff')+';color:'+(mine?'#fff':'#0a2b3e')+';border:1px solid '+(mine?'#003366':'#cfdfed')+';border-radius:14px;padding:9px 13px;font-size:.86rem;"><div>'+esc(m.contenu)+'</div><div style="font-size:.62rem;opacity:.75;margin-top:3px;">'+(mine?'Moi':'Partner Immo CI')+' · '+dshort(m.date)+'</div></div></div>';
+    }).join('');
+  }
+  async function _pmsgClientSend(type,id,inputId,threadId,store){
+    var inp=document.getElementById(inputId); if(!inp) return; var txt=(inp.value||'').trim(); if(!txt) return;
+    var msg={ id:uid(), partie_type:type, partie_id:id, expediteur:'client', contenu:txt, date:new Date().toISOString(), lu_staff:false, lu_client:true };
+    try{
+      await sbInsert('pi_portail_messages',{ id:msg.id, data:msg });
+      store.push(msg); inp.value='';
+      var th=document.getElementById(threadId); if(th){ th.innerHTML=pmsgBubbles(store); th.scrollTop=th.scrollHeight; }
+    }catch(e){ alert('Échec de l\'envoi du message. Réessayez.'); }
+  }
+  function sMsgEnvoyer(){ if(S.client) _pmsgClientSend('souscripteur', S.client.id, 's-msg-input','s-msg-thread', S.messages); }
+  function aMsgEnvoyer(){ if(A.app) _pmsgClientSend('apporteur', A.app.id, 'a-msg-input','a-msg-thread', A.messages); }
+  /* Rafraîchissement auto des conversations ouvertes */
+  setInterval(async function(){
+    try{
+      var sd=document.getElementById('sous-dash');
+      if(S.client && sd && sd.style.display!=='none'){ S.messages=await pmsgFetch('souscripteur',S.client.id); var st=document.getElementById('s-msg-thread'); if(st) st.innerHTML=pmsgBubbles(S.messages); }
+      var ad=document.getElementById('app-dash');
+      if(A.app && ad && ad.style.display!=='none'){ A.messages=await pmsgFetch('apporteur',A.app.id); var at=document.getElementById('a-msg-thread'); if(at) at.innerHTML=pmsgBubbles(A.messages); }
+    }catch(e){}
+  }, 30000);
+
+  window.sMsgEnvoyer=sMsgEnvoyer; window.aMsgEnvoyer=aMsgEnvoyer;
   window.envoyerSouscription=envoyerSouscription; window.majPrixEstime=majPrixEstime;
   window.loginSouscripteur=loginSouscripteur; window.logoutSouscripteur=logoutSouscripteur; window.sSub=sSub; window.docEcheancier=docEcheancier; window.docAttestation=docAttestation;
   window.loginApporteur=loginApporteur; window.logoutApporteur=logoutApporteur; window.aSub=aSub;
