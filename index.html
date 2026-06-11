@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v18.11 · 2026-06-08';
+window.IMMOSUITE_VERSION = 'v18.14 · 2026-06-08';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -2012,6 +2012,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('parametres')" data-page="parametres">
         <span class="nav-icon">⚙️</span><span>Paramètres</span>
       </div>
+      <div class="nav-item" onclick="goTo('portail')" data-page="portail">
+        <span class="nav-icon">🌐</span><span>Site / Portail</span>
+      </div>
     </nav>
 
     <!-- Contenu principal -->
@@ -3128,6 +3131,45 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
 
       <!-- ── PARAMÈTRES ─────────────────────────────── -->
+      <!-- 🌐 SITE / PORTAIL ──────────────────────────── -->
+      <div id="page-portail" class="page">
+        <div class="page-header">
+          <h1>🌐 Site / Portail — Médias publiables</h1>
+          <p style="color:#6B6B9A;font-size:13px;">Ajoutez des photos et documents qui s'afficheront sur le site public et l'espace souscripteur.</p>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <h3 style="margin-bottom:12px;">➕ Ajouter des médias</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Catégorie</label>
+              <select id="pm-categorie" class="form-control">
+                <option value="eden">Photos — Cité EDEN</option>
+                <option value="chantier">Photos — Chantier / Avancement</option>
+                <option value="catalogue">Photos — Villas / Catalogue</option>
+                <option value="document">Document (PDF, plan, brochure)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Titre / légende</label>
+              <input type="text" id="pm-titre" class="form-control" placeholder="Ex : Vue du lac, Plan de masse…">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="pmOuvrirPhotos()">📷 Ajouter des photos</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="pmOuvrirDocument()">📄 Ajouter un document (PDF)</button>
+            <input type="file" id="pm-input-photos" accept="image/*" multiple style="display:none;" onchange="pmAjouterPhotos(this)">
+            <input type="file" id="pm-input-doc" accept="application/pdf,image/*" style="display:none;" onchange="pmAjouterDocument(this)">
+          </div>
+          <div style="font-size:11px;color:#6B6B9A;margin-top:8px;">Les photos sont compressées automatiquement. Documents : PDF recommandé (max ~4 Mo).</div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:12px;">🗂️ Médias du portail</h3>
+          <div id="pm-liste"></div>
+        </div>
+      </div>
+
       <!-- ⚙ PARAMÈTRES ──────────────────────────────── -->
       <div class="page" id="page-parametres">
         <style>
@@ -10315,6 +10357,7 @@ var APP = {
 // Données en mémoire (sync avec IndexedDB + Supabase)
 var DATA = {
   clients: [],
+  portail_medias: [],
   versements: [],
   programmes: [],
   lots: [],
@@ -10375,7 +10418,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 109; /* v109: store mutations (Portefeuille Foncier) — migration additive, non destructive */
+var DB_VERSION = 110; /* v110: store portail_medias (photos/documents du portail) — migration additive */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -10408,7 +10451,9 @@ var ALL_STORES = [
   'avenants_amenagement',
   /* v108 — Module Reunions Direction */
   'reunions_direction',
-  'actions_reunion'
+  'actions_reunion',
+  /* v110 — Médias du portail (photos/documents publiables) */
+  'portail_medias'
 ];
 
 function initDB() {
@@ -10530,7 +10575,9 @@ async function loadAllData() {
   /* v108 */
   'reunions_direction','actions_reunion',
   /* MàJ RH 2026-06-07 : stores désormais synchronisés */
-  'custom_roles','logs_connexion'
+  'custom_roles','logs_connexion',
+  /* v110 */
+  'portail_medias'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -10709,6 +10756,7 @@ async function deleteFromSupabase(table, id) {
 /* Correspondance table Supabase ↔ store local (IndexedDB / DATA) */
 var SUPA_STORE_MAP = [
   ['pi_users',           'users'],
+  ['pi_portail_medias',  'portail_medias'],
   ['pi_programmes',       'programmes'],
   ['pi_lots',            'lots'],
   ['pi_terrains',        'terrains'],
@@ -11475,6 +11523,7 @@ function goTo(page) {
   if (page === 'constructeurs') { renderConstructeurs(); updateConstructeursKPIs(); }
   if (page === 'conventions') { renderConventions(); populateConventionSelects(); }
   if (page === 'avancement') { renderChantiersDashboard(); }
+  if (page === 'portail') { if (typeof pmRender === 'function') pmRender(); }
   if (page === 'leads') { renderPipeline(); if (typeof crmStartPolling === 'function') crmStartPolling(); }
   if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else { renderCarteGeo(); _refreshGeoMap(false); } }, 80); }
   if (page === 'crm-itineraires') { loadPageItineraires(); }
@@ -19079,6 +19128,7 @@ function renderApporteurs() {
       +'<td><span style="background:'+(a.statut==='actif'?'#ECFDF5':'#FEF2F2')+';color:'+sm+';padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">'+a.statut+'</span></td>'
       +'<td style="white-space:nowrap;">'
         +'<button onclick="openApporteurModal(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Modifier">✏️</button> '
+        +'<button onclick="genererCodeApporteur(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Code d\'accès portail">🔑</button> '
         +'<button onclick="imprimerContratApporteur(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Contrat">📄</button> '
         +'<button onclick="imprimerNonContournement(\''+a.id+'\')" class="btn btn-secondary btn-sm btn-icon" title="Non-contournement">🔒</button> '
         +'<button onclick="deleteApporteur(\''+a.id+'\')" class="btn btn-danger btn-sm btn-icon" title="Supprimer">🗑️</button>'
@@ -23411,16 +23461,20 @@ function switchSousTab(tab) {
 }
 
 // ── Génération code accès par l'admin ────────────────────────
-function genererCodeAcces(clientId) {
+async function genererCodeAcces(clientId) {
   if (!hasRole('admin') && !hasRole('manager') && !hasRole('commercial')) {
     toast('⛔ Accès refusé.','error'); return;
   }
   var client = DATA.clients.find(function(c){ return c.id === clientId; });
   if (!client) return;
-  // Code 6 chiffres aléatoire
+  // Code 6 chiffres aléatoire (montré une seule fois), stocké HASHÉ (SHA-256 + sel)
   var code = Math.floor(100000 + Math.random() * 900000).toString();
-  client.code_acces = code;
+  var salt = generateSalt();
+  client.code_acces_hash = await hashPassword(code, salt);
+  client.code_acces_salt = salt;
   client.code_acces_date = new Date().toISOString();
+  delete client.code_acces;      // ne jamais conserver le code en clair
+  delete client.mot_de_passe;
   dbPut('clients', client);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', client);
   toast('Code généré pour ' + client.nom + ' : ' + code, 'success');
@@ -23431,6 +23485,110 @@ function genererCodeAcces(clientId) {
     secret: code, email: client.email || '', tel: client.tel || '',
     type: 'souscripteur', secretLabel: "Code d'accès"
   });
+}
+
+// ── Code d'accès apporteur (portail) ─────────────────────────
+async function genererCodeApporteur(apporteurId) {
+  if (!hasRole('admin') && !hasRole('manager') && !hasRole('commercial')) {
+    toast('⛔ Accès refusé.','error'); return;
+  }
+  var a = DATA.apporteurs.find(function(x){ return x.id === apporteurId; });
+  if (!a) return;
+  if (!a.email && !a.tel) { toast('Ajoutez un email ou téléphone à l\'apporteur d\'abord.', 'error'); return; }
+  var code = Math.floor(100000 + Math.random() * 900000).toString();
+  var salt = generateSalt();
+  a.code_acces_hash = await hashPassword(code, salt);
+  a.code_acces_salt = salt;
+  a.code_acces_date = new Date().toISOString();
+  delete a.code_acces; delete a.mot_de_passe;
+  await dbPut('apporteurs', a);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_apporteurs', a);
+  toast('Code apporteur généré : ' + code, 'success');
+  ouvrirInvitation({
+    nom: (a.prenoms ? a.prenoms + ' ' : '') + a.nom,
+    login: a.email || a.tel,
+    secret: code, email: a.email || '', tel: a.tel || '',
+    type: 'apporteur', secretLabel: "Code d'accès"
+  });
+}
+
+/* ═══ Médias du portail (admin → site public + espace souscripteur) ═══ */
+function pmOuvrirPhotos(){ var i=document.getElementById('pm-input-photos'); if(i){ i.value=''; i.click(); } }
+function pmOuvrirDocument(){ var i=document.getElementById('pm-input-doc'); if(i){ i.value=''; i.click(); } }
+function _pmLabelCat(c){ return ({eden:'Cité EDEN',chantier:'Chantier',catalogue:'Catalogue',document:'Document'})[c]||c; }
+
+async function pmAjouterPhotos(input){
+  if (!hasRole('admin') && !hasRole('manager')) { toast('⛔ Réservé à l\'administrateur.','error'); return; }
+  var cat = (document.getElementById('pm-categorie')||{}).value || 'eden';
+  if (cat === 'document') cat = 'eden';
+  var titre = (document.getElementById('pm-titre')||{}).value || '';
+  var files = Array.from(input.files||[]).filter(function(f){ return f.type.indexOf('image/')===0; });
+  if(!files.length){ toast('Aucune image sélectionnée.','error'); return; }
+  for(var k=0;k<files.length;k++){
+    var f=files[k];
+    if(f.size > 6*1024*1024){ toast('❌ '+f.name+' dépasse 6 Mo.','error'); continue; }
+    var dataUrl = await new Promise(function(res){ var r=new FileReader(); r.onload=function(e){res(e.target.result);}; r.readAsDataURL(f); });
+    var compressed = await _compressImage(dataUrl, 1600, 0.7);
+    var media = { id: uid(), type:'photo', categorie:cat, titre: titre || f.name.replace(/\.[^.]+$/,''), data:compressed, mime:'image/jpeg', taille:Math.round(compressed.length*3/4), visible:true, date:new Date().toISOString() };
+    DATA.portail_medias.push(media);
+    await dbPut('portail_medias', media);
+    if(typeof syncToSupabase==='function') syncToSupabase('pi_portail_medias', media);
+  }
+  input.value='';
+  toast('✅ Photo(s) publiée(s) au portail.','success');
+  pmRender();
+}
+
+async function pmAjouterDocument(input){
+  if (!hasRole('admin') && !hasRole('manager')) { toast('⛔ Réservé à l\'administrateur.','error'); return; }
+  var titre = (document.getElementById('pm-titre')||{}).value || '';
+  var f = (input.files||[])[0];
+  if(!f){ return; }
+  if(f.size > 5*1024*1024){ toast('❌ Document trop lourd (max 5 Mo).','error'); input.value=''; return; }
+  var dataUrl = await new Promise(function(res){ var r=new FileReader(); r.onload=function(e){res(e.target.result);}; r.readAsDataURL(f); });
+  var media = { id: uid(), type:'document', categorie:'document', titre: titre || f.name, data:dataUrl, mime:f.type||'application/pdf', nom:f.name, taille:f.size, visible:true, date:new Date().toISOString() };
+  DATA.portail_medias.push(media);
+  await dbPut('portail_medias', media);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_portail_medias', media);
+  input.value='';
+  toast('✅ Document publié au portail.','success');
+  pmRender();
+}
+
+function pmRender(){
+  var el=document.getElementById('pm-liste'); if(!el) return;
+  var list=(DATA.portail_medias||[]).slice().sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  if(!list.length){ el.innerHTML='<div style="color:#6B6B9A;">Aucun média. Ajoutez des photos ou documents ci-dessus.</div>'; return; }
+  el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">'+list.map(function(m){
+    var vis = m.visible!==false;
+    var thumb = m.type==='photo'
+      ? '<img src="'+escHtml(m.data)+'" style="width:100%;height:120px;object-fit:cover;border-radius:8px;">'
+      : '<div style="height:120px;display:flex;align-items:center;justify-content:center;background:#F1F5F9;border-radius:8px;font-size:36px;">📄</div>';
+    return '<div style="border:1px solid #E0E0EA;border-radius:10px;padding:8px;'+(vis?'':'opacity:.5;')+'">'
+      + thumb
+      + '<div style="font-size:12px;font-weight:600;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(m.titre||'—')+'</div>'
+      + '<div style="font-size:10px;color:#6B6B9A;">'+_pmLabelCat(m.categorie)+'</div>'
+      + '<div style="display:flex;gap:6px;margin-top:6px;">'
+      +   '<button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="pmToggleVisible(\''+m.id+'\')">'+(vis?'👁️':'🚫')+'</button>'
+      +   '<button type="button" class="btn btn-danger btn-sm" onclick="pmDelete(\''+m.id+'\')">🗑️</button>'
+      + '</div></div>';
+  }).join('')+'</div>';
+}
+
+async function pmToggleVisible(id){
+  var m=DATA.portail_medias.find(function(x){return x.id===id;}); if(!m) return;
+  m.visible = (m.visible===false);
+  await dbPut('portail_medias', m);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_portail_medias', m);
+  pmRender();
+}
+
+async function pmDelete(id){
+  if(!confirm('Supprimer ce média du portail ?')) return;
+  DATA.portail_medias = (DATA.portail_medias||[]).filter(function(x){return x.id!==id;});
+  await dbDelete('portail_medias', id);
+  if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_portail_medias', id);
+  pmRender();
 }
 
 // ── Authentification souscripteur ────────────────────────────
@@ -23445,15 +23603,24 @@ async function authentifierSouscripteur() {
     errEl.style.display = 'block'; return;
   }
 
-  // Recherche par dossier, email ou tel + code_acces
-  var client = DATA.clients.find(function(c) {
-    var matchId = c.dossier === login || c.email === login
-      || c.tel === login || c.tel.replace(/\s/g,'') === login.replace(/\s/g,'');
-    // Compatibilité ancien: mot_de_passe ou code_acces
-    var matchCode = (c.code_acces && c.code_acces === code)
-      || (c.mot_de_passe && c.mot_de_passe === code);
-    return matchId && matchCode;
+  // Recherche par dossier, email ou tel
+  var cand = DATA.clients.find(function(c) {
+    var tel = (c.tel || '').replace(/\s/g,'');
+    return c.dossier === login || c.email === login
+      || c.tel === login || tel === login.replace(/\s/g,'');
   });
+  // Vérification du code : hash si dispo, sinon clair (compatibilité ancien)
+  var codeOk = false;
+  if (cand) {
+    if (cand.code_acces_hash && cand.code_acces_salt) {
+      codeOk = (await hashPassword(code, cand.code_acces_salt)) === cand.code_acces_hash;
+    } else if (cand.code_acces) {
+      codeOk = String(cand.code_acces) === code;
+    } else if (cand.mot_de_passe) {
+      codeOk = String(cand.mot_de_passe) === code;
+    }
+  }
+  var client = codeOk ? cand : null;
 
   if (!client) {
     errEl.textContent = 'Identifiants incorrects. Vérifiez votre n° de dossier/téléphone et votre code acces.';
