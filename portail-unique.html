@@ -3,48 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Partner Immo CI | Portail Immobilier</title>
+  <title>Partner Immo CI | Espace Souscripteur & Apporteur</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family:'Inter',sans-serif; background:#f8fafc; color:#0a2b3e; }
     .container { max-width:1280px; margin:0 auto; padding:0 24px; }
-
-    /* BANDEAU DÉFILANT */
-    .bandeau-container {
-      background-color: #003366; /* couleur par défaut, sera écrasée par JS */
-      overflow: hidden;
-      white-space: nowrap;
-      position: relative;
-      padding: 10px 0;
-      z-index: 99;
-    }
-    .bandeau-contenu {
-      display: inline-block;
-      padding-left: 100%;
-      animation: defilement 35s linear infinite;
-      font-size: 0.95rem;
-      font-weight: 500;
-      color: white;
-      text-shadow: 0 0 2px rgba(0,0,0,0.2);
-    }
-    .bandeau-contenu i {
-      margin: 0 12px;
-      opacity: 0.9;
-    }
-    .bandeau-contenu span {
-      margin: 0 8px;
-    }
-    @keyframes defilement {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-    /* Pause au survol */
-    .bandeau-container:hover .bandeau-contenu {
-      animation-play-state: paused;
-    }
-
     .site-header { background:#fff; border-bottom:1px solid #e9edf2; position:sticky; top:0; z-index:100; }
     .header-flex { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:16px 0; gap:16px; }
     .logo-area { display:flex; align-items:center; gap:12px; }
@@ -95,20 +60,34 @@
     .photo-card:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,0.1); }
     .photo-card img { width:100%; height:200px; object-fit:cover; display:block; }
     .photo-card .caption { padding:10px 12px; font-size:0.8rem; color:#1e4663; font-weight:500; text-align:center; background:#fff; border-top:1px solid #eef2f8; }
+    /* Signature SanixAfrica */
+    .signature {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: #0a2a3b;
+    }
+    .signature a {
+      color: #cddfea;
+      text-decoration: none;
+    }
+    .signature a:hover {
+      color: #B87333;
+    }
   </style>
 </head>
 <body>
 
-<!-- BANDEAU DÉFILANT DYNAMIQUE -->
-<div id="bandeau" class="bandeau-container" style="background-color: #003366;">
-  <div class="bandeau-contenu" id="bandeau-texte">
-    <i class="fas fa-spinner fa-pulse"></i> Chargement des informations...
-  </div>
-</div>
-
 <header class="site-header">
   <div class="container header-flex" id="main-header">
-    <div class="logo-area" id="logo-area"></div>
+    <div class="logo-area" id="logo-area">
+      <!-- Logo chargé dynamiquement -->
+    </div>
     <ul class="nav-tabs">
       <li><button class="tab-link active" data-tab="activites"><i class="fas fa-hard-hat"></i> ACTIVITÉS</button></li>
       <li><button class="tab-link" data-tab="eden"><i class="fas fa-tree"></i> CITÉ EDEN</button></li>
@@ -212,7 +191,18 @@
   </div>
 </div></div>
 
-<footer><div class="container"><p id="footer-legal">© Partner Immo CI 2026 — SARLU au capital de 1 000 000 FCFA · RCCM CI-ABJ-03-2022-B13-09764</p></div></footer>
+<footer>
+  <div class="container">
+    <p id="footer-legal">© Partner Immo CI 2026 — SARLU au capital de 1 000 000 FCFA · RCCM CI-ABJ-03-2022-B13-09764</p>
+    <!-- Signature SanixAfrica -->
+    <div class="signature">
+      <span>🚀 Conception & réalisation : <strong>SanixAfrica</strong> (Division Technologies)</span>
+      <span>📞 <a href="tel:+2250779181075">+225 0779181075</a></span>
+      <span>✉️ <a href="mailto:sanixafrica699@gmail.com">sanixafrica699@gmail.com</a></span>
+      <span>👤 C. KESSIE</span>
+    </div>
+  </div>
+</footer>
 
 <script>
   // ==================== CONFIGURATION SUPABASE ====================
@@ -230,7 +220,6 @@
 
   let params = {}, medias = [], programmes = [], modelesLogement = [], clients = [], conventions = [];
 
-  // Chargement global des données ERP
   async function chargerDonneesERP() {
     try {
       const paramsRows = await sbFetch('pi_params?select=id,data&limit=1');
@@ -242,66 +231,8 @@
       conventions = (await sbFetch('pi_conventions?select=id,data')).map(r => r.data);
     } catch(e) { console.warn("Erreur chargement ERP", e); }
     majHeader(); majActivites(); majEden(); majCatalogue(); majCataloguePhoto(); majSocieteContact(); majHero();
-    mettreAJourBandeau(); // initialise le bandeau
-    setInterval(mettreAJourBandeau, 30000); // rafraîchissement auto toutes les 30s
   }
 
-  // ========== BANDEAU DÉFILANT AVEC DONNÉES RÉELLES ==========
-  async function mettreAJourBandeau() {
-    try {
-      // Récupérer les dernières données pour être à jour
-      const freshClients = (await sbFetch('pi_clients?select=id,data')).map(r => r.data);
-      const freshConvs = (await sbFetch('pi_conventions?select=id,data')).map(r => r.data);
-      const nbSouscripteurs = freshClients.filter(c => c && c.statut !== 'resilie').length;
-      
-      // Prochaine remise de clés : chercher la convention avec réception définitive la plus proche dans le futur
-      let prochaineRemise = null;
-      const today = new Date();
-      const conventionsAvecDate = freshConvs.filter(c => c.date_fin_prev && c.statut === 'en_cours');
-      let dateMin = null;
-      for (let conv of conventionsAvecDate) {
-        const d = new Date(conv.date_fin_prev);
-        if (d > today && (!dateMin || d < dateMin)) {
-          dateMin = d;
-          prochaineRemise = conv.date_fin_prev;
-        }
-      }
-      // Si aucune, prendre une date approximative (ex: dans 60 jours)
-      if (!prochaineRemise) {
-        const future = new Date();
-        future.setDate(future.getDate() + 60);
-        prochaineRemise = future.toISOString().slice(0,10);
-      }
-      const dateFormatee = new Date(prochaineRemise).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'});
-      
-      // Calcul de l'avancement global des chantiers (moyenne des conventions)
-      let avancementMoyen = 0;
-      if (freshConvs.length) {
-        const sum = freshConvs.reduce((acc, c) => acc + (c.avancement || 0), 0);
-        avancementMoyen = Math.round(sum / freshConvs.length);
-      }
-      
-      // Construction du message défilant
-      let message = `🏠 ${nbSouscripteurs} familles nous ont déjà rejointes !  `;
-      message += `🔑 Prochaine remise de clés : ${dateFormatee}.  `;
-      message += `📊 Avancement global des chantiers : ${avancementMoyen}%.  `;
-      message += `✨ Souscrivez en ligne et devenez propriétaire.  `;
-      message += `📞 Contactez-nous au 07 7877 2529.  `;
-      
-      // Couleur du bandeau depuis les paramètres ERP (ex: "bandeau_couleur": "#dc2626")
-      const couleurBandeau = params.bandeau_couleur || '#003366';
-      document.getElementById('bandeau').style.backgroundColor = couleurBandeau;
-      
-      const bandeauTexte = document.getElementById('bandeau-texte');
-      bandeauTexte.innerHTML = `<i class="fas fa-bullhorn"></i> ${escapeHtml(message)} <i class="fas fa-arrow-right"></i> ${escapeHtml(message)} <i class="fas fa-arrow-right"></i> ${escapeHtml(message)}`;
-      
-    } catch(e) {
-      console.warn("Erreur mise à jour bandeau", e);
-      document.getElementById('bandeau-texte').innerHTML = '<i class="fas fa-info-circle"></i> Restez informé : suivez nos actualités sur le site.';
-    }
-  }
-
-  // ========== AUTRES FONCTIONS DU SITE ==========
   function majHeader() {
     const logoArea = document.getElementById('logo-area');
     const logoData = medias.find(m => m.type === 'logo' || m.categorie === 'logo');
