@@ -19,7 +19,7 @@
     .tab-link:hover { background:#eef3fc; }
     .tab-link.active { background:#003366; color:white; }
     .hero { background:linear-gradient(105deg,#001f3f,#005a8c); padding:60px 0; color:white; text-align:center; position:relative; overflow:hidden; }
-    .hero::before { content:""; position:absolute; top:0; left:0; width:100%; height:100%; background-image:url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=2073&auto=format'); background-size:cover; opacity:0.2; pointer-events:none; }
+    .hero::before { content:""; position:absolute; inset:0; background-image:url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=2073&auto=format'); background-size:cover; opacity:0.2; pointer-events:none; }
     .hero-content { position:relative; z-index:2; }
     .hero h2 { font-size:2rem; margin-bottom:20px; }
     .content-section { background:white; border-radius:28px; margin:50px auto; padding:40px 32px; }
@@ -34,12 +34,37 @@
     .badge-list { display:flex; flex-wrap:wrap; gap:12px; margin:20px 0; }
     .highlight-btn { background:#003366; color:white; border:none; border-radius:40px; padding:12px 28px; font-weight:bold; cursor:pointer; transition:0.2s; }
     .highlight-btn:hover { background:#001f4f; }
+    .highlight-btn:disabled { opacity:.6; cursor:default; }
     .contact-form { display:flex; flex-direction:column; gap:20px; max-width:600px; }
     .contact-form input, .contact-form textarea { padding:14px 18px; border:1px solid #cfdfed; border-radius:18px; }
     footer { background:#0a2a3b; color:#cddfea; text-align:center; padding:28px 0; }
     .stat-card { background:white; border-radius:20px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #eef2f8; margin-bottom:20px; }
-    .badge-danger { background:#fee2e2; color:#991b1b; padding:8px; border-radius:30px; display:none; margin-top:10px; }
-    @media (max-width:980px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .hero h2 { font-size:1.8rem; } .header-flex { flex-direction:column; } .nav-tabs { justify-content:center; } }
+    .badge-danger { background:#fee2e2; color:#991b1b; padding:8px 12px; border-radius:30px; display:none; margin-top:10px; font-size:.85rem; }
+    /* dashboard */
+    .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:20px 0; }
+    .kpi { background:#fff; border:1px solid #eef2f8; border-top:3px solid #003366; border-radius:16px; padding:16px; text-align:center; }
+    .kpi .l { font-size:.72rem; color:#4b6a8b; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+    .kpi .v { font-size:1.25rem; font-weight:700; }
+    .subnav { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+    .subnav button { border:1px solid #cfdfed; background:#fff; border-radius:30px; padding:8px 16px; font-size:.82rem; font-weight:600; color:#1e4663; cursor:pointer; }
+    .subnav button.on { background:#003366; color:#fff; border-color:#003366; }
+    .sub { display:none; } .sub.on { display:block; }
+    table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    th,td { padding:10px 8px; text-align:left; border-bottom:1px solid #eef2f8; }
+    th { color:#4b6a8b; font-size:.72rem; text-transform:uppercase; }
+    .pill { padding:4px 10px; border-radius:20px; font-size:.72rem; font-weight:600; }
+    .p-vert{ background:#dcfce7; color:#166534;} .p-rouge{ background:#fee2e2; color:#991b1b;} .p-bleu{ background:#dbeafe; color:#1e40af;} .p-or{ background:#fef3c7; color:#92400e;} .p-gris{ background:#eef2f8; color:#4b6a8b;}
+    .prog { height:8px; background:#eef2f8; border-radius:4px; overflow:hidden; margin:8px 0; }
+    .prog > div { height:100%; background:#16a34a; border-radius:4px; }
+    .photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px; }
+    .photo-item { aspect-ratio:1; border-radius:12px; overflow:hidden; border:1px solid #eef2f8; position:relative; background:#f1f5f9; }
+    .photo-item img { width:100%; height:100%; object-fit:cover; }
+    .photo-cap { position:absolute; left:0; right:0; bottom:0; font-size:.65rem; padding:3px 6px; background:rgba(0,0,0,.55); color:#fff; }
+    .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; }
+    .spinner.dark { border-color:rgba(0,51,102,.25); border-top-color:#003366; }
+    @keyframes spin { to{ transform:rotate(360deg);} }
+    .loader { text-align:center; color:#4b6a8b; padding:30px 0; }
+    @media (max-width:980px) { .grid-2,.grid-3 { grid-template-columns:1fr; } .kpi-row{ grid-template-columns:1fr 1fr;} .hero h2 { font-size:1.8rem; } .header-flex { flex-direction:column; } .nav-tabs { justify-content:center; } }
   </style>
 </head>
 <body>
@@ -50,302 +75,396 @@
     <ul class="nav-tabs">
       <li><button class="tab-link active" data-tab="activites"><i class="fas fa-hard-hat"></i> ACTIVITÉS</button></li>
       <li><button class="tab-link" data-tab="realisations"><i class="fas fa-trophy"></i> RÉALISATIONS</button></li>
-      <li><button class="tab-link" data-tab="engagements"><i class="fas fa-leaf"></i> ENGAGEMENTS</button></li>
       <li><button class="tab-link" data-tab="presence"><i class="fas fa-globe-europe"></i> PRÉSENCE</button></li>
-      <li><button class="tab-link" data-tab="source"><i class="fas fa-newspaper"></i> SOURCE</button></li>
       <li><button class="tab-link" data-tab="nous-connaitre"><i class="fas fa-building"></i> NOUS CONNAÎTRE</button></li>
       <li><button class="tab-link" data-tab="nous-contacter"><i class="fas fa-envelope"></i> CONTACT</button></li>
-      <li><button class="tab-link" data-tab="nous-rejoindre"><i class="fas fa-user-plus"></i> NOUS REJOINDRE</button></li>
       <li><button class="tab-link" data-tab="souscripteur"><i class="fas fa-chart-line"></i> SOUSCRIPTEUR</button></li>
-      <li><button class="tab-link" data-tab="apporteurs"><i class="fas fa-handshake"></i> APPORTEURS</button></li>
-      <li><button class="tab-link" data-tab="fr"><i class="fas fa-flag-checkered"></i> FR</button></li>
+      <li><button class="tab-link" data-tab="apporteurs"><i class="fas fa-handshake"></i> APPORTEUR</button></li>
     </ul>
   </div>
 </header>
 
-<section class="hero"><div class="hero-content container"><h2>BÂTIR ENSEMBLE L'IMMOBILIER DE DEMAIN</h2><p>Partner Immo CI — solutions d’investissement sur mesure et partenariat gagnant-gagnant.</p><div class="search-area" style="max-width:520px; margin:20px auto 0; background:white; border-radius:60px; display:flex; align-items:center; padding:4px 8px 4px 20px;"><i class="fas fa-search"></i><input type="text" placeholder="Rechercher..." id="searchInput" style="flex:1; border:none; padding:14px 12px; background:transparent;"><button id="searchMockBtn" style="background:#003366; border:none; color:white; padding:8px 20px; border-radius:50px;"><i class="fas fa-arrow-right"></i></button></div></div></section>
+<section class="hero"><div class="hero-content container"><h2>BÂTIR ENSEMBLE L'IMMOBILIER DE DEMAIN</h2><p>Partner Immo CI — solutions d'investissement sur mesure et partenariat gagnant-gagnant.</p></div></section>
 
 <div class="container"><div class="content-section">
-  <!-- Contenu vitrine -->
-  <div id="activites-pane" class="tab-pane active-pane"><h3><i class="fas fa-hard-hat"></i> Nos activités immobilières</h3><p>Partner Immo CI accompagne les investisseurs, promoteurs et institutionnels en Côte d’Ivoire et à l’international.</p><div class="grid-3"><div class="card"><i class="fas fa-chart-pie"></i><h4>Investissement & Souscription</h4><p>SCPI, crowdfunding, foncier.</p></div><div class="card"><i class="fas fa-handshake"></i><h4>Apport d’affaires</h4><p>Programme partenaire rémunérateur.</p></div><div class="card"><i class="fas fa-building"></i><h4>Promotion & Gestion</h4><p>Résidentiel, bureaux, gestion locative.</p></div></div><div class="badge-list"><span class="badge">+15 ans d'expertise</span><span class="badge">+250 M€ de projets</span><span class="badge">100% dédié Afrique & Europe</span></div></div>
-  <div id="realisations-pane" class="tab-pane"><h3><i class="fas fa-medal"></i> Réalisations</h3><div class="grid-2"><div class="card"><i class="fas fa-hotel"></i><h4>Résidence Les Flamboyants – Abidjan</h4><p>63 appartements livrés en 2024.</p></div><div class="card"><i class="fas fa-chart-line"></i><h4>Fonds SCPI IMPACT 2025</h4><p>Collecte de 12M€.</p></div></div></div>
-  <div id="engagements-pane" class="tab-pane"><h3><i class="fas fa-globe"></i> Engagements RSE</h3><div class="grid-3"><div class="card"><i class="fas fa-leaf"></i><h4>Bâtiments bas carbone</h4></div><div class="card"><i class="fas fa-hand-holding-usd"></i><h4>Souscripteur protégé</h4></div><div class="card"><i class="fas fa-people-arrows"></i><h4>Équité apporteurs</h4></div></div></div>
-  <div id="presence-pane" class="tab-pane"><h3><i class="fas fa-map-marker-alt"></i> Présence</h3><p>Cocody – Angré (Abidjan), Paris, Dakar. +45 collaborateurs, +300 souscripteurs.</p></div>
-  <div id="source-pane" class="tab-pane"><h3><i class="fas fa-rss"></i> Actualités</h3><div class="grid-2"><div class="card"><i class="fas fa-chart-simple"></i><h4>Rapport semestriel 2026</h4></div><div class="card"><i class="fas fa-users"></i><h4>Webinaire “Apporteur d’affaires”</h4></div></div></div>
-  <div id="nous-connaitre-pane" class="tab-pane"><h3><i class="fas fa-users"></i> Qui sommes-nous ?</h3><p>Expert immobilier depuis 2012.</p><div class="card"><i class="fas fa-chart-simple"></i><h4>Chiffres clés</h4><p>45 salariés · 180M€ d’actifs · 98% de satisfaction</p></div></div>
-  <div id="nous-contacter-pane" class="tab-pane"><h3><i class="fas fa-comment-dots"></i> Contact</h3><div class="contact-form"><input type="text" id="contactName" placeholder="Nom & Prénom"><input type="email" id="contactEmail" placeholder="Email"><textarea rows="3" placeholder="Message"></textarea><button id="fakeSubmit" class="highlight-btn">Envoyer</button></div></div>
-  <div id="nous-rejoindre-pane" class="tab-pane"><h3><i class="fas fa-briefcase"></i> Rejoindre</h3><button class="highlight-btn" id="careerBtn">Postulez spontanément</button></div>
+  <div id="activites-pane" class="tab-pane active-pane"><h3><i class="fas fa-hard-hat"></i> Nos activités immobilières</h3><p>Partner Immo CI accompagne les investisseurs, promoteurs et institutionnels en Côte d'Ivoire.</p><div class="grid-3"><div class="card"><i class="fas fa-chart-pie"></i><h4>Investissement & Souscription</h4><p>Foncier, logements, programmes.</p></div><div class="card"><i class="fas fa-handshake"></i><h4>Apport d'affaires</h4><p>Programme partenaire rémunérateur.</p></div><div class="card"><i class="fas fa-building"></i><h4>Promotion & Gestion</h4><p>Résidentiel, gestion locative.</p></div></div></div>
+  <div id="realisations-pane" class="tab-pane"><h3><i class="fas fa-medal"></i> Réalisations</h3><div class="grid-2"><div class="card"><h4>Résidence Les Flamboyants – Abidjan</h4><p>Appartements livrés.</p></div><div class="card"><h4>Cité Eden</h4><p>Programme en cours.</p></div></div></div>
+  <div id="presence-pane" class="tab-pane"><h3><i class="fas fa-map-marker-alt"></i> Présence</h3><p>Cocody – Angré (Abidjan).</p></div>
+  <div id="nous-connaitre-pane" class="tab-pane"><h3><i class="fas fa-users"></i> Qui sommes-nous ?</h3><p>Expert immobilier en Côte d'Ivoire.</p></div>
+  <div id="nous-contacter-pane" class="tab-pane"><h3><i class="fas fa-comment-dots"></i> Contact</h3><div class="contact-form"><input type="text" placeholder="Nom & Prénom"><input type="email" placeholder="Email"><textarea rows="3" placeholder="Message"></textarea><button class="highlight-btn" onclick="alert('Message envoyé (simulation)')">Envoyer</button></div></div>
 
-  <!-- ESPACE SOUSCRIPTEUR (avec fallback démo) -->
+  <!-- ESPACE SOUSCRIPTEUR -->
   <div id="souscripteur-pane" class="tab-pane">
     <h3><i class="fas fa-chart-line"></i> Espace Souscripteur</h3>
-    <div id="souscripteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
-      <div class="card"><h4>Connexion</h4>
-        <input type="text" id="sousLogin" placeholder="Numéro dossier / Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
-        <input type="password" id="sousCode" placeholder="Code d'accès" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+    <div id="sous-login" style="max-width:420px; margin:20px auto; text-align:center;">
+      <div class="card"><h4>Connexion souscripteur</h4>
+        <input type="text" id="sousLogin" placeholder="N° dossier / Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+        <input type="password" id="sousCode" inputmode="numeric" maxlength="6" placeholder="Code d'accès (6 chiffres)" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed; text-align:center; letter-spacing:4px;">
         <div id="sousError" class="badge-danger"></div>
-        <button id="sousLoginBtn" class="highlight-btn">Se connecter</button>
-        <p style="margin-top:12px; font-size:0.7rem; color:#4b6a8b;">🔐 Mode démo : BV019 / demo123</p>
+        <button id="sousBtn" class="highlight-btn" onclick="loginSouscripteur()">Se connecter</button>
+        <p style="margin-top:12px; font-size:0.7rem; color:#4b6a8b;">🔐 Connexion sécurisée. Code fourni par votre commercial.<br><strong>🧪 Test :</strong> identifiant <strong>DEMO</strong> · code <strong>123456</strong></p>
       </div>
     </div>
-    <div id="souscripteur-dashboard" style="display:none;"></div>
+    <div id="sous-dash" style="display:none;"></div>
   </div>
 
-  <!-- ESPACE APPORTEUR (avec fallback démo) -->
+  <!-- ESPACE APPORTEUR -->
   <div id="apporteurs-pane" class="tab-pane">
-    <h3><i class="fas fa-handshake"></i> Espace Apporteur</h3>
-    <div id="apporteur-login-area" style="max-width:400px; margin:20px auto; text-align:center;">
-      <div class="card"><h4>Connexion</h4>
+    <h3><i class="fas fa-handshake"></i> Espace Apporteur d'affaires</h3>
+    <div id="app-login" style="max-width:420px; margin:20px auto; text-align:center;">
+      <div class="card"><h4>Connexion apporteur</h4>
         <input type="text" id="appLogin" placeholder="Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
-        <input type="password" id="appCode" placeholder="Code d'accès" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+        <input type="password" id="appCode" inputmode="numeric" maxlength="6" placeholder="Code d'accès (6 chiffres)" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed; text-align:center; letter-spacing:4px;">
         <div id="appError" class="badge-danger"></div>
-        <button id="appLoginBtn" class="highlight-btn">Se connecter</button>
-        <p style="margin-top:12px; font-size:0.7rem; color:#4b6a8b;">🔐 Mode démo : apporteur@demo.com / demo123</p>
+        <button id="appBtn" class="highlight-btn" onclick="loginApporteur()">Se connecter</button>
+        <p style="margin-top:12px; font-size:0.7rem; color:#4b6a8b;">🔐 Connexion sécurisée. Code fourni par Partner Immo CI.<br><strong>🧪 Test :</strong> identifiant <strong>DEMO</strong> · code <strong>123456</strong></p>
       </div>
     </div>
-    <div id="apporteur-dashboard" style="display:none;"></div>
+    <div id="app-dash" style="display:none;"></div>
   </div>
-
-  <div id="fr-pane" class="tab-pane"><h3><i class="fas fa-flag-checkered"></i> Mentions légales</h3><div class="card"><p>Partner Immo CI – SAS au capital de 1 000 000 000 FCFA. Agrément n°2025-032/CIPM.</p></div></div>
 </div></div>
 
-<footer><div class="container"><p>© Partner Immo CI 2026 — Investir et faire grandir l’immobilier ensemble.</p></div></footer>
+<footer><div class="container"><p>© Partner Immo CI 2026 — Investir et faire grandir l'immobilier ensemble.</p></div></footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ==================== GESTION DES ONGLETS ====================
-  (function() {
-    const btns = document.querySelectorAll('.tab-link');
-    const panes = document.querySelectorAll('.tab-pane');
-    function activate(tabId) {
-      panes.forEach(p => p.classList.remove('active-pane'));
-      const target = document.getElementById(tabId + '-pane');
-      if (target) target.classList.add('active-pane');
-      btns.forEach(b => b.classList.remove('active'));
-      const activeBtn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
-      if (activeBtn) activeBtn.classList.add('active');
-    }
-    btns.forEach(btn => btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const tabId = btn.getAttribute('data-tab');
-      if (tabId) activate(tabId);
-    }));
+  /* ───── Onglets vitrine ───── */
+  (function(){
+    var btns=document.querySelectorAll('.tab-link'), panes=document.querySelectorAll('.tab-pane');
+    btns.forEach(function(b){ b.addEventListener('click',function(){
+      var t=b.getAttribute('data-tab');
+      panes.forEach(function(p){ p.classList.remove('active-pane'); });
+      var el=document.getElementById(t+'-pane'); if(el) el.classList.add('active-pane');
+      btns.forEach(function(x){ x.classList.remove('active'); }); b.classList.add('active');
+    }); });
   })();
 
-  // ==================== CONFIGURATION SUPABASE (vos identifiants) ====================
-  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
-  let supabaseClient = null;
-  let useDemoMode = false;
+  /* ───── Backend (même base que l'ERP, modèle {id,data}) ───── */
+  var SB_URL='https://izgpvhwhbrgeagjfhfli.supabase.co';
+  var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
 
-  try {
-    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log("Supabase client créé");
-  } catch(e) {
-    console.warn("Supabase non disponible, mode démo activé", e);
-    useDemoMode = true;
+  function fmt(n){ return Math.round(n||0).toLocaleString('fr-FR'); }
+  function dshort(d){ if(!d) return '—'; return String(d).slice(0,10).split('-').reverse().join('/'); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function unwrap(rows){ return (rows||[]).map(function(r){ return (r&&r.data)?r.data:r; }); }
+  async function sb(path){
+    var r=await fetch(SB_URL+'/rest/v1/'+path,{ headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  }
+  async function sha256Hex(str){
+    var data=new TextEncoder().encode(str);
+    var buf=await crypto.subtle.digest('SHA-256',data);
+    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  }
+  async function verifierCode(obj, code){
+    if(obj.code_acces_hash && obj.code_acces_salt) return (await sha256Hex(code+obj.code_acces_salt))===obj.code_acces_hash;
+    if(obj.code_acces) return String(obj.code_acces)===code;
+    if(obj.mot_de_passe) return String(obj.mot_de_passe)===code;
+    return false;
+  }
+  function surPrix(v){ return v && v.type!=='frais_souscription'; }
+  function labelType(t){ return ({frais_souscription:'Frais souscription',apport:'Apport',mensualite:'Mensualité',regularisation:'Régularisation',autre:'Autre'})[t]||(t||'Versement'); }
+  function setErr(id,msg){ var e=document.getElementById(id); e.innerText=msg; e.style.display='block'; }
+
+  /* ───── Données de TEST (mode démo : DEMO / 123456) ───── */
+  function chargerDemoSouscripteur(){
+    S.client={ id:'demo_cli', dossier:'DEMO-001', nom:'KOUASSI', prenoms:'Jean', tel:'0700000000', email:'demo@partnerimmo.ci',
+      programme_id:'demo_prog', lot_id:'demo_lot', montant_total:28500000, apport:5000000, duree:48, date_debut:'2025-06-01' };
+    S.programmes=[{ id:'demo_prog', nom:'Résidence Les Flamboyants', avancement:45 }];
+    S.lots=[{ id:'demo_lot', numero:'A12' }];
+    var m=Math.ceil((28500000-5000000)/48);
+    S.versements=[
+      { client_id:'demo_cli', date:'2025-05-20', montant:150000, mode:'wave',     type:'frais_souscription' },
+      { client_id:'demo_cli', date:'2025-06-01', montant:5000000, mode:'virement', type:'apport' },
+      { client_id:'demo_cli', date:'2025-07-03', montant:m,       mode:'orange',   type:'mensualite' },
+      { client_id:'demo_cli', date:'2025-08-05', montant:m,       mode:'wave',     type:'mensualite' }
+    ];
+    S.rapports=[{ programme_id:'demo_prog', date:'2025-09-10', avancement:45, travaux:'Gros œuvre R+1 terminé, début second œuvre.',
+      photos:[ {url:'https://picsum.photos/seed/flamb1/300',legende:'Fondations',visible:true},
+               {url:'https://picsum.photos/seed/flamb2/300',legende:'Élévation R+1',visible:true},
+               {url:'https://picsum.photos/seed/flamb3/300',legende:'Charpente',visible:true} ] }];
+    S.conventions=[];
+  }
+  function chargerDemoApporteur(){
+    A.app={ id:'demo_app', nom:'KONÉ', prenoms:'Fatou', societe:'KF Invest', email:'apporteur@demo.ci', tel:'0788888888', taux_souscription:10, taux_regulier:5 };
+    A.programmes=[{ id:'demo_prog', nom:'Résidence Les Flamboyants' }];
+    A.clients=[
+      { id:'c1', dossier:'BV019', nom:'DIOMANDE', prenoms:'Ali', programme_id:'demo_prog', montant_total:18500000, apporteur_id:'demo_app' },
+      { id:'c2', dossier:'BV022', nom:'TRAORE',   prenoms:'Awa', programme_id:'demo_prog', montant_total:23000000, apporteur_id:'demo_app' }
+    ];
+    A.commissions=[
+      { client_id:'c1', date:'2025-05-20', type_versement:'souscription', montant_base:150000,  taux:10, montant_comm:15000,  statut:'payee',   type_beneficiaire:'apporteur', beneficiaire_id:'demo_app' },
+      { client_id:'c1', date:'2025-06-01', type_versement:'regulier',     montant_base:2500000, taux:5,  montant_comm:125000, statut:'a_payer', type_beneficiaire:'apporteur', beneficiaire_id:'demo_app' },
+      { client_id:'c2', date:'2025-07-01', type_versement:'souscription', montant_base:150000,  taux:10, montant_comm:15000,  statut:'a_payer', type_beneficiaire:'apporteur', beneficiaire_id:'demo_app' }
+    ];
+  }
+  function estDemo(ident,code){ return code==='123456' && ['DEMO','DEMO-001','demo@partnerimmo.ci','apporteur@demo.ci'].indexOf(ident)!==-1; }
+
+  /* ═════════════ SOUSCRIPTEUR ═════════════ */
+  var S = { client:null, versements:[], programmes:[], lots:[], rapports:[], conventions:[] };
+
+  async function loginSouscripteur(){
+    var ident=document.getElementById('sousLogin').value.trim();
+    var code=document.getElementById('sousCode').value.trim();
+    var btn=document.getElementById('sousBtn');
+    document.getElementById('sousError').style.display='none';
+    if(!ident||!code){ setErr('sousError','Veuillez remplir tous les champs.'); return; }
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Connexion…';
+    if(estDemo(ident,code)){
+      chargerDemoSouscripteur();
+      document.getElementById('sous-login').style.display='none';
+      document.getElementById('sous-dash').style.display='block';
+      rendreSouscripteur();
+      btn.disabled=false; btn.innerHTML='Se connecter'; return;
+    }
+    try{
+      var q=encodeURIComponent(ident);
+      var rows=await sb('pi_clients?select=id,data&or=(data->>dossier.eq.'+q+',data->>email.eq.'+q+',data->>tel.eq.'+q+')&limit=1');
+      var client=unwrap(rows)[0];
+      if(!client || !(await verifierCode(client,code))) throw new Error('auth');
+      if(client.code_expiration && new Date(client.code_expiration)<new Date()){ setErr('sousError','Code expiré. Contactez votre commercial.'); btn.disabled=false; btn.innerHTML='Se connecter'; return; }
+      S.client=client;
+      document.getElementById('sous-login').style.display='none';
+      document.getElementById('sous-dash').style.display='block';
+      document.getElementById('sous-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre dossier…</div>';
+      await chargerSouscripteur();
+    }catch(e){ setErr('sousError','Identifiant ou code incorrect.'); }
+    btn.disabled=false; btn.innerHTML='Se connecter';
   }
 
-  // Fonction pour tester la connectivité réelle (optionnel)
-  async function testSupabaseConnection() {
-    if (!supabaseClient) return false;
-    try {
-      const { error } = await supabaseClient.from('pi_clients').select('id', { count: 'exact', head: true });
-      if (error) throw error;
-      return true;
-    } catch(e) {
-      console.warn("Connexion Supabase échouée (CORS ou réseau), mode démo activé", e);
-      return false;
-    }
+  async function chargerSouscripteur(){
+    var cid=encodeURIComponent(S.client.id);
+    try{
+      var r=await Promise.all([
+        sb('pi_versements?select=id,data&data->>client_id=eq.'+cid),
+        sb('pi_programmes?select=id,data').catch(function(){return [];}),
+        sb('pi_lots?select=id,data').catch(function(){return [];}),
+        sb('pi_rapports_chantier?select=id,data').catch(function(){return [];}),
+        sb('pi_conventions?select=id,data&data->>client_id=eq.'+cid).catch(function(){return [];})
+      ]);
+      S.versements=unwrap(r[0]); S.programmes=unwrap(r[1]); S.lots=unwrap(r[2]); S.rapports=unwrap(r[3]); S.conventions=unwrap(r[4]);
+    }catch(e){ S.versements=S.versements||[]; }
+    rendreSouscripteur();
   }
 
-  // ==================== SOUSCRIPTEUR (avec fallback démo) ====================
-  (function() {
-    const loginArea = document.getElementById('souscripteur-login-area');
-    const dashboard = document.getElementById('souscripteur-dashboard');
-    const loginBtn = document.getElementById('sousLoginBtn');
-    const errorDiv = document.getElementById('sousError');
+  function sProgNom(){ var p=S.programmes.find(function(x){return x.id===S.client.programme_id;}); return (p&&(p.nom||p.libelle))||S.client.programme||'—'; }
+  function sLotNum(){ var l=S.lots.find(function(x){return x.id===S.client.lot_id;}); return (l&&(l.numero||l.nom))||S.client.lot||''; }
+  function sVers(){ return S.versements.filter(function(v){return v.client_id===S.client.id;}); }
 
-    if (!loginBtn) return;
+  function rendreSouscripteur(){
+    var c=S.client, vs=sVers();
+    var total=parseFloat(c.montant_total)||0;
+    var versePrix=vs.filter(surPrix).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+    var frais=vs.filter(function(v){return v.type==='frais_souscription';}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+    var reste=Math.max(0,total-versePrix);
+    var pct=total>0?(versePrix/total*100):0;
 
-    // Données de démonstration
-    const demoClient = {
-      dossier: 'BV019',
-      nom: 'KOUASSI',
-      prenoms: 'Jean',
-      email: 'jean.kouassi@example.com',
-      tel: '+225 01 23 45 67',
-      montant_total: 28500000,
-      programme_id: 'Résidence Les Flamboyants'
-    };
+    var html='';
+    html+='<div class="stat-card"><h4>✅ Bienvenue '+esc((c.prenoms||'')+' '+(c.nom||''))+'</h4>'
+      +'<p><strong>Dossier :</strong> '+esc(c.dossier||c.id)+' &nbsp;·&nbsp; <strong>Programme :</strong> '+esc(sProgNom())+(sLotNum()?(' &nbsp;·&nbsp; <strong>Lot :</strong> '+esc(sLotNum())):'')+'</p>'
+      +'<button class="highlight-btn" style="margin-top:10px; background:#991b1b;" onclick="logoutSouscripteur()">Déconnexion</button></div>';
 
-    loginBtn.onclick = async () => {
-      const identifier = document.getElementById('sousLogin').value.trim();
-      const code = document.getElementById('sousCode').value.trim();
-      if (!identifier || !code) {
-        errorDiv.style.display = 'block';
-        errorDiv.innerText = 'Veuillez remplir tous les champs.';
-        return;
-      }
+    html+='<div class="kpi-row">'
+      +kpiBox('Montant total',fmt(total)+' F','')
+      +kpiBox('Versé sur prix',fmt(versePrix)+' F','color:#16a34a;')
+      +kpiBox('Reste à payer',fmt(reste)+' F','color:#991b1b;')
+      +kpiBox('Avancement',pct.toFixed(0)+'%','')+'</div>';
 
-      // Vérifier d'abord si on peut utiliser Supabase
-      let useReal = false;
-      if (supabaseClient && !useDemoMode) {
-        const isConnected = await testSupabaseConnection();
-        if (isConnected) useReal = true;
-        else useDemoMode = true;
-      }
+    if(frais>0) html+='<div class="card" style="background:#fff7ed; border-color:#fed7aa; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:#92400e;">📝 Frais de souscription</strong><div style="font-size:.75rem; color:#4b6a8b;">Non remboursables — hors prix du bien</div></div><div style="font-weight:700; color:#92400e;">'+fmt(frais)+' F</div></div>';
 
-      if (useReal) {
-        try {
-          const { data, error } = await supabaseClient
-            .from('pi_clients')
-            .select('*')
-            .or(`dossier.eq.${identifier},email.eq.${identifier},tel.eq.${identifier}`);
-          if (error) throw error;
-          if (!data || data.length === 0) throw new Error('Compte introuvable');
-          let client = null;
-          for (const c of data) {
-            if (c.code_acces === code || c.mot_de_passe === code) {
-              client = c;
-              break;
-            }
-          }
-          if (!client) throw new Error('Code incorrect');
-          // Connexion réelle réussie
-          loginArea.style.display = 'none';
-          dashboard.style.display = 'block';
-          dashboard.innerHTML = `
-            <div class="stat-card">
-              <h4>✅ Bienvenue ${client.prenoms || ''} ${client.nom || client.dossier}</h4>
-              <p><strong>Dossier :</strong> ${client.dossier}<br>
-              <strong>Email :</strong> ${client.email || '—'}<br>
-              <strong>Téléphone :</strong> ${client.tel || '—'}<br>
-              <strong>Programme :</strong> ${client.programme_id || '—'}<br>
-              <strong>Montant souscrit :</strong> ${(client.montant_total || 0).toLocaleString('fr-FR')} FCFA</p>
-              <hr><p><em>Connexion à la base de données réussie.</em></p>
-            </div>`;
-          return;
-        } catch(err) {
-          console.warn("Erreur Supabase, basculement mode démo", err);
-          useDemoMode = true;
-        }
-      }
+    html+='<div class="subnav">'
+      +'<button class="on" onclick="sSub(this,\'fin\')">Finances</button>'
+      +'<button onclick="sSub(this,\'ech\')">Échéancier</button>'
+      +'<button onclick="sSub(this,\'ver\')">Versements</button>'
+      +'<button onclick="sSub(this,\'tra\')">Travaux</button>'
+      +'<button onclick="sSub(this,\'doc\')">Documents</button></div>';
 
-      // Mode démo (fallback)
-      if (identifier === 'BV019' && code === 'demo123') {
-        loginArea.style.display = 'none';
-        dashboard.style.display = 'block';
-        dashboard.innerHTML = `
-          <div class="stat-card">
-            <h4>✅ Bienvenue ${demoClient.prenoms} ${demoClient.nom} (mode démonstration)</h4>
-            <p><strong>Dossier :</strong> ${demoClient.dossier}<br>
-            <strong>Email :</strong> ${demoClient.email}<br>
-            <strong>Téléphone :</strong> ${demoClient.tel}<br>
-            <strong>Programme :</strong> ${demoClient.programme_id}<br>
-            <strong>Montant souscrit :</strong> ${demoClient.montant_total.toLocaleString('fr-FR')} FCFA</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0;">
-              <div class="stat-card"><strong>Déjà versé</strong><br>14 250 000 FCFA (50%)</div>
-              <div class="stat-card"><strong>Reste à payer</strong><br>14 250 000 FCFA</div>
-            </div>
-            <hr><p><em>⚠️ Aperçu de démonstration. La connexion réelle nécessite une configuration CORS dans Supabase (ajoutez l'origine de votre site dans Settings > API).</em></p>
-          </div>`;
-      } else {
-        errorDiv.style.display = 'block';
-        errorDiv.innerText = 'Identifiant ou code incorrect. Pour tester, utilisez BV019 / demo123';
-      }
-    };
-  })();
+    // FIN
+    var prog=S.programmes.find(function(x){return x.id===c.programme_id;})||{};
+    var av=parseFloat(prog.avancement||c.avancement_travaux||0)||0;
+    if(!av){ var rr=sRapportsLies()[0]; if(rr) av=parseFloat(rr.avancement)||0; }
+    html+='<div class="sub on" id="s-fin"><div class="card"><strong>📈 Avancement du programme</strong><div class="prog"><div style="width:'+av+'%;"></div></div><div style="display:flex; justify-content:space-between; font-size:.85rem;"><span>'+esc(sProgNom())+'</span><strong>'+av+'%</strong></div></div>'
+      +'<div class="card"><strong>📋 Derniers versements</strong>'+derniersVers(vs)+'</div></div>';
 
-  // ==================== APPORTEUR (fallback démo) ====================
-  (function() {
-    const loginArea = document.getElementById('apporteur-login-area');
-    const dashboard = document.getElementById('apporteur-dashboard');
-    const loginBtn = document.getElementById('appLoginBtn');
-    const errorDiv = document.getElementById('appError');
+    // ECH
+    html+='<div class="sub" id="s-ech"><div class="card"><strong>📅 Échéancier</strong><div style="overflow-x:auto;"><table><thead><tr><th>N°</th><th>Échéance</th><th>Montant</th><th>Statut</th></tr></thead><tbody>'+echeancier()+'</tbody></table></div><div style="font-size:.72rem; color:#4b6a8b; margin-top:8px;">Mensualité = (Prix − Apport) ÷ Durée. Frais exclus.</div></div></div>';
 
-    if (!loginBtn) return;
+    // VER
+    html+='<div class="sub" id="s-ver"><div class="card"><strong>💳 Historique des versements</strong><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Type</th><th>Montant</th><th>Mode</th></tr></thead><tbody>'+tableVers(vs)+'</tbody></table></div></div></div>';
 
-    const demoApporteur = {
-      nom: 'KONÉ',
-      prenoms: 'Fatou',
-      email: 'apporteur@demo.com',
-      tel: '+225 07 89 10 11'
-    };
+    // TRA
+    html+='<div class="sub" id="s-tra">'+blocTravaux()+'</div>';
 
-    loginBtn.onclick = async () => {
-      const identifier = document.getElementById('appLogin').value.trim();
-      const code = document.getElementById('appCode').value.trim();
-      if (!identifier || !code) {
-        errorDiv.style.display = 'block';
-        errorDiv.innerText = 'Veuillez remplir tous les champs.';
-        return;
-      }
+    // DOC
+    html+='<div class="sub" id="s-doc"><div class="card"><strong>📁 Mes documents</strong><div style="display:flex; flex-direction:column; gap:12px; margin-top:12px; max-width:340px;"><button class="highlight-btn" style="background:#0077b6;" onclick="docEcheancier()">📅 Échéancier personnalisé</button><button class="highlight-btn" style="background:#0077b6;" onclick="docAttestation()">📑 Attestation de versements</button></div></div></div>';
 
-      let useReal = false;
-      if (supabaseClient && !useDemoMode) {
-        const isConnected = await testSupabaseConnection();
-        if (isConnected) useReal = true;
-        else useDemoMode = true;
-      }
+    document.getElementById('sous-dash').innerHTML=html;
+  }
+  function kpiBox(l,v,st){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v" style="'+(st||'')+'">'+v+'</div></div>'; }
+  function sSub(btn,key){
+    document.querySelectorAll('#sous-dash .subnav button').forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    document.querySelectorAll('#sous-dash .sub').forEach(function(s){ s.classList.remove('on'); });
+    document.getElementById('s-'+key).classList.add('on');
+  }
+  function derniersVers(vs){
+    var r=vs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,5);
+    if(!r.length) return '<p style="color:#4b6a8b; margin-top:8px;">Aucun versement.</p>';
+    return r.map(function(v){ return '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eef2f8;"><span>'+dshort(v.date)+' · '+esc(labelType(v.type))+'</span><strong style="color:#16a34a;">+'+fmt(v.montant)+' F</strong></div>'; }).join('');
+  }
+  function echeancier(){
+    var c=S.client, total=parseFloat(c.montant_total)||0, apport=parseFloat(c.apport)||0, duree=parseInt(c.duree)||0;
+    if(!duree||!c.date_debut) return '<tr><td colspan="4">Échéancier non défini.</td></tr>';
+    var vs=sVers().filter(surPrix), mens=Math.ceil((total-apport)/duree), debut=new Date(c.date_debut), now=new Date(), out='';
+    for(var i=0;i<duree;i++){
+      var ech=new Date(debut.getFullYear(),debut.getMonth()+i,1), key=ech.toISOString().slice(0,7);
+      var cumul=vs.filter(function(v){return (v.date||'')<=key+'-31';}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+      var attendu=Math.min(total,apport+mens*(i+1)), paye=cumul>=attendu-1;
+      var cls=paye?'p-vert':(ech<now?'p-rouge':'p-bleu'), st=paye?'Payé':(ech<now?'En retard':'À venir');
+      out+='<tr><td>'+(i+1)+'</td><td>'+ech.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})+'</td><td>'+fmt(mens)+'</td><td><span class="pill '+cls+'">'+st+'</span></td></tr>';
+    }
+    return out;
+  }
+  function tableVers(vs){
+    var s=vs.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    if(!s.length) return '<tr><td colspan="4">Aucun versement.</td></tr>';
+    return s.map(function(v){ var b=v.type==='frais_souscription'?'<span class="pill p-or">Frais</span>':'<span class="pill p-gris">'+esc(labelType(v.type))+'</span>'; return '<tr><td>'+dshort(v.date)+'</td><td>'+b+'</td><td>'+fmt(v.montant)+' F</td><td>'+esc(v.mode||'—')+'</td></tr>'; }).join('');
+  }
+  function sRapportsLies(){
+    var convIds=S.conventions.map(function(c){return c.id;}), prog=S.client.programme_id, progNom=sProgNom();
+    return S.rapports.filter(function(r){
+      return (r.client_id===S.client.id)||(r.convention_id&&convIds.indexOf(r.convention_id)!==-1)||(r.programme_id&&r.programme_id===prog)||(r.programme&&r.programme===progNom);
+    }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  }
+  function blocTravaux(){
+    var raps=sRapportsLies(), photos=[];
+    raps.forEach(function(r){ (r.photos||[]).forEach(function(p){ if(p&&p.visible!==false) photos.push(p); }); });
+    var ph=photos.length?photos.map(function(p){ var src=p.data||p.url||''; return '<div class="photo-item"><img src="'+esc(src)+'" loading="lazy" alt="">'+(p.legende?'<div class="photo-cap">'+esc(p.legende)+'</div>':'')+'</div>'; }).join(''):'<p style="color:#4b6a8b;">Aucune photo disponible.</p>';
+    var rp=raps.length?raps.map(function(r){ return '<div style="border:1px solid #eef2f8; border-radius:12px; padding:12px; margin-bottom:10px;"><strong>📅 '+dshort(r.date)+' — Avancement '+(parseFloat(r.avancement)||0)+'%</strong>'+(r.travaux?'<div style="font-size:.85rem; margin-top:6px;">'+esc(r.travaux)+'</div>':'')+'</div>'; }).join(''):'<p style="color:#4b6a8b;">Aucun rapport partagé.</p>';
+    return '<div class="card"><strong>🚧 Photos de chantier</strong><div class="photo-grid">'+ph+'</div></div><div class="card"><strong>📋 Rapports d\'avancement</strong><div style="margin-top:10px;">'+rp+'</div></div>';
+  }
+  function logoutSouscripteur(){ S.client=null; document.getElementById('sous-dash').style.display='none'; document.getElementById('sous-login').style.display='block'; document.getElementById('sousCode').value=''; }
 
-      if (useReal) {
-        try {
-          const { data, error } = await supabaseClient
-            .from('pi_apporteurs')
-            .select('*')
-            .or(`email.eq.${identifier},tel.eq.${identifier}`);
-          if (error) throw error;
-          if (!data || data.length === 0) throw new Error('Compte introuvable');
-          let app = null;
-          for (const a of data) {
-            if (a.code_acces === code || a.mot_de_passe === code) {
-              app = a;
-              break;
-            }
-          }
-          if (!app) throw new Error('Code incorrect');
-          loginArea.style.display = 'none';
-          dashboard.style.display = 'block';
-          dashboard.innerHTML = `
-            <div class="stat-card">
-              <h4>✅ Bienvenue ${app.prenoms || ''} ${app.nom || 'Apporteur'}</h4>
-              <p><strong>Email :</strong> ${app.email || '—'}<br>
-              <strong>Téléphone :</strong> ${app.tel || '—'}</p>
-              <hr><p><em>Connexion réelle réussie.</em></p>
-            </div>`;
-          return;
-        } catch(err) {
-          useDemoMode = true;
-        }
-      }
+  function docEcheancier(){
+    var c=S.client, total=parseFloat(c.montant_total)||0, apport=parseFloat(c.apport)||0, duree=parseInt(c.duree)||0, mens=duree?Math.ceil((total-apport)/duree):0, debut=new Date(c.date_debut||Date.now()), rows='';
+    for(var i=0;i<duree;i++){ var ech=new Date(debut.getFullYear(),debut.getMonth()+i,1); rows+='<tr><td>'+(i+1)+'</td><td>'+ech.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})+'</td><td>'+fmt(mens)+' FCFA</td></tr>'; }
+    imprimer('Échéancier '+(c.dossier||''),'<h2>Échéancier des paiements</h2><p>'+esc((c.prenoms||'')+' '+(c.nom||''))+' — Dossier '+esc(c.dossier||'')+'<br>Programme : '+esc(sProgNom())+' · Lot '+esc(sLotNum())+'</p><p>Apport : '+fmt(apport)+' FCFA · Mensualité : '+fmt(mens)+' FCFA × '+duree+'</p><table><thead><tr><th>N°</th><th>Mois</th><th>Montant</th></tr></thead><tbody>'+rows+'</tbody></table>');
+  }
+  function docAttestation(){
+    var c=S.client, vs=sVers();
+    var vp=vs.filter(surPrix).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+    var fr=vs.filter(function(v){return v.type==='frais_souscription';}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+    var lg=vs.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);}).map(function(v){return '<tr><td>'+dshort(v.date)+'</td><td>'+esc(labelType(v.type))+'</td><td>'+fmt(v.montant)+' FCFA</td></tr>';}).join('');
+    imprimer('Attestation '+(c.dossier||''),'<h2>Attestation de versements</h2><p>Je soussigné(e) '+esc((c.prenoms||'')+' '+(c.nom||''))+' (dossier '+esc(c.dossier||'')+') atteste des versements suivants :</p><table><thead><tr><th>Date</th><th>Type</th><th>Montant</th></tr></thead><tbody>'+lg+'</tbody></table><p style="margin-top:10px;"><strong>Total versé sur le prix : '+fmt(vp)+' FCFA</strong>'+(fr>0?'<br>Frais de souscription (non remboursables) : '+fmt(fr)+' FCFA':'')+'</p><p>Fait le '+new Date().toLocaleDateString('fr-FR')+'</p>');
+  }
 
-      // Mode démo
-      if (identifier === 'apporteur@demo.com' && code === 'demo123') {
-        loginArea.style.display = 'none';
-        dashboard.style.display = 'block';
-        dashboard.innerHTML = `
-          <div class="stat-card">
-            <h4>✅ Bienvenue ${demoApporteur.prenoms} ${demoApporteur.nom} (mode démo)</h4>
-            <p><strong>Email :</strong> ${demoApporteur.email}<br>
-            <strong>Téléphone :</strong> ${demoApporteur.tel}</p>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0;">
-              <div class="stat-card"><strong>Clients apportés</strong><br>3</div>
-              <div class="stat-card"><strong>Commissions dues</strong><br>2 250 000 FCFA</div>
-            </div>
-            <hr><p><em>Aperçu de démonstration.</em></p>
-          </div>`;
-      } else {
-        errorDiv.style.display = 'block';
-        errorDiv.innerText = 'Identifiant ou code incorrect. Pour tester, utilisez apporteur@demo.com / demo123';
-      }
-    };
-  })();
+  /* ═════════════ APPORTEUR ═════════════ */
+  var A = { app:null, clients:[], commissions:[], programmes:[] };
 
-  // Événements annexes
-  document.getElementById('searchMockBtn')?.addEventListener('click', () => alert('Fonctionnalité de recherche à venir'));
-  document.getElementById('fakeSubmit')?.addEventListener('click', () => alert('Message envoyé (simulation)'));
-  document.getElementById('careerBtn')?.addEventListener('click', () => alert('Postulez à recrutement@partnerimmo.ci'));
+  async function loginApporteur(){
+    var ident=document.getElementById('appLogin').value.trim();
+    var code=document.getElementById('appCode').value.trim();
+    var btn=document.getElementById('appBtn');
+    document.getElementById('appError').style.display='none';
+    if(!ident||!code){ setErr('appError','Veuillez remplir tous les champs.'); return; }
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Connexion…';
+    if(estDemo(ident,code)){
+      chargerDemoApporteur();
+      document.getElementById('app-login').style.display='none';
+      document.getElementById('app-dash').style.display='block';
+      rendreApporteur();
+      btn.disabled=false; btn.innerHTML='Se connecter'; return;
+    }
+    try{
+      var q=encodeURIComponent(ident);
+      var rows=await sb('pi_apporteurs?select=id,data&or=(data->>email.eq.'+q+',data->>tel.eq.'+q+')&limit=1');
+      var app=unwrap(rows)[0];
+      if(!app || !(await verifierCode(app,code))) throw new Error('auth');
+      if(app.date_expiration && new Date(app.date_expiration)<new Date()){ setErr('appError','Contrat/code expiré. Contactez Partner Immo CI.'); btn.disabled=false; btn.innerHTML='Se connecter'; return; }
+      A.app=app;
+      document.getElementById('app-login').style.display='none';
+      document.getElementById('app-dash').style.display='block';
+      document.getElementById('app-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre espace…</div>';
+      await chargerApporteur();
+    }catch(e){ setErr('appError','Identifiant ou code incorrect.'); }
+    btn.disabled=false; btn.innerHTML='Se connecter';
+  }
+
+  async function chargerApporteur(){
+    var aid=encodeURIComponent(A.app.id);
+    try{
+      var r=await Promise.all([
+        sb('pi_clients?select=id,data&data->>apporteur_id=eq.'+aid).catch(function(){return [];}),
+        sb('pi_commissions?select=id,data&data->>beneficiaire_id=eq.'+aid).catch(function(){return [];}),
+        sb('pi_programmes?select=id,data').catch(function(){return [];})
+      ]);
+      A.clients=unwrap(r[0]); A.commissions=unwrap(r[1]).filter(function(c){return c.type_beneficiaire==='apporteur';}); A.programmes=unwrap(r[2]);
+    }catch(e){}
+    rendreApporteur();
+  }
+  function aProgNom(id){ var p=A.programmes.find(function(x){return x.id===id;}); return (p&&(p.nom||p.libelle))||'—'; }
+
+  function rendreApporteur(){
+    var a=A.app;
+    var dues=A.commissions.filter(function(c){return c.statut==='a_payer';}).reduce(function(s,c){return s+(parseFloat(c.montant_comm)||0);},0);
+    var payees=A.commissions.filter(function(c){return c.statut==='payee'||c.statut==='paye';}).reduce(function(s,c){return s+(parseFloat(c.montant_comm)||0);},0);
+    var totale=A.commissions.reduce(function(s,c){return s+(parseFloat(c.montant_comm)||0);},0);
+
+    var html='';
+    html+='<div class="stat-card"><h4>✅ Bienvenue '+esc((a.prenoms||'')+' '+(a.nom||'Apporteur'))+'</h4>'
+      +'<p>'+(a.societe?'<strong>Société :</strong> '+esc(a.societe)+' &nbsp;·&nbsp; ':'')+'<strong>Email :</strong> '+esc(a.email||'—')+' &nbsp;·&nbsp; <strong>Tél :</strong> '+esc(a.tel||'—')+'<br><strong>Taux :</strong> souscription '+(a.taux_souscription||10)+'% · régulier '+(a.taux_regulier||5)+'%</p>'
+      +'<button class="highlight-btn" style="margin-top:10px; background:#991b1b;" onclick="logoutApporteur()">Déconnexion</button></div>';
+
+    html+='<div class="kpi-row">'
+      +kpiBox('Clients apportés',A.clients.length,'')
+      +kpiBox('Commissions dues',fmt(dues)+' F','color:#991b1b;')
+      +kpiBox('Déjà payées',fmt(payees)+' F','color:#16a34a;')
+      +kpiBox('Total généré',fmt(totale)+' F','')+'</div>';
+
+    html+='<div class="subnav"><button class="on" onclick="aSub(this,\'cli\')">Clients apportés</button><button onclick="aSub(this,\'com\')">Commissions</button></div>';
+
+    // Clients
+    var rowsCli=A.clients.length?A.clients.map(function(c){
+      return '<tr><td>'+esc(c.dossier||c.id)+'</td><td>'+esc((c.prenoms||'')+' '+(c.nom||''))+'</td><td>'+esc(aProgNom(c.programme_id)||c.programme||'—')+'</td><td>'+fmt(c.montant_total)+' F</td></tr>';
+    }).join(''):'<tr><td colspan="4">Aucun client apporté.</td></tr>';
+    html+='<div class="sub on" id="a-cli"><div class="card"><div style="overflow-x:auto;"><table><thead><tr><th>Dossier</th><th>Client</th><th>Programme</th><th>Montant</th></tr></thead><tbody>'+rowsCli+'</tbody></table></div></div></div>';
+
+    // Commissions
+    var rowsCom=A.commissions.length?A.commissions.slice().sort(function(x,y){return new Date(y.date||0)-new Date(x.date||0);}).map(function(c){
+      var cli=A.clients.find(function(k){return k.id===c.client_id;});
+      var nom=cli?((cli.prenoms||'')+' '+(cli.nom||'')):(c.client_id||'—');
+      var pillCls=(c.statut==='payee'||c.statut==='paye')?'p-vert':(c.statut==='annulee'?'p-gris':'p-or');
+      var pillTxt=(c.statut==='payee'||c.statut==='paye')?'Payée':(c.statut==='annulee'?'Annulée':'À payer');
+      return '<tr><td>'+dshort(c.date)+'</td><td>'+esc(nom)+'</td><td>'+esc(c.type_versement||'')+'</td><td>'+fmt(c.montant_base)+'</td><td>'+(c.taux||0)+'%</td><td><strong>'+fmt(c.montant_comm)+'</strong></td><td><span class="pill '+pillCls+'">'+pillTxt+'</span></td></tr>';
+    }).join(''):'<tr><td colspan="7">Aucune commission.</td></tr>';
+    html+='<div class="sub" id="a-com"><div class="card"><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>'+rowsCom+'</tbody></table></div></div></div>';
+
+    document.getElementById('app-dash').innerHTML=html;
+  }
+  function aSub(btn,key){
+    document.querySelectorAll('#app-dash .subnav button').forEach(function(b){ b.classList.remove('on'); });
+    btn.classList.add('on');
+    document.querySelectorAll('#app-dash .sub').forEach(function(s){ s.classList.remove('on'); });
+    document.getElementById('a-'+key).classList.add('on');
+  }
+  function logoutApporteur(){ A.app=null; document.getElementById('app-dash').style.display='none'; document.getElementById('app-login').style.display='block'; document.getElementById('appCode').value=''; }
+
+  /* impression partagée */
+  function imprimer(titre,corps){
+    var w=window.open('','_blank');
+    w.document.write('<html><head><meta charset="UTF-8"><title>'+esc(titre)+'</title><style>body{font-family:Arial;padding:28px;color:#0a2b3e}table{border-collapse:collapse;width:100%;margin-top:10px}td,th{border:1px solid #ccc;padding:8px;text-align:left;font-size:13px}h2{color:#003366}</style></head><body>'+corps+'</body></html>');
+    w.document.close(); w.focus(); w.print();
+  }
+
+  /* saisie numérique codes */
+  ['sousCode','appCode'].forEach(function(id){
+    var el=document.getElementById(id);
+    el.addEventListener('input',function(e){ e.target.value=e.target.value.replace(/\D/g,''); });
+    el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ id==='sousCode'?loginSouscripteur():loginApporteur(); } });
+  });
+
+  window.loginSouscripteur=loginSouscripteur; window.logoutSouscripteur=logoutSouscripteur; window.sSub=sSub; window.docEcheancier=docEcheancier; window.docAttestation=docAttestation;
+  window.loginApporteur=loginApporteur; window.logoutApporteur=logoutApporteur; window.aSub=aSub;
 </script>
 </body>
 </html>
