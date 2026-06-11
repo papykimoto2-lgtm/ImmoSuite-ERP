@@ -40,7 +40,6 @@
     footer { background:#0a2a3b; color:#cddfea; text-align:center; padding:28px 0; }
     .stat-card { background:white; border-radius:20px; padding:20px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #eef2f8; margin-bottom:20px; }
     .badge-danger { background:#fee2e2; color:#991b1b; padding:8px 12px; border-radius:30px; display:none; margin-top:10px; font-size:.85rem; }
-    /* dashboard */
     .kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:20px 0; }
     .kpi { background:#fff; border:1px solid #eef2f8; border-top:3px solid #003366; border-radius:16px; padding:16px; text-align:center; }
     .kpi .l { font-size:.72rem; color:#4b6a8b; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
@@ -221,38 +220,62 @@
     </div>
   </div>
 
-  <!-- ESPACE SOUSCRIPTEUR -->
+  <!-- ═══ ESPACE SOUSCRIPTEUR ═══ -->
   <div id="souscripteur-pane" class="tab-pane">
     <h3><i class="fas fa-chart-line"></i> Espace Souscripteur</h3>
     <div id="sous-login" style="max-width:420px; margin:20px auto; text-align:center;">
-      <div class="card"><h4>Connexion souscripteur</h4>
-        <input type="text" id="sousLogin" placeholder="N° dossier / Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
-        <input type="password" id="sousCode" inputmode="numeric" maxlength="6" placeholder="Code d'accès (6 chiffres)" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed; text-align:center; letter-spacing:4px;">
+      <div class="card">
+        <h4 style="margin-bottom:16px;">Connexion souscripteur</h4>
+        <input type="text" id="sousLogin" placeholder="N° dossier / Email / Téléphone"
+          style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+        <input type="password" id="sousCode" inputmode="numeric" maxlength="8"
+          placeholder="Code d'accès (reçu de votre commercial)"
+          style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed; text-align:center; letter-spacing:4px;">
         <div id="sousError" class="badge-danger"></div>
-        <button id="sousBtn" class="highlight-btn" onclick="loginSouscripteur()">Se connecter</button>
-        <p style="margin-top:12px; font-size:0.7rem; color:#4b6a8b;">🔐 Connexion sécurisée. Code fourni par votre commercial.<br><strong>🧪 Test :</strong> identifiant <strong>DEMO</strong> · code <strong>123456</strong></p>
+        <button id="sousBtn" class="highlight-btn" style="margin-top:8px; width:100%;" onclick="loginSouscripteur()">Se connecter</button>
+        <p style="margin-top:14px; font-size:0.72rem; color:#4b6a8b; line-height:1.6;">
+          🔐 Connexion sécurisée — code fourni par votre commercial Partner Immo CI.<br>
+          Première connexion ? Contactez votre commercial au <strong>07 7877 2529</strong>.
+        </p>
       </div>
     </div>
     <div id="sous-dash" style="display:none;"></div>
   </div>
 
-  <!-- ESPACE APPORTEUR -->
+  <!-- ═══ ESPACE APPORTEUR ═══ -->
   <div id="apporteurs-pane" class="tab-pane">
     <h3><i class="fas fa-handshake"></i> Espace Apporteur d'affaires</h3>
     <div id="app-login" style="max-width:420px; margin:20px auto; text-align:center;">
-      <div class="card"><h4>Connexion apporteur</h4>
-        <input type="text" id="appLogin" placeholder="Email / Téléphone" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
-        <input type="password" id="appCode" inputmode="numeric" maxlength="6" placeholder="Code d'accès (6 chiffres)" style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed; text-align:center; letter-spacing:4px;">
+      <div class="card">
+        <h4 style="margin-bottom:16px;">Connexion apporteur</h4>
+        <input type="text" id="appLogin" placeholder="Email / Téléphone enregistré"
+          style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed;">
+        <input type="password" id="appCode" inputmode="numeric" maxlength="8"
+          placeholder="Code d'accès (reçu de Partner Immo CI)"
+          style="width:100%; padding:12px; margin:8px 0; border-radius:30px; border:1px solid #cfdfed; text-align:center; letter-spacing:4px;">
         <div id="appError" class="badge-danger"></div>
-        <button id="appBtn" class="highlight-btn" onclick="loginApporteur()">Se connecter</button>
-        <p style="margin-top:12px; font-size:0.7rem; color:#4b6a8b;">🔐 Connexion sécurisée. Code fourni par Partner Immo CI.<br><strong>🧪 Test :</strong> identifiant <strong>DEMO</strong> · code <strong>123456</strong></p>
+        <button id="appBtn" class="highlight-btn" style="margin-top:8px; width:100%;" onclick="loginApporteur()">Se connecter</button>
+        <p style="margin-top:14px; font-size:0.72rem; color:#4b6a8b; line-height:1.6;">
+          🔐 Connexion sécurisée — code fourni par l'équipe Partner Immo CI.<br>
+          Pas encore de code ? Contactez-nous au <strong>07 7877 2529</strong>.
+        </p>
       </div>
     </div>
     <div id="app-dash" style="display:none;"></div>
   </div>
 </div></div>
 
-<footer><div class="container"><p style="margin-bottom:6px;"><strong>PARTNER IMMO CI</strong> — l'assurance d'être logé…</p><p style="font-size:.85rem;">Grand-Bassam, Route de Grand-Bassam (derrière Station GASOIL) · 07 7877 2529 · 07 1000 2323 · partnerimmoinfo@gmail.com · www.partner-immo.net</p><p style="font-size:.8rem; margin-top:8px; opacity:.7;">© Partner Immo CI 2026 — SARLU au capital de 1 000 000 FCFA · RCCM CI-ABJ-03-2022-B13-09764</p><div class="signature"><span>🚀 Conception & réalisation : <strong>SanixAfrica</strong> (Division Technologies)</span><span>📞 <a href="tel:+2250779181075">+225 07 79 18 10 75</a></span><span>✉️ <a href="mailto:sanixafrica699@gmail.com">sanixafrica699@gmail.com</a></span><span>👤 C. KESSIE</span></div></div></footer>
+<footer><div class="container">
+  <p style="margin-bottom:6px;"><strong>PARTNER IMMO CI</strong> — l'assurance d'être logé…</p>
+  <p style="font-size:.85rem;">Grand-Bassam, Route de Grand-Bassam (derrière Station GASOIL) · 07 7877 2529 · 07 1000 2323 · partnerimmoinfo@gmail.com · www.partner-immo.net</p>
+  <p style="font-size:.8rem; margin-top:8px; opacity:.7;">© Partner Immo CI 2026 — SARLU au capital de 1 000 000 FCFA · RCCM CI-ABJ-03-2022-B13-09764</p>
+  <div class="signature">
+    <span>🚀 Conception & réalisation : <strong>SanixAfrica</strong> (Division Technologies)</span>
+    <span>📞 <a href="tel:+2250779181075">+225 07 79 18 10 75</a></span>
+    <span>✉️ <a href="mailto:sanixafrica699@gmail.com">sanixafrica699@gmail.com</a></span>
+    <span>👤 C. KESSIE</span>
+  </div>
+</div></footer>
 
 <script>
   /* ───── Onglets vitrine ───── */
@@ -266,7 +289,7 @@
     }); });
   })();
 
-  /* ───── Backend (même base que l'ERP, modèle {id,data}) ───── */
+  /* ───── Backend Supabase ───── */
   var SB_URL='https://izgpvhwhbrgeagjfhfli.supabase.co';
   var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
 
@@ -274,89 +297,76 @@
   function dshort(d){ if(!d) return '—'; return String(d).slice(0,10).split('-').reverse().join('/'); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function unwrap(rows){ return (rows||[]).map(function(r){ return (r&&r.data)?r.data:r; }); }
+
   async function sb(path){
     var r=await fetch(SB_URL+'/rest/v1/'+path,{ headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY } });
     if(!r.ok) throw new Error('HTTP '+r.status);
     return await r.json();
   }
+
   async function sha256Hex(str){
     var data=new TextEncoder().encode(str);
     var buf=await crypto.subtle.digest('SHA-256',data);
     return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
   }
+
+  /* Vérification code : SHA-256+sel (nouveau) ou code en clair (migration) */
   async function verifierCode(obj, code){
-    if(obj.code_acces_hash && obj.code_acces_salt) return (await sha256Hex(code+obj.code_acces_salt))===obj.code_acces_hash;
+    if(!obj || !code) return false;
+    if(obj.code_acces_hash && obj.code_acces_salt)
+      return (await sha256Hex(code+obj.code_acces_salt))===obj.code_acces_hash;
     if(obj.code_acces) return String(obj.code_acces)===code;
     if(obj.mot_de_passe) return String(obj.mot_de_passe)===code;
     return false;
   }
+
   function surPrix(v){ return v && v.type!=='frais_souscription'; }
   function labelType(t){ return ({frais_souscription:'Frais souscription',apport:'Apport',mensualite:'Mensualité',regularisation:'Régularisation',autre:'Autre'})[t]||(t||'Versement'); }
-  function setErr(id,msg){ var e=document.getElementById(id); e.innerText=msg; e.style.display='block'; }
 
-  /* ───── Données de TEST (mode démo : DEMO / 123456) ───── */
-  function chargerDemoSouscripteur(){
-    S.client={ id:'demo_cli', dossier:'DEMO-001', nom:'KOUASSI', prenoms:'Jean', tel:'0700000000', email:'demo@partnerimmo.ci',
-      programme_id:'demo_prog', lot_id:'demo_lot', montant_total:28500000, apport:5000000, duree:48, date_debut:'2025-06-01' };
-    S.programmes=[{ id:'demo_prog', nom:'Résidence Les Flamboyants', avancement:45 }];
-    S.lots=[{ id:'demo_lot', numero:'A12' }];
-    var m=Math.ceil((28500000-5000000)/48);
-    S.versements=[
-      { client_id:'demo_cli', date:'2025-05-20', montant:150000, mode:'wave',     type:'frais_souscription' },
-      { client_id:'demo_cli', date:'2025-06-01', montant:5000000, mode:'virement', type:'apport' },
-      { client_id:'demo_cli', date:'2025-07-03', montant:m,       mode:'orange',   type:'mensualite' },
-      { client_id:'demo_cli', date:'2025-08-05', montant:m,       mode:'wave',     type:'mensualite' }
-    ];
-    S.rapports=[{ programme_id:'demo_prog', date:'2025-09-10', avancement:45, travaux:'Gros œuvre R+1 terminé, début second œuvre.',
-      photos:[ {url:'https://picsum.photos/seed/flamb1/300',legende:'Fondations',visible:true},
-               {url:'https://picsum.photos/seed/flamb2/300',legende:'Élévation R+1',visible:true},
-               {url:'https://picsum.photos/seed/flamb3/300',legende:'Charpente',visible:true} ] }];
-    S.conventions=[];
+  function setErr(id,msg){
+    var e=document.getElementById(id);
+    if(e){ e.innerText=msg; e.style.display='block'; }
   }
-  function chargerDemoApporteur(){
-    A.app={ id:'demo_app', nom:'KONÉ', prenoms:'Fatou', societe:'KF Invest', email:'apporteur@demo.ci', tel:'0788888888', taux_souscription:10, taux_regulier:5 };
-    A.programmes=[{ id:'demo_prog', nom:'Résidence Les Flamboyants' }];
-    A.clients=[
-      { id:'c1', dossier:'BV019', nom:'DIOMANDE', prenoms:'Ali', programme_id:'demo_prog', montant_total:18500000, apporteur_id:'demo_app' },
-      { id:'c2', dossier:'BV022', nom:'TRAORE',   prenoms:'Awa', programme_id:'demo_prog', montant_total:23000000, apporteur_id:'demo_app' }
-    ];
-    A.commissions=[
-      { client_id:'c1', date:'2025-05-20', type_versement:'souscription', montant_base:150000,  taux:10, montant_comm:15000,  statut:'payee',   type_beneficiaire:'apporteur', beneficiaire_id:'demo_app' },
-      { client_id:'c1', date:'2025-06-01', type_versement:'regulier',     montant_base:2500000, taux:5,  montant_comm:125000, statut:'a_payer', type_beneficiaire:'apporteur', beneficiaire_id:'demo_app' },
-      { client_id:'c2', date:'2025-07-01', type_versement:'souscription', montant_base:150000,  taux:10, montant_comm:15000,  statut:'a_payer', type_beneficiaire:'apporteur', beneficiaire_id:'demo_app' }
-    ];
-  }
-  function estDemo(ident,code){ return code==='123456' && ['DEMO','DEMO-001','demo@partnerimmo.ci','apporteur@demo.ci'].indexOf(ident)!==-1; }
 
-  /* ═════════════ SOUSCRIPTEUR ═════════════ */
+  /* ═══════════════════════════════════
+     SOUSCRIPTEUR
+  ═══════════════════════════════════ */
   var S = { client:null, versements:[], programmes:[], lots:[], rapports:[], conventions:[], messages:[] };
 
   async function loginSouscripteur(){
-    var ident=document.getElementById('sousLogin').value.trim();
-    var code=document.getElementById('sousCode').value.trim();
+    var ident=(document.getElementById('sousLogin').value||'').trim();
+    var code=(document.getElementById('sousCode').value||'').trim();
     var btn=document.getElementById('sousBtn');
     document.getElementById('sousError').style.display='none';
     if(!ident||!code){ setErr('sousError','Veuillez remplir tous les champs.'); return; }
+
+    /* Rate limiting côté client : 5 tentatives / 10 min */
+    var bfKey='sous_bf_'+ident.slice(-6)+'_'+Math.floor(Date.now()/(10*60000));
+    var att={}; try{ att=JSON.parse(localStorage.getItem('sous_bf')||'{}'); }catch(e){}
+    if((att[bfKey]||0)>=5){ setErr('sousError','Trop de tentatives. Réessayez dans 10 minutes.'); return; }
+
     btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Connexion…';
-    if(estDemo(ident,code)){
-      chargerDemoSouscripteur();
-      document.getElementById('sous-login').style.display='none';
-      document.getElementById('sous-dash').style.display='block';
-      rendreSouscripteur();
-      btn.disabled=false; btn.innerHTML='Se connecter'; return;
-    }
     try{
       var q=encodeURIComponent(ident);
       var rows=await sb('pi_clients?select=id,data&or=(data->>dossier.eq.'+q+',data->>email.eq.'+q+',data->>tel.eq.'+q+')&limit=1');
       var client=unwrap(rows)[0];
       if(!client || !(await verifierCode(client,code))) throw new Error('auth');
-      if(client.code_expiration && new Date(client.code_expiration)<new Date()){ setErr('sousError','Code expiré. Contactez votre commercial.'); btn.disabled=false; btn.innerHTML='Se connecter'; return; }
+      if(client.code_expiration && new Date(client.code_expiration)<new Date()){
+        setErr('sousError','Code expiré. Contactez votre commercial.');
+        btn.disabled=false; btn.innerHTML='Se connecter'; return;
+      }
+      /* Connexion réussie — effacer compteur */
+      delete att[bfKey]; localStorage.setItem('sous_bf',JSON.stringify(att));
       S.client=client;
       document.getElementById('sous-login').style.display='none';
       document.getElementById('sous-dash').style.display='block';
       document.getElementById('sous-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre dossier…</div>';
       await chargerSouscripteur();
-    }catch(e){ setErr('sousError','Identifiant ou code incorrect.'); }
+    }catch(e){
+      att[bfKey]=(att[bfKey]||0)+1; localStorage.setItem('sous_bf',JSON.stringify(att));
+      var reste=5-(att[bfKey]||0);
+      setErr('sousError','Identifiant ou code incorrect.'+(reste<=2?' ('+reste+' tentative(s) restante(s))':''));
+    }
     btn.disabled=false; btn.innerHTML='Se connecter';
   }
 
@@ -387,20 +397,16 @@
     var frais=vs.filter(function(v){return v.type==='frais_souscription';}).reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
     var reste=Math.max(0,total-versePrix);
     var pct=total>0?(versePrix/total*100):0;
-
     var html='';
     html+='<div class="stat-card"><h4>✅ Bienvenue '+esc((c.prenoms||'')+' '+(c.nom||''))+'</h4>'
       +'<p><strong>Dossier :</strong> '+esc(c.dossier||c.id)+' &nbsp;·&nbsp; <strong>Programme :</strong> '+esc(sProgNom())+(sLotNum()?(' &nbsp;·&nbsp; <strong>Lot :</strong> '+esc(sLotNum())):'')+'</p>'
       +'<button class="highlight-btn" style="margin-top:10px; background:#991b1b;" onclick="logoutSouscripteur()">Déconnexion</button></div>';
-
     html+='<div class="kpi-row">'
       +kpiBox('Montant total',fmt(total)+' F','')
       +kpiBox('Versé sur prix',fmt(versePrix)+' F','color:#16a34a;')
       +kpiBox('Reste à payer',fmt(reste)+' F','color:#991b1b;')
       +kpiBox('Avancement',pct.toFixed(0)+'%','')+'</div>';
-
     if(frais>0) html+='<div class="card" style="background:#fff7ed; border-color:#fed7aa; display:flex; justify-content:space-between; align-items:center;"><div><strong style="color:#92400e;">📝 Frais de souscription</strong><div style="font-size:.75rem; color:#4b6a8b;">Non remboursables — hors prix du bien</div></div><div style="font-weight:700; color:#92400e;">'+fmt(frais)+' F</div></div>';
-
     html+='<div class="subnav">'
       +'<button class="on" onclick="sSub(this,\'fin\')">Finances</button>'
       +'<button onclick="sSub(this,\'ech\')">Échéancier</button>'
@@ -408,34 +414,22 @@
       +'<button onclick="sSub(this,\'tra\')">Travaux</button>'
       +'<button onclick="sSub(this,\'doc\')">Documents</button>'
       +'<button onclick="sSub(this,\'msg\')">💬 Messagerie</button></div>';
-
-    // FIN
     var prog=S.programmes.find(function(x){return x.id===c.programme_id;})||{};
     var av=parseFloat(prog.avancement||c.avancement_travaux||0)||0;
     if(!av){ var rr=sRapportsLies()[0]; if(rr) av=parseFloat(rr.avancement)||0; }
     html+='<div class="sub on" id="s-fin"><div class="card"><strong>📈 Avancement du programme</strong><div class="prog"><div style="width:'+av+'%;"></div></div><div style="display:flex; justify-content:space-between; font-size:.85rem;"><span>'+esc(sProgNom())+'</span><strong>'+av+'%</strong></div></div>'
       +'<div class="card"><strong>📋 Derniers versements</strong>'+derniersVers(vs)+'</div></div>';
-
-    // ECH
     html+='<div class="sub" id="s-ech"><div class="card"><strong>📅 Échéancier</strong><div style="overflow-x:auto;"><table><thead><tr><th>N°</th><th>Échéance</th><th>Montant</th><th>Statut</th></tr></thead><tbody>'+echeancier()+'</tbody></table></div><div style="font-size:.72rem; color:#4b6a8b; margin-top:8px;">Mensualité = (Prix − Apport) ÷ Durée. Frais exclus.</div></div></div>';
-
-    // VER
     html+='<div class="sub" id="s-ver"><div class="card"><strong>💳 Historique des versements</strong><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Type</th><th>Montant</th><th>Mode</th></tr></thead><tbody>'+tableVers(vs)+'</tbody></table></div></div></div>';
-
-    // TRA
     html+='<div class="sub" id="s-tra">'+blocTravaux()+'</div>';
-
-    // DOC
     html+='<div class="sub" id="s-doc"><div class="card"><strong>📁 Mes documents</strong><div style="display:flex; flex-direction:column; gap:12px; margin-top:12px; max-width:340px;"><button class="highlight-btn" style="background:#0077b6;" onclick="docEcheancier()">📅 Échéancier personnalisé</button><button class="highlight-btn" style="background:#0077b6;" onclick="docAttestation()">📑 Attestation de versements</button></div></div></div>';
-
-    // MSG
     html+='<div class="sub" id="s-msg"><div class="card"><strong>💬 Échangez avec Partner Immo CI</strong>'
       +'<div id="s-msg-thread" style="border:1px solid #cfdfed;border-radius:14px;padding:12px;max-height:340px;overflow-y:auto;background:#f7fbff;margin:12px 0;"></div>'
       +'<div style="display:flex;gap:8px;align-items:flex-end;"><textarea id="s-msg-input" rows="2" placeholder="Votre message…" style="flex:1;padding:11px 13px;border:1px solid #cfdfed;border-radius:14px;resize:vertical;"></textarea><button class="highlight-btn" onclick="sMsgEnvoyer()">Envoyer</button></div></div></div>';
-
     document.getElementById('sous-dash').innerHTML=html;
     var sth=document.getElementById('s-msg-thread'); if(sth){ sth.innerHTML=pmsgBubbles(S.messages||[]); sth.scrollTop=sth.scrollHeight; }
   }
+
   function kpiBox(l,v,st){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v" style="'+(st||'')+'">'+v+'</div></div>'; }
   function sSub(btn,key){
     document.querySelectorAll('#sous-dash .subnav button').forEach(function(b){ b.classList.remove('on'); });
@@ -481,7 +475,6 @@
     return '<div class="card"><strong>🚧 Photos de chantier</strong><div class="photo-grid">'+ph+'</div></div><div class="card"><strong>📋 Rapports d\'avancement</strong><div style="margin-top:10px;">'+rp+'</div></div>';
   }
   function logoutSouscripteur(){ S.client=null; document.getElementById('sous-dash').style.display='none'; document.getElementById('sous-login').style.display='block'; document.getElementById('sousCode').value=''; }
-
   function docEcheancier(){
     var c=S.client, total=parseFloat(c.montant_total)||0, apport=parseFloat(c.apport)||0, duree=parseInt(c.duree)||0, mens=duree?Math.ceil((total-apport)/duree):0, debut=new Date(c.date_debut||Date.now()), rows='';
     for(var i=0;i<duree;i++){ var ech=new Date(debut.getFullYear(),debut.getMonth()+i,1); rows+='<tr><td>'+(i+1)+'</td><td>'+ech.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})+'</td><td>'+fmt(mens)+' FCFA</td></tr>'; }
@@ -495,35 +488,45 @@
     imprimer('Attestation '+(c.dossier||''),'<h2>Attestation de versements</h2><p>Je soussigné(e) '+esc((c.prenoms||'')+' '+(c.nom||''))+' (dossier '+esc(c.dossier||'')+') atteste des versements suivants :</p><table><thead><tr><th>Date</th><th>Type</th><th>Montant</th></tr></thead><tbody>'+lg+'</tbody></table><p style="margin-top:10px;"><strong>Total versé sur le prix : '+fmt(vp)+' FCFA</strong>'+(fr>0?'<br>Frais de souscription (non remboursables) : '+fmt(fr)+' FCFA':'')+'</p><p>Fait le '+new Date().toLocaleDateString('fr-FR')+'</p>');
   }
 
-  /* ═════════════ APPORTEUR ═════════════ */
+  /* ═══════════════════════════════════
+     APPORTEUR
+  ═══════════════════════════════════ */
   var A = { app:null, clients:[], commissions:[], programmes:[], messages:[] };
 
   async function loginApporteur(){
-    var ident=document.getElementById('appLogin').value.trim();
-    var code=document.getElementById('appCode').value.trim();
+    var ident=(document.getElementById('appLogin').value||'').trim();
+    var code=(document.getElementById('appCode').value||'').trim();
     var btn=document.getElementById('appBtn');
     document.getElementById('appError').style.display='none';
     if(!ident||!code){ setErr('appError','Veuillez remplir tous les champs.'); return; }
+
+    /* Rate limiting : 5 tentatives / 10 min */
+    var bfKey='app_bf_'+ident.slice(-6)+'_'+Math.floor(Date.now()/(10*60000));
+    var att={}; try{ att=JSON.parse(localStorage.getItem('app_bf')||'{}'); }catch(e){}
+    if((att[bfKey]||0)>=5){ setErr('appError','Trop de tentatives. Réessayez dans 10 minutes.'); return; }
+
     btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Connexion…';
-    if(estDemo(ident,code)){
-      chargerDemoApporteur();
-      document.getElementById('app-login').style.display='none';
-      document.getElementById('app-dash').style.display='block';
-      rendreApporteur();
-      btn.disabled=false; btn.innerHTML='Se connecter'; return;
-    }
     try{
       var q=encodeURIComponent(ident);
       var rows=await sb('pi_apporteurs?select=id,data&or=(data->>email.eq.'+q+',data->>tel.eq.'+q+')&limit=1');
       var app=unwrap(rows)[0];
       if(!app || !(await verifierCode(app,code))) throw new Error('auth');
-      if(app.date_expiration && new Date(app.date_expiration)<new Date()){ setErr('appError','Contrat/code expiré. Contactez Partner Immo CI.'); btn.disabled=false; btn.innerHTML='Se connecter'; return; }
+      if(app.date_expiration && new Date(app.date_expiration)<new Date()){
+        setErr('appError','Contrat/code expiré. Contactez Partner Immo CI.');
+        btn.disabled=false; btn.innerHTML='Se connecter'; return;
+      }
+      /* Connexion réussie */
+      delete att[bfKey]; localStorage.setItem('app_bf',JSON.stringify(att));
       A.app=app;
       document.getElementById('app-login').style.display='none';
       document.getElementById('app-dash').style.display='block';
       document.getElementById('app-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre espace…</div>';
       await chargerApporteur();
-    }catch(e){ setErr('appError','Identifiant ou code incorrect.'); }
+    }catch(e){
+      att[bfKey]=(att[bfKey]||0)+1; localStorage.setItem('app_bf',JSON.stringify(att));
+      var reste=5-(att[bfKey]||0);
+      setErr('appError','Identifiant ou code incorrect.'+(reste<=2?' ('+reste+' tentative(s) restante(s))':''));
+    }
     btn.disabled=false; btn.innerHTML='Se connecter';
   }
 
@@ -535,11 +538,14 @@
         sb('pi_commissions?select=id,data&data->>beneficiaire_id=eq.'+aid).catch(function(){return [];}),
         sb('pi_programmes?select=id,data').catch(function(){return [];})
       ]);
-      A.clients=unwrap(r[0]); A.commissions=unwrap(r[1]).filter(function(c){return c.type_beneficiaire==='apporteur';}); A.programmes=unwrap(r[2]);
+      A.clients=unwrap(r[0]);
+      A.commissions=unwrap(r[1]).filter(function(c){return c.type_beneficiaire==='apporteur';});
+      A.programmes=unwrap(r[2]);
       A.messages=await pmsgFetch('apporteur', A.app.id);
     }catch(e){}
     rendreApporteur();
   }
+
   function aProgNom(id){ var p=A.programmes.find(function(x){return x.id===id;}); return (p&&(p.nom||p.libelle))||'—'; }
 
   function rendreApporteur(){
@@ -547,27 +553,20 @@
     var dues=A.commissions.filter(function(c){return c.statut==='a_payer';}).reduce(function(s,c){return s+(parseFloat(c.montant_comm)||0);},0);
     var payees=A.commissions.filter(function(c){return c.statut==='payee'||c.statut==='paye';}).reduce(function(s,c){return s+(parseFloat(c.montant_comm)||0);},0);
     var totale=A.commissions.reduce(function(s,c){return s+(parseFloat(c.montant_comm)||0);},0);
-
     var html='';
     html+='<div class="stat-card"><h4>✅ Bienvenue '+esc((a.prenoms||'')+' '+(a.nom||'Apporteur'))+'</h4>'
       +'<p>'+(a.societe?'<strong>Société :</strong> '+esc(a.societe)+' &nbsp;·&nbsp; ':'')+'<strong>Email :</strong> '+esc(a.email||'—')+' &nbsp;·&nbsp; <strong>Tél :</strong> '+esc(a.tel||'—')+'<br><strong>Taux :</strong> souscription '+(a.taux_souscription||10)+'% · régulier '+(a.taux_regulier||5)+'%</p>'
       +'<button class="highlight-btn" style="margin-top:10px; background:#991b1b;" onclick="logoutApporteur()">Déconnexion</button></div>';
-
     html+='<div class="kpi-row">'
       +kpiBox('Clients apportés',A.clients.length,'')
       +kpiBox('Commissions dues',fmt(dues)+' F','color:#991b1b;')
       +kpiBox('Déjà payées',fmt(payees)+' F','color:#16a34a;')
       +kpiBox('Total généré',fmt(totale)+' F','')+'</div>';
-
     html+='<div class="subnav"><button class="on" onclick="aSub(this,\'cli\')">Clients apportés</button><button onclick="aSub(this,\'com\')">Commissions</button><button onclick="aSub(this,\'msg\')">💬 Messagerie</button></div>';
-
-    // Clients
     var rowsCli=A.clients.length?A.clients.map(function(c){
       return '<tr><td>'+esc(c.dossier||c.id)+'</td><td>'+esc((c.prenoms||'')+' '+(c.nom||''))+'</td><td>'+esc(aProgNom(c.programme_id)||c.programme||'—')+'</td><td>'+fmt(c.montant_total)+' F</td></tr>';
     }).join(''):'<tr><td colspan="4">Aucun client apporté.</td></tr>';
     html+='<div class="sub on" id="a-cli"><div class="card"><div style="overflow-x:auto;"><table><thead><tr><th>Dossier</th><th>Client</th><th>Programme</th><th>Montant</th></tr></thead><tbody>'+rowsCli+'</tbody></table></div></div></div>';
-
-    // Commissions
     var rowsCom=A.commissions.length?A.commissions.slice().sort(function(x,y){return new Date(y.date||0)-new Date(x.date||0);}).map(function(c){
       var cli=A.clients.find(function(k){return k.id===c.client_id;});
       var nom=cli?((cli.prenoms||'')+' '+(cli.nom||'')):(c.client_id||'—');
@@ -576,14 +575,13 @@
       return '<tr><td>'+dshort(c.date)+'</td><td>'+esc(nom)+'</td><td>'+esc(c.type_versement||'')+'</td><td>'+fmt(c.montant_base)+'</td><td>'+(c.taux||0)+'%</td><td><strong>'+fmt(c.montant_comm)+'</strong></td><td><span class="pill '+pillCls+'">'+pillTxt+'</span></td></tr>';
     }).join(''):'<tr><td colspan="7">Aucune commission.</td></tr>';
     html+='<div class="sub" id="a-com"><div class="card"><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>'+rowsCom+'</tbody></table></div></div></div>';
-
     html+='<div class="sub" id="a-msg"><div class="card"><strong>💬 Échangez avec Partner Immo CI</strong>'
       +'<div id="a-msg-thread" style="border:1px solid #cfdfed;border-radius:14px;padding:12px;max-height:340px;overflow-y:auto;background:#f7fbff;margin:12px 0;"></div>'
       +'<div style="display:flex;gap:8px;align-items:flex-end;"><textarea id="a-msg-input" rows="2" placeholder="Votre message…" style="flex:1;padding:11px 13px;border:1px solid #cfdfed;border-radius:14px;resize:vertical;"></textarea><button class="highlight-btn" onclick="aMsgEnvoyer()">Envoyer</button></div></div></div>';
-
     document.getElementById('app-dash').innerHTML=html;
     var ath=document.getElementById('a-msg-thread'); if(ath){ ath.innerHTML=pmsgBubbles(A.messages||[]); ath.scrollTop=ath.scrollHeight; }
   }
+
   function aSub(btn,key){
     document.querySelectorAll('#app-dash .subnav button').forEach(function(b){ b.classList.remove('on'); });
     btn.classList.add('on');
@@ -592,21 +590,22 @@
   }
   function logoutApporteur(){ A.app=null; document.getElementById('app-dash').style.display='none'; document.getElementById('app-login').style.display='block'; document.getElementById('appCode').value=''; }
 
-  /* impression partagée */
+  /* ───── Impression ───── */
   function imprimer(titre,corps){
     var w=window.open('','_blank');
     w.document.write('<html><head><meta charset="UTF-8"><title>'+esc(titre)+'</title><style>body{font-family:Arial;padding:28px;color:#0a2b3e}table{border-collapse:collapse;width:100%;margin-top:10px}td,th{border:1px solid #ccc;padding:8px;text-align:left;font-size:13px}h2{color:#003366}</style></head><body>'+corps+'</body></html>');
     w.document.close(); w.focus(); w.print();
   }
 
-  /* saisie numérique codes */
+  /* ───── Saisie numérique codes ───── */
   ['sousCode','appCode'].forEach(function(id){
     var el=document.getElementById(id);
+    if(!el) return;
     el.addEventListener('input',function(e){ e.target.value=e.target.value.replace(/\D/g,''); });
     el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ id==='sousCode'?loginSouscripteur():loginApporteur(); } });
   });
 
-  /* ───── Catalogue villas (Cité EDEN) ───── */
+  /* ───── Catalogue villas ───── */
   var VILLAS = [
     { nom:'HARMONIE',            pieces:'2 pièces',          surf:'80 m²',  go:14500000, cle:20000000 },
     { nom:'SOMOLI Standard',     pieces:'3 pièces',          surf:'150 m²', go:23500000, cle:32500000 },
@@ -627,7 +626,7 @@
     }).join('');
   })();
 
-  /* ───── Médias publiés par l'admin (photos + documents) ───── */
+  /* ───── Médias portail ───── */
   var MEDIAS = [];
   async function chargerMediasPortail(){
     try{
@@ -635,7 +634,7 @@
       MEDIAS = unwrap(rows).filter(function(m){ return m && m.visible!==false; });
     }catch(e){ MEDIAS=[]; }
     rendreMediasEden();
-    if(typeof renderCataloguePhoto==='function') renderCataloguePhoto();
+    renderCataloguePhoto();
   }
   function rendreMediasEden(){
     var photos = MEDIAS.filter(function(m){ return m.type==='photo' && (m.categorie==='eden'||m.categorie==='catalogue'); });
@@ -647,7 +646,7 @@
   }
   chargerMediasPortail();
 
-  /* ───── Bandeau défilant (params publics + stats) ───── */
+  /* ───── Bandeau défilant ───── */
   var PARAMS = {};
   function uid(){ return 'web_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
   async function sbInsert(table, row){
@@ -715,42 +714,55 @@
   }
   peuplerVillasSelect();
 
-  /* ───── Messagerie portail (souscripteur/apporteur ↔ staff) ───── */
+  /* ───── Messagerie portail ───── */
   async function pmsgFetch(type,id){
-    try{ var rows=await sb('pi_portail_messages?select=id,data&data->>partie_type=eq.'+type+'&data->>partie_id=eq.'+encodeURIComponent(id)); return unwrap(rows).sort(function(a,b){return new Date(a.date)-new Date(b.date);}); }
-    catch(e){ return []; }
+    try{
+      var rows=await sb('pi_portail_messages?select=id,data&data->>partie_type=eq.'+type+'&data->>partie_id=eq.'+encodeURIComponent(id));
+      return unwrap(rows).sort(function(a,b){return new Date(a.created_at||a.date)-new Date(b.created_at||b.date);});
+    }catch(e){ return []; }
   }
   function pmsgBubbles(msgs){
     if(!msgs||!msgs.length) return '<div style="color:#4b6a8b;text-align:center;padding:16px 0;">Aucun message. Écrivez à Partner Immo CI ci-dessous.</div>';
-    return msgs.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);}).map(function(m){
+    return msgs.slice().sort(function(a,b){return new Date(a.created_at||a.date)-new Date(b.created_at||b.date);}).map(function(m){
       var mine=m.expediteur==='client';
-      return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:78%;background:'+(mine?'#003366':'#fff')+';color:'+(mine?'#fff':'#0a2b3e')+';border:1px solid '+(mine?'#003366':'#cfdfed')+';border-radius:14px;padding:9px 13px;font-size:.86rem;"><div>'+esc(m.contenu)+'</div><div style="font-size:.62rem;opacity:.75;margin-top:3px;">'+(mine?'Moi':'Partner Immo CI')+' · '+dshort(m.date)+'</div></div></div>';
+      return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:78%;background:'+(mine?'#003366':'#fff')+';color:'+(mine?'#fff':'#0a2b3e')+';border:1px solid '+(mine?'#003366':'#cfdfed')+';border-radius:14px;padding:9px 13px;font-size:.86rem;"><div>'+esc(m.contenu||m.message||'')+'</div><div style="font-size:.62rem;opacity:.75;margin-top:3px;">'+(mine?'Moi':'Partner Immo CI')+' · '+dshort(m.created_at||m.date)+'</div></div></div>';
     }).join('');
   }
   async function _pmsgClientSend(type,id,inputId,threadId,store){
-    var inp=document.getElementById(inputId); if(!inp) return; var txt=(inp.value||'').trim(); if(!txt) return;
-    var msg={ id:uid(), partie_type:type, partie_id:id, expediteur:'client', contenu:txt, date:new Date().toISOString(), lu_staff:false, lu_client:true };
+    var inp=document.getElementById(inputId); if(!inp) return;
+    var txt=(inp.value||'').trim(); if(!txt) return;
+    var msg={ id:uid(), partie_type:type, partie_id:id, expediteur:'client', contenu:txt,
+      created_at:new Date().toISOString(), lu_staff:false, lu_client:true };
     try{
       await sbInsert('pi_portail_messages',{ id:msg.id, data:msg });
       store.push(msg); inp.value='';
-      var th=document.getElementById(threadId); if(th){ th.innerHTML=pmsgBubbles(store); th.scrollTop=th.scrollHeight; }
+      var th=document.getElementById(threadId);
+      if(th){ th.innerHTML=pmsgBubbles(store); th.scrollTop=th.scrollHeight; }
     }catch(e){ alert('Échec de l\'envoi du message. Réessayez.'); }
   }
   function sMsgEnvoyer(){ if(S.client) _pmsgClientSend('souscripteur', S.client.id, 's-msg-input','s-msg-thread', S.messages); }
   function aMsgEnvoyer(){ if(A.app) _pmsgClientSend('apporteur', A.app.id, 'a-msg-input','a-msg-thread', A.messages); }
-  /* Rafraîchissement auto des conversations ouvertes */
+
+  /* Rafraîchissement auto des messages (30 s) */
   setInterval(async function(){
     try{
       var sd=document.getElementById('sous-dash');
-      if(S.client && sd && sd.style.display!=='none'){ S.messages=await pmsgFetch('souscripteur',S.client.id); var st=document.getElementById('s-msg-thread'); if(st) st.innerHTML=pmsgBubbles(S.messages); }
+      if(S.client && sd && sd.style.display!=='none'){
+        S.messages=await pmsgFetch('souscripteur',S.client.id);
+        var st=document.getElementById('s-msg-thread'); if(st){ st.innerHTML=pmsgBubbles(S.messages); }
+      }
       var ad=document.getElementById('app-dash');
-      if(A.app && ad && ad.style.display!=='none'){ A.messages=await pmsgFetch('apporteur',A.app.id); var at=document.getElementById('a-msg-thread'); if(at) at.innerHTML=pmsgBubbles(A.messages); }
+      if(A.app && ad && ad.style.display!=='none'){
+        A.messages=await pmsgFetch('apporteur',A.app.id);
+        var at=document.getElementById('a-msg-thread'); if(at){ at.innerHTML=pmsgBubbles(A.messages); }
+      }
     }catch(e){}
   }, 30000);
 
   window.sMsgEnvoyer=sMsgEnvoyer; window.aMsgEnvoyer=aMsgEnvoyer;
   window.envoyerSouscription=envoyerSouscription; window.majPrixEstime=majPrixEstime;
-  window.loginSouscripteur=loginSouscripteur; window.logoutSouscripteur=logoutSouscripteur; window.sSub=sSub; window.docEcheancier=docEcheancier; window.docAttestation=docAttestation;
+  window.loginSouscripteur=loginSouscripteur; window.logoutSouscripteur=logoutSouscripteur;
+  window.sSub=sSub; window.docEcheancier=docEcheancier; window.docAttestation=docAttestation;
   window.loginApporteur=loginApporteur; window.logoutApporteur=logoutApporteur; window.aSub=aSub;
 </script>
 </body>
