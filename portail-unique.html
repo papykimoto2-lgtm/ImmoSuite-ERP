@@ -75,6 +75,40 @@
     .signature{ margin-top:18px; padding-top:14px; border-top:1px solid rgba(255,255,255,.2); font-size:.75rem; display:flex; justify-content:center; gap:14px; flex-wrap:wrap; }
     .signature a{ color:#cddfea; text-decoration:none; }
     @media (max-width:600px){ .row-2{ grid-template-columns:1fr; } }
+    select#s-staff-select, select#a-staff-select { transition:.15s; }
+    select#s-staff-select:focus, select#a-staff-select:focus { outline:none; border-color:#003366; box-shadow:0 0 0 3px rgba(0,51,102,.1); }
+
+    /* ── Zone de saisie messagerie ── */
+    .msg-compose-wrap { display:flex; gap:10px; align-items:flex-end; }
+    .msg-textarea {
+      flex:1; padding:14px 16px; border:2px solid #cfdfed; border-radius:18px;
+      font-size:1rem; font-family:inherit; line-height:1.5; resize:none;
+      min-height:52px; max-height:160px; overflow-y:auto;
+      transition:border-color .2s, box-shadow .2s;
+      background:#fff; color:#0a2b3e;
+    }
+    .msg-textarea:focus { outline:none; border-color:#003366; box-shadow:0 0 0 3px rgba(0,51,102,.1); }
+    .msg-textarea::placeholder { color:#9bb0c5; }
+    .msg-send-btn {
+      flex-shrink:0; width:48px; height:48px; border-radius:50%; border:none;
+      background:#003366; color:#fff; font-size:1.2rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:background .2s, transform .1s; box-shadow:0 2px 8px rgba(0,51,102,.25);
+    }
+    .msg-send-btn:hover { background:#001f4f; }
+    .msg-send-btn:active { transform:scale(.93); }
+    .msg-thread-wrap {
+      border:1px solid #e0eaf4; border-radius:18px; padding:14px;
+      max-height:340px; overflow-y:auto; background:#f7fbff;
+      margin:0 0 12px; min-height:70px;
+      scroll-behavior:smooth;
+    }
+    @media (max-width:600px){
+      .msg-thread-wrap { max-height:220px; padding:10px; border-radius:14px; }
+      .msg-textarea { font-size:.95rem; padding:12px 14px; min-height:48px; border-radius:14px; }
+      .msg-send-btn { width:44px; height:44px; font-size:1.1rem; }
+      .msg-compose-wrap { gap:8px; }
+    }
   </style>
 </head>
 <body>
@@ -331,7 +365,43 @@
   /* ═══════════════════════════════════
      SOUSCRIPTEUR
   ═══════════════════════════════════ */
-  var S = { client:null, versements:[], programmes:[], lots:[], rapports:[], conventions:[], messages:[] };
+  /* Staff disponibles pour la messagerie */
+  var STAFF = [];
+
+  async function chargerStaff(){
+    STAFF = [];
+    try{
+      /* 1. Employés commerciaux actifs depuis la liste du personnel */
+      var empRows = await sb('pi_employes?select=id,data');
+      var employes = unwrap(empRows).filter(function(e){
+        return e && e.statut === 'actif' && e.dept === 'commercial';
+      });
+      employes.forEach(function(e){
+        STAFF.push({
+          id:    e.id,
+          nom:   ((e.prenoms||'')+' '+(e.nom||'')).trim(),
+          poste: e.poste || 'Commercial',
+          type:  'commercial'
+        });
+      });
+    }catch(e){}
+    try{
+      /* 2. Admin(s) — toujours en copie */
+      var adminRows = await sb('pi_users?select=id,data');
+      unwrap(adminRows).filter(function(u){
+        return u && u.statut === 'actif' && u.role === 'admin';
+      }).forEach(function(u){
+        STAFF.push({
+          id:    u.id,
+          nom:   u.nom || 'Administration',
+          poste: 'Administration',
+          type:  'admin'
+        });
+      });
+    }catch(e){}
+  }
+
+  var S = { client:null, versements:[], programmes:[], lots:[], rapports:[], conventions:[], messages:[], interlocuteur:null };
 
   async function loginSouscripteur(){
     var ident=(document.getElementById('sousLogin').value||'').trim();
@@ -361,6 +431,8 @@
       document.getElementById('sous-login').style.display='none';
       document.getElementById('sous-dash').style.display='block';
       document.getElementById('sous-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre dossier…</div>';
+      if(!STAFF.length) await chargerStaff();
+      demanderPermissionNotification();
       await chargerSouscripteur();
     }catch(e){
       att[bfKey]=(att[bfKey]||0)+1; localStorage.setItem('sous_bf',JSON.stringify(att));
@@ -384,6 +456,8 @@
       S.messages=await pmsgFetch('souscripteur', S.client.id);
     }catch(e){ S.versements=S.versements||[]; }
     rendreSouscripteur();
+    /* Badge messages non lus */
+    setTimeout(function(){ mettreAJourBadge('s', compterNonLus(S.messages)); }, 100);
   }
 
   function sProgNom(){ var p=S.programmes.find(function(x){return x.id===S.client.programme_id;}); return (p&&(p.nom||p.libelle))||S.client.programme||'—'; }
@@ -413,7 +487,7 @@
       +'<button onclick="sSub(this,\'ver\')">Versements</button>'
       +'<button onclick="sSub(this,\'tra\')">Travaux</button>'
       +'<button onclick="sSub(this,\'doc\')">Documents</button>'
-      +'<button onclick="sSub(this,\'msg\')">💬 Messagerie</button></div>';
+      +'<button onclick="sSub(this,\'msg\')",id="s-msg-badge-btn">💬 Messagerie</button></div>';
     var prog=S.programmes.find(function(x){return x.id===c.programme_id;})||{};
     var av=parseFloat(prog.avancement||c.avancement_travaux||0)||0;
     if(!av){ var rr=sRapportsLies()[0]; if(rr) av=parseFloat(rr.avancement)||0; }
@@ -423,11 +497,26 @@
     html+='<div class="sub" id="s-ver"><div class="card"><strong>💳 Historique des versements</strong><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Type</th><th>Montant</th><th>Mode</th></tr></thead><tbody>'+tableVers(vs)+'</tbody></table></div></div></div>';
     html+='<div class="sub" id="s-tra">'+blocTravaux()+'</div>';
     html+='<div class="sub" id="s-doc"><div class="card"><strong>📁 Mes documents</strong><div style="display:flex; flex-direction:column; gap:12px; margin-top:12px; max-width:340px;"><button class="highlight-btn" style="background:#0077b6;" onclick="docEcheancier()">📅 Échéancier personnalisé</button><button class="highlight-btn" style="background:#0077b6;" onclick="docAttestation()">📑 Attestation de versements</button></div></div></div>';
-    html+='<div class="sub" id="s-msg"><div class="card"><strong>💬 Échangez avec Partner Immo CI</strong>'
-      +'<div id="s-msg-thread" style="border:1px solid #cfdfed;border-radius:14px;padding:12px;max-height:340px;overflow-y:auto;background:#f7fbff;margin:12px 0;"></div>'
-      +'<div style="display:flex;gap:8px;align-items:flex-end;"><textarea id="s-msg-input" rows="2" placeholder="Votre message…" style="flex:1;padding:11px 13px;border:1px solid #cfdfed;border-radius:14px;resize:vertical;"></textarea><button class="highlight-btn" onclick="sMsgEnvoyer()">Envoyer</button></div></div></div>';
+    html+='<div class="sub" id="s-msg"><div class="card">'
+      +'<strong style="font-size:1rem;">💬 Messagerie</strong>'
+      +'<div style="margin:14px 0 12px;">'
+      +'<label style="font-size:.78rem;color:#4b6a8b;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Interlocuteur</label>'
+      + buildStaffSelect('s')
+      +'</div>'
+      +'<div id="s-msg-thread" class="msg-thread-wrap"></div>'
+      +'<div id="s-msg-compose" style="display:none;flex-direction:column;gap:10px;">'
+      +'<div id="s-msg-dest-label" style="font-size:.8rem;color:#1e4663;padding:7px 12px;background:#eef3fc;border-radius:8px;font-weight:600;border-left:3px solid #003366;"></div>'
+      +'<div class="msg-compose-wrap">'
+      +'<textarea id="s-msg-input" class="msg-textarea" placeholder="Écrivez votre message…" rows="3" onkeydown="if(event.key===\'Enter\'&&event.ctrlKey){sMsgEnvoyer();event.preventDefault();}"></textarea>'
+      +'<button class="msg-send-btn" onclick="sMsgEnvoyer()" title="Envoyer (Ctrl+Entrée)">➤</button>'
+      +'</div>'
+      +'<div style="font-size:.7rem;color:#9bb0c5;text-align:right;">Ctrl+Entrée pour envoyer</div>'
+      +'</div>'
+      +'<div id="s-msg-placeholder" style="text-align:center;color:#4b6a8b;padding:24px 0;font-size:.85rem;">☝️ Choisissez un interlocuteur dans la liste pour démarrer ou consulter une conversation.</div>'
+      +'</div></div>';
+      +'</div></div>';
     document.getElementById('sous-dash').innerHTML=html;
-    var sth=document.getElementById('s-msg-thread'); if(sth){ sth.innerHTML=pmsgBubbles(S.messages||[]); sth.scrollTop=sth.scrollHeight; }
+    /* thread souscripteur : initialisé par selectStaff() */
   }
 
   function kpiBox(l,v,st){ return '<div class="kpi"><div class="l">'+l+'</div><div class="v" style="'+(st||'')+'">'+v+'</div></div>'; }
@@ -491,7 +580,7 @@
   /* ═══════════════════════════════════
      APPORTEUR
   ═══════════════════════════════════ */
-  var A = { app:null, clients:[], commissions:[], programmes:[], messages:[] };
+  var A = { app:null, clients:[], commissions:[], programmes:[], messages:[], interlocuteur:null };
 
   async function loginApporteur(){
     var ident=(document.getElementById('appLogin').value||'').trim();
@@ -521,6 +610,8 @@
       document.getElementById('app-login').style.display='none';
       document.getElementById('app-dash').style.display='block';
       document.getElementById('app-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre espace…</div>';
+      if(!STAFF.length) await chargerStaff();
+      demanderPermissionNotification();
       await chargerApporteur();
     }catch(e){
       att[bfKey]=(att[bfKey]||0)+1; localStorage.setItem('app_bf',JSON.stringify(att));
@@ -544,6 +635,7 @@
       A.messages=await pmsgFetch('apporteur', A.app.id);
     }catch(e){}
     rendreApporteur();
+    setTimeout(function(){ mettreAJourBadge('a', compterNonLus(A.messages)); }, 100);
   }
 
   function aProgNom(id){ var p=A.programmes.find(function(x){return x.id===id;}); return (p&&(p.nom||p.libelle))||'—'; }
@@ -562,7 +654,7 @@
       +kpiBox('Commissions dues',fmt(dues)+' F','color:#991b1b;')
       +kpiBox('Déjà payées',fmt(payees)+' F','color:#16a34a;')
       +kpiBox('Total généré',fmt(totale)+' F','')+'</div>';
-    html+='<div class="subnav"><button class="on" onclick="aSub(this,\'cli\')">Clients apportés</button><button onclick="aSub(this,\'com\')">Commissions</button><button onclick="aSub(this,\'msg\')">💬 Messagerie</button></div>';
+    html+='<div class="subnav"><button class="on" onclick="aSub(this,\'cli\')">Clients apportés</button><button onclick="aSub(this,\'com\')">Commissions</button><button id="a-msg-badge-btn" onclick="aSub(this,\'msg\')",id="a-msg-badge-btn">💬 Messagerie</button></div>';
     var rowsCli=A.clients.length?A.clients.map(function(c){
       return '<tr><td>'+esc(c.dossier||c.id)+'</td><td>'+esc((c.prenoms||'')+' '+(c.nom||''))+'</td><td>'+esc(aProgNom(c.programme_id)||c.programme||'—')+'</td><td>'+fmt(c.montant_total)+' F</td></tr>';
     }).join(''):'<tr><td colspan="4">Aucun client apporté.</td></tr>';
@@ -575,11 +667,26 @@
       return '<tr><td>'+dshort(c.date)+'</td><td>'+esc(nom)+'</td><td>'+esc(c.type_versement||'')+'</td><td>'+fmt(c.montant_base)+'</td><td>'+(c.taux||0)+'%</td><td><strong>'+fmt(c.montant_comm)+'</strong></td><td><span class="pill '+pillCls+'">'+pillTxt+'</span></td></tr>';
     }).join(''):'<tr><td colspan="7">Aucune commission.</td></tr>';
     html+='<div class="sub" id="a-com"><div class="card"><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Client</th><th>Type</th><th>Base</th><th>Taux</th><th>Commission</th><th>Statut</th></tr></thead><tbody>'+rowsCom+'</tbody></table></div></div></div>';
-    html+='<div class="sub" id="a-msg"><div class="card"><strong>💬 Échangez avec Partner Immo CI</strong>'
-      +'<div id="a-msg-thread" style="border:1px solid #cfdfed;border-radius:14px;padding:12px;max-height:340px;overflow-y:auto;background:#f7fbff;margin:12px 0;"></div>'
-      +'<div style="display:flex;gap:8px;align-items:flex-end;"><textarea id="a-msg-input" rows="2" placeholder="Votre message…" style="flex:1;padding:11px 13px;border:1px solid #cfdfed;border-radius:14px;resize:vertical;"></textarea><button class="highlight-btn" onclick="aMsgEnvoyer()">Envoyer</button></div></div></div>';
+    html+='<div class="sub" id="a-msg"><div class="card">'
+      +'<strong style="font-size:1rem;">💬 Messagerie</strong>'
+      +'<div style="margin:14px 0 12px;">'
+      +'<label style="font-size:.78rem;color:#4b6a8b;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Interlocuteur</label>'
+      + buildStaffSelect('a')
+      +'</div>'
+      +'<div id="a-msg-thread" class="msg-thread-wrap"></div>'
+      +'<div id="a-msg-compose" style="display:none;flex-direction:column;gap:10px;">'
+      +'<div id="a-msg-dest-label" style="font-size:.8rem;color:#1e4663;padding:7px 12px;background:#eef3fc;border-radius:8px;font-weight:600;border-left:3px solid #003366;"></div>'
+      +'<div class="msg-compose-wrap">'
+      +'<textarea id="a-msg-input" class="msg-textarea" placeholder="Écrivez votre message…" rows="3" onkeydown="if(event.key===\'Enter\'&&event.ctrlKey){aMsgEnvoyer();event.preventDefault();}"></textarea>'
+      +'<button class="msg-send-btn" onclick="aMsgEnvoyer()" title="Envoyer (Ctrl+Entrée)">➤</button>'
+      +'</div>'
+      +'<div style="font-size:.7rem;color:#9bb0c5;text-align:right;">Ctrl+Entrée pour envoyer</div>'
+      +'</div>'
+      +'<div id="a-msg-placeholder" style="text-align:center;color:#4b6a8b;padding:24px 0;font-size:.85rem;">☝️ Choisissez un interlocuteur dans la liste pour démarrer ou consulter une conversation.</div>'
+      +'</div></div>';
+      +'</div></div>';
     document.getElementById('app-dash').innerHTML=html;
-    var ath=document.getElementById('a-msg-thread'); if(ath){ ath.innerHTML=pmsgBubbles(A.messages||[]); ath.scrollTop=ath.scrollHeight; }
+    /* thread apporteur : initialisé par selectStaff() */
   }
 
   function aSub(btn,key){
@@ -654,6 +761,83 @@
     if(!r.ok){ throw new Error('HTTP '+r.status+' '+(await r.text())); }
     return true;
   }
+  /* ── PATCH Supabase (marquer lu) ── */
+  async function sbPatch(table, id, payload){
+    try{
+      await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+encodeURIComponent(id), {
+        method:'PATCH',
+        headers:{ apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json', Prefer:'return=minimal' },
+        body: JSON.stringify(payload)
+      });
+    }catch(e){}
+  }
+
+  /* ── Notifications navigateur ── */
+  var _notifPermission = 'default';
+  var _lastMsgIds = {};   /* évite de notifier deux fois le même message */
+
+  async function demanderPermissionNotification(){
+    if(!('Notification' in window)) return;
+    try{
+      var r = await Notification.requestPermission();
+      _notifPermission = r;
+    }catch(e){}
+  }
+
+  function notifierNouveauMessage(expediteurNom, contenu){
+    if(_notifPermission !== 'granted') return;
+    try{
+      var notif = new Notification('💬 Nouveau message — Partner Immo CI', {
+        body: (expediteurNom ? expediteurNom + ' : ' : '') + (contenu||'').slice(0,80),
+        icon: 'https://partner-immo.net/favicon.ico',
+        tag: 'partnerimmo-msg'
+      });
+      notif.onclick = function(){ window.focus(); notif.close(); };
+    }catch(e){}
+  }
+
+  /* ── Compter messages non lus (staff → client) ── */
+  function compterNonLus(messages){
+    return (messages||[]).filter(function(m){
+      return m.expediteur === 'staff' && m.lu_client === false;
+    }).length;
+  }
+
+  /* ── Mettre à jour le badge sur le bouton Messagerie ── */
+  function mettreAJourBadge(prefix, nb){
+    var btn = document.getElementById(prefix+'-msg-badge-btn');
+    if(!btn) return;
+    var badge = btn.querySelector('.msg-badge');
+    if(!badge){
+      badge = document.createElement('span');
+      badge.className = 'msg-badge';
+      badge.style.cssText = 'background:#dc2626;color:#fff;border-radius:50%;'
+        +'padding:1px 6px;font-size:.65rem;font-weight:700;margin-left:6px;'
+        +'display:inline-flex;align-items:center;justify-content:center;min-width:18px;';
+      btn.appendChild(badge);
+    }
+    badge.textContent = nb;
+    badge.style.display = nb > 0 ? 'inline-flex' : 'none';
+  }
+
+  /* ── Marquer messages lus pour un interlocuteur ── */
+  async function marquerLus(store, staffId){
+    var toMark = (store.messages||[]).filter(function(m){
+      return m.expediteur === 'staff'
+        && m.lu_client === false
+        && (!staffId || staffId === 'general'
+            ? !m.interlocuteur_id
+            : m.interlocuteur_id === staffId || !m.interlocuteur_id);
+    });
+    for(var i=0; i<toMark.length; i++){
+      toMark[i].lu_client = true;
+      sbPatch('pi_portail_messages', toMark[i].id, { data: toMark[i] });
+    }
+    /* Rafraîchir badge */
+    var prefix = (store === S) ? 's' : 'a';
+    mettreAJourBadge(prefix, compterNonLus(store.messages));
+  }
+
   async function chargerParamsBandeau(){
     try{ var rows = await sb('pi_params?select=id,data&id=eq.portail&limit=1'); PARAMS = unwrap(rows)[0] || {}; }catch(e){ PARAMS={}; }
     majBandeau(); setInterval(majBandeau, 60000);
@@ -714,50 +898,201 @@
   }
   peuplerVillasSelect();
 
-  /* ───── Messagerie portail ───── */
-  async function pmsgFetch(type,id){
+  /* ═══════════════════════════════════════════════════════════
+     MESSAGERIE PORTAIL — avec sélection de l'interlocuteur
+  ═══════════════════════════════════════════════════════════ */
+
+  var TYPE_ICONS = { commercial:'🎯', admin:'👑' };
+
+  function buildStaffSelect(prefix){
+    var opts = '<option value="">— Choisir un interlocuteur —</option>';
+
+    /* Commerciaux */
+    var commerciaux = STAFF.filter(function(u){ return u.type === 'commercial'; });
+    if(commerciaux.length){
+      opts += '<optgroup label="👥 Équipe commerciale">';
+      opts += commerciaux.map(function(u){
+        return '<option value="'+u.id+'" data-nom="'+esc(u.nom)+' ('+esc(u.poste)+')">'
+          +'🎯 '+esc(u.nom)+' — '+esc(u.poste)+'</option>';
+      }).join('');
+      opts += '</optgroup>';
+    }
+
+    /* Administration — toujours en copie */
+    var admins = STAFF.filter(function(u){ return u.type === 'admin'; });
+    if(admins.length){
+      opts += '<optgroup label="📋 Administration (copie)">';
+      opts += admins.map(function(u){
+        return '<option value="'+u.id+'" data-nom="'+esc(u.nom)+' (Administration)">'
+          +'👑 '+esc(u.nom)+' — Administration</option>';
+      }).join('');
+      opts += '</optgroup>';
+    }
+
+    /* Fallback si aucun staff chargé */
+    if(!STAFF.length){
+      opts += '<option value="general" data-nom="Équipe Partner Immo CI">🏢 Équipe Partner Immo CI</option>';
+    }
+
+    return '<select id="'+prefix+'-staff-select" onchange="onStaffSelect(this)"'
+      +' style="width:100%;padding:12px 14px;border:1px solid #cfdfed;border-radius:14px;'
+      +'font-size:.9rem;color:#0a2b3e;background:#fff;cursor:pointer;">'
+      + opts + '</select>';
+  }
+
+  /* Déclencheur onChange du select interlocuteur */
+  function onStaffSelect(sel){
+    var staffId  = sel.value;
+    if(!staffId) return;
+    var selOpt   = sel.options[sel.selectedIndex];
+    var staffNom = selOpt.getAttribute('data-nom') || selOpt.text.replace(/^[^\s]+\s/,'');
+    /* Identifier le portail depuis l'id du select */
+    var prefix = sel.id.startsWith('s-') ? 's' : 'a';
+    var store  = prefix==='s' ? S : A;
+    store.interlocuteur = { id: staffId, nom: staffNom };
+    _afficherThread(prefix, staffId, staffNom, store);
+  }
+
+  function _afficherThread(prefix, staffId, staffNom, store){
+    /* Label */
+    var destLabel = document.getElementById(prefix+'-msg-dest-label');
+    if(destLabel) destLabel.textContent = '✉️ Conversation avec : ' + staffNom;
+
+    /* Afficher compose, masquer placeholder */
+    var compose     = document.getElementById(prefix+'-msg-compose');
+    var placeholder = document.getElementById(prefix+'-msg-placeholder');
+    if(compose)     compose.style.display = 'flex';
+    if(placeholder) placeholder.style.display = 'none';
+
+    /* Filtrer les messages */
+    var filtered = (store.messages||[]).filter(function(m){
+      if(staffId==='general') return !m.interlocuteur_id;
+      return m.interlocuteur_id === staffId;
+    });
+    var thread = document.getElementById(prefix+'-msg-thread');
+    if(thread){
+      thread.innerHTML = filtered.length
+        ? pmsgBubbles(filtered, staffNom)
+        : '<div style="color:#4b6a8b;text-align:center;padding:20px 0;font-size:.85rem;">Aucun échange avec '+esc(staffNom)+' pour l\'instant.<br>Rédigez votre message ci-dessous.</div>';
+      thread.scrollTop = thread.scrollHeight;
+
+    /* Marquer comme lus les messages staff dans ce thread */
+    marquerLus(store, staffId);
+    }
+  }
+
+  /* Récupérer tous les messages d'une conversation */
+  async function pmsgFetch(type, id){
     try{
       var rows=await sb('pi_portail_messages?select=id,data&data->>partie_type=eq.'+type+'&data->>partie_id=eq.'+encodeURIComponent(id));
       return unwrap(rows).sort(function(a,b){return new Date(a.created_at||a.date)-new Date(b.created_at||b.date);});
     }catch(e){ return []; }
   }
-  function pmsgBubbles(msgs){
-    if(!msgs||!msgs.length) return '<div style="color:#4b6a8b;text-align:center;padding:16px 0;">Aucun message. Écrivez à Partner Immo CI ci-dessous.</div>';
-    return msgs.slice().sort(function(a,b){return new Date(a.created_at||a.date)-new Date(b.created_at||b.date);}).map(function(m){
-      var mine=m.expediteur==='client';
-      return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:78%;background:'+(mine?'#003366':'#fff')+';color:'+(mine?'#fff':'#0a2b3e')+';border:1px solid '+(mine?'#003366':'#cfdfed')+';border-radius:14px;padding:9px 13px;font-size:.86rem;"><div>'+esc(m.contenu||m.message||'')+'</div><div style="font-size:.62rem;opacity:.75;margin-top:3px;">'+(mine?'Moi':'Partner Immo CI')+' · '+dshort(m.created_at||m.date)+'</div></div></div>';
+
+  /* Affichage des bulles — nomStaff affiché côté staff */
+  function pmsgBubbles(msgs, staffNom){
+    if(!msgs||!msgs.length) return '';
+    var staffLabel = staffNom || 'Partner Immo CI';
+    return msgs.map(function(m){
+      var mine = m.expediteur==='client';
+      var sender = mine ? 'Moi' : (m.interlocuteur_nom || staffLabel);
+      return '<div style="display:flex;justify-content:'+(mine?'flex-end':'flex-start')+';margin:6px 0;">'
+        +'<div style="max-width:78%;background:'+(mine?'#003366':'#fff')+';color:'+(mine?'#fff':'#0a2b3e')
+        +';border:1px solid '+(mine?'#003366':'#cfdfed')+';border-radius:14px;padding:9px 13px;font-size:.86rem;">'
+        +'<div>'+esc(m.contenu||m.message||'')+'</div>'
+        +'<div style="font-size:.62rem;opacity:.75;margin-top:3px;">'+esc(sender)+' · '+dshort(m.created_at||m.date)+'</div>'
+        +'</div></div>';
     }).join('');
   }
-  async function _pmsgClientSend(type,id,inputId,threadId,store){
-    var inp=document.getElementById(inputId); if(!inp) return;
-    var txt=(inp.value||'').trim(); if(!txt) return;
-    var msg={ id:uid(), partie_type:type, partie_id:id, expediteur:'client', contenu:txt,
-      created_at:new Date().toISOString(), lu_staff:false, lu_client:true };
-    try{
-      await sbInsert('pi_portail_messages',{ id:msg.id, data:msg });
-      store.push(msg); inp.value='';
-      var th=document.getElementById(threadId);
-      if(th){ th.innerHTML=pmsgBubbles(store); th.scrollTop=th.scrollHeight; }
-    }catch(e){ alert('Échec de l\'envoi du message. Réessayez.'); }
-  }
-  function sMsgEnvoyer(){ if(S.client) _pmsgClientSend('souscripteur', S.client.id, 's-msg-input','s-msg-thread', S.messages); }
-  function aMsgEnvoyer(){ if(A.app) _pmsgClientSend('apporteur', A.app.id, 'a-msg-input','a-msg-thread', A.messages); }
 
-  /* Rafraîchissement auto des messages (30 s) */
+  /* Envoi avec interlocuteur_id dans le payload */
+  async function _pmsgClientSend(type, partieId, inputId, threadId, store){
+    var inp = document.getElementById(inputId); if(!inp) return;
+    var txt = (inp.value||'').trim(); if(!txt) return;
+    var interloc = store.interlocuteur || { id:'general', nom:'Équipe Partner Immo CI' };
+    var msg = {
+      id: uid(), partie_type: type, partie_id: partieId,
+      expediteur: 'client', contenu: txt,
+      interlocuteur_id: interloc.id==='general' ? null : interloc.id,
+      interlocuteur_nom: interloc.nom,
+      created_at: new Date().toISOString(), lu_staff: false, lu_client: true
+    };
+    try{
+      await sbInsert('pi_portail_messages', { id: msg.id, data: msg });
+      store.messages.push(msg);
+      inp.value=''; inp.style.height='auto'; /* reset hauteur après envoi */
+      /* Rafraîchir le thread filtré */
+      var filtered = store.messages.filter(function(m){
+        if(!interloc.id||interloc.id==='general') return !m.interlocuteur_id;
+        return m.interlocuteur_id===interloc.id;
+      });
+      var th = document.getElementById(threadId);
+      if(th){ th.innerHTML=pmsgBubbles(filtered, interloc.nom); th.scrollTop=th.scrollHeight; }
+    }catch(e){ alert('Échec de l\'envoi. Réessayez.'); }
+  }
+
+  function sMsgEnvoyer(){
+    if(S.client) _pmsgClientSend('souscripteur', S.client.id, 's-msg-input', 's-msg-thread', S);
+  }
+  function aMsgEnvoyer(){
+    if(A.app) _pmsgClientSend('apporteur', A.app.id, 'a-msg-input', 'a-msg-thread', A);
+  }
+
+  /* Rafraîchissement auto (30 s) — nouveaux messages + notifications */
   setInterval(async function(){
     try{
       var sd=document.getElementById('sous-dash');
       if(S.client && sd && sd.style.display!=='none'){
-        S.messages=await pmsgFetch('souscripteur',S.client.id);
-        var st=document.getElementById('s-msg-thread'); if(st){ st.innerHTML=pmsgBubbles(S.messages); }
+        var avant = compterNonLus(S.messages);
+        S.messages = await pmsgFetch('souscripteur', S.client.id);
+        var apres  = compterNonLus(S.messages);
+        mettreAJourBadge('s', apres);
+
+        /* Notifier si nouveaux messages staff */
+        if(apres > avant){
+          var nouveaux = S.messages.filter(function(m){
+            return m.expediteur==='staff' && m.lu_client===false && !_lastMsgIds[m.id];
+          });
+          nouveaux.forEach(function(m){
+            _lastMsgIds[m.id] = true;
+            var nom = m.interlocuteur_nom || 'Partner Immo CI';
+            notifierNouveauMessage(nom, m.contenu||m.message||'');
+          });
+        }
+
+        /* Rafraîchir le thread affiché */
+        if(S.interlocuteur) _afficherThread('s', S.interlocuteur.id, S.interlocuteur.nom, S);
       }
       var ad=document.getElementById('app-dash');
       if(A.app && ad && ad.style.display!=='none'){
-        A.messages=await pmsgFetch('apporteur',A.app.id);
-        var at=document.getElementById('a-msg-thread'); if(at){ at.innerHTML=pmsgBubbles(A.messages); }
+        var avantA = compterNonLus(A.messages);
+        A.messages = await pmsgFetch('apporteur', A.app.id);
+        var apresA  = compterNonLus(A.messages);
+        mettreAJourBadge('a', apresA);
+
+        if(apresA > avantA){
+          var nouveauxA = A.messages.filter(function(m){
+            return m.expediteur==='staff' && m.lu_client===false && !_lastMsgIds[m.id];
+          });
+          nouveauxA.forEach(function(m){
+            _lastMsgIds[m.id] = true;
+            var nom = m.interlocuteur_nom || 'Partner Immo CI';
+            notifierNouveauMessage(nom, m.contenu||m.message||'');
+          });
+        }
+
+        if(A.interlocuteur) _afficherThread('a', A.interlocuteur.id, A.interlocuteur.nom, A);
       }
     }catch(e){}
   }, 30000);
+
+  /* Auto-resize textarea */
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.classList.contains('msg-textarea')){
+      e.target.style.height = 'auto';
+      e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px';
+    }
+  });
 
   window.sMsgEnvoyer=sMsgEnvoyer; window.aMsgEnvoyer=aMsgEnvoyer;
   window.envoyerSouscription=envoyerSouscription; window.majPrixEstime=majPrixEstime;
