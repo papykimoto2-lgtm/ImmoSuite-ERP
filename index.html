@@ -2580,6 +2580,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('compta','tresorerie')">💵 Trésorerie</button>
           <button class="tab-btn" onclick="switchTab('compta','grandlivre')">📚 Grand Livre</button>
           <button class="tab-btn" onclick="switchTab('compta','rapprochement')">🏦 Rapprochement Bancaire</button>
+          <button class="tab-btn" onclick="switchTab('compta','cloture');renderClotureFEC()">🔒 Clôture & FEC</button>
         </div>
 
         <!-- Journal -->
@@ -3292,6 +3293,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
 
         </div><!-- fin tab-compta-rapprochement -->
+
+        <!-- Clôture & FEC -->
+        <div class="tab-pane" id="tab-compta-cloture">
+          <div id="cloture-fec-content"></div>
+        </div>
       </div>
 
       <!-- ── RELANCES ───────────────────────────────── -->
@@ -12717,7 +12723,15 @@ function skipConfig() {
 async function sbFetch(path, method, body, prefer) {
   if (!SB.url || !SB.key) return null;
   var SB_BREAKER_DELAY = 5 * 60 * 1000;
-  if (SB._breakerOpen && (Date.now() - SB._breakerSince) < SB_BREAKER_DELAY) return null;
+
+  /* Circuit ouvert : réarmer immédiatement si le navigateur signale le retour du réseau */
+  if (SB._breakerOpen) {
+    var elapsed = Date.now() - SB._breakerSince;
+    if (elapsed < SB_BREAKER_DELAY && !navigator.onLine) return null;
+    if (elapsed < SB_BREAKER_DELAY && navigator.onLine && elapsed < 10000) return null; /* éviter les rafales : 10s mini */
+    /* Sinon : tenter (réseau revenu ou délai écoulé) */
+  }
+
   try {
     var opts = {
       method: method || 'GET',
@@ -12730,7 +12744,16 @@ async function sbFetch(path, method, body, prefer) {
     };
     if (body) opts.body = JSON.stringify(body);
     var resp = await fetch(SB.url + '/rest/v1/' + path, opts);
-    SB._breakerOpen = false;
+
+    /* Succès réseau → fermer le circuit + mettre à jour le badge */
+    if (SB._breakerOpen) {
+      SB._breakerOpen = false;
+      console.info('[Supabase] Connexion rétablie — synchronisation reprise.');
+      _majBadgeSync('ok');
+      /* Rejouer la file d'attente hors-ligne */
+      if (typeof flushSyncOutbox === 'function') setTimeout(flushSyncOutbox, 1000);
+    }
+
     if (!resp.ok) {
       try {
         var t = await resp.text();
@@ -12746,12 +12769,48 @@ async function sbFetch(path, method, body, prefer) {
     if (!SB._breakerOpen) {
       SB._breakerOpen = true;
       SB._breakerSince = Date.now();
-      console.warn('[Supabase] Serveur inaccessible — synchronisation suspendue 5 min.');
+      console.warn('[Supabase] Serveur inaccessible — synchronisation suspendue (reprise auto dès retour réseau, max 5 min).');
       window._lastSupaError = 'réseau : ' + ((e && e.message) ? e.message : 'inconnu');
+      _majBadgeSync('offline');
     }
     return null;
   }
 }
+
+/* ── Badge de statut sync dans le header ──────────────────── */
+function _majBadgeSync(etat) {
+  var el = document.getElementById('badge-sync-statut');
+  if (!el) {
+    /* Créer le badge à côté du badge "En ligne" */
+    var header = document.querySelector('.online-badge, .header-status, .topbar');
+    el = document.createElement('span');
+    el.id = 'badge-sync-statut';
+    el.style.cssText = 'font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600;margin-left:6px;display:none;';
+    if (header && header.parentNode) header.parentNode.insertBefore(el, header.nextSibling);
+    else document.body.appendChild(el);
+  }
+  if (etat === 'offline') {
+    el.textContent = '⚠ Hors ligne — données locales';
+    el.style.cssText += 'display:inline-flex;background:rgba(234,88,12,0.15);color:#EA580C;';
+  } else {
+    el.textContent = '☁ Sync rétablie';
+    el.style.cssText += 'display:inline-flex;background:rgba(5,150,105,0.15);color:#059669;';
+    setTimeout(function(){ el.style.display='none'; }, 4000);
+  }
+}
+
+/* ── Réarmement immédiat à l'événement réseau ─────────────── */
+window.addEventListener('online', function() {
+  if (SB._breakerOpen) {
+    SB._breakerSince = 0; /* force la prochaine tentative */
+    console.info('[Supabase] Réseau détecté — tentative de reconnexion…');
+    if (typeof flushSyncOutbox === 'function') setTimeout(flushSyncOutbox, 2000);
+  }
+});
+
+window.addEventListener('offline', function() {
+  _majBadgeSync('offline');
+});
 
 /* ── File d'attente de synchronisation (résilience hors ligne) ──────────────
    Les écritures qui échouent (hors ligne, erreur réseau) sont mises en file
@@ -12877,6 +12936,7 @@ var SUPA_STORE_MAP = [
   ['pi_logs_connexion',        'logs_connexion'],
   ['pi_visites_rdv',           'visites_rdv'],
   ['pi_visites_log',           'visites_log'],
+  ['pi_visites_blacklist',     'visites_blacklist'],
   ['pi_messages', 'messages'],
   ['pi_conversations', 'conversations'],
   ['pi_apporteurs', 'apporteurs'],
@@ -17243,6 +17303,12 @@ async function saveEcriture() {
   if (!libelle || !montant || !date) { toast('Libellé, date et montant sont obligatoires.', 'error'); return; }
   if (!compteDebit || !compteCredit) { toast('Sélectionnez les comptes débit et crédit.', 'error'); return; }
   if (compteDebit === compteCredit) { toast('Le compte débité ne peut être identique au compte crédité.', 'error'); return; }
+
+  /* Verrou exercice clos */
+  if (typeof exerciceEstClos === 'function' && exerciceEstClos(date)) {
+    toast('🔒 Exercice ' + new Date(date).getFullYear() + ' clôturé — écritures verrouillées.', 'error');
+    return;
+  }
 
   var id = APP.editingId || uid();
   var an = new Date(date).getFullYear();
@@ -24281,6 +24347,257 @@ goTo = function(page) {
 };
 
 /* ─── KPIs Tiers ────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLÔTURE D'EXERCICE & EXPORT FEC — SYSCOHADA / DGI CI
+   ═══════════════════════════════════════════════════════════════════ */
+
+function renderClotureFEC() {
+  var el = document.getElementById('cloture-fec-content'); if (!el) return;
+  var annee = parseInt((document.getElementById('filter-annee-compta')||{}).value) || new Date().getFullYear();
+  var ecr = (DATA.ecritures||[]).filter(function(e){ return (e.date||'').startsWith(String(annee)); });
+  var p = DATA.params||{};
+  var dejaCloture = p['cloture_'+annee] === true;
+
+  /* Calcul résultat de l'exercice */
+  var produits=0, charges=0;
+  ecr.forEach(function(e) {
+    var m = e.montant||0;
+    var cd = String(e.compte_debit||''), cc = String(e.compte_credit||'');
+    if (cc[0]==='7') produits += m;
+    if (cd[0]==='7') produits -= m;
+    if (cd[0]==='6') charges += m;
+    if (cc[0]==='6') charges -= m;
+  });
+  var resultat = produits - charges;
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
+
+    /* ── Export FEC ── */
+    +'<div class="card">'
+    +'<div class="form-section-title">📄 Export FEC — Fichier des Écritures Comptables</div>'
+    +'<div style="font-size:12px;color:var(--blanc-dim);margin:8px 0 14px;line-height:1.7;">'
+    +'Format normalisé DGI (18 colonnes, séparateur |). Exigible en cas de contrôle fiscal.<br>'
+    +'Exercice : <strong>'+annee+'</strong> — '+ecr.length+' écriture(s)'
+    +'</div>'
+    +'<button class="btn btn-primary" onclick="exporterFEC('+annee+')">⬇ Télécharger le FEC '+annee+'</button>'
+    +'<div style="margin-top:10px;font-size:11px;color:var(--blanc-dim);">Nom du fichier : <code>'+( (p.dgi||'SIREN') +'FEC'+annee+'1231.txt')+'</code></div>'
+    +'</div>'
+
+    /* ── Lettrage tiers ── */
+    +'<div class="card">'
+    +'<div class="form-section-title">🔗 Lettrage automatique des tiers</div>'
+    +'<div style="font-size:12px;color:var(--blanc-dim);margin:8px 0 14px;line-height:1.7;">'
+    +'Rapproche les écritures débit/crédit de même montant sur les comptes clients (411) et fournisseurs (401) pour identifier les soldes réels.'
+    +'</div>'
+    +'<button class="btn btn-secondary" onclick="lettrageAuto('+annee+')">🔗 Lancer le lettrage auto</button>'
+    +'<div id="lettrage-result" style="margin-top:10px;font-size:12px;"></div>'
+    +'</div>'
+
+    /* ── Clôture d'exercice ── */
+    +'<div class="card" style="grid-column:1/-1;'+(dejaCloture?'border:2px solid var(--vert);':'border:2px solid var(--or);')+'">'
+    +'<div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">'
+    +'<span>🔒 Clôture de l\'exercice '+annee+'</span>'
+    +(dejaCloture?'<span style="font-size:11px;background:rgba(5,150,105,0.15);color:var(--vert);padding:3px 10px;border-radius:8px;font-weight:600;">✅ Exercice clôturé</span>':'<span style="font-size:11px;background:rgba(234,88,12,0.15);color:var(--or);padding:3px 10px;border-radius:8px;font-weight:600;">Exercice ouvert</span>')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;">'
+    +'<div style="background:var(--bord2);border-radius:8px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--blanc-dim);">Produits (cl.7)</div><div style="font-size:16px;font-weight:700;color:var(--vert);">'+fmtF(produits)+'</div></div>'
+    +'<div style="background:var(--bord2);border-radius:8px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--blanc-dim);">Charges (cl.6)</div><div style="font-size:16px;font-weight:700;color:var(--rouge);">'+fmtF(charges)+'</div></div>'
+    +'<div style="background:var(--bord2);border-radius:8px;padding:12px;text-align:center;"><div style="font-size:11px;color:var(--blanc-dim);">Résultat net</div><div style="font-size:16px;font-weight:700;color:'+(resultat>=0?'var(--vert)':'var(--rouge)')+';">'+fmtF(resultat)+'</div></div>'
+    +'</div>'
+    +'<div style="font-size:12px;color:var(--blanc-dim);line-height:1.8;margin-bottom:14px;">'
+    +'La clôture génère automatiquement :<br>'
+    +'1️⃣ Écriture de détermination du résultat — solde des classes 6 et 7 vers le compte <strong>13'+(resultat>=0?'1 (bénéfice)':'9 (perte)')+'</strong><br>'
+    +'2️⃣ Écritures d\'à-nouveaux au 01/01/'+(annee+1)+' — report des soldes bilan (classes 1 à 5)<br>'
+    +'3️⃣ Verrouillage : les écritures '+annee+' ne seront plus modifiables'
+    +'</div>'
+    +(dejaCloture
+      ? '<button class="btn btn-secondary" onclick="rouvrirExercice('+annee+')">🔓 Rouvrir l\'exercice (admin)</button>'
+      : '<button class="btn btn-danger" onclick="cloturerExercice('+annee+')">🔒 Clôturer l\'exercice '+annee+'</button>')
+    +'</div>'
+    +'</div>';
+}
+
+/* ── Export FEC (format DGI 18 colonnes) ───────────────────── */
+function exporterFEC(annee) {
+  var ecr = (DATA.ecritures||[]).filter(function(e){ return (e.date||'').startsWith(String(annee)); })
+    .sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+  if (!ecr.length) { toast('Aucune écriture pour '+annee+'.', 'error'); return; }
+  var p = DATA.params||{};
+  var siren = (p.dgi||p.rccm||'000000000').replace(/[^0-9A-Z]/gi,'');
+
+  var header = ['JournalCode','JournalLib','EcritureNum','EcritureDate','CompteNum','CompteLib',
+    'CompAuxNum','CompAuxLib','PieceRef','PieceDate','EcritureLib','Debit','Credit',
+    'EcritureLet','DateLet','ValidDate','Montantdevise','Idevise'].join('|');
+
+  var lignes = [header];
+  var num = 0;
+  ecr.forEach(function(e) {
+    num++;
+    var d = (e.date||'').replace(/-/g,'');
+    var lib = (e.libelle||'').replace(/[|\r\n]/g,' ');
+    var m = String(Math.round(e.montant||0));
+    var jr = e.journal||'OD';
+    var ref = e.reference||e.id||'';
+    var let_ = e.lettrage||'';
+    /* Ligne débit */
+    lignes.push([jr,'Journal '+jr,num,d,e.compte_debit||'','', '','',ref,d,lib,m,'0',let_,'',d,'',''].join('|'));
+    /* Ligne crédit */
+    lignes.push([jr,'Journal '+jr,num,d,e.compte_credit||'','','','',ref,d,lib,'0',m,let_,'',d,'',''].join('|'));
+  });
+
+  var nomFichier = siren+'FEC'+annee+'1231.txt';
+  var blob = new Blob(['\uFEFF'+lignes.join('\r\n')], {type:'text/plain;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nomFichier;
+  a.click();
+  toast('FEC '+annee+' exporté : '+(lignes.length-1)+' lignes ('+ecr.length+' écritures).', 'success');
+}
+
+/* ── Lettrage automatique ──────────────────────────────────── */
+async function lettrageAuto(annee) {
+  var el = document.getElementById('lettrage-result');
+  var ecr = (DATA.ecritures||[]).filter(function(e){ return (e.date||'').startsWith(String(annee)) && !e.lettrage; });
+
+  var nbLettres = 0;
+  var lettreIdx = 0;
+  var comptes = ['411','401','422','461','467','468'];
+
+  for (var ci=0; ci<comptes.length; ci++) {
+    var cpt = comptes[ci];
+    /* Écritures au débit de ce compte */
+    var debits = ecr.filter(function(e){ return String(e.compte_debit||'').startsWith(cpt) && !e.lettrage; });
+    var credits = ecr.filter(function(e){ return String(e.compte_credit||'').startsWith(cpt) && !e.lettrage; });
+
+    for (var di=0; di<debits.length; di++) {
+      var deb = debits[di];
+      if (deb.lettrage) continue;
+      /* Chercher un crédit de même montant non lettré */
+      var match = credits.find(function(c){ return !c.lettrage && Math.abs((c.montant||0)-(deb.montant||0))<1; });
+      if (match) {
+        lettreIdx++;
+        var code = 'L'+annee.toString().slice(2)+String(lettreIdx).padStart(4,'0');
+        deb.lettrage = code; match.lettrage = code;
+        await dbPut('ecritures', deb);
+        await dbPut('ecritures', match);
+        if (typeof syncToSupabase==='function') { syncToSupabase('pi_ecritures', deb); syncToSupabase('pi_ecritures', match); }
+        nbLettres += 2;
+      }
+    }
+  }
+  if (el) el.innerHTML = nbLettres
+    ? '<span style="color:var(--vert);">✅ '+nbLettres+' écriture(s) lettrée(s) — '+lettreIdx+' rapprochement(s)</span>'
+    : '<span style="color:var(--blanc-dim);">Aucun rapprochement possible (montants déjà lettrés ou sans correspondance)</span>';
+  toast(nbLettres ? 'Lettrage : '+lettreIdx+' paire(s) rapprochée(s).' : 'Aucun lettrage possible.', nbLettres?'success':'info');
+}
+
+/* ── Clôture d'exercice ───────────────────────────────────── */
+async function cloturerExercice(annee) {
+  if (!hasRole('admin')) { toast('Réservé à l\'administrateur.', 'error'); return; }
+  if (!confirm('🔒 Clôturer l\'exercice '+annee+' ?\n\n• Solde des comptes 6 et 7 → résultat\n• Génération des à-nouveaux au 01/01/'+(annee+1)+'\n• Verrouillage des écritures '+annee+'\n\nCette action est réversible uniquement par un admin.')) return;
+  if (!confirm('Dernière confirmation — exercice '+annee+' ?')) return;
+
+  var ecr = (DATA.ecritures||[]).filter(function(e){ return (e.date||'').startsWith(String(annee)); });
+
+  /* 1. Calcul résultat */
+  var produits=0, charges=0;
+  ecr.forEach(function(e) {
+    var m=e.montant||0, cd=String(e.compte_debit||''), cc=String(e.compte_credit||'');
+    if (cc[0]==='7') produits+=m; if (cd[0]==='7') produits-=m;
+    if (cd[0]==='6') charges+=m;  if (cc[0]==='6') charges-=m;
+  });
+  var resultat = produits - charges;
+  var cptResultat = resultat>=0 ? '131' : '139';
+
+  /* 2. Écriture de résultat au 31/12 */
+  var ecritureResultat = {
+    id: uid(), date: annee+'-12-31',
+    libelle: 'Détermination du résultat exercice '+annee+' ('+(resultat>=0?'bénéfice':'perte')+')',
+    montant: Math.abs(resultat),
+    compte_debit:  resultat>=0 ? '7XX-SOLDE' : cptResultat,
+    compte_credit: resultat>=0 ? cptResultat : '6XX-SOLDE',
+    journal: 'CLO', reference: 'CLOTURE-'+annee,
+    type: 'cloture', verrouille: true,
+    created_at: new Date().toISOString()
+  };
+  DATA.ecritures.push(ecritureResultat);
+  await dbPut('ecritures', ecritureResultat);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', ecritureResultat);
+
+  /* 3. À-nouveaux : soldes des comptes de bilan (classes 1-5) */
+  var soldes = {};
+  ecr.forEach(function(e) {
+    var m=e.montant||0, cd=String(e.compte_debit||''), cc=String(e.compte_credit||'');
+    if (cd && '12345'.indexOf(cd[0])!==-1) soldes[cd]=(soldes[cd]||0)+m;
+    if (cc && '12345'.indexOf(cc[0])!==-1) soldes[cc]=(soldes[cc]||0)-m;
+  });
+  /* Ajouter le résultat au report à nouveau */
+  soldes[cptResultat] = (soldes[cptResultat]||0) + (resultat>=0?-Math.abs(resultat):Math.abs(resultat));
+
+  var nbAN = 0;
+  var dateAN = (annee+1)+'-01-01';
+  for (var cpt in soldes) {
+    var s = soldes[cpt];
+    if (Math.abs(s) < 1) continue;
+    var an = {
+      id: uid(), date: dateAN,
+      libelle: 'À-nouveau '+(annee+1)+' — compte '+cpt,
+      montant: Math.abs(s),
+      compte_debit:  s>0 ? cpt : '890',
+      compte_credit: s>0 ? '890' : cpt,
+      journal: 'AN', reference: 'AN-'+(annee+1),
+      type: 'a_nouveau',
+      created_at: new Date().toISOString()
+    };
+    DATA.ecritures.push(an);
+    await dbPut('ecritures', an);
+    if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', an);
+    nbAN++;
+  }
+
+  /* 4. Verrouiller l'exercice */
+  DATA.params = Object.assign(DATA.params||{}, {});
+  DATA.params['cloture_'+annee] = true;
+  await dbPut('params', DATA.params);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_params', DATA.params);
+
+  toast('✅ Exercice '+annee+' clôturé — résultat '+fmtF(resultat)+' FCFA, '+nbAN+' à-nouveaux générés.', 'success');
+  renderClotureFEC();
+  loadComptabilite();
+}
+
+async function rouvrirExercice(annee) {
+  if (!hasRole('admin')) { toast('Réservé à l\'administrateur.', 'error'); return; }
+  if (!confirm('🔓 Rouvrir l\'exercice '+annee+' ?\n\nLes écritures de clôture et à-nouveaux seront SUPPRIMÉES.')) return;
+
+  /* Supprimer écritures CLO et AN liées */
+  var toDelete = (DATA.ecritures||[]).filter(function(e){
+    return (e.reference==='CLOTURE-'+annee) || (e.reference==='AN-'+(annee+1));
+  });
+  for (var i=0; i<toDelete.length; i++) {
+    await deleteRecord('ecritures', toDelete[i].id);
+  }
+  DATA.ecritures = DATA.ecritures.filter(function(e){
+    return !(e.reference==='CLOTURE-'+annee || e.reference==='AN-'+(annee+1));
+  });
+
+  DATA.params['cloture_'+annee] = false;
+  await dbPut('params', DATA.params);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_params', DATA.params);
+
+  toast('Exercice '+annee+' rouvert — '+toDelete.length+' écriture(s) de clôture supprimée(s).', 'info');
+  renderClotureFEC();
+  loadComptabilite();
+}
+
+/* ── Verrou écritures exercice clos ────────────────────────── */
+function exerciceEstClos(date) {
+  var an = new Date(date).getFullYear();
+  return (DATA.params||{})['cloture_'+an] === true;
+}
+
 function buildTiersKPIs() {
   var el = document.getElementById('tiers-kpi-grid');
   if (!el) return;
@@ -27147,11 +27464,11 @@ async function pmsgOuvrir(){
 function pmsgRender(){
   var v=(document.getElementById('pmsg-interlocuteur')||{}).value; var el=document.getElementById('pmsg-thread'); if(!el||!v) return;
   var p=v.split(':'), type=p[0], id=p[1];
-  var msgs=(DATA.portail_messages||[]).filter(function(m){ return m.partie_type===type&&m.partie_id===id; }).sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+  var msgs=(DATA.portail_messages||[]).filter(function(m){ return m.partie_type===type&&m.partie_id===id; }).sort(function(a,b){ return new Date(a.date||a.created_at)-new Date(b.date||b.created_at); });
   if(!msgs.length){ el.innerHTML='<div style="color:#6B6B9A;text-align:center;padding:20px 0;">Aucun message. Démarrez la conversation.</div>'; return; }
   el.innerHTML=msgs.map(function(m){
     var staff=m.expediteur==='staff';
-    return '<div style="display:flex;justify-content:'+(staff?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:75%;background:'+(staff?'#B87333':'#fff')+';color:'+(staff?'#fff':'#1C1C2E')+';border:1px solid '+(staff?'#B87333':'#E0E0EA')+';border-radius:12px;padding:8px 12px;font-size:13px;"><div>'+escHtml(m.contenu)+'</div><div style="font-size:9px;opacity:.7;margin-top:3px;">'+(staff?'Vous':'Client')+' · '+_pmsgDate(m.date)+'</div></div></div>';
+    return '<div style="display:flex;justify-content:'+(staff?'flex-end':'flex-start')+';margin:6px 0;"><div style="max-width:75%;background:'+(staff?'#B87333':'#fff')+';color:'+(staff?'#fff':'#1C1C2E')+';border:1px solid '+(staff?'#B87333':'#E0E0EA')+';border-radius:12px;padding:8px 12px;font-size:13px;"><div>'+escHtml(m.contenu)+'</div><div style="font-size:9px;opacity:.7;margin-top:3px;">'+(staff?'Vous':'Client')+' · '+_pmsgDate(m.date||m.created_at)+'</div></div></div>';
   }).join('');
   el.scrollTop=el.scrollHeight;
 }
@@ -27808,6 +28125,7 @@ async function saveBlacklist() {
   if (!DATA.visites_blacklist) DATA.visites_blacklist = [];
   DATA.visites_blacklist.push(entry);
   await dbPut('visites_blacklist', entry);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_visites_blacklist', entry);
   closeModal('modal-blacklist');
   renderAccueilBlacklist();
   toast('Ajouté à la liste noire.', 'info');
@@ -31589,7 +31907,7 @@ function printConventionId(id) {
   win.document.close(); win.print();
 }
 
-function openSituation() { toast('Module situations de travaux — saisie via la convention.', 'info'); }
+/* openSituation : stub supprimé — la vraie fonction (modal-situation) est définie plus haut */
 function printConvention() {
   var num = document.getElementById('cv-numero') ? document.getElementById('cv-numero').value : '';
   if (num) { toast('Enregistrez d\'abord, puis imprimez depuis la liste.', 'info'); }
