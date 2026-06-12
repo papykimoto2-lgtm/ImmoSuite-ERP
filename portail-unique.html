@@ -433,10 +433,12 @@
       document.getElementById('sous-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre dossier…</div>';
       if(!STAFF.length) await chargerStaff();
       demanderPermissionNotification();
+      logConnexion('[SOUSCRIPTEUR] '+ident, true, 'Portail — '+(client.prenoms||'')+' '+(client.nom||''));
       await chargerSouscripteur();
     }catch(e){
       att[bfKey]=(att[bfKey]||0)+1; localStorage.setItem('sous_bf',JSON.stringify(att));
       var reste=5-(att[bfKey]||0);
+      logConnexion('[SOUSCRIPTEUR] '+ident, false, 'Code incorrect ('+(att[bfKey]||0)+'e tentative)');
       setErr('sousError','Identifiant ou code incorrect.'+(reste<=2?' ('+reste+' tentative(s) restante(s))':''));
     }
     btn.disabled=false; btn.innerHTML='Se connecter';
@@ -612,10 +614,12 @@
       document.getElementById('app-dash').innerHTML='<div class="loader"><span class="spinner dark"></span> Chargement de votre espace…</div>';
       if(!STAFF.length) await chargerStaff();
       demanderPermissionNotification();
+      logConnexion('[APPORTEUR] '+ident, true, 'Portail apporteur — '+(app.prenoms||'')+' '+(app.nom||''));
       await chargerApporteur();
     }catch(e){
       att[bfKey]=(att[bfKey]||0)+1; localStorage.setItem('app_bf',JSON.stringify(att));
       var reste=5-(att[bfKey]||0);
+      logConnexion('[APPORTEUR] '+ident, false, 'Code incorrect ('+(att[bfKey]||0)+'e tentative)');
       setErr('appError','Identifiant ou code incorrect.'+(reste<=2?' ('+reste+' tentative(s) restante(s))':''));
     }
     btn.disabled=false; btn.innerHTML='Se connecter';
@@ -770,6 +774,19 @@
         body: JSON.stringify(payload)
       });
     }catch(e){}
+  }
+
+  /* ── Journal des connexions (visible dans l'ERP) ── */
+  async function logConnexion(login, success, detail){
+    try{
+      var log = {
+        id: uid(), login: login, success: success,
+        date: new Date().toISOString(),
+        detail: detail || '',
+        userAgent: navigator.userAgent.slice(0, 120)
+      };
+      await sbInsert('pi_logs_connexion', { id: log.id, data: log });
+    }catch(e){ /* jamais bloquant */ }
   }
 
   /* ── Notifications navigateur ── */
