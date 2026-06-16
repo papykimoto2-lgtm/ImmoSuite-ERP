@@ -2084,6 +2084,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">📊</span><span>DQE &amp; Coût de revient</span>
       </div>
 
+      <div class="nav-item" onclick="goTo('debourse')" data-page="debourse">
+        <span class="nav-icon">🧱</span><span>Étude de Prix &amp; Déboursé Sec</span>
+      </div>
+
       <!-- ÉTAPE 4 : COMMERCIAL — prospecter et convertir -->
       <div class="nav-section"><span class="nav-step">4</span><span>Commercial & CRM</span></div>
       <div class="nav-item" onclick="goTo('leads')" data-page="leads">
@@ -8045,6 +8049,195 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
       </div>
 
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : ÉTUDE DE PRIX & DÉBOURSÉ SEC
+           Module BTP — Sous-détail · Métré · Marge · Suivi budget
+      ═══════════════════════════════════════════════════ -->
+      <div class="page" id="page-debourse">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Étude de Prix &amp; Déboursé Sec</div>
+            <div class="page-subtitle">Bibliothèque d'ouvrages · Sous-détail · Métré programme · Marge · Suivi chantier</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="edsExportBibCSV()">⬇ CSV bibliothèque</button>
+          <button class="btn btn-primary btn-sm" onclick="edsOpenOuvrage()">+ Nouvel ouvrage</button>
+        </div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('debourse','bib')">🧱 Bibliothèque d'ouvrages</button>
+          <button class="tab-btn" onclick="switchTab('debourse','etudes')">📐 Études de prix</button>
+          <button class="tab-btn" onclick="switchTab('debourse','suivi')">📊 Suivi budgétaire</button>
+          <button class="tab-btn" onclick="switchTab('debourse','syscohada')">🧾 Imputations SYSCOHADA</button>
+        </div>
+
+        <!-- ── Onglet Bibliothèque ── -->
+        <div class="tab-pane active" id="tab-debourse-bib">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <input type="text" class="search-input" id="eds-search-bib" placeholder="🔍 Code, désignation, catégorie..." oninput="edsRenderBib()" style="flex:1;min-width:160px;">
+            <select class="filter-select" id="eds-filter-cat" onchange="edsRenderBib()">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table id="table-eds-bib">
+                <thead>
+                  <tr>
+                    <th>Code</th><th>Désignation</th><th>Unité</th><th>Catégorie</th>
+                    <th style="text-align:right;">Matériaux</th>
+                    <th style="text-align:right;">Main-d'œuvre</th>
+                    <th style="text-align:right;">Matériel</th>
+                    <th style="text-align:right;">Sous-traitance</th>
+                    <th style="text-align:right;">Déboursé sec</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-eds-bib"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="eds-bib-resume" class="card" style="margin-top:14px;background:var(--card2);"></div>
+        </div>
+
+        <!-- ── Onglet Études de prix ── -->
+        <div class="tab-pane" id="tab-debourse-etudes">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <select class="filter-select" id="eds-etude-programme">
+              <option value="">— Programme —</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="edsNewEtude()">+ Nouvelle étude</button>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table id="table-eds-etudes">
+                <thead>
+                  <tr><th>Étude</th><th>Programme</th><th>Date</th><th style="text-align:right;">Déboursé sec</th><th style="text-align:right;">Prix de revient</th><th style="text-align:right;">Prix de vente</th><th style="text-align:right;">Marge</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="tbody-eds-etudes"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Onglet Suivi budgétaire ── -->
+        <div class="tab-pane" id="tab-debourse-suivi">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <select class="filter-select" id="eds-suivi-etude" onchange="edsRenderSuivi()">
+              <option value="">— Choisir une étude —</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="edsOpenRealisation()">+ Saisir un réalisé</button>
+          </div>
+          <div id="eds-suivi-zone" class="card"></div>
+        </div>
+
+        <!-- ── Onglet SYSCOHADA ── -->
+        <div class="tab-pane" id="tab-debourse-syscohada">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <select class="filter-select" id="eds-sys-etude" onchange="edsRenderSyscohada()">
+              <option value="">— Choisir une étude —</option>
+            </select>
+          </div>
+          <div id="eds-sys-zone" class="card"></div>
+        </div>
+      </div>
+
+      <!-- ── MODAL : Ouvrage (sous-détail de prix) ── -->
+      <div class="modal-overlay" id="modal-eds-ouvrage">
+        <div class="modal" style="max-width:860px;">
+          <div class="modal-header">
+            <div class="modal-title" id="eds-ouvrage-titre">Nouvel ouvrage</div>
+            <button class="modal-close" onclick="closeModal('modal-eds-ouvrage')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group"><label>Code *</label><input type="text" id="eds-o-code" class="form-control" placeholder="MA001"></div>
+              <div class="form-group"><label>Unité *</label><input type="text" id="eds-o-unite" class="form-control" placeholder="m², m³, kg, u"></div>
+              <div class="form-group span-2"><label>Désignation *</label><input type="text" id="eds-o-designation" class="form-control" placeholder="Mur en agglos creux 15 cm"></div>
+              <div class="form-group span-2"><label>Catégorie</label><input type="text" id="eds-o-categorie" class="form-control" placeholder="Maçonnerie, Béton armé, Finitions..."></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px;">
+              <strong>Sous-détail de prix</strong>
+              <button class="btn btn-secondary btn-sm" onclick="edsAddComposant()">+ Composant</button>
+            </div>
+            <div class="table-wrap">
+              <table id="table-eds-comp">
+                <thead><tr><th>Type</th><th>Libellé</th><th>Unité</th><th style="text-align:right;">Quantité</th><th style="text-align:right;">PU (FCFA)</th><th style="text-align:right;">Montant</th><th></th></tr></thead>
+                <tbody id="tbody-eds-comp"></tbody>
+              </table>
+            </div>
+            <div id="eds-o-total" class="card" style="margin-top:12px;background:var(--card2);"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-eds-ouvrage')">Annuler</button>
+            <button class="btn btn-primary" onclick="edsSaveOuvrage()">💾 Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL : Étude de prix ── -->
+      <div class="modal-overlay" id="modal-eds-etude">
+        <div class="modal" style="max-width:960px;">
+          <div class="modal-header">
+            <div class="modal-title" id="eds-etude-titre">Étude de prix</div>
+            <button class="modal-close" onclick="closeModal('modal-eds-etude')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Intitulé de l'étude *</label><input type="text" id="eds-e-nom" class="form-control" placeholder="Cité Eden — Villa Harmonie F2"></div>
+              <div class="form-group"><label>Programme</label><select id="eds-e-programme" class="form-control"><option value="">—</option></select></div>
+              <div class="form-group"><label>Date</label><input type="date" id="eds-e-date" class="form-control"></div>
+              <div class="form-group"><label>Frais généraux (%)</label><input type="number" id="eds-e-fg" class="form-control" value="12" min="0" step="0.1" oninput="edsRecalcEtude()"></div>
+              <div class="form-group"><label>Aléas (%)</label><input type="number" id="eds-e-aleas" class="form-control" value="3" min="0" step="0.1" oninput="edsRecalcEtude()"></div>
+              <div class="form-group"><label>Marge (%)</label><input type="number" id="eds-e-marge" class="form-control" value="15" min="0" step="0.1" oninput="edsRecalcEtude()"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 6px;">
+              <strong>Métré — ouvrages du projet</strong>
+              <div style="display:flex;gap:8px;">
+                <select id="eds-e-ouvrage-pick" class="filter-select"></select>
+                <button class="btn btn-secondary btn-sm" onclick="edsAddLigne()">+ Ajouter</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table id="table-eds-lignes">
+                <thead><tr><th>Code</th><th>Désignation</th><th>Unité</th><th style="text-align:right;">Qté (métré)</th><th style="text-align:right;">Déboursé U.</th><th style="text-align:right;">Total déboursé</th><th></th></tr></thead>
+                <tbody id="tbody-eds-lignes"></tbody>
+              </table>
+            </div>
+            <div id="eds-e-synthese" class="card" style="margin-top:12px;background:var(--card2);"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-eds-etude')">Annuler</button>
+            <button class="btn btn-secondary" onclick="edsExportPDF()">🖨 PDF devis</button>
+            <button class="btn btn-primary" onclick="edsSaveEtude()">💾 Enregistrer l'étude</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL : Réalisé (suivi budget) ── -->
+      <div class="modal-overlay" id="modal-eds-realise">
+        <div class="modal" style="max-width:560px;">
+          <div class="modal-header">
+            <div class="modal-title">Saisir une dépense réalisée</div>
+            <button class="modal-close" onclick="closeModal('modal-eds-realise')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Étude / chantier</label><select id="eds-r-etude" class="form-control"></select></div>
+              <div class="form-group span-2"><label>Poste (catégorie d'ouvrage)</label><input type="text" id="eds-r-poste" class="form-control" placeholder="Béton armé, Maçonnerie..."></div>
+              <div class="form-group span-2"><label>Libellé</label><input type="text" id="eds-r-libelle" class="form-control" placeholder="Achat ciment lot 3"></div>
+              <div class="form-group"><label>Montant (FCFA)</label><input type="number" id="eds-r-montant" class="form-control" value="0" min="0"></div>
+              <div class="form-group"><label>Date</label><input type="date" id="eds-r-date" class="form-control"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-eds-realise')">Annuler</button>
+            <button class="btn btn-primary" onclick="edsSaveRealisation()">💾 Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════════════════════════════════════════════════
            PAGE : RÉUNIONS DIRECTION
            Module : Planification 360° · PV · Plan d'action
@@ -12456,14 +12649,17 @@ var DATA = {
   conges_rh: [],            // demandes de congés
   postes_ouverts: [],       // offres de recrutement
   candidats_rh: [],         // candidatures
-  formations_rh: []         // sessions de formation
+  formations_rh: [],        // sessions de formation
+  /* v113 — Étude de prix & déboursé sec */
+  eds_ouvrages: [],
+  eds_etudes: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 112; /* v112: store docs_juridiques — upload documents par dossier juridique */
+var DB_VERSION = 113; /* v113: stores eds_ouvrages, eds_etudes — Étude de prix & déboursé sec BTP */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -12502,7 +12698,9 @@ var ALL_STORES = [
   /* v111 — Messagerie portail (souscripteurs/apporteurs) */
   'portail_messages',
   /* v112 — Documents joints aux dossiers juridiques */
-  'docs_juridiques'
+  'docs_juridiques',
+  /* v113 — Étude de prix & déboursé sec (BTP) */
+  'eds_ouvrages','eds_etudes'
 ];
 
 function initDB() {
@@ -13697,6 +13895,7 @@ function goTo(page) {
   if (page === 'tresorerie-page') { buildTresorerieDetaille(); }
   if (page === 'previsionnel') { loadPrevisionnel(); }
   if (page === 'amenagement') { loadAmenagement(); }
+  if (page === 'debourse') { edsRender(); }
 }
 
 function switchTab(context, tab) {
@@ -13762,6 +13961,7 @@ function switchTab(context, tab) {
   else if (context === 'accueil')          prefix = 'tab-accueil-';
   else if (context === 'modal-visite')     prefix = 'tab-modal-visite-';
   else if (context === 'params-reporting') prefix = 'tab-params-reporting-';
+  else if (context === 'debourse')         prefix = 'tab-debourse-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
@@ -41803,6 +42003,536 @@ document.addEventListener('change', function(e) {
     if (cv) amRefreshLotPickSitu(cv.programme_id || '');
   }
 });
+
+/* ══════════════════════════════════════════════════════════
+   MODULE — ÉTUDE DE PRIX & DÉBOURSÉ SEC  (BTP)
+   Bibliothèque ouvrages · Sous-détail · Métré · Marge · Suivi
+   Stores : eds_ouvrages, eds_etudes
+══════════════════════════════════════════════════════════ */
+
+if (!DATA.eds_ouvrages) DATA.eds_ouvrages = [];
+if (!DATA.eds_etudes)   DATA.eds_etudes   = [];
+
+/* Bibliothèque par défaut — prix indicatifs Côte d'Ivoire (FCFA) */
+var EDS_OUVRAGES_DEFAUT = [
+  { code:'MA001', designation:'Mur en agglos creux 15 cm', unite:'m²', categorie:'Maçonnerie', composants:[
+    { type:'materiau', libelle:'Agglos creux 15', unite:'u',   qte:12,   pu:500 },
+    { type:'materiau', libelle:'Ciment (sac 50kg)', unite:'sac', qte:0.25, pu:7000 },
+    { type:'materiau', libelle:'Sable',             unite:'m³',  qte:0.05, pu:15000 },
+    { type:'mo',       libelle:'Maçon',             unite:'h',   qte:0.5,  pu:3000 }
+  ]},
+  { code:'MA002', designation:'Mur en agglos creux 20 cm', unite:'m²', categorie:'Maçonnerie', composants:[
+    { type:'materiau', libelle:'Agglos creux 20', unite:'u',   qte:12,   pu:650 },
+    { type:'materiau', libelle:'Ciment (sac 50kg)', unite:'sac', qte:0.30, pu:7000 },
+    { type:'materiau', libelle:'Sable',             unite:'m³',  qte:0.06, pu:15000 },
+    { type:'mo',       libelle:'Maçon',             unite:'h',   qte:0.55, pu:3000 }
+  ]},
+  { code:'BE001', designation:'Béton armé dosé à 350 kg/m³', unite:'m³', categorie:'Béton armé', composants:[
+    { type:'materiau', libelle:'Ciment (sac 50kg)', unite:'sac', qte:7,    pu:7000 },
+    { type:'materiau', libelle:'Sable',             unite:'m³',  qte:0.4,  pu:15000 },
+    { type:'materiau', libelle:'Gravier 15/25',     unite:'m³',  qte:0.8,  pu:35000 },
+    { type:'materiau', libelle:'Fer à béton',       unite:'kg',  qte:80,   pu:750 },
+    { type:'mo',       libelle:'Équipe coffrage/ferraillage', unite:'h', qte:8, pu:3500 },
+    { type:'materiel', libelle:'Bétonnière (location)', unite:'h', qte:2,  pu:2500 }
+  ]},
+  { code:'DA001', designation:'Dalle béton armé ép. 15 cm', unite:'m²', categorie:'Béton armé', composants:[
+    { type:'materiau', libelle:'Béton dosé 350',    unite:'m³',  qte:0.15, pu:95000 },
+    { type:'materiau', libelle:'Fer à béton',       unite:'kg',  qte:12,   pu:750 },
+    { type:'mo',       libelle:'Équipe dalle',      unite:'h',   qte:1.2,  pu:3500 }
+  ]},
+  { code:'EN001', designation:'Enduit ciment 2 cm', unite:'m²', categorie:'Finitions', composants:[
+    { type:'materiau', libelle:'Ciment (sac 50kg)', unite:'sac', qte:0.18, pu:7000 },
+    { type:'materiau', libelle:'Sable',             unite:'m³',  qte:0.02, pu:15000 },
+    { type:'mo',       libelle:'Maçon enduit',      unite:'h',   qte:0.35, pu:3000 }
+  ]},
+  { code:'PE001', designation:'Peinture acrylique 2 couches', unite:'m²', categorie:'Finitions', composants:[
+    { type:'materiau', libelle:'Peinture acrylique', unite:'L',  qte:0.25, pu:3500 },
+    { type:'mo',       libelle:'Peintre',            unite:'h',  qte:0.2,  pu:2500 }
+  ]},
+  { code:'CA001', designation:'Carrelage grès 40x40 posé', unite:'m²', categorie:'Finitions', composants:[
+    { type:'materiau', libelle:'Carreaux grès 40x40', unite:'m²', qte:1.05, pu:6000 },
+    { type:'materiau', libelle:'Colle + joint',       unite:'kg', qte:5,    pu:400 },
+    { type:'mo',       libelle:'Carreleur',           unite:'h', qte:0.6,  pu:3500 }
+  ]},
+  { code:'FO001', designation:'Fouille en pleine masse', unite:'m³', categorie:'Terrassement', composants:[
+    { type:'mo',       libelle:'Manœuvre',           unite:'h',  qte:1.5,  pu:2000 },
+    { type:'materiel', libelle:'Pelle (location prorata)', unite:'h', qte:0.3, pu:25000 }
+  ]},
+  { code:'TO001', designation:'Couverture tôle bac alu', unite:'m²', categorie:'Couverture', composants:[
+    { type:'materiau', libelle:'Tôle bac alu',       unite:'m²', qte:1.1,  pu:5500 },
+    { type:'materiau', libelle:'Bois charpente',     unite:'ml', qte:0.8,  pu:2500 },
+    { type:'mo',       libelle:'Charpentier-couvreur', unite:'h', qte:0.7, pu:3500 }
+  ]}
+];
+
+var EDS_TYPES = { materiau:'Matériaux', mo:'Main-d\u2019œuvre', materiel:'Matériel', st:'Sous-traitance' };
+
+/* État d'édition */
+var _edsComp = [];        // composants en cours d'édition (modal ouvrage)
+var _edsOuvrageId = null;
+var _edsLignes = [];      // lignes métré (modal étude)
+var _edsEtudeId = null;
+
+/* ── Calcul déboursé d'un ouvrage ── */
+function edsDebourse(o) {
+  var r = { materiau:0, mo:0, materiel:0, st:0, total:0 };
+  (o.composants || []).forEach(function(c) {
+    var m = (parseFloat(c.qte) || 0) * (parseFloat(c.pu) || 0);
+    if (r[c.type] === undefined) r[c.type] = 0;
+    r[c.type] += m; r.total += m;
+  });
+  return r;
+}
+
+/* ── Entrée page ── */
+async function edsRender() {
+  if (!DATA.eds_ouvrages.length) {
+    var ob = await dbGetAll('eds_ouvrages');
+    if (ob && ob.length) DATA.eds_ouvrages = ob;
+    else {
+      DATA.eds_ouvrages = EDS_OUVRAGES_DEFAUT.map(function(o, i) {
+        return { id:'ouv_' + o.code, code:o.code, designation:o.designation, unite:o.unite, categorie:o.categorie, composants:JSON.parse(JSON.stringify(o.composants)) };
+      });
+      for (var i = 0; i < DATA.eds_ouvrages.length; i++) await dbPut('eds_ouvrages', DATA.eds_ouvrages[i]);
+    }
+  }
+  if (!DATA.eds_etudes.length) {
+    var et = await dbGetAll('eds_etudes');
+    if (et && et.length) DATA.eds_etudes = et;
+  }
+  edsFillCatFilter();
+  edsFillEtudeSelects();
+  edsRenderBib();
+  edsRenderEtudes();
+}
+
+function edsFillCatFilter() {
+  var sel = document.getElementById('eds-filter-cat');
+  if (!sel) return;
+  var cats = {};
+  DATA.eds_ouvrages.forEach(function(o) { if (o.categorie) cats[o.categorie] = 1; });
+  sel.innerHTML = '<option value="">Toutes catégories</option>' +
+    Object.keys(cats).map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+}
+
+function edsFillEtudeSelects() {
+  var progOpts = '<option value="">— Programme —</option>' +
+    (DATA.programmes || []).map(function(p) { return '<option value="' + p.id + '">' + (p.nom || '—') + '</option>'; }).join('');
+  ['eds-etude-programme'].forEach(function(id) { var s = document.getElementById(id); if (s) s.innerHTML = progOpts; });
+  var ep = document.getElementById('eds-e-programme');
+  if (ep) ep.innerHTML = '<option value="">—</option>' + (DATA.programmes || []).map(function(p) { return '<option value="' + p.id + '">' + (p.nom || '—') + '</option>'; }).join('');
+
+  var etOpts = '<option value="">— Choisir une étude —</option>' +
+    DATA.eds_etudes.map(function(e) { return '<option value="' + e.id + '">' + (e.nom || '—') + '</option>'; }).join('');
+  ['eds-suivi-etude', 'eds-sys-etude', 'eds-r-etude'].forEach(function(id) { var s = document.getElementById(id); if (s) s.innerHTML = etOpts; });
+}
+
+/* ════════════ ONGLET 1 — BIBLIOTHÈQUE ════════════ */
+function edsRenderBib() {
+  var tb = document.getElementById('tbody-eds-bib');
+  if (!tb) return;
+  var q = (document.getElementById('eds-search-bib') || {}).value || '';
+  var fc = (document.getElementById('eds-filter-cat') || {}).value || '';
+  q = q.toLowerCase();
+  var list = DATA.eds_ouvrages.filter(function(o) {
+    if (fc && o.categorie !== fc) return false;
+    if (!q) return true;
+    return ((o.code || '') + ' ' + (o.designation || '') + ' ' + (o.categorie || '')).toLowerCase().indexOf(q) !== -1;
+  });
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:18px;">Aucun ouvrage.</td></tr>'; }
+  else {
+    tb.innerHTML = list.map(function(o) {
+      var d = edsDebourse(o);
+      return '<tr>' +
+        '<td><strong>' + (o.code || '') + '</strong></td>' +
+        '<td>' + (o.designation || '') + '</td>' +
+        '<td>' + (o.unite || '') + '</td>' +
+        '<td>' + (o.categorie || '—') + '</td>' +
+        '<td style="text-align:right;">' + fmtF(d.materiau) + '</td>' +
+        '<td style="text-align:right;">' + fmtF(d.mo) + '</td>' +
+        '<td style="text-align:right;">' + fmtF(d.materiel) + '</td>' +
+        '<td style="text-align:right;">' + fmtF(d.st) + '</td>' +
+        '<td style="text-align:right;font-weight:700;color:var(--vert,#1A6B3A);">' + fmtF(d.total) + '</td>' +
+        '<td><button class="btn btn-secondary btn-sm" onclick="edsOpenOuvrage(\'' + o.id + '\')">✎</button> ' +
+        '<button class="btn btn-secondary btn-sm" onclick="edsDeleteOuvrage(\'' + o.id + '\')">🗑</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+  var tot = list.reduce(function(s, o) { return s + edsDebourse(o).total; }, 0);
+  var rz = document.getElementById('eds-bib-resume');
+  if (rz) rz.innerHTML = '<strong>' + list.length + '</strong> ouvrage(s) · Déboursé sec cumulé bibliothèque : <strong>' + fmtF(tot) + ' FCFA</strong>';
+}
+
+function edsExportBibCSV() {
+  var rows = [['Code', 'Designation', 'Unite', 'Categorie', 'Materiaux', 'MainOeuvre', 'Materiel', 'SousTraitance', 'DebourseSec']];
+  DATA.eds_ouvrages.forEach(function(o) {
+    var d = edsDebourse(o);
+    rows.push([o.code, o.designation, o.unite, o.categorie, d.materiau, d.mo, d.materiel, d.st, d.total]);
+  });
+  var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\n');
+  var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bibliotheque_ouvrages.csv'; a.click();
+}
+
+/* ── Modal ouvrage ── */
+function edsOpenOuvrage(id) {
+  _edsOuvrageId = id || null;
+  var o = id ? DATA.eds_ouvrages.find(function(x) { return x.id === id; }) : null;
+  document.getElementById('eds-ouvrage-titre').textContent = o ? 'Modifier l\u2019ouvrage' : 'Nouvel ouvrage';
+  document.getElementById('eds-o-code').value = o ? (o.code || '') : '';
+  document.getElementById('eds-o-unite').value = o ? (o.unite || '') : '';
+  document.getElementById('eds-o-designation').value = o ? (o.designation || '') : '';
+  document.getElementById('eds-o-categorie').value = o ? (o.categorie || '') : '';
+  _edsComp = o ? JSON.parse(JSON.stringify(o.composants || [])) : [];
+  edsRenderComp();
+  openModal('modal-eds-ouvrage');
+}
+
+function edsAddComposant() { _edsComp.push({ type:'materiau', libelle:'', unite:'', qte:1, pu:0 }); edsRenderComp(); }
+function edsRemoveComposant(i) { _edsComp.splice(i, 1); edsRenderComp(); }
+
+function edsRenderComp() {
+  var tb = document.getElementById('tbody-eds-comp');
+  if (!tb) return;
+  if (!_edsComp.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:12px;">Aucun composant — cliquez sur + Composant.</td></tr>'; }
+  else {
+    tb.innerHTML = _edsComp.map(function(c, i) {
+      var opts = Object.keys(EDS_TYPES).map(function(k) { return '<option value="' + k + '"' + (c.type === k ? ' selected' : '') + '>' + EDS_TYPES[k] + '</option>'; }).join('');
+      var m = (parseFloat(c.qte) || 0) * (parseFloat(c.pu) || 0);
+      return '<tr>' +
+        '<td><select class="form-control" onchange="_edsComp[' + i + '].type=this.value;edsRenderComp()">' + opts + '</select></td>' +
+        '<td><input class="form-control" value="' + (c.libelle || '').replace(/"/g, '&quot;') + '" oninput="_edsComp[' + i + '].libelle=this.value"></td>' +
+        '<td><input class="form-control" style="width:70px" value="' + (c.unite || '') + '" oninput="_edsComp[' + i + '].unite=this.value"></td>' +
+        '<td><input type="number" step="0.0001" class="form-control" style="width:90px;text-align:right" value="' + (c.qte || 0) + '" oninput="_edsComp[' + i + '].qte=parseFloat(this.value)||0;edsRenderComp()"></td>' +
+        '<td><input type="number" class="form-control" style="width:110px;text-align:right" value="' + (c.pu || 0) + '" oninput="_edsComp[' + i + '].pu=parseFloat(this.value)||0;edsRenderComp()"></td>' +
+        '<td style="text-align:right;font-weight:600;">' + fmtF(m) + '</td>' +
+        '<td><button class="btn btn-secondary btn-sm" onclick="edsRemoveComposant(' + i + ')">✕</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+  var d = edsDebourse({ composants: _edsComp });
+  document.getElementById('eds-o-total').innerHTML =
+    'Matériaux <strong>' + fmtF(d.materiau) + '</strong> · MO <strong>' + fmtF(d.mo) + '</strong> · Matériel <strong>' + fmtF(d.materiel) + '</strong> · ST <strong>' + fmtF(d.st) + '</strong><br>' +
+    '<span style="font-size:16px;">Déboursé sec : <strong style="color:var(--vert,#1A6B3A);">' + fmtF(d.total) + ' FCFA / unité</strong></span>';
+}
+
+async function edsSaveOuvrage() {
+  var code = document.getElementById('eds-o-code').value.trim();
+  var des = document.getElementById('eds-o-designation').value.trim();
+  if (!code || !des) { toast('Code et désignation obligatoires', 'error'); return; }
+  var o = _edsOuvrageId ? DATA.eds_ouvrages.find(function(x) { return x.id === _edsOuvrageId; }) : null;
+  if (!o) { o = { id: 'ouv_' + uid() }; DATA.eds_ouvrages.push(o); }
+  o.code = code; o.designation = des;
+  o.unite = document.getElementById('eds-o-unite').value.trim();
+  o.categorie = document.getElementById('eds-o-categorie').value.trim();
+  o.composants = JSON.parse(JSON.stringify(_edsComp));
+  await dbPut('eds_ouvrages', o);
+  closeModal('modal-eds-ouvrage');
+  edsFillCatFilter(); edsRenderBib();
+  toast('Ouvrage enregistré', 'success');
+}
+
+async function edsDeleteOuvrage(id) {
+  if (!confirm('Supprimer cet ouvrage ?')) return;
+  DATA.eds_ouvrages = DATA.eds_ouvrages.filter(function(x) { return x.id !== id; });
+  await dbDelete('eds_ouvrages', id);
+  edsRenderBib();
+}
+
+/* ════════════ ONGLET 2 — ÉTUDES DE PRIX ════════════ */
+function edsCalcEtude(e) {
+  var debSec = 0, parPoste = {};
+  (e.lignes || []).forEach(function(l) {
+    var o = DATA.eds_ouvrages.find(function(x) { return x.id === l.ouvrage_id; });
+    if (!o) return;
+    var u = edsDebourse(o).total;
+    var tot = u * (parseFloat(l.qte) || 0);
+    debSec += tot;
+    var p = o.categorie || 'Divers';
+    parPoste[p] = (parPoste[p] || 0) + tot;
+  });
+  var fg = debSec * ((e.coef && e.coef.fg || 0) / 100);
+  var aleas = debSec * ((e.coef && e.coef.aleas || 0) / 100);
+  var prixRevient = debSec + fg + aleas;
+  var marge = prixRevient * ((e.coef && e.coef.marge || 0) / 100);
+  var prixVente = prixRevient + marge;
+  return { debSec: debSec, fg: fg, aleas: aleas, prixRevient: prixRevient, marge: marge, prixVente: prixVente, parPoste: parPoste };
+}
+
+function edsRenderEtudes() {
+  var tb = document.getElementById('tbody-eds-etudes');
+  if (!tb) return;
+  if (!DATA.eds_etudes.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:18px;">Aucune étude.</td></tr>'; return; }
+  tb.innerHTML = DATA.eds_etudes.map(function(e) {
+    var c = edsCalcEtude(e);
+    var prog = (DATA.programmes || []).find(function(p) { return p.id === e.programme_id; });
+    return '<tr>' +
+      '<td><strong>' + (e.nom || '—') + '</strong></td>' +
+      '<td>' + (prog ? prog.nom : '—') + '</td>' +
+      '<td>' + (e.date || '—') + '</td>' +
+      '<td style="text-align:right;">' + fmtF(c.debSec) + '</td>' +
+      '<td style="text-align:right;">' + fmtF(c.prixRevient) + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:var(--vert,#1A6B3A);">' + fmtF(c.prixVente) + '</td>' +
+      '<td style="text-align:right;color:#B8732F;">' + fmtF(c.marge) + '</td>' +
+      '<td><button class="btn btn-secondary btn-sm" onclick="edsOpenEtude(\'' + e.id + '\')">✎</button> ' +
+      '<button class="btn btn-secondary btn-sm" onclick="edsExportPDF(\'' + e.id + '\')">🖨</button> ' +
+      '<button class="btn btn-secondary btn-sm" onclick="edsDeleteEtude(\'' + e.id + '\')">🗑</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function edsNewEtude() { edsOpenEtude(null); }
+
+function edsOpenEtude(id) {
+  _edsEtudeId = id || null;
+  var e = id ? DATA.eds_etudes.find(function(x) { return x.id === id; }) : null;
+  document.getElementById('eds-etude-titre').textContent = e ? 'Étude de prix — ' + (e.nom || '') : 'Nouvelle étude de prix';
+  document.getElementById('eds-e-nom').value = e ? (e.nom || '') : '';
+  document.getElementById('eds-e-date').value = e ? (e.date || today()) : today();
+  document.getElementById('eds-e-fg').value = e && e.coef ? e.coef.fg : 12;
+  document.getElementById('eds-e-aleas').value = e && e.coef ? e.coef.aleas : 3;
+  document.getElementById('eds-e-marge').value = e && e.coef ? e.coef.marge : 15;
+  edsFillEtudeSelects();
+  var prefProg = e ? (e.programme_id || '') : ((document.getElementById('eds-etude-programme') || {}).value || '');
+  var ep = document.getElementById('eds-e-programme'); if (ep) ep.value = prefProg;
+  /* pick ouvrage */
+  var pick = document.getElementById('eds-e-ouvrage-pick');
+  if (pick) pick.innerHTML = DATA.eds_ouvrages.map(function(o) { return '<option value="' + o.id + '">' + o.code + ' — ' + o.designation + '</option>'; }).join('');
+  _edsLignes = e ? JSON.parse(JSON.stringify(e.lignes || [])) : [];
+  edsRenderLignes();
+  openModal('modal-eds-etude');
+}
+
+function edsAddLigne() {
+  var pick = document.getElementById('eds-e-ouvrage-pick');
+  if (!pick || !pick.value) { toast('Choisir un ouvrage', 'error'); return; }
+  _edsLignes.push({ id: uid(), ouvrage_id: pick.value, qte: 1 });
+  edsRenderLignes();
+}
+
+function edsRemoveLigne(i) { _edsLignes.splice(i, 1); edsRenderLignes(); }
+
+function edsRenderLignes() {
+  var tb = document.getElementById('tbody-eds-lignes');
+  if (!tb) return;
+  if (!_edsLignes.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:12px;">Aucun ouvrage — ajoutez le métré.</td></tr>'; }
+  else {
+    tb.innerHTML = _edsLignes.map(function(l, i) {
+      var o = DATA.eds_ouvrages.find(function(x) { return x.id === l.ouvrage_id; }) || {};
+      var u = o.composants ? edsDebourse(o).total : 0;
+      var tot = u * (parseFloat(l.qte) || 0);
+      return '<tr>' +
+        '<td><strong>' + (o.code || '?') + '</strong></td>' +
+        '<td>' + (o.designation || '—') + '</td>' +
+        '<td>' + (o.unite || '') + '</td>' +
+        '<td><input type="number" step="0.01" class="form-control" style="width:100px;text-align:right" value="' + (l.qte || 0) + '" oninput="_edsLignes[' + i + '].qte=parseFloat(this.value)||0;edsRenderLignes()"></td>' +
+        '<td style="text-align:right;">' + fmtF(u) + '</td>' +
+        '<td style="text-align:right;font-weight:600;">' + fmtF(tot) + '</td>' +
+        '<td><button class="btn btn-secondary btn-sm" onclick="edsRemoveLigne(' + i + ')">✕</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+  edsRecalcEtude();
+}
+
+function edsCurrentCoef() {
+  return {
+    fg: parseFloat(document.getElementById('eds-e-fg').value) || 0,
+    aleas: parseFloat(document.getElementById('eds-e-aleas').value) || 0,
+    marge: parseFloat(document.getElementById('eds-e-marge').value) || 0
+  };
+}
+
+function edsRecalcEtude() {
+  var prog = (DATA.programmes || []).find(function(p) { return p.id === (document.getElementById('eds-e-programme') || {}).value; });
+  var nbLots = prog ? (prog.nb_lots || prog.nbLots || 0) : 0;
+  var c = edsCalcEtude({ lignes: _edsLignes, coef: edsCurrentCoef() });
+  var coutLot = nbLots > 0 ? c.prixVente / nbLots : 0;
+  var zone = document.getElementById('eds-e-synthese');
+  if (!zone) return;
+  zone.innerHTML =
+    '<table style="width:100%;border-collapse:collapse;">' +
+    '<tr><td>Déboursé sec total</td><td style="text-align:right;font-weight:600;">' + fmtF(c.debSec) + ' FCFA</td></tr>' +
+    '<tr><td>+ Frais généraux (' + edsCurrentCoef().fg + ' %)</td><td style="text-align:right;">' + fmtF(c.fg) + '</td></tr>' +
+    '<tr><td>+ Aléas (' + edsCurrentCoef().aleas + ' %)</td><td style="text-align:right;">' + fmtF(c.aleas) + '</td></tr>' +
+    '<tr style="border-top:1px solid #ccc;"><td><strong>Prix de revient</strong></td><td style="text-align:right;font-weight:700;">' + fmtF(c.prixRevient) + ' FCFA</td></tr>' +
+    '<tr><td>+ Marge (' + edsCurrentCoef().marge + ' %)</td><td style="text-align:right;color:#B8732F;">' + fmtF(c.marge) + '</td></tr>' +
+    '<tr style="border-top:2px solid var(--vert,#1A6B3A);"><td><strong>PRIX DE VENTE</strong></td><td style="text-align:right;font-size:16px;font-weight:800;color:var(--vert,#1A6B3A);">' + fmtF(c.prixVente) + ' FCFA</td></tr>' +
+    (nbLots > 0 ? '<tr><td>Coût de revient / lot (' + nbLots + ' lots)</td><td style="text-align:right;font-weight:600;">' + fmtF(c.prixRevient / nbLots) + ' FCFA</td></tr>' +
+      '<tr><td>Prix de vente / lot</td><td style="text-align:right;font-weight:700;">' + fmtF(coutLot) + ' FCFA</td></tr>' : '') +
+    '</table>';
+}
+
+async function edsSaveEtude() {
+  var nom = document.getElementById('eds-e-nom').value.trim();
+  if (!nom) { toast('Intitulé obligatoire', 'error'); return; }
+  var e = _edsEtudeId ? DATA.eds_etudes.find(function(x) { return x.id === _edsEtudeId; }) : null;
+  if (!e) { e = { id: 'eds_' + uid(), realisations: [] }; DATA.eds_etudes.push(e); }
+  e.nom = nom;
+  e.programme_id = (document.getElementById('eds-e-programme') || {}).value || '';
+  e.date = document.getElementById('eds-e-date').value || today();
+  e.coef = edsCurrentCoef();
+  e.lignes = JSON.parse(JSON.stringify(_edsLignes));
+  if (!e.realisations) e.realisations = [];
+  await dbPut('eds_etudes', e);
+  closeModal('modal-eds-etude');
+  edsFillEtudeSelects(); edsRenderEtudes();
+  toast('Étude enregistrée', 'success');
+}
+
+async function edsDeleteEtude(id) {
+  if (!confirm('Supprimer cette étude ?')) return;
+  DATA.eds_etudes = DATA.eds_etudes.filter(function(x) { return x.id !== id; });
+  await dbDelete('eds_etudes', id);
+  edsFillEtudeSelects(); edsRenderEtudes();
+}
+
+/* ── PDF devis (fenêtre d'impression) ── */
+function edsExportPDF(id) {
+  var e;
+  if (id) e = DATA.eds_etudes.find(function(x) { return x.id === id; });
+  else e = { nom: document.getElementById('eds-e-nom').value, programme_id: (document.getElementById('eds-e-programme') || {}).value, date: document.getElementById('eds-e-date').value, coef: edsCurrentCoef(), lignes: _edsLignes };
+  if (!e) return;
+  var c = edsCalcEtude(e);
+  var prog = (DATA.programmes || []).find(function(p) { return p.id === e.programme_id; });
+  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var rows = (e.lignes || []).map(function(l) {
+    var o = DATA.eds_ouvrages.find(function(x) { return x.id === l.ouvrage_id; }) || {};
+    var u = o.composants ? edsDebourse(o).total : 0;
+    return '<tr><td>' + (o.code || '') + '</td><td>' + (o.designation || '') + '</td><td>' + (o.unite || '') + '</td><td style="text-align:right;">' + (l.qte || 0) + '</td><td style="text-align:right;">' + fmtF(u) + '</td><td style="text-align:right;">' + fmtF(u * (l.qte || 0)) + '</td></tr>';
+  }).join('');
+  var w = window.open('', '', 'width=850,height=750');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Étude de prix</title><style>body{font-family:Georgia,serif;padding:34px;font-size:12px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;font-size:20px;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 9px;}th{background:#E8F4EE;}</style></head><body>' +
+    '<h1>ÉTUDE DE PRIX — DÉBOURSÉ SEC</h1>' +
+    '<p><strong>' + soc + '</strong><br>Étude : ' + (e.nom || '—') + ' · Programme : ' + (prog ? prog.nom : '—') + ' · Date : ' + (e.date || '—') + '</p>' +
+    '<table><tr><th>Code</th><th>Désignation</th><th>U.</th><th style="text-align:right;">Qté</th><th style="text-align:right;">Déboursé U.</th><th style="text-align:right;">Total</th></tr>' + rows + '</table>' +
+    '<table style="width:55%;margin-left:auto;">' +
+    '<tr><td>Déboursé sec</td><td style="text-align:right;">' + fmtF(c.debSec) + '</td></tr>' +
+    '<tr><td>Frais généraux ' + (e.coef.fg) + '%</td><td style="text-align:right;">' + fmtF(c.fg) + '</td></tr>' +
+    '<tr><td>Aléas ' + (e.coef.aleas) + '%</td><td style="text-align:right;">' + fmtF(c.aleas) + '</td></tr>' +
+    '<tr><td><strong>Prix de revient</strong></td><td style="text-align:right;"><strong>' + fmtF(c.prixRevient) + '</strong></td></tr>' +
+    '<tr><td>Marge ' + (e.coef.marge) + '%</td><td style="text-align:right;">' + fmtF(c.marge) + '</td></tr>' +
+    '<tr><td><strong>PRIX DE VENTE HT</strong></td><td style="text-align:right;font-size:15px;color:#1A6B3A;"><strong>' + fmtF(c.prixVente) + ' FCFA</strong></td></tr>' +
+    '</table></body></html>');
+  w.document.close(); w.print();
+}
+
+/* ════════════ ONGLET 3 — SUIVI BUDGÉTAIRE ════════════ */
+function edsRenderSuivi() {
+  var zone = document.getElementById('eds-suivi-zone');
+  if (!zone) return;
+  var id = (document.getElementById('eds-suivi-etude') || {}).value;
+  var e = DATA.eds_etudes.find(function(x) { return x.id === id; });
+  if (!e) { zone.innerHTML = '<p style="color:var(--muted);">Choisissez une étude pour suivre le prévu vs réalisé.</p>'; return; }
+  var c = edsCalcEtude(e);
+  var realParPoste = {};
+  (e.realisations || []).forEach(function(r) { realParPoste[r.poste] = (realParPoste[r.poste] || 0) + (parseFloat(r.montant) || 0); });
+  var postes = {}; Object.keys(c.parPoste).forEach(function(p) { postes[p] = 1; }); Object.keys(realParPoste).forEach(function(p) { postes[p] = 1; });
+  var rows = Object.keys(postes).map(function(p) {
+    var prevu = c.parPoste[p] || 0, real = realParPoste[p] || 0, ecart = real - prevu;
+    var depass = prevu > 0 && real > prevu;
+    return '<tr' + (depass ? ' style="background:rgba(192,57,43,0.08);"' : '') + '>' +
+      '<td>' + p + '</td>' +
+      '<td style="text-align:right;">' + fmtF(prevu) + '</td>' +
+      '<td style="text-align:right;">' + fmtF(real) + '</td>' +
+      '<td style="text-align:right;font-weight:700;color:' + (ecart > 0 ? '#c0392b' : '#1A6B3A') + ';">' + (ecart > 0 ? '+' : '') + fmtF(ecart) + '</td>' +
+      '<td>' + (depass ? '<span style="color:#c0392b;">⚠ Dépassement</span>' : (prevu > 0 ? '✅ OK' : '—')) + '</td></tr>';
+  }).join('');
+  var realTot = (e.realisations || []).reduce(function(s, r) { return s + (parseFloat(r.montant) || 0); }, 0);
+  zone.innerHTML =
+    '<h3 style="margin:0 0 10px;">' + e.nom + '</h3>' +
+    '<table style="width:100%;border-collapse:collapse;"><thead><tr><th>Poste</th><th style="text-align:right;">Prévu (déboursé)</th><th style="text-align:right;">Réalisé</th><th style="text-align:right;">Écart</th><th>État</th></tr></thead><tbody>' + rows +
+    '<tr style="border-top:2px solid #333;font-weight:700;"><td>TOTAL</td><td style="text-align:right;">' + fmtF(c.debSec) + '</td><td style="text-align:right;">' + fmtF(realTot) + '</td><td style="text-align:right;color:' + (realTot > c.debSec ? '#c0392b' : '#1A6B3A') + ';">' + (realTot - c.debSec > 0 ? '+' : '') + fmtF(realTot - c.debSec) + '</td><td></td></tr>' +
+    '</tbody></table>' +
+    (e.realisations && e.realisations.length ?
+      '<h4 style="margin:16px 0 6px;">Dépenses saisies</h4><table style="width:100%;border-collapse:collapse;"><thead><tr><th>Date</th><th>Poste</th><th>Libellé</th><th style="text-align:right;">Montant</th><th></th></tr></thead><tbody>' +
+      e.realisations.map(function(r) { return '<tr><td>' + (r.date || '—') + '</td><td>' + r.poste + '</td><td>' + (r.libelle || '') + '</td><td style="text-align:right;">' + fmtF(r.montant) + '</td><td><button class="btn btn-secondary btn-sm" onclick="edsDeleteRealisation(\'' + e.id + '\',\'' + r.id + '\')">✕</button></td></tr>'; }).join('') +
+      '</tbody></table>' : '');
+}
+
+function edsOpenRealisation() {
+  edsFillEtudeSelects();
+  var sel = document.getElementById('eds-r-etude');
+  var cur = (document.getElementById('eds-suivi-etude') || {}).value;
+  if (sel && cur) sel.value = cur;
+  document.getElementById('eds-r-poste').value = '';
+  document.getElementById('eds-r-libelle').value = '';
+  document.getElementById('eds-r-montant').value = 0;
+  document.getElementById('eds-r-date').value = today();
+  openModal('modal-eds-realise');
+}
+
+async function edsSaveRealisation() {
+  var id = document.getElementById('eds-r-etude').value;
+  var e = DATA.eds_etudes.find(function(x) { return x.id === id; });
+  if (!e) { toast('Choisir une étude', 'error'); return; }
+  if (!e.realisations) e.realisations = [];
+  e.realisations.push({
+    id: uid(),
+    poste: document.getElementById('eds-r-poste').value.trim() || 'Divers',
+    libelle: document.getElementById('eds-r-libelle').value.trim(),
+    montant: parseFloat(document.getElementById('eds-r-montant').value) || 0,
+    date: document.getElementById('eds-r-date').value || today()
+  });
+  await dbPut('eds_etudes', e);
+  closeModal('modal-eds-realise');
+  var ss = document.getElementById('eds-suivi-etude'); if (ss) ss.value = id;
+  edsRenderSuivi();
+  toast('Dépense enregistrée', 'success');
+}
+
+async function edsDeleteRealisation(eid, rid) {
+  var e = DATA.eds_etudes.find(function(x) { return x.id === eid; });
+  if (!e) return;
+  e.realisations = (e.realisations || []).filter(function(r) { return r.id !== rid; });
+  await dbPut('eds_etudes', e);
+  edsRenderSuivi();
+}
+
+/* ════════════ ONGLET 4 — IMPUTATIONS SYSCOHADA ════════════ */
+function edsRenderSyscohada() {
+  var zone = document.getElementById('eds-sys-zone');
+  if (!zone) return;
+  var id = (document.getElementById('eds-sys-etude') || {}).value;
+  var e = DATA.eds_etudes.find(function(x) { return x.id === id; });
+  if (!e) { zone.innerHTML = '<p style="color:var(--muted);">Choisissez une étude pour voir les imputations comptables prévisionnelles.</p>'; return; }
+  var c = edsCalcEtude(e);
+  /* Imputations : charges chantier (classe 6) ventilées, contrepartie immobilisation en cours (classe 23) */
+  var lignes = [
+    { compte: '231', libelle: 'Bâtiments en cours (immobilisation)', debit: c.debSec, credit: 0 },
+    { compte: '601', libelle: 'Achats matériaux de construction', debit: 0, credit: 0 },
+    { compte: '622', libelle: 'Sous-traitance / locations matériel', debit: 0, credit: 0 },
+    { compte: '661', libelle: 'Charges de personnel chantier (MO)', debit: 0, credit: 0 },
+    { compte: '401', libelle: 'Fournisseurs', debit: 0, credit: c.debSec }
+  ];
+  /* ventilation par type de composant */
+  var vent = { materiau: 0, mo: 0, materiel: 0, st: 0 };
+  (e.lignes || []).forEach(function(l) {
+    var o = DATA.eds_ouvrages.find(function(x) { return x.id === l.ouvrage_id; });
+    if (!o) return;
+    var d = edsDebourse(o);
+    vent.materiau += d.materiau * (l.qte || 0);
+    vent.mo += d.mo * (l.qte || 0);
+    vent.materiel += d.materiel * (l.qte || 0);
+    vent.st += d.st * (l.qte || 0);
+  });
+  lignes[1].debit = vent.materiau;
+  lignes[2].debit = vent.materiel + vent.st;
+  lignes[3].debit = vent.mo;
+  /* l'immobilisation en cours = contrepartie des charges incorporées : on retire le doublon 231 */
+  lignes = lignes.filter(function(x) { return x.compte !== '231'; });
+  var rows = lignes.map(function(l) {
+    return '<tr><td><strong>' + l.compte + '</strong></td><td>' + l.libelle + '</td><td style="text-align:right;">' + (l.debit ? fmtF(l.debit) : '') + '</td><td style="text-align:right;">' + (l.credit ? fmtF(l.credit) : '') + '</td></tr>';
+  }).join('');
+  zone.innerHTML =
+    '<h3 style="margin:0 0 6px;">Imputations prévisionnelles — ' + e.nom + '</h3>' +
+    '<p style="color:var(--muted);font-size:12px;">Écriture-type d\u2019incorporation du déboursé sec au coût du programme (SYSCOHADA révisé).</p>' +
+    '<table style="width:100%;border-collapse:collapse;"><thead><tr><th>Compte</th><th>Libellé</th><th style="text-align:right;">Débit</th><th style="text-align:right;">Crédit</th></tr></thead><tbody>' + rows +
+    '<tr style="border-top:2px solid #333;font-weight:700;"><td colspan="2">TOTAUX</td><td style="text-align:right;">' + fmtF(vent.materiau + vent.mo + vent.materiel + vent.st) + '</td><td style="text-align:right;">' + fmtF(c.debSec) + '</td></tr>' +
+    '</tbody></table>' +
+    '<p style="font-size:12px;color:var(--muted);margin-top:10px;">À la production d\u2019immeuble destiné à la vente, ces charges sont reclassées en stocks (compte 35 — En-cours de production de biens). Frais généraux et marge ne sont pas immobilisés.</p>';
+}
+
 </script>
 
 </body>
