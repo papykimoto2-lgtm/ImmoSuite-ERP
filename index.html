@@ -10345,6 +10345,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
             <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
             <button class="btn btn-secondary btn-sm" onclick="brnPrintPlan()">🖨 Plan de bornage</button>
+            <button class="btn btn-primary btn-sm" onclick="genererPlanParcellaire()">📐 Plan parcellaire</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -30709,7 +30710,7 @@ function renderParcelles() {
       + '<td style="font-size:11px;">' + (p.type_titre||'—') + '</td>'
       + '<td style="font-size:12px;">' + prog + '</td>'
       + '<td><span class="badge ' + (statMap[p.statut]||'badge-bleu') + '">' + (p.statut||'').replace(/_/g,' ') + '</span></td>'
-      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="openParcelle(\'' + p.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteParcelle(\'' + p.id + '\')">🗑</button></td>'
+      + '<td>' + ((p.bornes&&p.bornes.length>=3)?('<button class="btn btn-secondary btn-sm btn-icon" title="Plan parcellaire" onclick="genererPlanParcellaire(\'' + p.id + '\')">📐</button> '):'') + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openParcelle(\'' + p.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteParcelle(\'' + p.id + '\')">🗑</button></td>'
       + '</tr>';
   }).join('');
 }
@@ -42854,6 +42855,127 @@ function zoomParcelles() {
   if (!_geoMap) { initLeafletMap(); setTimeout(zoomParcelles, 400); return; }
   if (_parcelleBounds) _geoMap.fitBounds(_parcelleBounds, { padding: [40, 40], maxZoom: 16 });
   else toast('Aucune parcelle bornée à afficher', 'info');
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   PLAN PARCELLAIRE — rendu cadastral à l'échelle (impression)
+   Polygone des bornes · distances · nord · échelle · cartouche
+══════════════════════════════════════════════════════════ */
+
+/* Récupère les données du plan : depuis une parcelle enregistrée (id)
+   ou depuis le formulaire ouvert (bornage en cours). */
+function planParcellaireData(id) {
+  if (id) {
+    var p = (DATA.parcelles || []).find(function(x){ return x.id === id; });
+    if (!p) return null;
+    return {
+      ref: p.ref, localisation: p.localisation, tf_num: p.tf_num || p.num_titre,
+      morcellement: p.morcellement, livre_foncier: p.livre_foncier, cedant: p.cedant,
+      demandeur: p.demandeur, contenance: p.contenance, geometre: p.geometre,
+      date_plan: p.date_plan, echelle: p.echelle, bornes: p.bornes || []
+    };
+  }
+  var g = function(fid){ var e = document.getElementById(fid); return e ? e.value : ''; };
+  return {
+    ref: g('parc-ref'), localisation: g('parc-localisation'), tf_num: g('parc-tf-num'),
+    morcellement: g('parc-morcellement'), livre_foncier: g('parc-livre-foncier'), cedant: g('parc-cedant'),
+    demandeur: g('parc-demandeur'), contenance: g('parc-contenance'), geometre: g('parc-geometre'),
+    date_plan: g('parc-date-plan'), echelle: g('parc-echelle'),
+    bornes: (typeof _brnList !== 'undefined') ? _brnList : []
+  };
+}
+
+function genererPlanParcellaire(id) {
+  var d = planParcellaireData(id);
+  if (!d) { toast('Parcelle introuvable', 'error'); return; }
+  var pts = (d.bornes || []).filter(function(b){ return (b.x || b.y); });
+  if (pts.length < 3) { toast('Au moins 3 bornes requises pour le plan', 'error'); return; }
+
+  /* ── échelle automatique ── */
+  var xs = pts.map(function(p){return p.x;}), ys = pts.map(function(p){return p.y;});
+  var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  var dxM = (maxX - minX) || 1, dyM = (maxY - minY) || 1;
+  var DW = 640, DH = 470, PAD = 60;                 /* zone de dessin px */
+  var sc = Math.min((DW - 2 * PAD) / dxM, (DH - 2 * PAD) / dyM);
+  var offX = (DW - dxM * sc) / 2, offY = (DH - dyM * sc) / 2;
+  function PX(x){ return offX + (x - minX) * sc; }
+  function PY(y){ return DH - (offY + (y - minY) * sc); }   /* Y vers le haut */
+
+  /* échelle approximative (96 dpi : 1px = 0.264583 mm) */
+  var realMmW = dxM * 1000;
+  var drawMmW = (dxM * sc) * 0.264583;
+  var ratio = drawMmW > 0 ? Math.round(realMmW / drawMmW) : 0;
+
+  /* ── aire (Gauss) ── */
+  var s = 0;
+  for (var i = 0; i < pts.length; i++) { var A = pts[i], C = pts[(i + 1) % pts.length]; s += (A.x * C.y - C.x * A.y); }
+  var aire = Math.abs(s / 2);
+
+  /* ── polygone + bornes + distances ── */
+  var poly = pts.map(function(p){ return PX(p.x).toFixed(1) + ',' + PY(p.y).toFixed(1); }).join(' ');
+  var marks = '', dists = '';
+  pts.forEach(function(p, i){
+    var cx = PX(p.x), cy = PY(p.y);
+    marks += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="3.2" fill="#b30000"/>'
+      + '<text x="' + (cx + 5).toFixed(1) + '" y="' + (cy - 4).toFixed(1) + '" font-size="10" font-weight="bold" fill="#111">' + (p.nom || ('B' + (i + 1))) + '</text>';
+    var n = pts[(i + 1) % pts.length];
+    var mx = (PX(p.x) + PX(n.x)) / 2, my = (PY(p.y) + PY(n.y)) / 2;
+    var dist = (p.distance != null && p.distance) ? p.distance
+      : Math.sqrt(Math.pow(n.x - p.x, 2) + Math.pow(n.y - p.y, 2)).toFixed(2);
+    dists += '<text x="' + mx.toFixed(1) + '" y="' + my.toFixed(1) + '" font-size="8.5" fill="#1A6B3A" text-anchor="middle">' + dist + '</text>';
+  });
+
+  /* ── barre d'échelle (100 m) ── */
+  var barM = 100, barPx = barM * sc;
+  var bx = PAD, by = DH - 18;
+  var scaleBar = '<line x1="' + bx + '" y1="' + by + '" x2="' + (bx + barPx).toFixed(1) + '" y2="' + by + '" stroke="#111" stroke-width="2"/>'
+    + '<line x1="' + bx + '" y1="' + (by - 4) + '" x2="' + bx + '" y2="' + (by + 4) + '" stroke="#111" stroke-width="2"/>'
+    + '<line x1="' + (bx + barPx).toFixed(1) + '" y1="' + (by - 4) + '" x2="' + (bx + barPx).toFixed(1) + '" y2="' + (by + 4) + '" stroke="#111" stroke-width="2"/>'
+    + '<text x="' + (bx + barPx / 2).toFixed(1) + '" y="' + (by - 7) + '" font-size="9" text-anchor="middle" fill="#111">100 m</text>';
+
+  /* ── flèche du Nord ── */
+  var nx = DW - 36, ny = 46;
+  var north = '<g><polygon points="' + nx + ',' + (ny - 22) + ' ' + (nx - 7) + ',' + (ny + 6) + ' ' + nx + ',' + (ny - 2) + ' ' + (nx + 7) + ',' + (ny + 6) + '" fill="#111"/>'
+    + '<text x="' + nx + '" y="' + (ny + 20) + '" font-size="11" font-weight="bold" text-anchor="middle" fill="#111">N</text></g>';
+
+  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var dateFr = d.date_plan ? new Date(d.date_plan).toLocaleDateString('fr-FR') : '—';
+
+  var w = window.open('', '', 'width=900,height=940');
+  w.document.write(
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Plan parcellaire — ' + (d.ref || '') + '</title>'
+    + '<style>body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:24px;color:#111;}'
+    + '.sheet{border:2px solid #111;max-width:760px;margin:auto;}'
+    + '.title{text-align:center;font-weight:bold;letter-spacing:1px;padding:8px;border-bottom:1px solid #111;font-size:15px;}'
+    + '.sub{text-align:center;font-size:11px;padding:4px;border-bottom:1px solid #111;color:#333;}'
+    + 'svg{display:block;margin:auto;background:#fff;}'
+    + '.cartouche{border-top:1px solid #111;display:grid;grid-template-columns:1fr 1fr;font-size:11px;}'
+    + '.cartouche div{padding:5px 9px;border-right:1px solid #ccc;border-bottom:1px solid #ccc;}'
+    + '.cartouche b{color:#1A6B3A;}'
+    + '@media print{button{display:none;}}'
+    + '</style></head><body>'
+    + '<div style="text-align:center;margin-bottom:10px;"><button onclick="window.print()" style="padding:8px 18px;background:#1A6B3A;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨 Imprimer</button></div>'
+    + '<div class="sheet">'
+    + '<div class="title">PLAN PARCELLAIRE</div>'
+    + '<div class="sub">RÉPUBLIQUE DE CÔTE D\u2019IVOIRE — ' + soc + (d.localisation ? (' · ' + d.localisation) : '') + '</div>'
+    + '<svg viewBox="0 0 ' + DW + ' ' + DH + '" width="' + DW + '" height="' + DH + '">'
+    + '<polygon points="' + poly + '" fill="rgba(26,107,58,0.10)" stroke="#1A6B3A" stroke-width="1.6"/>'
+    + dists + marks + scaleBar + north
+    + '</svg>'
+    + '<div class="cartouche">'
+    + '<div><b>Réf. parcelle</b><br>' + (d.ref || '—') + '</div>'
+    + '<div><b>Titre Foncier</b><br>' + (d.tf_num || '—') + (d.morcellement ? (' — Morc. ' + d.morcellement) : '') + '</div>'
+    + '<div><b>Livre Foncier</b><br>' + (d.livre_foncier || '—') + '</div>'
+    + '<div><b>Contenance</b><br>' + (d.contenance || (fmtF(Math.round(aire)) + ' m²')) + '</div>'
+    + '<div><b>Surface calculée (Gauss)</b><br>' + fmtF(Math.round(aire)) + ' m²</div>'
+    + '<div><b>Échelle approx.</b><br>' + (d.echelle || ('1/' + (ratio || '—'))) + '</div>'
+    + '<div><b>Cédant / Demandeur</b><br>' + (d.cedant || '—') + ' / ' + (d.demandeur || '—') + '</div>'
+    + '<div><b>Géomètre-Expert · Date</b><br>' + (d.geometre || '—') + ' · ' + dateFr + '</div>'
+    + '</div></div></body></html>'
+  );
+  w.document.close();
 }
 
 </script>
