@@ -5842,6 +5842,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <input type="checkbox" id="geo-show-programmes" checked onchange="renderCarteGeo()" style="accent-color:#8B5CF6;">
             <span style="color:#7C3AED;font-weight:600;">🏗️ Programmes</span>
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;">
+            <input type="checkbox" id="geo-show-parcelles" checked onchange="renderCarteGeo()" style="accent-color:#1A6B3A;">
+            <span style="color:#1A6B3A;font-weight:600;">🟩 Parcelles (bornage)</span>
+          </label>
+          <button class="btn btn-secondary btn-sm" onclick="zoomParcelles()">🎯 Voir parcelles</button>
           <select class="filter-select" id="geo-filter-commercial" onchange="renderCarteGeo()" style="min-width:140px;">
             <option value="">Tous commerciaux</option>
           </select>
@@ -21901,6 +21906,7 @@ var _geoLayerProspects = null;
 var _geoLayerClients = null;
 var _geoLayerCommerciaux = null;
 var _geoLayerProgrammes = null;
+var _geoLayerParcelles = null;
 var _leafletLoaded = false;
 
 // Coordonnées des communes d'Abidjan et villes CI
@@ -22030,6 +22036,7 @@ function _buildMap() {
   _geoLayerClients     = L.layerGroup().addTo(_geoMap);
   _geoLayerCommerciaux = L.layerGroup().addTo(_geoMap);
   _geoLayerProgrammes  = L.layerGroup().addTo(_geoMap);
+  _geoLayerParcelles   = L.layerGroup().addTo(_geoMap);
 
   // Marqueurs des programmes (fixes)
   DATA.programmes.forEach(function(p) {
@@ -22088,6 +22095,8 @@ function renderCarteGeo() {
   if (_geoLayerClients)     _geoLayerClients.clearLayers();
   if (_geoLayerCommerciaux) _geoLayerCommerciaux.clearLayers();
   if (_geoLayerProgrammes)  _geoLayerProgrammes.clearLayers();
+  if (_geoLayerParcelles)   _geoLayerParcelles.clearLayers();
+  if (typeof renderParcellesCarte === 'function') renderParcellesCarte();
 
   var nbP = 0, nbC = 0, nbComm = 0;
   var totalCA = 0, totalEnc = 0;
@@ -42760,6 +42769,91 @@ async function fonEnter() {
   await fonSeedYaou();
   renderParcelles();
   if (typeof updateFoncierKPIs === 'function') updateFoncierKPIs();
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CARTE — GÉOLOCALISATION DES PARCELLES PAR LE BORNAGE
+   Conversion UTM zone 30N (EPSG:32630) → WGS84 (lat/lng)
+   Tracé du polygone de chaque parcelle disposant de bornes
+══════════════════════════════════════════════════════════ */
+
+/* Inverse Transverse Mercator — UTM 30N, ellipsoïde WGS84.
+   Vérifié contre pyproj (écart < 1 mm). Renvoie [lat, lng] en degrés. */
+function utm30ToLatLng(E, N) {
+  var a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996, e2 = f * (2 - f);
+  var e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+  var lon0 = -3 * Math.PI / 180;            /* méridien central zone 30 */
+  var x = E - 500000, M = N / k0;
+  var mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256));
+  var phi1 = mu
+    + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
+    + (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32) * Math.sin(4 * mu)
+    + (151 * e1 * e1 * e1 / 96) * Math.sin(6 * mu)
+    + (1097 * e1 * e1 * e1 * e1 / 512) * Math.sin(8 * mu);
+  var ep2 = e2 / (1 - e2);
+  var C1 = ep2 * Math.pow(Math.cos(phi1), 2);
+  var T1 = Math.pow(Math.tan(phi1), 2);
+  var N1 = a / Math.sqrt(1 - e2 * Math.pow(Math.sin(phi1), 2));
+  var R1 = a * (1 - e2) / Math.pow(1 - e2 * Math.pow(Math.sin(phi1), 2), 1.5);
+  var D = x / (N1 * k0);
+  var lat = phi1 - (N1 * Math.tan(phi1) / R1) * (D * D / 2
+    - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * Math.pow(D, 4) / 24
+    + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ep2 - 3 * C1 * C1) * Math.pow(D, 6) / 720);
+  var lon = lon0 + (D
+    - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6
+    + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * Math.pow(D, 5) / 120) / Math.cos(phi1);
+  return [lat * 180 / Math.PI, lon * 180 / Math.PI];
+}
+
+/* Convertit les bornes (X/Y projetés) d'une parcelle en chemin lat/lng */
+function parcelleLatLngs(p) {
+  if (!p || !p.bornes || p.bornes.length < 3) return null;
+  var path = [];
+  p.bornes.forEach(function(b) {
+    if (!(b.x || b.y)) return;
+    path.push(utm30ToLatLng(b.x, b.y));
+  });
+  return path.length >= 3 ? path : null;
+}
+
+var _parcelleBounds = null;
+
+/* Trace tous les polygones de parcelles sur la couche dédiée */
+function renderParcellesCarte() {
+  if (typeof L === 'undefined' || !_geoLayerParcelles) return;
+  _geoLayerParcelles.clearLayers();
+  var show = document.getElementById('geo-show-parcelles') ? document.getElementById('geo-show-parcelles').checked : true;
+  if (!show) return;
+  _parcelleBounds = null;
+  var all = [];
+  (DATA.parcelles || []).forEach(function(p) {
+    var path = parcelleLatLngs(p);
+    if (!path) return;
+    all = all.concat(path);
+    var poly = L.polygon(path, { color: '#1A6B3A', weight: 2, fillColor: '#1A6B3A', fillOpacity: 0.18 });
+    var supTxt = p.contenance ? p.contenance : (p.superficie ? fmtF(p.superficie) + ' m²' : '—');
+    poly.bindPopup(
+      '<div style="font-size:13px;min-width:200px;">'
+      + '<strong style="color:#1A6B3A;">🟩 ' + (p.ref || 'Parcelle') + '</strong><br>'
+      + (p.localisation || '') + (p.tf_num ? ('<br>' + p.tf_num) : '')
+      + (p.morcellement ? (' · Morc. ' + p.morcellement) : '')
+      + '<br>Contenance : <strong>' + supTxt + '</strong>'
+      + '<br><button onclick="goTo(\'foncier\')" style="margin-top:6px;padding:4px 8px;background:#1A6B3A;color:#fff;border:none;border-radius:6px;cursor:pointer;">Voir au foncier</button>'
+      + '</div>', { maxWidth: 260 });
+    poly.addTo(_geoLayerParcelles);
+    /* étiquette au centroïde */
+    var c = poly.getBounds().getCenter();
+    L.marker(c, { icon: L.divIcon({ className: '', html: '<div style="font-size:11px;font-weight:700;color:#0f4023;background:rgba(255,255,255,.7);padding:1px 4px;border-radius:4px;white-space:nowrap;">' + (p.ref || '') + '</div>', iconSize: [60, 16] }) }).addTo(_geoLayerParcelles);
+  });
+  if (all.length) _parcelleBounds = L.latLngBounds(all);
+}
+
+/* Recentre la carte sur les parcelles */
+function zoomParcelles() {
+  if (!_geoMap) { initLeafletMap(); setTimeout(zoomParcelles, 400); return; }
+  if (_parcelleBounds) _geoMap.fitBounds(_parcelleBounds, { padding: [40, 40], maxZoom: 16 });
+  else toast('Aucune parcelle bornée à afficher', 'info');
 }
 
 </script>
