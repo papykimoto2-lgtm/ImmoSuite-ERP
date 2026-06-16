@@ -10260,6 +10260,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <button class="tab-btn active" onclick="switchTab('modal-parcelle','identification')">Identification</button>
         <button class="tab-btn" onclick="switchTab('modal-parcelle','titre')">Titre & Droits</button>
         <button class="tab-btn" onclick="switchTab('modal-parcelle','financier')">Financier</button>
+        <button class="tab-btn" onclick="switchTab('modal-parcelle','bornage')">Bornage &amp; Coordonnées</button>
       </div>
       <div class="tab-pane active" id="tab-modal-parcelle-identification">
         <div class="form-grid">
@@ -10319,6 +10320,35 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group"><label>Valeur estimée actuelle (FCFA)</label><input type="number" class="form-control" id="parc-valeur-actuelle"></div>
           <div class="form-group"><label>Prix de revient total (FCFA)</label><input type="number" class="form-control" id="parc-cout-total" readonly style="color:var(--or);font-weight:bold;"></div>
         </div>
+      </div>
+      <div class="tab-pane" id="tab-modal-parcelle-bornage">
+        <div class="form-grid">
+          <div class="form-group"><label>N° Titre Foncier</label><input type="text" class="form-control" id="parc-tf-num" placeholder="TF 21289"></div>
+          <div class="form-group"><label>Morcellement du TF</label><input type="text" class="form-control" id="parc-morcellement" placeholder="4726"></div>
+          <div class="form-group"><label>Livre Foncier de</label><input type="text" class="form-control" id="parc-livre-foncier" placeholder="Bassam"></div>
+          <div class="form-group"><label>Cédant</label><input type="text" class="form-control" id="parc-cedant" placeholder="ÉTAT-CI"></div>
+          <div class="form-group"><label>Demandeur</label><input type="text" class="form-control" id="parc-demandeur" placeholder="LGI-BTP"></div>
+          <div class="form-group"><label>Contenance (ha a ca)</label><input type="text" class="form-control" id="parc-contenance" placeholder="14 ha 39 a 25 ca"></div>
+          <div class="form-group"><label>Géomètre-Expert Agréé</label><input type="text" class="form-control" id="parc-geometre" placeholder="SORO NANGA DIDIER"></div>
+          <div class="form-group"><label>Date du plan</label><input type="date" class="form-control" id="parc-date-plan"></div>
+          <div class="form-group"><label>Échelle</label><input type="text" class="form-control" id="parc-echelle" placeholder="1/7000"></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;">
+          <strong>Tableau des coordonnées (bornes)</strong>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
+            <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
+            <button class="btn btn-secondary btn-sm" onclick="brnPrintPlan()">🖨 Plan de bornage</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="table-bornes">
+            <thead><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th><th></th></tr></thead>
+            <tbody id="tbody-bornes"></tbody>
+          </table>
+        </div>
+        <div id="brn-plan" class="card" style="margin-top:12px;background:var(--card2);text-align:center;"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -13878,7 +13908,7 @@ function goTo(page) {
   if (page === 'rh-conges')      { loadConges(); }
   if (page === 'rh-recrutement') { loadRecrutement(); }
   if (page === 'rh-formations')  { loadFormations(); }
-  if (page === 'foncier') { renderParcelles(); updateFoncierKPIs(); }
+  if (page === 'foncier') { fonEnter(); }
   if (page === 'juridique') { renderDossiersJuridiques(); loadAgrementInfo(); }
   if (page === 'conception') { renderConceptions(); }
   if (page === 'constructeurs') { renderConstructeurs(); updateConstructeursKPIs(); }
@@ -30695,6 +30725,7 @@ function openParcelle(id) {
     var risqueEl = document.getElementById('parc-risque'); if (risqueEl) risqueEl.value = 'faible';
   }
   document.getElementById('modal-parcelle-title').textContent = id ? 'Modifier Parcelle' : 'Nouvelle Parcelle';
+  fonLoadCadastreBornes(id);
   switchTab('modal-parcelle','identification');
   document.getElementById('modal-parcelle').classList.add('open');
 }
@@ -30728,6 +30759,16 @@ async function saveParcelle() {
     valeur_actuelle: parseFloat(document.getElementById('parc-valeur-actuelle').value)||0,
     programme_id: document.getElementById('parc-programme').value,
     cout_total: coutTot,
+    tf_num: (document.getElementById('parc-tf-num')||{}).value||'',
+    morcellement: (document.getElementById('parc-morcellement')||{}).value||'',
+    livre_foncier: (document.getElementById('parc-livre-foncier')||{}).value||'',
+    cedant: (document.getElementById('parc-cedant')||{}).value||'',
+    demandeur: (document.getElementById('parc-demandeur')||{}).value||'',
+    contenance: (document.getElementById('parc-contenance')||{}).value||'',
+    geometre: (document.getElementById('parc-geometre')||{}).value||'',
+    date_plan: (document.getElementById('parc-date-plan')||{}).value||'',
+    echelle: (document.getElementById('parc-echelle')||{}).value||'',
+    bornes: (typeof _brnList!=='undefined') ? JSON.parse(JSON.stringify(_brnList)) : ((existing&&existing.bornes)||[]),
     created_at: (existing && existing.created_at) ? existing.created_at : today()
   };
   if (APP.editingId) { var idx=DATA.parcelles.findIndex(function(x){return x.id===APP.editingId;}); if(idx>=0)DATA.parcelles[idx]=p; }
@@ -42531,6 +42572,194 @@ function edsRenderSyscohada() {
     '<tr style="border-top:2px solid #333;font-weight:700;"><td colspan="2">TOTAUX</td><td style="text-align:right;">' + fmtF(vent.materiau + vent.mo + vent.materiel + vent.st) + '</td><td style="text-align:right;">' + fmtF(c.debSec) + '</td></tr>' +
     '</tbody></table>' +
     '<p style="font-size:12px;color:var(--muted);margin-top:10px;">À la production d\u2019immeuble destiné à la vente, ces charges sont reclassées en stocks (compte 35 — En-cours de production de biens). Frais généraux et marge ne sont pas immobilisés.</p>';
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FONCIER — BORNAGE & COORDONNÉES  (extension portefeuille foncier)
+   Tableau des bornes (X/Y/angle/distance) · plan SVG · superficie
+   Données stockées dans le store existant `parcelles` (champ .bornes)
+══════════════════════════════════════════════════════════ */
+
+var _brnList = [];   // bornes en cours d'édition
+
+var FONC_CADASTRE_IDS = ['parc-tf-num','parc-morcellement','parc-livre-foncier','parc-cedant','parc-demandeur','parc-contenance','parc-geometre','parc-date-plan','parc-echelle'];
+var FONC_CADASTRE_MAP = {
+  'parc-tf-num':'tf_num','parc-morcellement':'morcellement','parc-livre-foncier':'livre_foncier',
+  'parc-cedant':'cedant','parc-demandeur':'demandeur','parc-contenance':'contenance',
+  'parc-geometre':'geometre','parc-date-plan':'date_plan','parc-echelle':'echelle'
+};
+
+/* Charge cadastre + bornes dans le modal (édition ou création) */
+function fonLoadCadastreBornes(id) {
+  var p = id ? DATA.parcelles.find(function(x){ return x.id===id; }) : null;
+  FONC_CADASTRE_IDS.forEach(function(fid){
+    var el = document.getElementById(fid); if (!el) return;
+    el.value = p ? (p[FONC_CADASTRE_MAP[fid]] || '') : '';
+  });
+  _brnList = (p && p.bornes) ? JSON.parse(JSON.stringify(p.bornes)) : [];
+  brnRender();
+}
+
+function brnAdd() {
+  var n = _brnList.length + 1;
+  _brnList.push({ nom:'B'+n, x:0, y:0, angle:0, distance:0 });
+  brnRender();
+}
+function brnRemove(i) { _brnList.splice(i,1); brnRender(); }
+
+function brnRender() {
+  var tb = document.getElementById('tbody-bornes');
+  if (!tb) return;
+  if (!_brnList.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--blanc-dim,#888);padding:12px;">Aucune borne — cliquez sur + Borne.</td></tr>'; }
+  else {
+    tb.innerHTML = _brnList.map(function(b,i){
+      return '<tr>'
+        + '<td><input class="form-control" style="width:70px" value="'+(b.nom||'').replace(/"/g,'&quot;')+'" oninput="_brnList['+i+'].nom=this.value"></td>'
+        + '<td><input type="number" step="0.001" class="form-control" style="text-align:right" value="'+(b.x||0)+'" oninput="_brnList['+i+'].x=parseFloat(this.value)||0;brnRenderPlan()"></td>'
+        + '<td><input type="number" step="0.001" class="form-control" style="text-align:right" value="'+(b.y||0)+'" oninput="_brnList['+i+'].y=parseFloat(this.value)||0;brnRenderPlan()"></td>'
+        + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:90px" value="'+(b.angle||0)+'" oninput="_brnList['+i+'].angle=parseFloat(this.value)||0"></td>'
+        + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:100px" value="'+(b.distance||0)+'" oninput="_brnList['+i+'].distance=parseFloat(this.value)||0"></td>'
+        + '<td><button class="btn btn-secondary btn-sm" onclick="brnRemove('+i+')">✕</button></td>'
+        + '</tr>';
+    }).join('');
+  }
+  brnRenderPlan();
+}
+
+/* Surface par la formule de Gauss (shoelace), en m² */
+function brnArea(list) {
+  list = list || _brnList;
+  var pts = list.filter(function(b){ return (b.x||b.y); });
+  if (pts.length < 3) return 0;
+  var s = 0;
+  for (var i=0; i<pts.length; i++) {
+    var a = pts[i], c = pts[(i+1)%pts.length];
+    s += (a.x*c.y - c.x*a.y);
+  }
+  return Math.abs(s/2);
+}
+
+function brnApplyArea() {
+  var a = brnArea();
+  if (!a) { toast('Au moins 3 bornes avec coordonnées requises', 'error'); return; }
+  var el = document.getElementById('parc-sf-totale');
+  if (el) el.value = Math.round(a);
+  toast('Superficie calculée : ' + fmtF(Math.round(a)) + ' m²', 'success');
+}
+
+/* Plan SVG auto-échelle */
+function brnRenderPlan() {
+  var box = document.getElementById('brn-plan');
+  if (!box) return;
+  var pts = _brnList.filter(function(b){ return (b.x||b.y); });
+  if (pts.length < 2) { box.innerHTML = '<span style="color:var(--blanc-dim,#888);font-size:12px;">Plan : saisissez au moins 2 bornes.</span>'; return; }
+  var xs = pts.map(function(p){return p.x;}), ys = pts.map(function(p){return p.y;});
+  var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+  var W=420, H=320, pad=30;
+  var dx=(maxX-minX)||1, dy=(maxY-minY)||1;
+  var sc=Math.min((W-2*pad)/dx, (H-2*pad)/dy);
+  function px(x){ return pad + (x-minX)*sc; }
+  function py(y){ return H - (pad + (y-minY)*sc); }   // Y vers le haut
+  var poly = pts.map(function(p){ return px(p.x)+','+py(p.y); }).join(' ');
+  var marks = pts.map(function(p){
+    return '<circle cx="'+px(p.x).toFixed(1)+'" cy="'+py(p.y).toFixed(1)+'" r="3" fill="#1A6B3A"/>'
+      + '<text x="'+(px(p.x)+5).toFixed(1)+'" y="'+(py(p.y)-4).toFixed(1)+'" font-size="9" fill="#333">'+(p.nom||'')+'</text>';
+  }).join('');
+  var a = brnArea();
+  box.innerHTML = '<svg width="'+W+'" height="'+H+'" style="max-width:100%;background:#fff;border:1px solid #ddd;border-radius:6px;">'
+    + '<polygon points="'+poly+'" fill="rgba(26,107,58,0.10)" stroke="#1A6B3A" stroke-width="1.5"/>'
+    + marks
+    + '</svg>'
+    + '<div style="font-size:12px;margin-top:6px;">Surface calculée (Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong> · '+pts.length+' bornes</div>';
+}
+
+/* Impression du plan de bornage + tableau des coordonnées */
+function brnPrintPlan() {
+  var ref = (document.getElementById('parc-ref')||{}).value || '';
+  var tf = (document.getElementById('parc-tf-num')||{}).value || '';
+  var loc = (document.getElementById('parc-localisation')||{}).value || '';
+  var cont = (document.getElementById('parc-contenance')||{}).value || '';
+  var geo = (document.getElementById('parc-geometre')||{}).value || '';
+  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var rows = _brnList.map(function(b){
+    return '<tr><td>'+(b.nom||'')+'</td><td style="text-align:right;">'+(b.x||0)+'</td><td style="text-align:right;">'+(b.y||0)+'</td><td style="text-align:right;">'+(b.angle||0)+'</td><td style="text-align:right;">'+(b.distance||0)+'</td></tr>';
+  }).join('');
+  var a = brnArea();
+  var w = window.open('','','width=800,height=850');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Plan de bornage</title><style>body{font-family:Georgia,serif;padding:32px;font-size:12px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;font-size:18px;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:5px 9px;}th{background:#E8F4EE;}</style></head><body>'
+    + '<h1>TABLEAU DES COORDONNÉES — PLAN DE BORNAGE</h1>'
+    + '<p><strong>'+soc+'</strong><br>Parcelle : '+ref+' · TF : '+tf+' · '+loc+'<br>Contenance : '+cont+(geo?(' · Géomètre : '+geo):'')+'</p>'
+    + '<table><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th></tr>'+rows+'</table>'
+    + '<p>Surface calculée (formule de Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong></p>'
+    + '</body></html>');
+  w.document.close(); w.print();
+}
+
+/* ── Seed : parcelle YAOU (Bounoua) — morcellement TF 4726 ── */
+async function fonSeedYaou() {
+  var exists = (DATA.parcelles||[]).some(function(p){ return p.ref === 'YAOU-4726' || p.morcellement === '4726'; });
+  if (exists) return;
+  var bornes = [
+    { nom:'B1',  x:430434.395, y:576815.718, angle:62.453,  distance:657.828 },
+    { nom:'B2',  x:430434.395, y:576157.890, angle:126.372, distance:21.528 },
+    { nom:'B3',  x:430414.688, y:576149.225, angle:127.171, distance:549.522 },
+    { nom:'B4',  x:430005.105, y:576515.581, angle:87.488,  distance:10.511 },
+    { nom:'B5',  x:430013.508, y:576521.896, angle:155.989, distance:26.125 },
+    { nom:'B6',  x:430039.604, y:576520.674, angle:217.844, distance:57.839 },
+    { nom:'B7',  x:430095.873, y:576534.056, angle:209.579, distance:9.288 },
+    { nom:'B8',  x:430104.485, y:576537.535, angle:221.816, distance:29.593 },
+    { nom:'B9',  x:430126.604, y:576557.195, angle:299.125, distance:22.427 },
+    { nom:'B10', x:430111.936, y:576574.161, angle:102.797, distance:128.725 },
+    { nom:'B11', x:430205.521, y:576662.546, angle:189.366, distance:275.399 }
+  ];
+  var p = {
+    id: 'parc_yaou_4726',
+    ref: 'YAOU-4726',
+    localisation: 'YAOU (Bounoua)',
+    commune: 'Grand-Bassam',
+    sous_prefecture: 'Bonoua',
+    superficie: 143925,          /* 14 ha 39 a 25 ca */
+    superficie_const: 0,
+    description: 'Morcellement du TF 4726 — Livre Foncier de Bassam. Plan certifié conforme (Abidjan, 09/06/2022).',
+    type_titre: 'tf_definitif',
+    num_titre: 'TF 21289',
+    date_titre: '',
+    notaire: 'SORO NANGA DIDIER (Géomètre-Expert)',
+    vendeur: 'ÉTAT-CI',
+    date_bornage: '2022-06-09',
+    statut: 'tf_definitif',
+    risque: 'faible',
+    obs_jur: 'Cédant : ÉTAT-CI. Copie certifiée conforme par DIE N\u2019Goran Bertrand, Géomètre Assermenté du Cadastre.',
+    prix_acq: 0, frais_mutation: 0, frais_bornage: 0, frais_notaire: 0, valeur_actuelle: 0,
+    programme_id: '',
+    cout_total: 0,
+    /* ── cadastre + bornes ── */
+    tf_num: 'TF 21289',
+    morcellement: '4726',
+    livre_foncier: 'Bassam',
+    cedant: 'ÉTAT-CI',
+    demandeur: 'LGI-BTP',
+    contenance: '14 ha 39 a 25 ca',
+    geometre: 'SORO NANGA DIDIER',
+    date_plan: '2022-06-09',
+    echelle: '1/7000',
+    bornes: bornes,
+    created_at: today()
+  };
+  DATA.parcelles.push(p);
+  await dbPut('parcelles', p);
+}
+
+/* Point d'entrée page Foncier : seed puis rendu */
+async function fonEnter() {
+  if (!DATA.parcelles || !DATA.parcelles.length) {
+    var rows = await dbGetAll('parcelles');
+    if (rows && rows.length) DATA.parcelles = rows;
+  }
+  await fonSeedYaou();
+  renderParcelles();
+  if (typeof updateFoncierKPIs === 'function') updateFoncierKPIs();
 }
 
 </script>
