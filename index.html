@@ -2578,6 +2578,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <div class="tab-nav" id="compta-tabs">
           <button class="tab-btn active" onclick="switchTab('compta','journal')">📓 Journal</button>
+          <button class="tab-btn" onclick="switchTab('compta','versements');renderComptaVersements()">💳 Versements</button>
           <button class="tab-btn" onclick="switchTab('compta','balance')">⚖️ Balance</button>
           <button class="tab-btn" onclick="switchTab('compta','tiers')">👥 Comptes Tiers</button>
           <button class="tab-btn" onclick="switchTab('compta','amortissements')">📉 Amortissements</button>
@@ -2590,6 +2591,19 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
 
         <!-- Journal -->
+        <div class="tab-pane" id="tab-compta-versements">
+          <div class="card" style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <div><strong>Versements souscripteurs</strong><div style="font-size:12px;color:var(--blanc-dim);">Modifier un versement recalcule automatiquement les commissions liées (extourne + régénération).</div></div>
+              <input type="text" class="search-input" id="compta-vers-search" placeholder="🔍 Réf, souscripteur..." oninput="renderComptaVersements()" style="min-width:200px;">
+            </div>
+          </div>
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>Réf</th><th>Date</th><th>Souscripteur</th><th>Type</th><th style="text-align:right;">Montant</th><th>Mode</th><th>Commissions liées</th><th></th></tr></thead>
+            <tbody id="tbody-compta-versements"></tbody>
+          </table></div></div>
+        </div>
+
         <div class="tab-pane active" id="tab-compta-journal">
           <div class="filters-bar">
             <input type="text" class="search-input" placeholder="🔍 Libellé, compte, référence..." id="search-ecritures" oninput="filterEcritures()">
@@ -16004,6 +16018,7 @@ async function savePaiement() {
       closeModal('modal-paiement');
       toast('Versement modifié — commissions réimpactées.', 'success');
       renderVersements();
+      if (typeof renderComptaVersements === 'function') renderComptaVersements();
       refreshDashboard();
     }
     return;
@@ -43735,6 +43750,51 @@ function editVersement(id) {
   var t = document.querySelector('#modal-paiement .modal-header h3'); if (t) t.textContent = 'Modifier le versement';
   var b = document.getElementById('btn-save-paiement'); if (b) b.textContent = '💾 Enregistrer les modifications';
   openModal('modal-paiement');
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   COMPTABILITÉ — Onglet Versements souscripteurs (éditable)
+   Modifier ici recalcule les commissions liées (extourne + régén.)
+══════════════════════════════════════════════════════════ */
+function renderComptaVersements() {
+  var tb = document.getElementById('tbody-compta-versements');
+  if (!tb) return;
+  var q = ((document.getElementById('compta-vers-search') || {}).value || '').toLowerCase();
+  var typeLabels = { frais_souscription:'Frais souscription', apport:'Apport', mensualite:'Mensualité', regularisation:'Régularisation', autre:'Autre' };
+  var modeLabels = { especes:'Espèces', virement:'Virement', cheque:'Chèque', mobile_money:'Mobile Money' };
+  var fmt = (typeof fcfa === 'function') ? fcfa : function(n){ return fmtF(n) + ' FCFA'; };
+  var dts = (typeof dateShort === 'function') ? dateShort : function(d){ return d || '—'; };
+
+  var list = (DATA.versements || []).filter(function(v) {
+    var cl = (DATA.clients || []).find(function(c){ return c.id === v.client_id; });
+    var nom = cl ? (cl.nom + ' ' + (cl.prenoms || '')).toLowerCase() : '';
+    return !q || nom.indexOf(q) !== -1 || (v.ref || '').toLowerCase().indexOf(q) !== -1;
+  }).sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
+
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun versement</td></tr>'; return; }
+
+  tb.innerHTML = list.map(function(v) {
+    var cl = (DATA.clients || []).find(function(c){ return c.id === v.client_id; });
+    var nom = cl ? (cl.nom + ' ' + (cl.prenoms || '')) : '—';
+    var comms = (DATA.commissions || []).filter(function(c){ return c.versement_id === v.id && c.statut !== 'annulee'; });
+    var totComm = comms.reduce(function(s, c){ return s + (c.montant_comm || 0); }, 0);
+    var payee = comms.some(function(c){ return c.statut === 'payee'; });
+    var commTxt = comms.length
+      ? (fmt(totComm) + ' <span style="font-size:11px;color:var(--blanc-dim);">(' + comms.length + ')' + (payee ? ' 🔒payée' : '') + '</span>')
+      : '<span style="color:var(--blanc-dim);">—</span>';
+    return '<tr>'
+      + '<td><strong>' + (v.ref || '—') + '</strong></td>'
+      + '<td>' + dts(v.date) + '</td>'
+      + '<td>' + nom + '</td>'
+      + '<td><span class="badge badge-bleu">' + (typeLabels[v.type] || v.type || '—') + '</span></td>'
+      + '<td style="text-align:right;color:var(--vert);font-weight:bold;">' + fmt(v.montant) + '</td>'
+      + '<td>' + (modeLabels[v.mode] || v.mode || '—') + '</td>'
+      + '<td style="font-size:12px;">' + commTxt + '</td>'
+      + '<td style="white-space:nowrap;text-align:right;">'
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="editVersement(\'' + v.id + '\')" title="Modifier (recalcule les commissions)">✎</button>'
+      + '</td></tr>';
+  }).join('');
 }
 
 </script>
