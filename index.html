@@ -2045,17 +2045,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">📊</span><span>Tableau de bord</span>
       </div>
 
-      <!-- ÉTAPE 1 : FONCIER — acquérir le terrain -->
+      <!-- ÉTAPE 1 : FONCIER — prospecter, acquérir et sécuriser le terrain -->
       <div class="nav-section"><span class="nav-step">1</span><span>Foncier</span></div>
       <div class="nav-item" onclick="goTo('foncier')" data-page="foncier">
         <span class="nav-icon">🗺️</span><span>Portefeuille Foncier</span>
       </div>
+      <div class="nav-item" onclick="goTo('foncierops')" data-page="foncierops">
+        <span class="nav-icon">🌍</span><span>Acquisition &amp; Aménagement Foncier</span>
+      </div>
       <div class="nav-item" onclick="goTo('juridique')" data-page="juridique">
         <span class="nav-icon">⚖️</span><span>Dossiers Juridiques</span>
         <span class="nav-badge" id="badge-juridique" style="display:none;">!</span>
-      </div>
-      <div class="nav-item" onclick="goTo('amenagement')" data-page="amenagement">
-        <span class="nav-icon">🌍</span><span>Aménagement foncier</span>
       </div>
 
       <!-- ÉTAPE 2 : MONTAGE — concevoir et contractualiser le programme -->
@@ -2064,7 +2064,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">🏗️</span><span>Programmes</span>
       </div>
       <div class="nav-item" onclick="goTo('conception')" data-page="conception">
-        <span class="nav-icon">📐</span><span>Plans & Conception</span>
+        <span class="nav-icon">📐</span><span>Plans &amp; Conception</span>
       </div>
       <div class="nav-item" onclick="goTo('constructeurs')" data-page="constructeurs">
         <span class="nav-icon">👷</span><span>Constructeurs</span>
@@ -2074,22 +2074,23 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-badge" id="badge-conventions" style="display:none;">!</span>
       </div>
 
-      <!-- ÉTAPE 3 : TRAVAUX — construire -->
-      <div class="nav-section"><span class="nav-step">3</span><span>Travaux & Chantier</span></div>
+      <!-- ÉTAPE 3 : ÉTUDES & CHANTIER — estimer puis construire -->
+      <div class="nav-section"><span class="nav-step">3</span><span>Études &amp; Chantier</span></div>
+      <div class="nav-item" onclick="goTo('dqe')" data-page="dqe">
+        <span class="nav-icon">📊</span><span>DQE &amp; Coût de revient</span>
+      </div>
+      <div class="nav-item" onclick="goTo('debourse')" data-page="debourse">
+        <span class="nav-icon">🧱</span><span>Étude de Prix &amp; Déboursé Sec</span>
+      </div>
+      <div class="nav-item" onclick="goTo('amenagement')" data-page="amenagement">
+        <span class="nav-icon">🚧</span><span>Marchés d'Aménagement (VRD)</span>
+      </div>
       <div class="nav-item" onclick="goTo('avancement')" data-page="avancement">
         <span class="nav-icon">📈</span><span>Suivi Chantiers</span>
       </div>
 
-      <div class="nav-item" onclick="goTo('dqe')" data-page="dqe">
-        <span class="nav-icon">📊</span><span>DQE &amp; Coût de revient</span>
-      </div>
-
-      <div class="nav-item" onclick="goTo('debourse')" data-page="debourse">
-        <span class="nav-icon">🧱</span><span>Étude de Prix &amp; Déboursé Sec</span>
-      </div>
-
       <!-- ÉTAPE 4 : COMMERCIAL — prospecter et convertir -->
-      <div class="nav-section"><span class="nav-step">4</span><span>Commercial & CRM</span></div>
+      <div class="nav-section"><span class="nav-step">4</span><span>Commercial &amp; CRM</span></div>
       <div class="nav-item" onclick="goTo('leads')" data-page="leads">
         <span class="nav-icon">🎯</span><span>Pipeline Leads</span>
         <span class="nav-badge" id="badge-leads" style="display:none;">0</span>
@@ -2098,7 +2099,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">📣</span><span>Plan d'Action Commercial</span>
       </div>
       <div class="nav-item" onclick="goTo('crm-carte')" data-page="crm-carte">
-        <span class="nav-icon">📍</span><span>Carte & Géoloc.</span>
+        <span class="nav-icon">📍</span><span>Carte &amp; Géoloc.</span>
       </div>
       <div class="nav-item" onclick="goTo('crm-itineraires')" data-page="crm-itineraires">
         <span class="nav-icon">🧭</span><span>Itinéraires terrain</span>
@@ -2111,9 +2112,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
 
       <!-- ÉTAPE 5 : VENTES — réserver, signer, formaliser -->
-      <div class="nav-section"><span class="nav-step">5</span><span>Ventes & Contrats</span></div>
+      <div class="nav-section"><span class="nav-step">5</span><span>Ventes &amp; Contrats</span></div>
       <div class="nav-item" onclick="goTo('lots')" data-page="lots">
-        <span class="nav-icon">🏠</span><span>Lots & Réservations</span>
+        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
       </div>
       <div class="nav-item" onclick="goTo('clients')" data-page="clients">
         <span class="nav-icon">👥</span><span>Souscripteurs</span>
@@ -2130,13 +2131,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-badge" id="badge-relance" style="display:none;">0</span>
       </div>
 
-      <!-- ÉTAPE 7 : LIVRAISON — remettre les clés (Espace souscripteur + Archives) -->
-      <div class="nav-section"><span class="nav-step">7</span><span>Livraison & SAV</span></div>
-      <div class="nav-item" onclick="goTo('portail-apporteur')" data-page="portail-apporteur">
-        <span class="nav-icon">🤝</span><span>Portail Apporteur</span>
-      </div>
+      <!-- ÉTAPE 7 : LIVRAISON & SAV — remettre les clés -->
+      <div class="nav-section"><span class="nav-step">7</span><span>Livraison &amp; SAV</span></div>
       <div class="nav-item" onclick="goTo('portail-souscripteur')" data-page="portail-souscripteur">
         <span class="nav-icon">🔑</span><span>Espace souscripteur</span>
+      </div>
+      <div class="nav-item" onclick="goTo('portail-apporteur')" data-page="portail-apporteur">
+        <span class="nav-icon">🤝</span><span>Portail Apporteur</span>
       </div>
       <div class="nav-item" onclick="goTo('archives-docs')" data-page="archives-docs">
         <span class="nav-icon">📁</span><span>Archives documentaires</span>
@@ -2160,11 +2161,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">👤</span><span>Employés</span>
       </div>
       <div class="nav-item" onclick="goTo('rh-pointage')" data-page="rh-pointage">
-        <span class="nav-icon">⏱️</span><span>Pointage & Présences</span>
+        <span class="nav-icon">⏱️</span><span>Pointage &amp; Présences</span>
         <span class="nav-badge" id="badge-pointage" style="display:none;">!</span>
       </div>
       <div class="nav-item" onclick="goTo('rh-paie')" data-page="rh-paie">
-        <span class="nav-icon">💼</span><span>Paie & Bulletins</span>
+        <span class="nav-icon">💼</span><span>Paie &amp; Bulletins</span>
       </div>
       <div class="nav-item" onclick="goTo('rh-declarations')" data-page="rh-declarations">
         <span class="nav-icon">📑</span><span>Déclarations Sociales</span>
@@ -2174,7 +2175,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">📒</span><span>Livre de Paie</span>
       </div>
       <div class="nav-item" onclick="goTo('rh-conges')" data-page="rh-conges">
-        <span class="nav-icon">🌴</span><span>Congés & Absences</span>
+        <span class="nav-icon">🌴</span><span>Congés &amp; Absences</span>
         <span class="nav-badge" id="badge-conges" style="display:none;"></span>
       </div>
       <div class="nav-item" onclick="goTo('rh-recrutement')" data-page="rh-recrutement">
@@ -2182,13 +2183,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-badge" id="badge-recrutement" style="display:none;"></span>
       </div>
       <div class="nav-item" onclick="goTo('rh-formations')" data-page="rh-formations">
-        <span class="nav-icon">📚</span><span>Formations & FDFP</span>
+        <span class="nav-icon">📚</span><span>Formations &amp; FDFP</span>
       </div>
 
       <!-- ── TRANSVERSAL (hors flux métier) ──────────────────────── -->
       <div class="nav-section"><span class="nav-step">🤝</span><span>Collaboration</span></div>
       <div class="nav-item" onclick="goTo('accueil-visites')" data-page="accueil-visites">
-        <span class="nav-icon">🏢</span><span>Accueil & Visites</span>
+        <span class="nav-icon">🏢</span><span>Accueil &amp; Visites</span>
         <span class="nav-badge" id="badge-visites-attente" style="display:none;">0</span>
       </div>
       <div class="nav-item" onclick="goTo('calendrier')" data-page="calendrier">
@@ -2211,6 +2212,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <span class="nav-icon">🌐</span><span>Site / Portail</span>
         <span class="nav-badge" id="badge-portail-msg" style="display:none;">0</span>
       </div>
+
     </nav>
 
     <!-- Contenu principal -->
@@ -5318,6 +5320,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="page-subtitle">Gestion des parcelles, titres fonciers et acquisitions — Côte d'Ivoire</div>
           </div>
           <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="ouvrirCarteFoncier()">🗺️ Géolocaliser</button>
           <button class="btn btn-secondary btn-sm" onclick="exportFoncierCSV()">⬇ Export</button>
           <button class="btn btn-primary" onclick="openParcelle()">+ Nouvelle parcelle</button>
         </div>
@@ -5846,7 +5849,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <input type="checkbox" id="geo-show-parcelles" checked onchange="renderCarteGeo()" style="accent-color:#1A6B3A;">
             <span style="color:#1A6B3A;font-weight:600;">🟩 Parcelles (bornage)</span>
           </label>
-          <button class="btn btn-secondary btn-sm" onclick="zoomParcelles()">🎯 Voir parcelles</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;">
+            <input type="checkbox" id="geo-show-operations" checked onchange="renderCarteGeo()" style="accent-color:#3B82F6;">
+            <span style="color:#2563EB;font-weight:600;">📍 Opérations foncières</span>
+          </label>
+          <button class="btn btn-secondary btn-sm" onclick="zoomFoncier()">🎯 Voir le foncier</button>
           <select class="filter-select" id="geo-filter-commercial" onchange="renderCarteGeo()" style="min-width:140px;">
             <option value="">Tous commerciaux</option>
           </select>
@@ -8243,6 +8250,179 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
       </div>
 
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : ACQUISITION & AMÉNAGEMENT FONCIER
+           7 pipelines · Agents du foncier · Répartition · Dashboard
+      ═══════════════════════════════════════════════════ -->
+      <div class="page" id="page-foncierops">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Acquisition &amp; Aménagement Foncier</div>
+            <div class="page-subtitle">Prospection → Négociation → Juridique → Administratif → Aménagement → Répartition → Commercialisation</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="ouvrirCarteFoncier()">🗺️ Géolocaliser</button>
+          <button class="btn btn-primary btn-sm" onclick="afNewOperation()">+ Nouvelle opération</button>
+        </div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('af','pipeline')">🗂 Pipeline</button>
+          <button class="tab-btn" onclick="switchTab('af','agents')">🧑‍💼 Agents du foncier</button>
+          <button class="tab-btn" onclick="switchTab('af','dashboard')">📊 Tableau de bord</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-af-pipeline">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <input type="text" class="search-input" id="af-search" placeholder="🔍 Site, village, propriétaire..." oninput="afRenderPipeline()" style="flex:1;min-width:160px;">
+            <select class="filter-select" id="af-filter-agent" onchange="afRenderPipeline()"><option value="">Tous les agents</option></select>
+          </div>
+          <div id="af-kanban" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;"></div>
+        </div>
+
+        <div class="tab-pane" id="tab-af-agents">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <div class="spacer"></div>
+            <button class="btn btn-primary btn-sm" onclick="afOpenAgent()">+ Nouvel agent</button>
+          </div>
+          <div id="af-agents-liste"></div>
+        </div>
+
+        <div class="tab-pane" id="tab-af-dashboard">
+          <div id="af-dashboard"></div>
+        </div>
+      </div>
+
+      <!-- ── MODAL : Opération foncière (7 pipelines) ── -->
+      <div class="modal-overlay" id="modal-af-operation">
+        <div class="modal" style="max-width:980px;">
+          <div class="modal-header">
+            <div class="modal-title" id="af-op-titre">Opération foncière</div>
+            <button class="modal-close" onclick="closeModal('modal-af-operation')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Désignation du site *</label><input type="text" id="af-op-nom" class="form-control" placeholder="Site Yaou Extension Sud"></div>
+              <div class="form-group"><label>Agent du foncier</label><select id="af-op-agent" class="form-control"></select></div>
+              <div class="form-group"><label>Étape (pipeline)</label><select id="af-op-stage" class="form-control" onchange="afStageBadge()"></select></div>
+            </div>
+
+            <div class="tab-nav" style="flex-wrap:wrap;margin-top:8px;">
+              <button class="tab-btn active" onclick="switchTab('af-op','prospection')">🔍 Prospection</button>
+              <button class="tab-btn" onclick="switchTab('af-op','negociation')">🤝 Négociation</button>
+              <button class="tab-btn" onclick="switchTab('af-op','juridique')">⚖️ Juridique</button>
+              <button class="tab-btn" onclick="switchTab('af-op','admin')">🏛️ Administratif</button>
+              <button class="tab-btn" onclick="switchTab('af-op','amenagement')">🚧 Aménagement</button>
+              <button class="tab-btn" onclick="switchTab('af-op','repartition')">🧮 Répartition</button>
+              <button class="tab-btn" onclick="switchTab('af-op','commercial')">💰 Commercialisation</button>
+            </div>
+
+            <!-- P1 Prospection -->
+            <div class="tab-pane active" id="tab-af-op-prospection">
+              <div class="form-grid">
+                <div class="form-group"><label>Village</label><input id="af-village" class="form-control"></div>
+                <div class="form-group"><label>Commune</label><input id="af-commune" class="form-control"></div>
+                <div class="form-group"><label>Département</label><input id="af-departement" class="form-control"></div>
+                <div class="form-group"><label>Superficie (m²)</label><input type="number" id="af-superficie" class="form-control" value="0"></div>
+                <div class="form-group"><label>Latitude</label><input id="af-lat" class="form-control" placeholder="5.218"></div>
+                <div class="form-group"><label>Longitude</label><input id="af-lng" class="form-control" placeholder="-3.628"></div>
+                <div class="form-group span-2"><label>Statut de la négociation</label><input id="af-statut-nego" class="form-control" placeholder="Premier contact, accord verbal..."></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;"><strong>Propriétaires identifiés</strong><button class="btn btn-secondary btn-sm" onclick="afAddProprietaire()">+ Propriétaire</button></div>
+              <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Contact</th><th>Qualité</th><th></th></tr></thead><tbody id="af-tbody-prop"></tbody></table></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;"><strong>Documents disponibles</strong><button class="btn btn-secondary btn-sm" onclick="afAddDocument()">+ Document</button></div>
+              <div class="table-wrap"><table><thead><tr><th>Document</th><th>Disponible</th><th></th></tr></thead><tbody id="af-tbody-doc"></tbody></table></div>
+            </div>
+
+            <!-- P2 Négociation -->
+            <div class="tab-pane" id="tab-af-op-negociation">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;"><strong>Rencontres &amp; comptes rendus</strong><button class="btn btn-secondary btn-sm" onclick="afAddRencontre()">+ Rencontre</button></div>
+              <div class="table-wrap"><table><thead><tr><th>Date</th><th>Objet</th><th>Compte rendu</th><th></th></tr></thead><tbody id="af-tbody-renc"></tbody></table></div>
+              <div class="form-grid" style="margin-top:12px;">
+                <div class="form-group span-2"><label>Proposition de clé de répartition</label><input id="af-prop-cle" class="form-control" placeholder="Prop. 40% / Aménageur 35% / Financier 25%"></div>
+                <div class="form-group"><label><input type="checkbox" id="af-accord-principe"> Accord de principe validé</label></div>
+              </div>
+            </div>
+
+            <!-- P3 Juridique -->
+            <div class="tab-pane" id="tab-af-op-juridique">
+              <div class="form-grid">
+                <div class="form-group span-2"><label>Vérification des droits fonciers</label><textarea id="af-verif-droits" class="form-control" rows="2" placeholder="Nature des droits, TF/ACD, antériorité..."></textarea></div>
+                <div class="form-group"><label><input type="checkbox" id="af-juridique-valide"> Validation juridique avant engagement</label></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 6px;"><strong>Litiges éventuels</strong><button class="btn btn-secondary btn-sm" onclick="afAddLitige()">+ Litige</button></div>
+              <div class="table-wrap"><table><thead><tr><th>Objet</th><th>Statut</th><th></th></tr></thead><tbody id="af-tbody-lit"></tbody></table></div>
+            </div>
+
+            <!-- P4 Administratif -->
+            <div class="tab-pane" id="tab-af-op-admin">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;"><strong>Démarches ministérielles</strong><div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm" onclick="afChargerProcedureType()">📋 Procédure-type CI</button><button class="btn btn-secondary btn-sm" onclick="afAddDemarche()">+ Démarche</button></div></div>
+              <div class="table-wrap"><table><thead><tr><th>Étape</th><th>Statut</th><th>Dépôt</th><th>Échéance</th><th></th></tr></thead><tbody id="af-tbody-dem"></tbody></table></div>
+              <div id="af-admin-alertes" style="margin-top:10px;"></div>
+            </div>
+
+            <!-- P5 Aménagement -->
+            <div class="tab-pane" id="tab-af-op-amenagement">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;"><strong>Budget d'aménagement (VRD)</strong><button class="btn btn-secondary btn-sm" onclick="afAddPosteVrd()">+ Poste</button></div>
+              <div class="table-wrap"><table><thead><tr><th>Poste</th><th style="text-align:right;">Budget (FCFA)</th><th style="text-align:right;">Avancement %</th><th></th></tr></thead><tbody id="af-tbody-vrd"></tbody></table></div>
+              <div id="af-vrd-synth" class="card" style="margin-top:12px;background:var(--card2);"></div>
+            </div>
+
+            <!-- P6 Répartition -->
+            <div class="tab-pane" id="tab-af-op-repartition">
+              <div class="form-grid">
+                <div class="form-group"><label>Nombre total de lots</label><input type="number" id="af-nb-lots" class="form-control" value="0" oninput="afCalcRepartition()"></div>
+                <div class="form-group"><label>Propriétaires (%)</label><input type="number" id="af-cle-prop" class="form-control" value="40" step="0.1" oninput="afCalcRepartition()"></div>
+                <div class="form-group"><label>Aménageur (%)</label><input type="number" id="af-cle-amen" class="form-control" value="35" step="0.1" oninput="afCalcRepartition()"></div>
+                <div class="form-group"><label>Financier (%)</label><input type="number" id="af-cle-fin" class="form-control" value="25" step="0.1" oninput="afCalcRepartition()"></div>
+              </div>
+              <div id="af-repartition-res" class="card" style="margin-top:12px;background:var(--card2);"></div>
+            </div>
+
+            <!-- P7 Commercialisation -->
+            <div class="tab-pane" id="tab-af-op-commercial">
+              <div class="form-grid">
+                <div class="form-group"><label>Prix de vente moyen / lot (FCFA)</label><input type="number" id="af-prix-lot" class="form-control" value="0" oninput="afCalcRepartition()"></div>
+                <div class="form-group"><label>Lots réservés</label><input type="number" id="af-lots-reserves" class="form-control" value="0"></div>
+                <div class="form-group"><label>Lots vendus</label><input type="number" id="af-lots-vendus" class="form-control" value="0"></div>
+                <div class="form-group"><label>Titres délivrés</label><input type="number" id="af-titres" class="form-control" value="0"></div>
+              </div>
+              <div id="af-commercial-res" class="card" style="margin-top:12px;background:var(--card2);"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-af-operation')">Annuler</button>
+            <button class="btn btn-secondary" onclick="afTransfererFoncier()">📍 → Portefeuille Foncier</button>
+            <button class="btn btn-danger" id="af-op-del" onclick="afDeleteOperation()" style="display:none;">🗑 Supprimer</button>
+            <button class="btn btn-primary" onclick="afSaveOperation()">💾 Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MODAL : Agent du foncier ── -->
+      <div class="modal-overlay" id="modal-af-agent">
+        <div class="modal" style="max-width:560px;">
+          <div class="modal-header">
+            <div class="modal-title" id="af-agent-titre">Agent du foncier</div>
+            <button class="modal-close" onclick="closeModal('modal-af-agent')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Nom complet *</label><input id="af-ag-nom" class="form-control"></div>
+              <div class="form-group"><label>Téléphone</label><input id="af-ag-tel" class="form-control"></div>
+              <div class="form-group"><label>Email</label><input id="af-ag-email" class="form-control"></div>
+              <div class="form-group"><label>Objectif terrains</label><input type="number" id="af-ag-obj-terrains" class="form-control" value="0"></div>
+              <div class="form-group"><label>Objectif superficie (m²)</label><input type="number" id="af-ag-obj-surface" class="form-control" value="0"></div>
+              <div class="form-group span-2"><label>Taux de commission (% du CA des lots vendus sur ses opérations)</label><input type="number" id="af-ag-commission" class="form-control" value="2" step="0.1"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-af-agent')">Annuler</button>
+            <button class="btn btn-primary" onclick="afSaveAgent()">💾 Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════════════════════════════════════════════════
            PAGE : RÉUNIONS DIRECTION
            Module : Planification 360° · PV · Plan d'action
@@ -8926,7 +9106,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-paiement')">Annuler</button>
-      <button class="btn btn-primary" onclick="savePaiement()">Enregistrer + Reçu</button>
+      <button class="btn btn-primary" id="btn-save-paiement" onclick="savePaiement()">Enregistrer + Reçu</button>
     </div>
   </div>
 </div>
@@ -12688,14 +12868,17 @@ var DATA = {
   formations_rh: [],        // sessions de formation
   /* v113 — Étude de prix & déboursé sec */
   eds_ouvrages: [],
-  eds_etudes: []
+  eds_etudes: [],
+  /* v114 — Aménagement foncier */
+  af_operations: [],
+  af_agents: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 113; /* v113: stores eds_ouvrages, eds_etudes — Étude de prix & déboursé sec BTP */
+var DB_VERSION = 114; /* v114: stores af_operations, af_agents — Acquisition & aménagement foncier */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -12736,7 +12919,9 @@ var ALL_STORES = [
   /* v112 — Documents joints aux dossiers juridiques */
   'docs_juridiques',
   /* v113 — Étude de prix & déboursé sec (BTP) */
-  'eds_ouvrages','eds_etudes'
+  'eds_ouvrages','eds_etudes',
+  /* v114 — Acquisition & aménagement foncier */
+  'af_operations','af_agents'
 ];
 
 function initDB() {
@@ -13932,6 +14117,7 @@ function goTo(page) {
   if (page === 'previsionnel') { loadPrevisionnel(); }
   if (page === 'amenagement') { loadAmenagement(); }
   if (page === 'debourse') { edsRender(); }
+  if (page === 'foncierops') { afRender(); }
 }
 
 function switchTab(context, tab) {
@@ -13998,6 +14184,8 @@ function switchTab(context, tab) {
   else if (context === 'modal-visite')     prefix = 'tab-modal-visite-';
   else if (context === 'params-reporting') prefix = 'tab-params-reporting-';
   else if (context === 'debourse')         prefix = 'tab-debourse-';
+  else if (context === 'af')               prefix = 'tab-af-';
+  else if (context === 'af-op')            prefix = 'tab-af-op-';
   else return;
 
   /* Masquer tous les panneaux du contexte */
@@ -15156,6 +15344,9 @@ function exportClients() {
    PAIEMENTS / VERSEMENTS
 ────────────────────────────────────────────────────── */
 function openPaiementModal(clientId) {
+  APP._editVersementId = null;
+  var _t=document.querySelector('#modal-paiement .modal-header h3'); if(_t) _t.textContent='Enregistrer un versement';
+  var _b=document.getElementById('btn-save-paiement'); if(_b) _b.textContent='Enregistrer + Reçu';
   populateClientSelects();
   clearPaiementForm();
   document.getElementById('v-date').value = today();
@@ -15792,6 +15983,32 @@ async function savePaiement() {
   var date = document.getElementById('v-date').value;
   if (!cid || !montant || !date) { toast('Client, montant et date sont obligatoires.', 'error'); return; }
 
+  // ── MODE ÉDITION : mise à jour + ré-impact des commissions ──
+  if (APP._editVersementId) {
+    var vEdit = DATA.versements.find(function(x){ return x.id === APP._editVersementId; });
+    if (vEdit) {
+      vEdit.client_id = cid;
+      vEdit.date      = date;
+      vEdit.type      = document.getElementById('v-type').value;
+      vEdit.montant   = montant;
+      vEdit.mode      = document.getElementById('v-mode').value;
+      vEdit.reference = document.getElementById('v-reference').value;
+      vEdit.mois      = document.getElementById('v-mois').value;
+      vEdit.notes     = document.getElementById('v-notes').value;
+      vEdit.modified_at = today();
+      await dbPut('versements', vEdit);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_versements', vEdit);
+      await reimpacterCommissionsVersement(vEdit);
+      if (typeof majStatutLotClient === 'function') await majStatutLotClient(vEdit.client_id);
+      APP._editVersementId = null;
+      closeModal('modal-paiement');
+      toast('Versement modifié — commissions réimpactées.', 'success');
+      renderVersements();
+      refreshDashboard();
+    }
+    return;
+  }
+
   var ref = 'VRS-' + new Date().getFullYear() + '-' + String(DATA.versements.length + 1).padStart(4, '0');
   var versement = {
     id: uid(),
@@ -15859,6 +16076,7 @@ function renderVersements() {
       + '<td>' + (modeLabels[v.mode] || v.mode) + '</td>'
       + '<td style="font-size:12px;color:var(--blanc-dim);">' + (v.notes || '—') + '</td>'
       + '<td style="white-space:nowrap;">'
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="editVersement(\'' + v.id + '\')" title="Modifier">✎</button> '
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="showRecu(DATA.versements.find(function(x){return x.id===\'' + v.id + '\';}))" title="Reçu">🖨️</button> '
       + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteVersement(\'' + v.id + '\')" title="Supprimer">🗑</button>'
       + '</td></tr>';
@@ -21908,6 +22126,7 @@ var _geoLayerClients = null;
 var _geoLayerCommerciaux = null;
 var _geoLayerProgrammes = null;
 var _geoLayerParcelles = null;
+var _geoLayerOperations = null;
 var _leafletLoaded = false;
 
 // Coordonnées des communes d'Abidjan et villes CI
@@ -22038,6 +22257,7 @@ function _buildMap() {
   _geoLayerCommerciaux = L.layerGroup().addTo(_geoMap);
   _geoLayerProgrammes  = L.layerGroup().addTo(_geoMap);
   _geoLayerParcelles   = L.layerGroup().addTo(_geoMap);
+  _geoLayerOperations  = L.layerGroup().addTo(_geoMap);
 
   // Marqueurs des programmes (fixes)
   DATA.programmes.forEach(function(p) {
@@ -22097,7 +22317,9 @@ function renderCarteGeo() {
   if (_geoLayerCommerciaux) _geoLayerCommerciaux.clearLayers();
   if (_geoLayerProgrammes)  _geoLayerProgrammes.clearLayers();
   if (_geoLayerParcelles)   _geoLayerParcelles.clearLayers();
+  if (_geoLayerOperations)  _geoLayerOperations.clearLayers();
   if (typeof renderParcellesCarte === 'function') renderParcellesCarte();
+  if (typeof afRenderOperationsCarte === 'function') afRenderOperationsCarte();
 
   var nbP = 0, nbC = 0, nbComm = 0;
   var totalCA = 0, totalEnc = 0;
@@ -42976,6 +43198,543 @@ function genererPlanParcellaire(id) {
     + '</div></div></body></html>'
   );
   w.document.close();
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   MODULE — ACQUISITION & AMÉNAGEMENT FONCIER
+   7 pipelines · Agents du foncier (CRM) · Répartition · Dashboard
+   Stores : af_operations, af_agents
+══════════════════════════════════════════════════════════ */
+
+if (!DATA.af_operations) DATA.af_operations = [];
+if (!DATA.af_agents)     DATA.af_agents     = [];
+
+var AF_STAGES = [
+  { k:'prospection',        t:'Prospection',        e:'🔍', c:'#3B82F6' },
+  { k:'negociation',        t:'Négociation',        e:'🤝', c:'#8B5CF6' },
+  { k:'juridique',          t:'Vérif. juridique',   e:'⚖️', c:'#F59E0B' },
+  { k:'admin',              t:'Procédure admin.',   e:'🏛️', c:'#0EA5E9' },
+  { k:'amenagement',        t:'Aménagement',        e:'🚧', c:'#EF4444' },
+  { k:'repartition',        t:'Répartition lots',   e:'🧮', c:'#10B981' },
+  { k:'commercialisation',  t:'Commercialisation',  e:'💰', c:'#1A6B3A' }
+];
+function afStage(k){ return AF_STAGES.find(function(s){ return s.k===k; }) || AF_STAGES[0]; }
+
+var _afOp = null;   /* opération en cours d'édition (copie de travail) */
+
+/* ── Entrée page ── */
+async function afRender() {
+  if (!DATA.af_operations.length) { var o = await dbGetAll('af_operations'); if (o&&o.length) DATA.af_operations = o; }
+  if (!DATA.af_agents.length)     { var a = await dbGetAll('af_agents');     if (a&&a.length) DATA.af_agents = a; }
+  afFillAgentSelects();
+  afRenderPipeline();
+  afRenderAgents();
+  afRenderDashboard();
+}
+
+function afFillAgentSelects() {
+  var opts = '<option value="">— Agent —</option>' + DATA.af_agents.map(function(a){ return '<option value="'+a.id+'">'+afEsc(a.nom)+'</option>'; }).join('');
+  var f = document.getElementById('af-filter-agent');
+  if (f) f.innerHTML = '<option value="">Tous les agents</option>' + DATA.af_agents.map(function(a){ return '<option value="'+a.id+'">'+afEsc(a.nom)+'</option>'; }).join('');
+  var s = document.getElementById('af-op-agent');
+  if (s) s.innerHTML = opts;
+  var st = document.getElementById('af-op-stage');
+  if (st) st.innerHTML = AF_STAGES.map(function(x){ return '<option value="'+x.k+'">'+x.e+' '+x.t+'</option>'; }).join('');
+}
+function afEsc(s){ s=(s==null?'':String(s)); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ════════ PIPELINE (Kanban 7 colonnes) ════════ */
+function afRenderPipeline() {
+  var box = document.getElementById('af-kanban');
+  if (!box) return;
+  var q = ((document.getElementById('af-search')||{}).value||'').toLowerCase();
+  var fa = (document.getElementById('af-filter-agent')||{}).value||'';
+  box.innerHTML = AF_STAGES.map(function(st){
+    var ops = DATA.af_operations.filter(function(o){
+      if (o.stage !== st.k) return false;
+      if (fa && o.agent_id !== fa) return false;
+      if (q) {
+        var hay = ((o.nom||'')+' '+(o.village||'')+' '+(o.commune||'')+' '+(o.proprietaires||[]).map(function(p){return p.nom;}).join(' ')).toLowerCase();
+        if (hay.indexOf(q)===-1) return false;
+      }
+      return true;
+    });
+    var cards = ops.map(function(o){
+      var ag = DATA.af_agents.find(function(a){ return a.id===o.agent_id; });
+      return '<div onclick="afOpenOperation(\''+o.id+'\')" style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-left:3px solid '+st.c+';border-radius:8px;padding:9px 10px;margin-bottom:8px;cursor:pointer;">'
+        + '<div style="font-weight:700;font-size:13px;">'+afEsc(o.nom||'—')+'</div>'
+        + '<div style="font-size:11px;color:var(--muted,#888);">'+afEsc(o.village||o.commune||'—')+' · '+fmtF(o.superficie||0)+' m²</div>'
+        + (ag?('<div style="font-size:11px;color:'+st.c+';margin-top:3px;">🧑‍💼 '+afEsc(ag.nom)+'</div>'):'')
+        + ((o.nb_lots)?('<div style="font-size:11px;margin-top:2px;">🧮 '+o.nb_lots+' lots</div>'):'')
+        + '</div>';
+    }).join('') || '<div style="font-size:11px;color:var(--muted,#aaa);padding:6px;">—</div>';
+    return '<div style="min-width:210px;flex:0 0 210px;">'
+      + '<div style="font-weight:700;font-size:12px;color:#fff;background:'+st.c+';padding:7px 10px;border-radius:8px 8px 0 0;">'+st.e+' '+st.t+' <span style="opacity:.85;">('+ops.length+')</span></div>'
+      + '<div style="background:var(--card2,#f8fafc);padding:8px;border-radius:0 0 8px 8px;min-height:60px;">'+cards+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+/* ════════ OPÉRATION — ouverture / sauvegarde ════════ */
+function afNewOperation() {
+  _afOp = { id:'af_'+uid(), nom:'', agent_id:'', stage:'prospection',
+    village:'', commune:'', departement:'', superficie:0, lat:'', lng:'', statut_nego:'',
+    proprietaires:[], documents:[], rencontres:[], prop_cle:'', accord_principe:false,
+    verif_droits:'', juridique_valide:false, litiges:[], demarches:[],
+    postes_vrd:[], nb_lots:0, cle:{prop:40,amen:35,fin:25},
+    prix_lot:0, lots_reserves:0, lots_vendus:0, titres:0, created_at:today() };
+  afBindOperation(false);
+}
+
+function afOpenOperation(id) {
+  var o = DATA.af_operations.find(function(x){ return x.id===id; });
+  if (!o) return;
+  _afOp = JSON.parse(JSON.stringify(o));
+  if (!_afOp.cle) _afOp.cle = {prop:40,amen:35,fin:25};
+  afBindOperation(true);
+}
+
+function afBindOperation(isEdit) {
+  afFillAgentSelects();
+  document.getElementById('af-op-titre').textContent = isEdit ? ('Opération — '+(_afOp.nom||'')) : 'Nouvelle opération foncière';
+  document.getElementById('af-op-del').style.display = isEdit ? '' : 'none';
+  var set = function(id,v){ var e=document.getElementById(id); if(e){ if(e.type==='checkbox') e.checked=!!v; else e.value=(v==null?'':v); } };
+  set('af-op-nom',_afOp.nom); set('af-op-agent',_afOp.agent_id); set('af-op-stage',_afOp.stage);
+  set('af-village',_afOp.village); set('af-commune',_afOp.commune); set('af-departement',_afOp.departement);
+  set('af-superficie',_afOp.superficie); set('af-lat',_afOp.lat); set('af-lng',_afOp.lng); set('af-statut-nego',_afOp.statut_nego);
+  set('af-prop-cle',_afOp.prop_cle); set('af-accord-principe',_afOp.accord_principe);
+  set('af-verif-droits',_afOp.verif_droits); set('af-juridique-valide',_afOp.juridique_valide);
+  set('af-nb-lots',_afOp.nb_lots);
+  set('af-cle-prop',_afOp.cle.prop); set('af-cle-amen',_afOp.cle.amen); set('af-cle-fin',_afOp.cle.fin);
+  set('af-prix-lot',_afOp.prix_lot); set('af-lots-reserves',_afOp.lots_reserves); set('af-lots-vendus',_afOp.lots_vendus); set('af-titres',_afOp.titres);
+  afRenderProp(); afRenderDoc(); afRenderRenc(); afRenderLit(); afRenderDem(); afRenderVrd();
+  afCalcRepartition();
+  switchTab('af-op','prospection');
+  openModal('modal-af-operation');
+}
+
+function afStageBadge(){ /* placeholder pour feedback visuel éventuel */ }
+
+/* sous-listes : propriétaires */
+function afAddProprietaire(){ _afOp.proprietaires.push({nom:'',contact:'',qualite:''}); afRenderProp(); }
+function afRenderProp(){
+  var tb=document.getElementById('af-tbody-prop'); if(!tb) return;
+  tb.innerHTML = _afOp.proprietaires.length ? _afOp.proprietaires.map(function(p,i){
+    return '<tr><td><input class="form-control" value="'+afEsc(p.nom)+'" oninput="_afOp.proprietaires['+i+'].nom=this.value"></td>'
+      +'<td><input class="form-control" value="'+afEsc(p.contact)+'" oninput="_afOp.proprietaires['+i+'].contact=this.value"></td>'
+      +'<td><input class="form-control" value="'+afEsc(p.qualite)+'" placeholder="chef de terre, héritier..." oninput="_afOp.proprietaires['+i+'].qualite=this.value"></td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="_afOp.proprietaires.splice('+i+',1);afRenderProp()">✕</button></td></tr>';
+  }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted,#999);padding:8px;">—</td></tr>';
+}
+/* documents */
+function afAddDocument(){ _afOp.documents.push({nom:'',dispo:true}); afRenderDoc(); }
+function afRenderDoc(){
+  var tb=document.getElementById('af-tbody-doc'); if(!tb) return;
+  tb.innerHTML = _afOp.documents.length ? _afOp.documents.map(function(d,i){
+    return '<tr><td><input class="form-control" value="'+afEsc(d.nom)+'" placeholder="Attestation villageoise, ACD, plan..." oninput="_afOp.documents['+i+'].nom=this.value"></td>'
+      +'<td><input type="checkbox" '+(d.dispo?'checked':'')+' onchange="_afOp.documents['+i+'].dispo=this.checked"></td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="_afOp.documents.splice('+i+',1);afRenderDoc()">✕</button></td></tr>';
+  }).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--muted,#999);padding:8px;">—</td></tr>';
+}
+/* rencontres */
+function afAddRencontre(){ _afOp.rencontres.push({date:today(),objet:'',cr:''}); afRenderRenc(); }
+function afRenderRenc(){
+  var tb=document.getElementById('af-tbody-renc'); if(!tb) return;
+  tb.innerHTML = _afOp.rencontres.length ? _afOp.rencontres.map(function(r,i){
+    return '<tr><td><input type="date" class="form-control" value="'+(r.date||'')+'" oninput="_afOp.rencontres['+i+'].date=this.value"></td>'
+      +'<td><input class="form-control" value="'+afEsc(r.objet)+'" oninput="_afOp.rencontres['+i+'].objet=this.value"></td>'
+      +'<td><input class="form-control" value="'+afEsc(r.cr)+'" oninput="_afOp.rencontres['+i+'].cr=this.value"></td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="_afOp.rencontres.splice('+i+',1);afRenderRenc()">✕</button></td></tr>';
+  }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted,#999);padding:8px;">—</td></tr>';
+}
+/* litiges */
+function afAddLitige(){ _afOp.litiges.push({objet:'',statut:'ouvert'}); afRenderLit(); }
+function afRenderLit(){
+  var tb=document.getElementById('af-tbody-lit'); if(!tb) return;
+  tb.innerHTML = _afOp.litiges.length ? _afOp.litiges.map(function(l,i){
+    return '<tr><td><input class="form-control" value="'+afEsc(l.objet)+'" oninput="_afOp.litiges['+i+'].objet=this.value"></td>'
+      +'<td><select class="form-control" onchange="_afOp.litiges['+i+'].statut=this.value">'
+        +['ouvert','en cours','résolu'].map(function(s){return '<option '+(l.statut===s?'selected':'')+'>'+s+'</option>';}).join('')+'</select></td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="_afOp.litiges.splice('+i+',1);afRenderLit()">✕</button></td></tr>';
+  }).join('') : '<tr><td colspan="3" style="text-align:center;color:var(--muted,#999);padding:8px;">—</td></tr>';
+}
+/* démarches admin */
+function afAddDemarche(){ _afOp.demarches.push({etape:'',statut:'à faire',depot:'',echeance:''}); afRenderDem(); }
+function afRenderDem(){
+  var tb=document.getElementById('af-tbody-dem'); if(!tb) return;
+  tb.innerHTML = _afOp.demarches.length ? _afOp.demarches.map(function(d,i){
+    return '<tr><td><input class="form-control" value="'+afEsc(d.etape)+'" placeholder="Dépôt dossier, visa urbanisme..." oninput="_afOp.demarches['+i+'].etape=this.value"></td>'
+      +'<td><select class="form-control" onchange="_afOp.demarches['+i+'].statut=this.value;afRenderDem()">'
+        +['à faire','déposé','en instruction','obtenu','rejeté'].map(function(s){return '<option '+(d.statut===s?'selected':'')+'>'+s+'</option>';}).join('')+'</select></td>'
+      +'<td><input type="date" class="form-control" value="'+(d.depot||'')+'" oninput="_afOp.demarches['+i+'].depot=this.value"></td>'
+      +'<td><input type="date" class="form-control" value="'+(d.echeance||'')+'" oninput="_afOp.demarches['+i+'].echeance=this.value;afRenderDem()"></td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="_afOp.demarches.splice('+i+',1);afRenderDem()">✕</button></td></tr>';
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted,#999);padding:8px;">—</td></tr>';
+  /* alertes pièces/délais */
+  var al=[];
+  var auj=new Date(today());
+  _afOp.demarches.forEach(function(d){
+    if (d.echeance && d.statut!=='obtenu' && d.statut!=='rejeté') {
+      var ech=new Date(d.echeance), j=Math.round((ech-auj)/86400000);
+      if (j<0) al.push('⛔ '+(d.etape||'Étape')+' : échéance dépassée de '+(-j)+' j');
+      else if (j<=15) al.push('⚠️ '+(d.etape||'Étape')+' : échéance dans '+j+' j');
+    }
+  });
+  var az=document.getElementById('af-admin-alertes');
+  if (az) az.innerHTML = al.length ? '<div class="card" style="background:#FEF3F2;border:1px solid #FECACA;color:#b42318;font-size:12px;">'+al.join('<br>')+'</div>' : '';
+}
+/* postes VRD aménagement */
+function afAddPosteVrd(){ _afOp.postes_vrd.push({poste:'',budget:0,avancement:0}); afRenderVrd(); }
+function afRenderVrd(){
+  var tb=document.getElementById('af-tbody-vrd'); if(!tb) return;
+  tb.innerHTML = _afOp.postes_vrd.length ? _afOp.postes_vrd.map(function(v,i){
+    return '<tr><td><input class="form-control" value="'+afEsc(v.poste)+'" placeholder="Voiries, eau, électricité, assainissement, espaces verts..." oninput="_afOp.postes_vrd['+i+'].poste=this.value"></td>'
+      +'<td><input type="number" class="form-control" style="text-align:right" value="'+(v.budget||0)+'" oninput="_afOp.postes_vrd['+i+'].budget=parseFloat(this.value)||0;afRenderVrd()"></td>'
+      +'<td><input type="number" class="form-control" style="text-align:right;width:90px" value="'+(v.avancement||0)+'" min="0" max="100" oninput="_afOp.postes_vrd['+i+'].avancement=parseFloat(this.value)||0;afRenderVrd()"></td>'
+      +'<td><button class="btn btn-secondary btn-sm" onclick="_afOp.postes_vrd.splice('+i+',1);afRenderVrd()">✕</button></td></tr>';
+  }).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted,#999);padding:8px;">—</td></tr>';
+  var bud=_afOp.postes_vrd.reduce(function(s,v){return s+(v.budget||0);},0);
+  var pond=bud>0 ? _afOp.postes_vrd.reduce(function(s,v){return s+(v.budget||0)*(v.avancement||0);},0)/bud : 0;
+  var sy=document.getElementById('af-vrd-synth');
+  if(sy) sy.innerHTML='Budget aménagement total : <strong>'+fmtF(bud)+' FCFA</strong> · Avancement pondéré : <strong>'+pond.toFixed(1)+' %</strong>';
+}
+
+/* P6 répartition (paramétrable) */
+function afCalcRepartition(){
+  if(!_afOp) return;
+  var nb=parseInt((document.getElementById('af-nb-lots')||{}).value)||0;
+  var cp=parseFloat((document.getElementById('af-cle-prop')||{}).value)||0;
+  var ca=parseFloat((document.getElementById('af-cle-amen')||{}).value)||0;
+  var cf=parseFloat((document.getElementById('af-cle-fin')||{}).value)||0;
+  var som=cp+ca+cf;
+  var lp=Math.round(nb*cp/100), la=Math.round(nb*ca/100), lf=nb-lp-la;
+  var z=document.getElementById('af-repartition-res');
+  if(z) z.innerHTML='<table style="width:100%;border-collapse:collapse;">'
+    +'<tr><th style="text-align:left;">Partie</th><th style="text-align:right;">%</th><th style="text-align:right;">Lots</th></tr>'
+    +'<tr><td>Propriétaires</td><td style="text-align:right;">'+cp+'</td><td style="text-align:right;font-weight:700;">'+lp+'</td></tr>'
+    +'<tr><td>Aménageur</td><td style="text-align:right;">'+ca+'</td><td style="text-align:right;font-weight:700;">'+la+'</td></tr>'
+    +'<tr><td>Financier</td><td style="text-align:right;">'+cf+'</td><td style="text-align:right;font-weight:700;">'+lf+'</td></tr>'
+    +'<tr style="border-top:2px solid #333;font-weight:700;"><td>TOTAL</td><td style="text-align:right;color:'+(som===100?'#1A6B3A':'#c0392b')+';">'+som+'</td><td style="text-align:right;">'+nb+'</td></tr>'
+    +'</table>'+(som!==100?'<div style="color:#c0392b;font-size:12px;margin-top:6px;">⚠️ La somme des clés doit faire 100 %.</div>':'');
+  /* commercialisation res */
+  var prix=parseFloat((document.getElementById('af-prix-lot')||{}).value)||0;
+  var caTot=nb*prix;
+  var vendus=parseInt((document.getElementById('af-lots-vendus')||{}).value)||0;
+  var caReal=vendus*prix;
+  var cz=document.getElementById('af-commercial-res');
+  if(cz) cz.innerHTML='CA prévisionnel : <strong>'+fmtF(caTot)+' FCFA</strong> · CA réalisé (lots vendus) : <strong>'+fmtF(caReal)+' FCFA</strong>'
+    +'<br>Quote-part théorique (prix×lots) — Propriétaires '+fmtF(lp*prix)+' · Aménageur '+fmtF(la*prix)+' · Financier '+fmtF(lf*prix)+' FCFA';
+}
+
+async function afSaveOperation(){
+  var g=function(id){ var e=document.getElementById(id); return e?(e.type==='checkbox'?e.checked:e.value):''; };
+  if(!g('af-op-nom').trim()){ toast('Désignation obligatoire','error'); return; }
+  _afOp.nom=g('af-op-nom').trim(); _afOp.agent_id=g('af-op-agent'); _afOp.stage=g('af-op-stage');
+  _afOp.village=g('af-village'); _afOp.commune=g('af-commune'); _afOp.departement=g('af-departement');
+  _afOp.superficie=parseFloat(g('af-superficie'))||0; _afOp.lat=g('af-lat'); _afOp.lng=g('af-lng'); _afOp.statut_nego=g('af-statut-nego');
+  _afOp.prop_cle=g('af-prop-cle'); _afOp.accord_principe=g('af-accord-principe');
+  _afOp.verif_droits=g('af-verif-droits'); _afOp.juridique_valide=g('af-juridique-valide');
+  _afOp.nb_lots=parseInt(g('af-nb-lots'))||0;
+  _afOp.cle={prop:parseFloat(g('af-cle-prop'))||0,amen:parseFloat(g('af-cle-amen'))||0,fin:parseFloat(g('af-cle-fin'))||0};
+  _afOp.prix_lot=parseFloat(g('af-prix-lot'))||0; _afOp.lots_reserves=parseInt(g('af-lots-reserves'))||0;
+  _afOp.lots_vendus=parseInt(g('af-lots-vendus'))||0; _afOp.titres=parseInt(g('af-titres'))||0;
+  var idx=DATA.af_operations.findIndex(function(x){return x.id===_afOp.id;});
+  if(idx>=0) DATA.af_operations[idx]=_afOp; else DATA.af_operations.push(_afOp);
+  await dbPut('af_operations',_afOp);
+  closeModal('modal-af-operation');
+  afRenderPipeline(); afRenderDashboard();
+  toast('Opération enregistrée','success');
+}
+
+async function afDeleteOperation(){
+  if(!_afOp || !confirm('Supprimer cette opération foncière ?')) return;
+  DATA.af_operations=DATA.af_operations.filter(function(x){return x.id!==_afOp.id;});
+  await dbDelete('af_operations',_afOp.id);
+  closeModal('modal-af-operation');
+  afRenderPipeline(); afRenderDashboard();
+}
+
+/* ════════ AGENTS DU FONCIER (CRM) ════════ */
+function afAgentStats(ag){
+  var ops=DATA.af_operations.filter(function(o){return o.agent_id===ag.id;});
+  var terrains=ops.length;
+  var surface=ops.reduce(function(s,o){return s+(o.superficie||0);},0);
+  var gagnes=ops.filter(function(o){return o.stage==='commercialisation';}).length;
+  var caReal=ops.reduce(function(s,o){return s+((o.lots_vendus||0)*(o.prix_lot||0));},0);
+  var commission=caReal*((ag.taux_commission||0)/100);
+  var taux=terrains>0?Math.round(gagnes/terrains*100):0;
+  return {terrains:terrains,surface:surface,gagnes:gagnes,caReal:caReal,commission:commission,taux:taux,ops:ops};
+}
+function afRenderAgents(){
+  var box=document.getElementById('af-agents-liste'); if(!box) return;
+  if(!DATA.af_agents.length){ box.innerHTML='<div class="card" style="text-align:center;color:var(--muted,#999);padding:18px;">Aucun agent. Cliquez sur + Nouvel agent.</div>'; return; }
+  box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">'
+    +DATA.af_agents.map(function(a){
+      var s=afAgentStats(a);
+      return '<div class="card" style="cursor:pointer;" onclick="afOpenAgent(\''+a.id+'\')">'
+        +'<div style="font-weight:700;font-size:14px;">🧑‍💼 '+afEsc(a.nom)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted,#888);">'+afEsc(a.telephone||'')+(a.email?(' · '+afEsc(a.email)):'')+'</div>'
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;font-size:12px;">'
+        +'<div>Portefeuille<br><strong>'+s.terrains+' terrains</strong></div>'
+        +'<div>Superficie<br><strong>'+fmtF(s.surface)+' m²</strong></div>'
+        +'<div>Transformation<br><strong>'+s.taux+' %</strong></div>'
+        +'<div>Commission<br><strong>'+fmtF(s.commission)+' F</strong></div>'
+        +'</div>'
+        +(a.objectif_terrains?('<div style="font-size:11px;margin-top:6px;color:var(--muted,#888);">Objectif : '+s.terrains+'/'+a.objectif_terrains+' terrains</div>'):'')
+        +'</div>';
+    }).join('')+'</div>';
+}
+function afOpenAgent(id){
+  var a=id?DATA.af_agents.find(function(x){return x.id===id;}):null;
+  APP._afAgentId=a?a.id:null;
+  document.getElementById('af-agent-titre').textContent=a?('Agent — '+a.nom):'Nouvel agent du foncier';
+  var set=function(id,v){var e=document.getElementById(id); if(e) e.value=(v==null?'':v);};
+  set('af-ag-nom',a?a.nom:''); set('af-ag-tel',a?a.telephone:''); set('af-ag-email',a?a.email:'');
+  set('af-ag-obj-terrains',a?a.objectif_terrains:0); set('af-ag-obj-surface',a?a.objectif_superficie:0);
+  set('af-ag-commission',a?a.taux_commission:2);
+  openModal('modal-af-agent');
+}
+async function afSaveAgent(){
+  var nom=document.getElementById('af-ag-nom').value.trim();
+  if(!nom){ toast('Nom obligatoire','error'); return; }
+  var a=APP._afAgentId?DATA.af_agents.find(function(x){return x.id===APP._afAgentId;}):null;
+  if(!a){ a={id:'afa_'+uid(),created_at:today()}; DATA.af_agents.push(a); }
+  a.nom=nom; a.telephone=document.getElementById('af-ag-tel').value.trim();
+  a.email=document.getElementById('af-ag-email').value.trim();
+  a.objectif_terrains=parseInt(document.getElementById('af-ag-obj-terrains').value)||0;
+  a.objectif_superficie=parseFloat(document.getElementById('af-ag-obj-surface').value)||0;
+  a.taux_commission=parseFloat(document.getElementById('af-ag-commission').value)||0;
+  await dbPut('af_agents',a);
+  closeModal('modal-af-agent');
+  afFillAgentSelects(); afRenderAgents(); afRenderDashboard();
+  toast('Agent enregistré','success');
+}
+
+/* ════════ TABLEAU DE BORD ════════ */
+function afRenderDashboard(){
+  var box=document.getElementById('af-dashboard'); if(!box) return;
+  var ops=DATA.af_operations;
+  var nbProsp=ops.filter(function(o){return o.stage==='prospection';}).length;
+  var nbNego=ops.filter(function(o){return o.stage==='negociation';}).length;
+  var nbInstr=ops.filter(function(o){return o.stage==='admin'||o.stage==='juridique';}).length;
+  var surface=ops.reduce(function(s,o){return s+(o.superficie||0);},0);
+  var lots=ops.reduce(function(s,o){return s+(o.nb_lots||0);},0);
+  var caPrev=ops.reduce(function(s,o){return s+((o.nb_lots||0)*(o.prix_lot||0));},0);
+  var caReal=ops.reduce(function(s,o){return s+((o.lots_vendus||0)*(o.prix_lot||0));},0);
+  /* répartition agrégée par partie */
+  var rp={prop:0,amen:0,fin:0};
+  ops.forEach(function(o){ if(o.nb_lots&&o.cle){ rp.prop+=Math.round(o.nb_lots*o.cle.prop/100); rp.amen+=Math.round(o.nb_lots*o.cle.amen/100); rp.fin+=Math.round(o.nb_lots*o.cle.fin/100); } });
+  var kpi=function(t,v,c){ return '<div class="card" style="text-align:center;"><div style="font-size:11px;color:var(--muted,#888);">'+t+'</div><div style="font-size:20px;font-weight:800;color:'+(c||'#1A6B3A')+';">'+v+'</div></div>'; };
+  box.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;">'
+    +kpi('Terrains prospectés',ops.length,'#3B82F6')
+    +kpi('En négociation',nbNego,'#8B5CF6')
+    +kpi('En instruction',nbInstr,'#F59E0B')
+    +kpi('Superficie acquise',fmtF(surface)+' m²','#0EA5E9')
+    +kpi('Lots créés',lots,'#10B981')
+    +kpi('CA prévisionnel',fmtF(caPrev)+' F','#1A6B3A')
+    +kpi('CA réalisé',fmtF(caReal)+' F','#1A6B3A')
+    +'</div>'
+    +'<div class="card"><strong>Répartition agrégée des lots</strong>'
+    +'<table style="width:100%;border-collapse:collapse;margin-top:8px;"><tr><th style="text-align:left;">Partie</th><th style="text-align:right;">Lots attribués</th></tr>'
+    +'<tr><td>Propriétaires</td><td style="text-align:right;font-weight:700;">'+rp.prop+'</td></tr>'
+    +'<tr><td>Aménageur</td><td style="text-align:right;font-weight:700;">'+rp.amen+'</td></tr>'
+    +'<tr><td>Financier</td><td style="text-align:right;font-weight:700;">'+rp.fin+'</td></tr>'
+    +'</table></div>'
+    +'<div class="card" style="margin-top:12px;"><strong>Performance des agents</strong>'
+    +'<table style="width:100%;border-collapse:collapse;margin-top:8px;"><tr><th style="text-align:left;">Agent</th><th style="text-align:right;">Terrains</th><th style="text-align:right;">Transf.</th><th style="text-align:right;">Commission</th></tr>'
+    +(DATA.af_agents.length?DATA.af_agents.map(function(a){var s=afAgentStats(a);return '<tr><td>'+afEsc(a.nom)+'</td><td style="text-align:right;">'+s.terrains+'</td><td style="text-align:right;">'+s.taux+'%</td><td style="text-align:right;">'+fmtF(s.commission)+' F</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--muted,#999);">—</td></tr>')
+    +'</table></div>';
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   PROCÉDURE-TYPE CÔTE D'IVOIRE
+   Terrain rural → terrain urbain → Titre Foncier définitif
+   Réf : Loi 98-750 (domaine rural) · décret ACD · réforme GUF 2025
+══════════════════════════════════════════════════════════ */
+var AF_PROCEDURE_TYPE = [
+  /* ── Phase A : sécurisation du terrain rural (Loi 98-750) ── */
+  'A1. Rural — PV de palabre / consentement des détenteurs coutumiers',
+  'A2. Rural — Procès-verbal de constat des droits coutumiers',
+  'A3. Rural — Enquête foncière officielle (commission, validation)',
+  'A4. Rural — Délimitation & bornage par géomètre',
+  'A5. Rural — Établissement du Certificat Foncier (AFOR), publication JO',
+  'A6. Rural — Requête d\u2019immatriculation au Livre Foncier (ou bail emphytéotique)',
+  /* ── Phase B : passage en terrain urbain (lotissement) ── */
+  'B1. Urbain — Demande de changement de destination (rural → urbain)',
+  'B2. Urbain — Dossier de lotissement & étude d\u2019urbanisme',
+  'B3. Urbain — Approbation du plan de lotissement (Ministère/MCLU)',
+  'B4. Urbain — Bornage du lotissement + plan parcellaire visé Cadastre (cachet sec)',
+  /* ── Phase C : titre définitif par lot (procédure ACD) ── */
+  'C1. ACD — Demande de position foncière au Guichet Unique du Foncier (obligatoire depuis 31/03/2025)',
+  'C2. ACD — Dépôt de la demande d\u2019ACD au GUF (enregistrement + n° dossier)',
+  'C3. ACD — Instruction Direction du Domaine Urbain : attestation domaniale + demande plan TF au Cadastre',
+  'C4. ACD — Paiement Domaines : prix de cession + taxe d\u2019établissement du TF',
+  'C5. ACD — Élaboration du projet d\u2019ACD & signature du Ministre',
+  'C6. ACD — Publication de l\u2019ACD, transmission à la Conservation Foncière (CPFH)',
+  'C7. ACD — Création du Titre Foncier au Livre Foncier (TF définitif, inattaquable)',
+  'C8. ACD — Retrait ACD/TF au GUF + morcellement du TF mère en TF individuels par lot'
+];
+
+function afChargerProcedureType() {
+  if (!_afOp) return;
+  if (_afOp.demarches && _afOp.demarches.length) {
+    if (!confirm('Remplacer les ' + _afOp.demarches.length + ' démarche(s) actuelle(s) par la procédure-type rural → urbain → TF ?')) return;
+  }
+  _afOp.demarches = AF_PROCEDURE_TYPE.map(function(lib) {
+    return { etape: lib, statut: 'à faire', depot: '', echeance: '' };
+  });
+  afRenderDem();
+  toast(AF_PROCEDURE_TYPE.length + ' étapes chargées', 'success');
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CONNEXION FONCIER : Acquisition ↔ Portefeuille  +  Carte globale
+══════════════════════════════════════════════════════════ */
+
+/* Couche carte des opérations foncières (points lat/lng) */
+var _geoLayerOperations = null;
+var _operationsBounds = null;
+
+function afRenderOperationsCarte() {
+  if (typeof L === 'undefined' || !_geoLayerOperations) return;
+  _geoLayerOperations.clearLayers();
+  var show = document.getElementById('geo-show-operations') ? document.getElementById('geo-show-operations').checked : true;
+  if (!show) return;
+  var pts = [];
+  (DATA.af_operations || []).forEach(function(o) {
+    var lat = parseFloat(o.lat), lng = parseFloat(o.lng);
+    if (isNaN(lat) || isNaN(lng)) return;
+    var st = (typeof afStage === 'function') ? afStage(o.stage) : { c:'#3B82F6', t:o.stage, e:'📍' };
+    var ag = (DATA.af_agents || []).find(function(a){ return a.id === o.agent_id; });
+    var mk = L.circleMarker([lat, lng], { radius:8, color:'#fff', weight:2, fillColor:st.c, fillOpacity:0.9 });
+    mk.bindPopup('<div style="font-size:13px;min-width:200px;">'
+      + '<strong style="color:'+st.c+';">'+st.e+' '+afEsc(o.nom||'Opération')+'</strong><br>'
+      + afEsc(o.village||o.commune||'')+' · '+fmtF(o.superficie||0)+' m²<br>Étape : '+st.t
+      + (ag?('<br>🧑‍💼 '+afEsc(ag.nom)):'')
+      + (o.parcelle_id?'<br>🔗 Liée au portefeuille':'')
+      + '<br><button onclick="afOpenOperation(\''+o.id+'\')" style="margin-top:6px;padding:4px 8px;background:'+st.c+';color:#fff;border:none;border-radius:6px;cursor:pointer;">Ouvrir l\u2019opération</button></div>');
+    mk.addTo(_geoLayerOperations);
+    pts.push([lat, lng]);
+  });
+  _operationsBounds = pts.length ? L.latLngBounds(pts) : null;
+}
+
+/* Recentre la carte sur TOUT le foncier : parcelles bornées + opérations */
+function zoomFoncier() {
+  if (!_geoMap) { initLeafletMap(); setTimeout(zoomFoncier, 400); return; }
+  var b = null;
+  if (typeof _parcelleBounds !== 'undefined' && _parcelleBounds) b = L.latLngBounds(_parcelleBounds.getSouthWest(), _parcelleBounds.getNorthEast());
+  if (_operationsBounds) { if (b) b.extend(_operationsBounds); else b = L.latLngBounds(_operationsBounds.getSouthWest(), _operationsBounds.getNorthEast()); }
+  if (b && b.isValid()) _geoMap.fitBounds(b, { padding:[40,40], maxZoom:16 });
+  else toast('Aucun foncier géolocalisé (bornage ou lat/lng requis)', 'info');
+}
+
+/* Accès rapide à la carte depuis Foncier / Acquisition */
+function ouvrirCarteFoncier() {
+  var cp = document.getElementById('geo-show-parcelles'); if (cp) cp.checked = true;
+  var co = document.getElementById('geo-show-operations'); if (co) co.checked = true;
+  goTo('crm-carte');
+  setTimeout(zoomFoncier, 600);
+}
+
+/* ── Transfert d'une opération d'acquisition vers le Portefeuille Foncier ── */
+async function afTransfererFoncier() {
+  if (!_afOp) return;
+  if (!_afOp.nom || !_afOp.nom.trim()) { toast('Renseignez la désignation du site', 'error'); return; }
+  if (!DATA.parcelles) DATA.parcelles = [];
+  var p = _afOp.parcelle_id ? DATA.parcelles.find(function(x){ return x.id === _afOp.parcelle_id; }) : null;
+  var isNew = false;
+  if (!p) { p = { id:'parc_'+uid(), created_at:today() }; isNew = true; }
+  if (!p.ref) p.ref = 'OP-' + _afOp.nom.trim().substring(0,24);
+  p.operation_id   = _afOp.id;
+  p.localisation   = _afOp.village || _afOp.commune || p.localisation || '';
+  p.commune        = _afOp.commune || p.commune || '';
+  p.sous_prefecture= _afOp.departement || p.sous_prefecture || '';
+  p.superficie     = _afOp.superficie || p.superficie || 0;
+  if (_afOp.lat) p.lat = _afOp.lat;
+  if (_afOp.lng) p.lng = _afOp.lng;
+  p.statut         = p.statut || (_afOp.juridique_valide ? 'tf_definitif' : 'en_cours');
+  p.description    = 'Issu de l\u2019opération d\u2019acquisition : ' + _afOp.nom.trim();
+  if (isNew) DATA.parcelles.push(p);
+  await dbPut('parcelles', p);
+  _afOp.parcelle_id = p.id;
+  var idx = DATA.af_operations.findIndex(function(x){ return x.id === _afOp.id; });
+  if (idx >= 0) DATA.af_operations[idx] = _afOp; else DATA.af_operations.push(_afOp);
+  await dbPut('af_operations', _afOp);
+  toast(isNew ? 'Parcelle créée dans le Portefeuille Foncier ✅' : 'Parcelle liée mise à jour ✅', 'success');
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   MODIFICATION DES VERSEMENTS + RÉ-IMPACT DES COMMISSIONS
+   Édition d'un versement existant → contre-passe les commissions
+   liées (extourne comptable) puis les régénère sur le nouveau montant
+══════════════════════════════════════════════════════════ */
+
+/* Annulation silencieuse d'une commission (avec extourne si comptabilisée) */
+async function annulerCommissionSilencieux(comm) {
+  if (!comm || comm.statut === 'annulee' || comm.statut === 'payee') return;
+  if (comm.ecriture_id && !comm.ecriture_extourne_id && typeof getCompteCommission === 'function') {
+    var compteCharge    = getCompteCommission(comm.type_beneficiaire, 'charge');
+    var compteProvision = getCompteCommission(comm.type_beneficiaire, 'provision');
+    var typeB = comm.type_beneficiaire === 'commercial' ? 'Commercial' : 'Apporteur';
+    var numEcr = DATA.ecritures.length + 1, an = today().slice(0, 4);
+    var ref = 'EXT-COMM-' + an + '-' + String(numEcr).padStart(4, '0');
+    var ext = {
+      id: uid(), ref: ref, date: today(),
+      piece: 'EXT-' + (comm.ecriture_ref || comm.id.slice(-6).toUpperCase()),
+      type: 'charge',
+      libelle: 'Extourne commission ' + typeB.toLowerCase() + ' — ' + (comm.beneficiaire || '') + ' (modification versement)',
+      compte: compteProvision, compte_debit: compteProvision, compte_credit: compteCharge,
+      montant: comm.montant_comm, mode: 'commission', programme_id: '',
+      notes: 'Contre-passation automatique — réimputation versement', source: 'extourne_commission',
+      commission_id: comm.id, created_at: today()
+    };
+    DATA.ecritures.push(ext);
+    await dbPut('ecritures', ext);
+    comm.ecriture_extourne_id = ext.id;
+    comm.ecriture_extourne_ref = ref;
+  }
+  comm.statut = 'annulee';
+  await dbPut('commissions', comm);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_commissions', comm);
+}
+
+/* Recalcule les commissions d'un versement modifié */
+async function reimpacterCommissionsVersement(versement) {
+  var liees = (DATA.commissions || []).filter(function(c) { return c.versement_id === versement.id && c.statut !== 'annulee'; });
+  if (liees.some(function(c) { return c.statut === 'payee'; })) {
+    toast('Commission déjà payée sur ce versement — recalcul bloqué. Extournez d\u2019abord le règlement.', 'error');
+    return false;
+  }
+  for (var i = 0; i < liees.length; i++) await annulerCommissionSilencieux(liees[i]);
+  await genererCommissionsVersement(versement);
+  if (typeof renderCommissions === 'function') renderCommissions();
+  if (typeof filterEcritures === 'function') filterEcritures();
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildCompteResultat === 'function') buildCompteResultat();
+  if (typeof buildKPIsApporteurs === 'function') buildKPIsApporteurs();
+  return true;
+}
+
+/* Ouvre le modal en mode édition, pré-rempli */
+function editVersement(id) {
+  var v = DATA.versements.find(function(x) { return x.id === id; });
+  if (!v) return;
+  APP._editVersementId = id;
+  if (typeof populateClientSelects === 'function') populateClientSelects();
+  var set = function(fid, val) { var e = document.getElementById(fid); if (e) e.value = (val == null ? '' : val); };
+  set('v-client', v.client_id); set('v-date', v.date); set('v-type', v.type);
+  set('v-montant', v.montant); set('v-mode', v.mode); set('v-reference', v.reference);
+  set('v-mois', v.mois); set('v-notes', v.notes);
+  if (typeof onTypeVersementChange === 'function') onTypeVersementChange();
+  if (typeof updateClientSolde === 'function') updateClientSolde();
+  var t = document.querySelector('#modal-paiement .modal-header h3'); if (t) t.textContent = 'Modifier le versement';
+  var b = document.getElementById('btn-save-paiement'); if (b) b.textContent = '💾 Enregistrer les modifications';
+  openModal('modal-paiement');
 }
 
 </script>
