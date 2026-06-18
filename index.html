@@ -5349,6 +5349,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn active" onclick="switchTab('foncier','parcelles')">🗺️ Parcelles</button>
           <button class="tab-btn" onclick="switchTab('foncier','titres')">📜 Titres Fonciers</button>
           <button class="tab-btn" onclick="switchTab('foncier','mutations')">🔄 Mutations</button>
+          <button class="tab-btn" onclick="switchTab('foncier','cessions');cesRender()">💰 Cessions</button>
         </div>
         <div class="tab-pane active" id="tab-foncier-parcelles">
           <div class="filters-bar">
@@ -5384,6 +5385,51 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-foncier-titres">
           <div class="card"><div id="titres-fonciers-box"><div style="color:var(--blanc-dim);font-size:13px;padding:20px;">Chargement...</div></div></div>
         </div>
+        <!-- ── Onglet Cessions foncières ── -->
+        <div class="tab-pane" id="tab-foncier-cessions">
+          <div class="filters-bar" style="margin-bottom:12px;">
+            <input type="text" class="search-input" placeholder="🔍 Acquéreur, source, désignation..." id="ces-search" oninput="cesRender()" style="flex:1;min-width:160px;">
+            <button class="btn btn-primary btn-sm" onclick="cesNew()">+ Nouvelle cession</button>
+          </div>
+          <div id="ces-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;"></div>
+          <div class="card"><div style="font-size:12px;color:var(--blanc-dim);margin-bottom:8px;">Cession de la part revenant à l'entreprise (lots / portions) pour soulager la trésorerie. Chaque cession génère l'écriture SYSCOHADA et alimente la trésorerie.</div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Date</th><th>Source</th><th>Désignation</th><th>Acquéreur</th><th style="text-align:right;">Superf./Lots</th><th style="text-align:right;">Prix cession</th><th style="text-align:right;">Encaissé</th><th>Statut</th><th></th></tr></thead>
+              <tbody id="tbody-cessions"></tbody>
+            </table></div>
+          </div>
+        </div>
+
+      <!-- ── MODAL : Cession foncière ── -->
+      <div class="modal-overlay" id="modal-cession">
+        <div class="modal" style="max-width:680px;">
+          <div class="modal-header"><div class="modal-title" id="ces-titre">Nouvelle cession</div><button class="modal-close" onclick="closeModal('modal-cession')">✕</button></div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Source (part entreprise) *</label><select id="ces-source" class="form-control" onchange="cesOnSource()"></select></div>
+              <div class="form-group"><label>Nature</label><select id="ces-nature" class="form-control"><option value="lots">Lots</option><option value="portion_parcelle">Portion de parcelle</option></select></div>
+              <div class="form-group"><label>Date</label><input type="date" id="ces-date" class="form-control"></div>
+              <div class="form-group span-2"><label>Désignation cédée</label><input id="ces-designation" class="form-control" placeholder="Ex : 5 lots îlot B / portion 1 200 m²"></div>
+              <div class="form-group"><label>Superficie cédée (m²)</label><input type="number" id="ces-superficie" class="form-control" value="0"></div>
+              <div class="form-group"><label>Nombre de lots cédés</label><input type="number" id="ces-nblots" class="form-control" value="0"></div>
+              <div class="form-group span-2"><label>Acquéreur *</label><input id="ces-acquereur" class="form-control" placeholder="Nom / raison sociale"></div>
+              <div class="form-group span-2"><label>Contact acquéreur</label><input id="ces-contact" class="form-control"></div>
+              <div class="form-group"><label>Prix de cession (FCFA)</label><input type="number" id="ces-prix" class="form-control" value="0" oninput="cesSync()"></div>
+              <div class="form-group"><label>Montant encaissé (FCFA)</label><input type="number" id="ces-encaisse" class="form-control" value="0" oninput="cesSync()"></div>
+              <div class="form-group"><label>Mode d'encaissement</label><select id="ces-mode" class="form-control"><option value="virement">Virement</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile Money</option></select></div>
+              <div class="form-group"><label>Statut</label><select id="ces-statut" class="form-control"><option value="promesse">Promesse</option><option value="cedee">Cédée</option><option value="soldee">Soldée</option></select></div>
+              <div class="form-group span-2"><label>Notes</label><input id="ces-notes" class="form-control"></div>
+            </div>
+            <div id="ces-synth" class="card" style="margin-top:10px;background:var(--card2);"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-cession')">Annuler</button>
+            <button class="btn btn-danger" id="ces-del" onclick="cesDelete()" style="display:none;">🗑 Supprimer</button>
+            <button class="btn btn-primary" onclick="cesSave()">💾 Enregistrer la cession</button>
+          </div>
+        </div>
+      </div>
+
         <div class="tab-pane" id="tab-foncier-mutations">
           <div class="filters-bar">
             <input type="text" class="search-input" placeholder="🔍 Parcelle, type, vendeur, acheteur..." id="search-mutations" oninput="renderMutations()">
@@ -8435,6 +8481,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Lots vendus</label><input type="number" id="af-lots-vendus" class="form-control" value="0"></div>
                 <div class="form-group"><label>Titres délivrés</label><input type="number" id="af-titres" class="form-control" value="0"></div>
               </div>
+              <div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="if(_afOp&&_afOp.id){cesNewFromOperation(_afOp.id);}else{toast('Enregistrez d\'abord l\'opération','error');}">💰 Céder des lots (part entreprise)</button></div>
               <div id="af-commercial-res" class="card" style="margin-top:12px;background:var(--card2);"></div>
             </div>
           </div>
@@ -12918,6 +12965,7 @@ var DATA = {
   eds_ouvrages: [],
   eds_etudes: [],
   eds_ressources: [],
+  cessions_foncieres: [],
   /* v114 — Aménagement foncier */
   af_operations: [],
   af_agents: []
@@ -12927,7 +12975,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 115; /* v115: store eds_ressources — bibliothèque de prix unitaires centralisée */
+var DB_VERSION = 116; /* v116: store cessions_foncieres — cession de la part entreprise */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -12971,6 +13019,8 @@ var ALL_STORES = [
   'eds_ouvrages','eds_etudes',
   /* v115 — Ressources & prix unitaires centralisés */
   'eds_ressources',
+  /* v116 — Cessions foncières */
+  'cessions_foncieres',
   /* v114 — Acquisition & aménagement foncier */
   'af_operations','af_agents'
 ];
@@ -13376,6 +13426,7 @@ var SUPA_STORE_MAP = [
   ['pi_commissions',     'commissions'],
   ['pi_leads',           'leads'],
   ['pi_ecritures',       'ecritures'],
+  ['pi_cessions_foncieres','cessions_foncieres'],
   ['pi_employes',        'employes'],
   ['pi_pointages',       'pointages'],
   ['pi_bulletins',       'bulletins'],
@@ -18251,7 +18302,8 @@ function buildTresorerie() {
   for (var m = 1; m <= 12; m++) {
     var mStr = year + '-' + String(m).padStart(2, '0');
     var label = new Date(year, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
-    var encaissements = DATA.versements.filter(function(v) { return v.date && v.date.startsWith(mStr); }).reduce(function(a, v) { return a + (parseFloat(v.montant) || 0); }, 0);
+    var encaissements = DATA.versements.filter(function(v) { return v.date && v.date.startsWith(mStr); }).reduce(function(a, v) { return a + (parseFloat(v.montant) || 0); }, 0)
+      + (DATA.cessions_foncieres||[]).filter(function(c){ return c.date && c.date.startsWith(mStr); }).reduce(function(a, c){ return a + (parseFloat(c.montant_encaisse)||0); }, 0);
     var decaissements = DATA.ecritures.filter(function(e) { return e.type === 'charge' && e.date && e.date.startsWith(mStr); }).reduce(function(a, e) { return a + e.montant; }, 0);
     months.push({ label: label, encaissements: encaissements, decaissements: decaissements, solde: encaissements - decaissements });
   }
@@ -30987,7 +31039,7 @@ function renderParcelles() {
       + '<td style="font-size:11px;">' + (p.type_titre||'—') + '</td>'
       + '<td style="font-size:12px;">' + prog + '</td>'
       + '<td><span class="badge ' + (statMap[p.statut]||'badge-bleu') + '">' + (p.statut||'').replace(/_/g,' ') + '</span></td>'
-      + '<td>' + ((p.bornes&&p.bornes.length>=3)?('<button class="btn btn-secondary btn-sm btn-icon" title="Plan parcellaire" onclick="genererPlanParcellaire(\'' + p.id + '\')">📐</button> '):'') + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openParcelle(\'' + p.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteParcelle(\'' + p.id + '\')">🗑</button></td>'
+      + '<td>' + ((p.bornes&&p.bornes.length>=3)?('<button class="btn btn-secondary btn-sm btn-icon" title="Plan parcellaire" onclick="genererPlanParcellaire(\'' + p.id + '\')">📐</button> '):'') + '<button class="btn btn-secondary btn-sm btn-icon" title="Céder / vendre" onclick="cesNewFromParcelle(\'' + p.id + '\')">💰</button> <button class="btn btn-secondary btn-sm btn-icon" onclick="openParcelle(\'' + p.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteParcelle(\'' + p.id + '\')">🗑</button></td>'
       + '</tr>';
   }).join('');
 }
@@ -43051,7 +43103,9 @@ async function fonEnter() {
     if (rows && rows.length) DATA.parcelles = rows;
   }
   await fonSeedYaou();
+  if (!DATA.cessions_foncieres || !DATA.cessions_foncieres.length) { var _cr = await dbGetAll('cessions_foncieres'); if (_cr && _cr.length) DATA.cessions_foncieres = _cr; }
   renderParcelles();
+  if (typeof cesRender==='function') cesRender();
   if (typeof updateFoncierKPIs === 'function') updateFoncierKPIs();
 }
 
@@ -44065,6 +44119,191 @@ function tombRemove(store, id) { var t = _tombLoad(); if (t[store]) { t[store] =
 function tombList() { return _tombLoad(); }
 /* Réinitialise le registre (à utiliser avec prudence) */
 function tombClear(store) { var t = _tombLoad(); if (store) { delete t[store]; } else { t = {}; } _tombSave(t); }
+
+
+/* ══════════════════════════════════════════════════════════
+   CESSIONS FONCIÈRES
+   Vente de la part entreprise (lots / portions) → trésorerie + SYSCOHADA
+   Store : cessions_foncieres
+══════════════════════════════════════════════════════════ */
+if (!DATA.cessions_foncieres) DATA.cessions_foncieres = [];
+var _cesId = null;
+
+function cesSourceList() {
+  var out = [];
+  (DATA.parcelles || []).forEach(function(p) {
+    out.push({ key:'parcelle:'+p.id, label:'🗺️ Parcelle — ' + (p.ref || p.localisation || p.id), type:'parcelle', id:p.id });
+  });
+  (DATA.af_operations || []).forEach(function(o) {
+    var partE = (o.nb_lots && o.cle) ? Math.round(o.nb_lots * (o.cle.amen||0) / 100) : 0;
+    out.push({ key:'operation:'+o.id, label:'🌍 Opération — ' + (o.nom || o.id) + (partE?(' (part entreprise ≈ '+partE+' lots)'):''), type:'operation', id:o.id });
+  });
+  return out;
+}
+function cesFillSources(selected) {
+  var sel = document.getElementById('ces-source'); if (!sel) return;
+  sel.innerHTML = '<option value="">— Choisir la source —</option>' + cesSourceList().map(function(s){ return '<option value="'+s.key+'"'+(selected===s.key?' selected':'')+'>'+s.label+'</option>'; }).join('');
+}
+function cesSourceRef(key) {
+  var s = cesSourceList().find(function(x){ return x.key===key; });
+  return s ? s.label.replace(/^.. /,'') : '—';
+}
+
+function cesRender() {
+  var tb = document.getElementById('tbody-cessions');
+  if (!tb) return;
+  var q = ((document.getElementById('ces-search')||{}).value||'').toLowerCase();
+  var statutBadge = { promesse:'badge-or', cedee:'badge-bleu', soldee:'badge-vert' };
+  var list = (DATA.cessions_foncieres||[]).filter(function(c){
+    return !q || ((c.acquereur||'')+' '+(c.designation||'')+' '+cesSourceRef(c.source_key)).toLowerCase().indexOf(q)!==-1;
+  }).sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  tb.innerHTML = list.length ? list.map(function(c){
+    var reste = (c.prix_cession||0) - (c.montant_encaisse||0);
+    return '<tr>'
+      + '<td>'+(c.date||'—')+'</td>'
+      + '<td style="font-size:12px;">'+cesSourceRef(c.source_key)+'</td>'
+      + '<td>'+(c.designation||'—')+'</td>'
+      + '<td>'+(c.acquereur||'—')+'</td>'
+      + '<td style="text-align:right;">'+(c.superficie?fmtF(c.superficie)+' m²':'')+(c.nb_lots?((c.superficie?' · ':'')+c.nb_lots+' lots'):'')+'</td>'
+      + '<td style="text-align:right;font-weight:700;">'+fmtF(c.prix_cession)+'</td>'
+      + '<td style="text-align:right;color:var(--vert);">'+fmtF(c.montant_encaisse)+(reste>0?('<br><span style="font-size:10px;color:var(--rouge);">reste '+fmtF(reste)+'</span>'):'')+'</td>'
+      + '<td><span class="badge '+(statutBadge[c.statut]||'badge-neutre')+'">'+(c.statut||'—')+'</span></td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="cesOpen(\''+c.id+'\')">✏️</button></td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:18px;">Aucune cession.</td></tr>';
+
+  var totPrix = (DATA.cessions_foncieres||[]).reduce(function(s,c){return s+(c.prix_cession||0);},0);
+  var totEnc = (DATA.cessions_foncieres||[]).reduce(function(s,c){return s+(c.montant_encaisse||0);},0);
+  var k = document.getElementById('ces-kpis');
+  if (k) k.innerHTML =
+      '<div class="kpi-card" style="border-top-color:var(--bleu);"><div class="kpi-label">Cessions</div><div class="kpi-value">'+(DATA.cessions_foncieres||[]).length+'</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--or);"><div class="kpi-label">Valeur cédée</div><div class="kpi-value" style="font-size:17px;">'+fmtF(totPrix)+'</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--vert);"><div class="kpi-label">Trésorerie encaissée</div><div class="kpi-value" style="font-size:17px;color:var(--vert);">'+fmtF(totEnc)+'</div></div>'
+    + '<div class="kpi-card" style="border-top-color:var(--rouge);"><div class="kpi-label">Reste à encaisser</div><div class="kpi-value" style="font-size:17px;color:var(--rouge);">'+fmtF(totPrix-totEnc)+'</div></div>';
+}
+
+function cesNew(sourceKey) {
+  _cesId = null;
+  cesFillSources(sourceKey||'');
+  document.getElementById('ces-titre').textContent='Nouvelle cession';
+  document.getElementById('ces-del').style.display='none';
+  var set=function(id,v){var e=document.getElementById(id); if(e) e.value=v;};
+  set('ces-nature','lots'); set('ces-date',today()); set('ces-designation','');
+  set('ces-superficie',0); set('ces-nblots',0); set('ces-acquereur',''); set('ces-contact','');
+  set('ces-prix',0); set('ces-encaisse',0); set('ces-mode','virement'); set('ces-statut','promesse'); set('ces-notes','');
+  cesSync();
+  openModal('modal-cession');
+}
+/* Ouverture depuis une parcelle / opération */
+function cesNewFromParcelle(id){ cesNew('parcelle:'+id); }
+function cesNewFromOperation(id){ cesNew('operation:'+id); }
+
+function cesOpen(id) {
+  var c = DATA.cessions_foncieres.find(function(x){return x.id===id;});
+  if (!c) return;
+  _cesId = id;
+  cesFillSources(c.source_key);
+  document.getElementById('ces-titre').textContent='Cession — '+(c.acquereur||'');
+  document.getElementById('ces-del').style.display='';
+  var set=function(id,v){var e=document.getElementById(id); if(e) e.value=(v==null?'':v);};
+  set('ces-nature',c.nature||'lots'); set('ces-date',c.date); set('ces-designation',c.designation);
+  set('ces-superficie',c.superficie||0); set('ces-nblots',c.nb_lots||0); set('ces-acquereur',c.acquereur); set('ces-contact',c.contact);
+  set('ces-prix',c.prix_cession||0); set('ces-encaisse',c.montant_encaisse||0); set('ces-mode',c.mode||'virement'); set('ces-statut',c.statut||'promesse'); set('ces-notes',c.notes);
+  cesSync();
+  openModal('modal-cession');
+}
+function cesOnSource(){ /* hook éventuel */ }
+function cesSync() {
+  var prix=parseFloat((document.getElementById('ces-prix')||{}).value)||0;
+  var enc=parseFloat((document.getElementById('ces-encaisse')||{}).value)||0;
+  var z=document.getElementById('ces-synth'); if(!z) return;
+  var reste=prix-enc;
+  z.innerHTML='Prix de cession : <strong>'+fmtF(prix)+' FCFA</strong> · Encaissé : <strong style="color:var(--vert);">'+fmtF(enc)+'</strong>'
+    +(reste>0?(' · Reste à encaisser : <strong style="color:var(--rouge);">'+fmtF(reste)+'</strong>'):'')
+    +'<br><span style="font-size:12px;color:var(--blanc-dim);">À l\u2019enregistrement : écriture de vente (4111 / 707) + encaissement ('+(((document.getElementById('ces-mode')||{}).value==='especes')?'571':'521')+' / 4111).</span>';
+}
+
+async function cesGenererEcriture(c) {
+  if (!DATA.ecritures) DATA.ecritures = [];
+  var an=(c.date||today()).slice(0,4);
+  /* 1. Vente : 4111 (débit) / 707 (crédit) */
+  var num1=DATA.ecritures.length+1;
+  var evente={ id:uid(), ref:'CESS-'+an+'-'+String(num1).padStart(4,'0'), date:c.date||today(), piece:'CESSION',
+    type:'produit', libelle:'Cession foncière — '+(c.designation||'')+' à '+(c.acquereur||''),
+    compte:'707', compte_debit:'4111', compte_credit:'707', montant:c.prix_cession||0,
+    mode:'cession', programme_id:'', notes:'Cession part entreprise — '+cesSourceRef(c.source_key), source:'cession_fonciere', cession_id:c.id, created_at:today() };
+  DATA.ecritures.push(evente); await dbPut('ecritures', evente);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', evente);
+  c.ecriture_vente_id=evente.id;
+  /* 2. Encaissement : 521/571 (débit) / 4111 (crédit) */
+  if ((c.montant_encaisse||0)>0) {
+    var num2=DATA.ecritures.length+1;
+    var compteTreso=(c.mode==='especes')?'571':'521';
+    var eenc={ id:uid(), ref:'ENC-CESS-'+an+'-'+String(num2).padStart(4,'0'), date:c.date||today(), piece:'CESSION',
+      type:'tresorerie', libelle:'Encaissement cession — '+(c.acquereur||''),
+      compte:compteTreso, compte_debit:compteTreso, compte_credit:'4111', montant:c.montant_encaisse||0,
+      mode:c.mode||'virement', programme_id:'', notes:'Encaissement cession foncière', source:'cession_fonciere', cession_id:c.id, created_at:today() };
+    DATA.ecritures.push(eenc); await dbPut('ecritures', eenc);
+    if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', eenc);
+    c.ecriture_enc_id=eenc.id;
+  }
+}
+
+async function cesSave() {
+  var g=function(id){var e=document.getElementById(id); return e?e.value:'';};
+  var src=g('ces-source'); var acq=g('ces-acquereur').trim();
+  if (!src) { toast('Choisissez la source (parcelle / opération)', 'error'); return; }
+  if (!acq) { toast('Acquéreur obligatoire', 'error'); return; }
+  var c = _cesId ? DATA.cessions_foncieres.find(function(x){return x.id===_cesId;}) : null;
+  var isNew=false;
+  if (!c) { c={ id:'ces_'+uid(), created_at:today() }; isNew=true; }
+  c.source_key=src;
+  var parts=src.split(':'); c.source_type=parts[0]; c.source_id=parts[1];
+  c.nature=g('ces-nature'); c.date=g('ces-date')||today(); c.designation=g('ces-designation').trim();
+  c.superficie=parseFloat(g('ces-superficie'))||0; c.nb_lots=parseInt(g('ces-nblots'))||0;
+  c.acquereur=acq; c.contact=g('ces-contact').trim();
+  c.prix_cession=parseFloat(g('ces-prix'))||0; c.montant_encaisse=parseFloat(g('ces-encaisse'))||0;
+  c.mode=g('ces-mode'); c.statut=g('ces-statut'); c.notes=g('ces-notes').trim();
+
+  if (isNew) DATA.cessions_foncieres.push(c);
+  await dbPut('cessions_foncieres', c);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_cessions_foncieres', c);
+
+  /* Écritures comptables (une seule fois) */
+  if (!c.ecriture_vente_id) await cesGenererEcriture(c);
+
+  /* Mise à jour de la source (suivi du cédé) */
+  if (c.source_type==='parcelle') {
+    var p=DATA.parcelles.find(function(x){return x.id===c.source_id;});
+    if (p) { p.superficie_cedee=(p.superficie_cedee||0)+(isNew?c.superficie:0); await dbPut('parcelles',p); if(typeof syncToSupabase==='function') syncToSupabase('pi_parcelles',p); }
+  } else if (c.source_type==='operation') {
+    var op=DATA.af_operations.find(function(x){return x.id===c.source_id;});
+    if (op) { op.lots_cedes=(op.lots_cedes||0)+(isNew?c.nb_lots:0); await dbPut('af_operations',op); }
+  }
+
+  closeModal('modal-cession');
+  cesRender();
+  if (typeof filterEcritures==='function') filterEcritures();
+  if (typeof buildTresorerie==='function') buildTresorerie();
+  if (typeof buildCompteResultat==='function') buildCompteResultat();
+  toast('Cession enregistrée — écriture + trésorerie mises à jour', 'success');
+}
+
+async function cesDelete() {
+  if (!_cesId || !confirm('Supprimer cette cession ? Les écritures liées seront retirées.')) return;
+  var c=DATA.cessions_foncieres.find(function(x){return x.id===_cesId;});
+  if (c) {
+    if (c.ecriture_vente_id && typeof deleteRecord==='function') await deleteRecord('ecritures', c.ecriture_vente_id);
+    if (c.ecriture_enc_id && typeof deleteRecord==='function') await deleteRecord('ecritures', c.ecriture_enc_id);
+  }
+  if (typeof deleteRecord==='function') await deleteRecord('cessions_foncieres', _cesId);
+  else { DATA.cessions_foncieres=DATA.cessions_foncieres.filter(function(x){return x.id!==_cesId;}); await dbDelete('cessions_foncieres',_cesId); }
+  closeModal('modal-cession');
+  cesRender();
+  if (typeof filterEcritures==='function') filterEcritures();
+  if (typeof buildTresorerie==='function') buildTresorerie();
+  toast('Cession supprimée', 'info');
+}
 
 </script>
 
