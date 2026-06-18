@@ -539,11 +539,21 @@ textarea.form-control { resize:vertical; min-height:90px; }
 
 /* Lots */
 .lots-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-.lot-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--r2); padding:14px; cursor:pointer; transition:all var(--tr); border-top:3px solid var(--bord2); }
+.lot-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--r2); padding:14px; cursor:pointer; transition:all var(--tr); border-top:3px solid var(--bord2); position:relative; }
 .lot-card:active { transform:scale(.97); }
 .lot-card.vendu { border-top-color:var(--rouge); }
 .lot-card.disponible { border-top-color:var(--vert); }
 .lot-card.reserve { border-top-color:var(--or); }
+.lot-card-del {
+  position:absolute; top:6px; right:6px;
+  background:rgba(224,82,82,0.12); border:1px solid rgba(224,82,82,0.35);
+  color:var(--rouge); border-radius:6px; width:24px; height:24px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; line-height:1; cursor:pointer;
+  transition:background var(--tr), transform var(--tr);
+  z-index:2;
+}
+.lot-card-del:hover { background:rgba(224,82,82,0.28); transform:scale(1.12); }
 .lot-num { font-size:16px; font-weight:700; }
 .lot-type { font-size:11px; color:var(--dim); margin:2px 0; }
 .lot-prix { font-size:12px; color:var(--or); font-weight:600; }
@@ -9840,6 +9850,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-lot')">Annuler</button>
+      <button id="lot-del-btn" class="btn" style="background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;display:none;" onclick="deleteLotFromModal()">🗑 Supprimer</button>
       <button class="btn btn-secondary" style="background:#1D4ED8;color:#fff;" onclick="genererCahierCharges({lotId:APP.editingId})">📋 Cahier des charges</button>
       <button class="btn btn-primary" onclick="saveLot()">Enregistrer</button>
     </div>
@@ -17490,6 +17501,7 @@ function openLotModal(id) {
   APP.editingId = id || null;
   populateProgrammeSelects();
   clearLotForm();
+  var delBtn = document.getElementById('lot-del-btn');
   if (id) {
     var l = DATA.lots.find(function(x) { return x.id === id; });
     if (!l) return;
@@ -17506,9 +17518,11 @@ function openLotModal(id) {
     setSelectValue('l-standing', l.standing);
     setSelectValue('l-statut', l.statut);
     setSelectValue('l-mode-livraison', l.mode_livraison || 'gros_oeuvre');
+    if (delBtn) delBtn.style.display = '';
   } else {
     document.getElementById('modal-lot-title').textContent = 'Nouveau Lot';
     populateTypeLogementOptions();
+    if (delBtn) delBtn.style.display = 'none';
   }
   openModal('modal-lot');
 }
@@ -17595,6 +17609,47 @@ async function saveLot() {
 }
 
 function filterLots() { renderLots(); }
+
+/* ── Suppression d'un lot depuis la grille (bouton 🗑 sur la carte) ── */
+async function deleteLot(id, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  var lot = DATA.lots.find(function(l) { return l.id === id; });
+  if (!lot) return;
+
+  /* Vérification : un client est-il rattaché à ce lot ? */
+  var clientLie = (DATA.clients || []).find(function(c) { return c.lot_id === id; });
+  var msg = 'Supprimer le Lot ' + (lot.numero || id) + ' ?';
+  if (clientLie) {
+    msg = '⚠️ Le client "' + (clientLie.nom || '') + ' ' + (clientLie.prenoms || '') + '" est rattaché à ce lot.\n\nSupprimer quand même le lot ? (le lien client sera conservé mais le lot disparaîtra)';
+  }
+  if (!confirm(msg)) return;
+
+  await deleteRecord('lots', id);
+  renderLots();
+  renderLotsDashboard();
+  toast('Lot ' + (lot.numero || '') + ' supprimé.', 'info');
+}
+
+/* ── Suppression depuis le modal d'édition ── */
+async function deleteLotFromModal() {
+  var id = APP.editingId;
+  if (!id) return;
+  var lot = DATA.lots.find(function(l) { return l.id === id; });
+  if (!lot) return;
+
+  var clientLie = (DATA.clients || []).find(function(c) { return c.lot_id === id; });
+  var msg = 'Supprimer le Lot ' + (lot.numero || id) + ' ?';
+  if (clientLie) {
+    msg = '⚠️ Le client "' + (clientLie.nom || '') + ' ' + (clientLie.prenoms || '') + '" est rattaché à ce lot.\n\nSupprimer quand même ?';
+  }
+  if (!confirm(msg)) return;
+
+  closeModal('modal-lot');
+  await deleteRecord('lots', id);
+  renderLots();
+  renderLotsDashboard();
+  toast('Lot ' + (lot.numero || '') + ' supprimé.', 'info');
+}
 
 /* ══════════════════════════════════════════════════════════════════
    TABLEAU DE BORD — LOTS & FONCIER
@@ -17740,6 +17795,7 @@ function renderLots() {
     var prog = DATA.programmes.find(function(p) { return p.id === l.programme_id; });
     var livBadge = l.mode_livraison === 'cle_en_main' ? '<div style="font-size:10px;color:var(--vert);font-weight:700;">🔑 Clé en main</div>' : '<div style="font-size:10px;color:var(--or);">🧱 Gros œuvre</div>';
     return '<div class="lot-card ' + l.statut + '" onclick="openLotModal(\'' + l.id + '\')">'
+      + '<button class="lot-card-del" title="Supprimer ce lot" onclick="deleteLot(\'' + l.id + '\',event)">🗑</button>'
       + '<div class="lot-num">Lot ' + l.numero + '</div>'
       + '<div class="lot-type">' + (l.type || 'N/A') + (l.ilot ? ' — Îlot ' + l.ilot : '') + '</div>'
       + '<div style="font-size:11px;color:var(--blanc-dim);margin:2px 0;">' + (prog ? prog.nom : '—') + '</div>'
