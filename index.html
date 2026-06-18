@@ -9770,7 +9770,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="form-grid">
         <div class="form-group">
           <label>Programme *</label>
-          <select class="form-control" id="l-programme">
+          <select class="form-control" id="l-programme" onchange="populateTypeLogementOptions()">
             <option value="">— Choisir —</option>
           </select>
         </div>
@@ -9784,7 +9784,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
         <div class="form-group">
           <label>Type de logement</label>
-          <input type="text" class="form-control" id="l-type" placeholder="F3, Villa, Duplex...">
+          <select class="form-control" id="l-type">
+            <option value="">— Choisir —</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Surface (m²)</label>
@@ -17490,7 +17492,7 @@ function openLotModal(id) {
     document.getElementById('l-programme').value = l.programme_id || '';
     document.getElementById('l-numero').value = l.numero || '';
     document.getElementById('l-ilot').value = l.ilot || '';
-    document.getElementById('l-type').value = l.type || '';
+    populateTypeLogementOptions(l.type || '');
     document.getElementById('l-surface').value = l.surface || '';
     document.getElementById('l-pieces').value = l.pieces || '';
     document.getElementById('l-prix').value = l.prix || '';
@@ -17501,16 +17503,55 @@ function openLotModal(id) {
     setSelectValue('l-mode-livraison', l.mode_livraison || 'gros_oeuvre');
   } else {
     document.getElementById('modal-lot-title').textContent = 'Nouveau Lot';
+    populateTypeLogementOptions();
   }
   openModal('modal-lot');
 }
 
 function clearLotForm() {
-  ['l-numero','l-ilot','l-type','l-surface','l-pieces','l-prix','l-cout-revient','l-notes'].forEach(function(id) {
+  ['l-numero','l-ilot','l-surface','l-pieces','l-prix','l-cout-revient','l-notes'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
   document.getElementById('l-mode-livraison').value = 'gros_oeuvre';
+}
+
+/* Construit la liste des types de logement disponibles à partir des projets
+   du module "Plan & Conception" (DATA.conceptions, champ type_logements).
+   Si un programme est sélectionné, ne garde que les types des projets de
+   conception rattachés à ce programme ; sinon (ou si aucun projet trouvé
+   pour ce programme), propose l'ensemble des types tous programmes confondus. */
+function getTypesLogementConception(programmeId) {
+  var types = [];
+  (DATA.conceptions || []).forEach(function(c) {
+    if (programmeId && c.programme_id !== programmeId) return;
+    (c.type_logements || '').split('/').forEach(function(t) {
+      t = t.trim();
+      if (t && types.indexOf(t) === -1) types.push(t);
+    });
+  });
+  types.sort(function(a, b) { return a.localeCompare(b); });
+  return types;
+}
+
+/* Remplit le <select> "Type de logement" du modal Lot avec les types issus
+   des projets de conception (module Plan & Conception), filtrés sur le
+   programme sélectionné. selectedType (optionnel) est conservé même s'il ne
+   provient pas (encore) d'un projet de conception, pour ne pas perdre une
+   valeur saisie avant la mise en place de cette liste. */
+function populateTypeLogementOptions(selectedType) {
+  var sel = document.getElementById('l-type');
+  if (!sel) return;
+  var progId = (document.getElementById('l-programme') || {}).value || '';
+  var types = getTypesLogementConception(progId);
+  if (!types.length && progId) types = getTypesLogementConception(''); // repli : tous programmes
+  if (selectedType && types.indexOf(selectedType) === -1) {
+    types.push(selectedType);
+    types.sort(function(a, b) { return a.localeCompare(b); });
+  }
+  sel.innerHTML = '<option value="">— Choisir —</option>'
+    + types.map(function(t) { return '<option value="' + escHtml(t) + '">' + escHtml(t) + '</option>'; }).join('');
+  sel.value = selectedType || '';
 }
 
 async function saveLot() {
