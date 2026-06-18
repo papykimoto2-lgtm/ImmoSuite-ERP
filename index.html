@@ -539,21 +539,11 @@ textarea.form-control { resize:vertical; min-height:90px; }
 
 /* Lots */
 .lots-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-.lot-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--r2); padding:14px; cursor:pointer; transition:all var(--tr); border-top:3px solid var(--bord2); position:relative; }
+.lot-card { background:var(--card); border:1px solid var(--bord); border-radius:var(--r2); padding:14px; cursor:pointer; transition:all var(--tr); border-top:3px solid var(--bord2); }
 .lot-card:active { transform:scale(.97); }
 .lot-card.vendu { border-top-color:var(--rouge); }
 .lot-card.disponible { border-top-color:var(--vert); }
 .lot-card.reserve { border-top-color:var(--or); }
-.lot-card-del {
-  position:absolute; top:6px; right:6px;
-  background:rgba(224,82,82,0.12); border:1px solid rgba(224,82,82,0.35);
-  color:var(--rouge); border-radius:6px; width:24px; height:24px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:13px; line-height:1; cursor:pointer;
-  transition:background var(--tr), transform var(--tr);
-  z-index:2;
-}
-.lot-card-del:hover { background:rgba(224,82,82,0.28); transform:scale(1.12); }
 .lot-num { font-size:16px; font-weight:700; }
 .lot-type { font-size:11px; color:var(--dim); margin:2px 0; }
 .lot-prix { font-size:12px; color:var(--or); font-weight:600; }
@@ -2056,12 +2046,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
 
       <!-- ÉTAPE 1 : FONCIER — prospecter, acquérir et sécuriser le terrain -->
-      <div class="nav-section"><span class="nav-step">1</span><span>Foncier</span></div>
+      <div class="nav-section"><span class="nav-step">1</span><span>Foncier &amp; Lots</span></div>
+      <div class="nav-item" onclick="goTo('filiere')" data-page="filiere">
+        <span class="nav-icon">🔗</span><span>Filière Foncière</span>
+      </div>
       <div class="nav-item" onclick="goTo('foncier')" data-page="foncier">
         <span class="nav-icon">🗺️</span><span>Portefeuille Foncier</span>
       </div>
       <div class="nav-item" onclick="goTo('foncierops')" data-page="foncierops">
         <span class="nav-icon">🌍</span><span>Acquisition &amp; Aménagement Foncier</span>
+      </div>
+      <div class="nav-item" onclick="goTo('lots')" data-page="lots">
+        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
       </div>
       <div class="nav-item" onclick="goTo('juridique')" data-page="juridique">
         <span class="nav-icon">⚖️</span><span>Dossiers Juridiques</span>
@@ -2123,9 +2119,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
       <!-- ÉTAPE 5 : VENTES — réserver, signer, formaliser -->
       <div class="nav-section"><span class="nav-step">5</span><span>Ventes &amp; Contrats</span></div>
-      <div class="nav-item" onclick="goTo('lots')" data-page="lots">
-        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
-      </div>
       <div class="nav-item" onclick="goTo('clients')" data-page="clients">
         <span class="nav-icon">👥</span><span>Souscripteurs</span>
         <span class="nav-badge" id="badge-retard" style="display:none;">0</span>
@@ -3458,7 +3451,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('params','comms')">📧 Communications</button>
           <button class="tab-btn" onclick="switchTab('params','workflow');renderParamsWorkflow()">🔄 Workflow</button>
           <button class="tab-btn" onclick="switchTab('params','backup');loadBackupParams()">💾 Sauvegardes</button>
-          <button class="tab-btn" onclick="switchTab('params','agrement');renderParamsAgrement()">🏛️ Agrément Promoteur</button>
           <button class="tab-btn" onclick="switchTab('params','rh')">👥 RH &amp; Paie</button>
           <button class="tab-btn" onclick="switchTab('params','mobilemoney')">💰 Mobile Money</button>
           <button class="tab-btn" onclick="switchTab('params','securite')">🔒 Sécurité</button>
@@ -4233,12 +4225,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
         </div>
 
-        <!-- Agrément Promoteur -->
-        <div class="tab-pane" id="tab-params-agrement">
-          <div id="params-agrement-content">
-            <div style="text-align:center;padding:30px;color:var(--dim);">Chargement...</div>
-          </div>
-        </div>
 
         <!-- RH & Paie -->
         <div class="tab-pane" id="tab-params-rh">
@@ -5342,6 +5328,25 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
       </div>
 
+      <!-- ════════ FILIÈRE FONCIÈRE — hub d'interconnexion ════════ -->
+      <div class="page" id="page-filiere">
+        <div class="page-header">
+          <div>
+            <div class="step-badge">① Foncier &amp; Lots</div>
+            <div class="page-title">🔗 Filière Foncière</div>
+            <div class="page-subtitle">Opération → Parcelle / Titre → Morcellement → Lots → Cessions — la chaîne complète d'un même métier</div>
+          </div>
+        </div>
+        <div class="filters-bar" style="margin-bottom:14px;">
+          <select id="fil-op" class="filter-select" onchange="filiereRender()" style="min-width:260px;">
+            <option value="">— Vue d'ensemble —</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="filiereRender()">🔄 Actualiser</button>
+        </div>
+        <div id="fil-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+        <div id="fil-content"></div>
+      </div>
+
       <div class="page" id="page-foncier">
         <div class="page-header">
           <div>
@@ -5543,7 +5548,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchTab('juridique','dossiers')">📂 Dossiers actifs</button>
           <button class="tab-btn" onclick="switchTab('juridique','contrats')">📝 Contrats</button>
-          <button class="tab-btn" onclick="switchTab('juridique','agrement')">🏛️ Agrément & Conformité</button>
+          <button class="tab-btn" onclick="switchTab('juridique','agrement');renderParamsAgrement()">🏛️ Agrément & Conformité</button>
           <button class="tab-btn" onclick="switchTab('juridique','contentieux')">⚖️ Contentieux</button>
         </div>
         <div class="tab-pane active" id="tab-juridique-dossiers">
@@ -5579,38 +5584,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="card"><div id="contrats-jur-box" style="color:var(--blanc-dim);font-size:13px;padding:20px;">Aucun contrat enregistré.</div></div>
         </div>
         <div class="tab-pane" id="tab-juridique-agrement">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card">
-              <div class="form-section-title">🏛️ Agrément Promoteur Immobilier — CI</div>
-              <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;font-size:13px;">
-                <div class="alert alert-warn">ℹ️ Agréé par le Ministère de la Construction — N° à renseigner dans les paramètres</div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gris-bord);">
-                  <span style="color:var(--blanc-dim);">N° Agrément</span>
-                  <span id="agr-num" style="font-weight:600;color:var(--or);">—</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gris-bord);">
-                  <span style="color:var(--blanc-dim);">Date délivrance</span>
-                  <span id="agr-date">—</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gris-bord);">
-                  <span style="color:var(--blanc-dim);">Date renouvellement</span>
-                  <span id="agr-renouvellement" style="color:var(--rouge);">—</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;">
-                  <span style="color:var(--blanc-dim);">RCCM</span>
-                  <span id="agr-rccm">—</span>
-                </div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="form-section-title">📋 Obligations légales — Promoteur CI</div>
-              <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;font-size:12px;">
-                <div class="alert alert-success">✅ Loi sur la VFI (Vente en l'État Futur d'Achèvement)</div>
-                <div class="alert alert-success">✅ Garantie d'achèvement obligatoire</div>
-                <div class="alert alert-warn">⏳ Dépôt de garantie BCEAO à vérifier</div>
-                <div class="alert alert-warn">⏳ Publication des plans aux services d'urbanisme</div>
-                <div id="checklist-conformite" style="margin-top:8px;"></div>
-              </div>
+          <div id="params-agrement-content">
+            <div style="text-align:center;padding:30px;color:var(--dim);">Chargement...</div>
+          </div>
+          <div class="card" style="margin-top:16px;">
+            <div class="form-section-title">📋 Obligations légales — Promoteur CI</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;font-size:12px;">
+              <div class="alert alert-success">✅ Loi sur la VFI (Vente en l'État Futur d'Achèvement)</div>
+              <div class="alert alert-success">✅ Garantie d'achèvement obligatoire</div>
+              <div class="alert alert-warn">⏳ Dépôt de garantie BCEAO à vérifier</div>
+              <div class="alert alert-warn">⏳ Publication des plans aux services d'urbanisme</div>
+              <div id="checklist-conformite" style="margin-top:8px;"></div>
             </div>
           </div>
         </div>
@@ -9790,6 +9774,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </select>
         </div>
         <div class="form-group">
+          <label>Parcelle source (foncier)</label>
+          <select class="form-control" id="l-parcelle"><option value="">— Aucune —</option></select>
+        </div>
+        <div class="form-group">
+          <label>Opération foncière</label>
+          <select class="form-control" id="l-operation"><option value="">— Aucune —</option></select>
+        </div>
+        <div class="form-group">
           <label>Numéro du lot *</label>
           <input type="text" class="form-control" id="l-numero">
         </div>
@@ -9850,8 +9842,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-lot')">Annuler</button>
-      <button id="lot-del-btn" class="btn" style="background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;display:none;" onclick="deleteLotFromModal()">🗑 Supprimer</button>
       <button class="btn btn-secondary" style="background:#1D4ED8;color:#fff;" onclick="genererCahierCharges({lotId:APP.editingId})">📋 Cahier des charges</button>
+      <button class="btn btn-danger" id="btn-del-lot" onclick="deleteLot()" style="display:none;">🗑 Supprimer</button>
       <button class="btn btn-primary" onclick="saveLot()">Enregistrer</button>
     </div>
   </div>
@@ -14279,6 +14271,7 @@ function goTo(page) {
   if (page === 'paiements') { renderVersements(); populateClientSelects(); }
   if (page === 'programmes') renderProgrammes();
   if (page === 'lots') { renderLots(); renderTerrains(); }
+  if (page === 'filiere') filiereRender();
   if (page === 'comptabilite') { loadComptabilite(); updateCompteSuggestions(); }
   if (page === 'relances') detectRelances();
   if (page === 'parametres') loadParams();
@@ -17497,16 +17490,39 @@ function renderParamsAgrement() {
 /* ──────────────────────────────────────────────────────
    LOTS & FONCIER
 ────────────────────────────────────────────────────── */
+async function deleteLot(id) {
+  var lid = id || APP.editingId;
+  if (!lid) return;
+  var l = DATA.lots.find(function(x){ return x.id===lid; });
+  if (!l) return;
+  var cli = (DATA.clients||[]).find(function(c){ return c.lot_id===lid; });
+  if (cli) { alert('Impossible : le lot ' + (l.numero||'') + ' est réservé/vendu par « ' + ((cli.nom||'')+' '+(cli.prenoms||'')).trim() + ' ».\nRetirez d\'abord le souscripteur du lot.'); return; }
+  if (!confirm('Supprimer définitivement le lot ' + (l.numero||'') + ' ?')) return;
+  DATA.lots = DATA.lots.filter(function(x){ return x.id!==lid; });
+  if (typeof deleteRecord==='function') await deleteRecord('lots', lid);
+  else { await dbDelete('lots', lid); if (typeof deleteFromSupabase==='function') deleteFromSupabase('pi_lots', lid); }
+  /* libère les parcelles de morcellement liées */
+  var liees = (DATA.parcelles_morcellement||[]).filter(function(pa){ return pa.lot_id===lid; });
+  for (var i=0;i<liees.length;i++){ liees[i].lot_id=null; await dbPut('parcelles_morcellement', liees[i]); if(typeof syncToSupabase==='function') syncToSupabase('pi_parcelles_morcellement', liees[i]); }
+  closeModal('modal-lot');
+  renderLots();
+  if (typeof renderLotsDashboard==='function') renderLotsDashboard();
+  if (typeof refreshDashboard==='function') refreshDashboard();
+  toast('Lot supprimé.', 'info');
+}
+
 function openLotModal(id) {
   APP.editingId = id || null;
+  var _dl=document.getElementById('btn-del-lot'); if(_dl) _dl.style.display = id ? '' : 'none';
   populateProgrammeSelects();
   clearLotForm();
-  var delBtn = document.getElementById('lot-del-btn');
+  if (typeof filierePopulateLotSelects==='function') filierePopulateLotSelects('','');
   if (id) {
     var l = DATA.lots.find(function(x) { return x.id === id; });
     if (!l) return;
     document.getElementById('modal-lot-title').textContent = 'Modifier Lot';
     document.getElementById('l-programme').value = l.programme_id || '';
+    if (typeof filierePopulateLotSelects==='function') filierePopulateLotSelects(l.parcelle_id||'', l.operation_id||'');
     document.getElementById('l-numero').value = l.numero || '';
     document.getElementById('l-ilot').value = l.ilot || '';
     populateTypeLogementOptions(l.type || '');
@@ -17518,11 +17534,9 @@ function openLotModal(id) {
     setSelectValue('l-standing', l.standing);
     setSelectValue('l-statut', l.statut);
     setSelectValue('l-mode-livraison', l.mode_livraison || 'gros_oeuvre');
-    if (delBtn) delBtn.style.display = '';
   } else {
     document.getElementById('modal-lot-title').textContent = 'Nouveau Lot';
     populateTypeLogementOptions();
-    if (delBtn) delBtn.style.display = 'none';
   }
   openModal('modal-lot');
 }
@@ -17580,6 +17594,8 @@ async function saveLot() {
   var lot = {
     id: id,
     programme_id: document.getElementById('l-programme').value,
+    parcelle_id: (document.getElementById('l-parcelle')||{}).value || '',
+    operation_id: (document.getElementById('l-operation')||{}).value || '',
     numero: numero,
     ilot: document.getElementById('l-ilot').value,
     type: document.getElementById('l-type').value,
@@ -17609,47 +17625,6 @@ async function saveLot() {
 }
 
 function filterLots() { renderLots(); }
-
-/* ── Suppression d'un lot depuis la grille (bouton 🗑 sur la carte) ── */
-async function deleteLot(id, event) {
-  if (event) { event.stopPropagation(); event.preventDefault(); }
-  var lot = DATA.lots.find(function(l) { return l.id === id; });
-  if (!lot) return;
-
-  /* Vérification : un client est-il rattaché à ce lot ? */
-  var clientLie = (DATA.clients || []).find(function(c) { return c.lot_id === id; });
-  var msg = 'Supprimer le Lot ' + (lot.numero || id) + ' ?';
-  if (clientLie) {
-    msg = '⚠️ Le client "' + (clientLie.nom || '') + ' ' + (clientLie.prenoms || '') + '" est rattaché à ce lot.\n\nSupprimer quand même le lot ? (le lien client sera conservé mais le lot disparaîtra)';
-  }
-  if (!confirm(msg)) return;
-
-  await deleteRecord('lots', id);
-  renderLots();
-  renderLotsDashboard();
-  toast('Lot ' + (lot.numero || '') + ' supprimé.', 'info');
-}
-
-/* ── Suppression depuis le modal d'édition ── */
-async function deleteLotFromModal() {
-  var id = APP.editingId;
-  if (!id) return;
-  var lot = DATA.lots.find(function(l) { return l.id === id; });
-  if (!lot) return;
-
-  var clientLie = (DATA.clients || []).find(function(c) { return c.lot_id === id; });
-  var msg = 'Supprimer le Lot ' + (lot.numero || id) + ' ?';
-  if (clientLie) {
-    msg = '⚠️ Le client "' + (clientLie.nom || '') + ' ' + (clientLie.prenoms || '') + '" est rattaché à ce lot.\n\nSupprimer quand même ?';
-  }
-  if (!confirm(msg)) return;
-
-  closeModal('modal-lot');
-  await deleteRecord('lots', id);
-  renderLots();
-  renderLotsDashboard();
-  toast('Lot ' + (lot.numero || '') + ' supprimé.', 'info');
-}
 
 /* ══════════════════════════════════════════════════════════════════
    TABLEAU DE BORD — LOTS & FONCIER
@@ -17795,7 +17770,6 @@ function renderLots() {
     var prog = DATA.programmes.find(function(p) { return p.id === l.programme_id; });
     var livBadge = l.mode_livraison === 'cle_en_main' ? '<div style="font-size:10px;color:var(--vert);font-weight:700;">🔑 Clé en main</div>' : '<div style="font-size:10px;color:var(--or);">🧱 Gros œuvre</div>';
     return '<div class="lot-card ' + l.statut + '" onclick="openLotModal(\'' + l.id + '\')">'
-      + '<button class="lot-card-del" title="Supprimer ce lot" onclick="deleteLot(\'' + l.id + '\',event)">🗑</button>'
       + '<div class="lot-num">Lot ' + l.numero + '</div>'
       + '<div class="lot-type">' + (l.type || 'N/A') + (l.ilot ? ' — Îlot ' + l.ilot : '') + '</div>'
       + '<div style="font-size:11px;color:var(--blanc-dim);margin:2px 0;">' + (prog ? prog.nom : '—') + '</div>'
@@ -17803,6 +17777,7 @@ function renderLots() {
       + livBadge
       + '<div class="lot-prix">' + fcfa(l.prix) + '</div>'
       + '<div style="font-size:11px;margin-top:4px;">' + (statutLabels[l.statut] || l.statut) + '</div>'
+      + '<button class="btn btn-danger btn-sm" style="margin-top:6px;padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();deleteLot(\'' + l.id + '\')">🗑</button>'
       + '</div>';
   }).join('');
 }
@@ -44911,6 +44886,243 @@ async function cesSave() {
   if (typeof buildTresorerie==='function') buildTresorerie();
   if (typeof buildCompteResultat==='function') buildCompteResultat();
   toast('Cession enregistrée', 'success');
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   FILIÈRE FONCIÈRE — interconnexion Opération · Parcelle · Lots · Cessions
+   Niveau 1 (filiation FK) + Niveau 2 (vue chaîne) + roll-up KPIs
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Liens de filiation ── */
+function filiereFindParcelle(op) {
+  if (!op) return null;
+  return (DATA.parcelles || []).find(function(p) {
+    return (op.parcelle_id && p.id === op.parcelle_id) || p.operation_id === op.id;
+  }) || null;
+}
+function filiereOpLots(op, parcelle) {
+  return (DATA.lots || []).filter(function(l) {
+    return (op && l.operation_id === op.id) || (parcelle && l.parcelle_id === parcelle.id);
+  });
+}
+function filiereOpCessions(op) {
+  return (DATA.cessions_foncieres || []).filter(function(c) {
+    return c.source_type === 'operation' && c.source_id === (op && op.id);
+  });
+}
+function filiereParcCessions(parcelle) {
+  return (DATA.cessions_foncieres || []).filter(function(c) {
+    return c.source_type === 'parcelle' && c.source_id === (parcelle && parcelle.id);
+  });
+}
+function _filKpi(t, v, c) {
+  return '<div class="kpi-card" style="border-top-color:' + (c || 'var(--vert)') + ';"><div class="kpi-label">' + t + '</div><div class="kpi-value" style="font-size:16px;color:' + (c || 'inherit') + ';">' + v + '</div></div>';
+}
+
+/* ── Rendu principal ── */
+function filiereRender() {
+  var sel = document.getElementById('fil-op');
+  if (sel) {
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">— Vue d\'ensemble —</option>' + (DATA.af_operations || []).map(function(o) {
+      return '<option value="' + o.id + '"' + (cur === o.id ? ' selected' : '') + '>' + escHtml(o.nom || o.id) + '</option>';
+    }).join('');
+    if (cur) sel.value = cur;
+  }
+  var opId = sel ? sel.value : '';
+  if (opId) {
+    var op = (DATA.af_operations || []).find(function(x) { return x.id === opId; });
+    filiereRenderChain(op);
+  } else {
+    filiereRenderGlobal();
+  }
+}
+
+/* ── Vue d'ensemble (toutes opérations) ── */
+function filiereRenderGlobal() {
+  var ops = DATA.af_operations || [];
+  var lots = DATA.lots || [];
+  var cess = DATA.cessions_foncieres || [];
+  var supTot = ops.reduce(function(s, o) { return s + (o.superficie || 0); }, 0);
+  var lotsVendus = lots.filter(function(l) { return l.statut === 'vendu'; }).length;
+  var lotsCedes = cess.reduce(function(s, c) { return s + (c.nb_lots || 0); }, 0);
+  var caCess = cess.reduce(function(s, c) { return s + (c.montant_encaisse || 0); }, 0);
+
+  var k = document.getElementById('fil-kpis');
+  if (k) k.innerHTML =
+      _filKpi('Opérations', ops.length, '#3B82F6')
+    + _filKpi('Superficie maîtrisée', fmtF(supTot) + ' m²', '#8B5CF6')
+    + _filKpi('Lots créés', lots.length, '#0EA5E9')
+    + _filKpi('Lots vendus', lotsVendus, '#1A6B3A')
+    + _filKpi('Lots cédés', lotsCedes, '#B8732F')
+    + _filKpi('Trésorerie cessions', fmtF(caCess) + ' F', '#1A6B3A');
+
+  var c = document.getElementById('fil-content');
+  if (!c) return;
+  if (!ops.length) { c.innerHTML = '<div class="card" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucune opération foncière. Créez-en une dans « Acquisition &amp; Aménagement Foncier ».</div>'; return; }
+
+  var rows = ops.map(function(o) {
+    var parcelle = filiereFindParcelle(o);
+    var ol = filiereOpLots(o, parcelle);
+    var oc = filiereOpCessions(o);
+    var vendus = ol.filter(function(l) { return l.statut === 'vendu'; }).length;
+    var stg = (typeof afStage === 'function' && o.stage) ? afStage(o.stage) : null;
+    return '<tr style="cursor:pointer;" onclick="filiereGoOp(\'' + o.id + '\')">'
+      + '<td><strong>' + escHtml(o.nom || '—') + '</strong><br><span style="font-size:11px;color:var(--blanc-dim);">' + escHtml(o.village || o.commune || '') + '</span></td>'
+      + '<td>' + (stg ? ('<span class="badge" style="background:' + stg.c + ';color:#fff;">' + stg.e + ' ' + stg.t + '</span>') : '—') + '</td>'
+      + '<td style="text-align:center;">' + (parcelle ? ('✅ ' + escHtml(parcelle.ref || parcelle.num_titre || 'oui')) : '<span style="color:var(--blanc-dim);">—</span>') + '</td>'
+      + '<td style="text-align:right;">' + (o.nb_lots || 0) + '</td>'
+      + '<td style="text-align:right;">' + ol.length + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + vendus + '</td>'
+      + '<td style="text-align:right;color:var(--or);">' + oc.length + '</td>'
+      + '</tr>';
+  }).join('');
+
+  c.innerHTML = '<div class="card"><div style="font-weight:700;margin-bottom:8px;">Filière par opération <span style="font-size:11px;color:var(--blanc-dim);">(cliquez une ligne pour dérouler la chaîne)</span></div>'
+    + '<div class="table-wrap"><table><thead><tr><th>Opération</th><th>Étape</th><th style="text-align:center;">Parcelle/Titre</th><th style="text-align:right;">Lots prévus</th><th style="text-align:right;">Lots créés</th><th style="text-align:right;">Vendus</th><th style="text-align:right;">Cessions</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div></div>';
+}
+
+function filiereGoOp(opId) {
+  var sel = document.getElementById('fil-op');
+  if (sel) sel.value = opId;
+  filiereRender();
+}
+
+/* ── Vue chaîne d'une opération ── */
+function filiereRenderChain(op) {
+  if (!op) { filiereRenderGlobal(); return; }
+  var parcelle = filiereFindParcelle(op);
+  var lots = filiereOpLots(op, parcelle);
+  var cess = filiereOpCessions(op).concat(parcelle ? filiereParcCessions(parcelle) : []);
+  var dispo = lots.filter(function(l) { return l.statut === 'disponible'; }).length;
+  var resv = lots.filter(function(l) { return l.statut === 'reserve'; }).length;
+  var vendu = lots.filter(function(l) { return l.statut === 'vendu'; }).length;
+  var lotsCedes = cess.reduce(function(s, c) { return s + (c.nb_lots || 0); }, 0);
+  var caCess = cess.reduce(function(s, c) { return s + (c.montant_encaisse || 0); }, 0);
+  var partE = (op.nb_lots && op.cle && op.cle.amen) ? Math.round(op.nb_lots * op.cle.amen / 100) : (op.nb_lots || 0);
+
+  var k = document.getElementById('fil-kpis');
+  if (k) k.innerHTML =
+      _filKpi('Superficie', fmtF(op.superficie || 0) + ' m²', '#8B5CF6')
+    + _filKpi('Lots prévus', op.nb_lots || 0, '#3B82F6')
+    + _filKpi('Part entreprise', partE + ' lots', '#0EA5E9')
+    + _filKpi('Lots créés', lots.length, '#0EA5E9')
+    + _filKpi('Vendus', vendu, '#1A6B3A')
+    + _filKpi('Cédés', lotsCedes, '#B8732F')
+    + _filKpi('Trésorerie cessions', fmtF(caCess) + ' F', '#1A6B3A');
+
+  var arrow = '<div style="text-align:center;color:var(--or);font-size:20px;margin:2px 0;">↓</div>';
+  function step(num, titre, couleur, corps, actions) {
+    return '<div class="card" style="border-left:4px solid ' + couleur + ';margin-bottom:0;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+      + '<div style="font-weight:700;"><span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;background:' + couleur + ';color:#fff;border-radius:50%;font-size:12px;margin-right:6px;">' + num + '</span>' + titre + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + (actions || '') + '</div></div>'
+      + (corps ? ('<div style="margin-top:8px;font-size:13px;">' + corps + '</div>') : '') + '</div>';
+  }
+
+  // 1. Opération
+  var stg = (typeof afStage === 'function' && op.stage) ? afStage(op.stage) : null;
+  var s1 = step('1', 'Opération — ' + escHtml(op.nom || ''), '#3B82F6',
+    (stg ? ('Étape : <strong>' + stg.e + ' ' + stg.t + '</strong> · ') : '') + 'Localité : ' + escHtml(op.village || op.commune || '—') + ' · ' + fmtF(op.superficie || 0) + ' m²',
+    '<button class="btn btn-secondary btn-sm" onclick="filiereOpenOp(\'' + op.id + '\')">Ouvrir l\'opération</button>');
+
+  // 2. Parcelle / Titre
+  var s2corps, s2act;
+  if (parcelle) {
+    s2corps = 'Réf : <strong>' + escHtml(parcelle.ref || '—') + '</strong> · Titre : ' + escHtml(parcelle.num_titre || parcelle.type_titre || '—') + ' · Contenance : ' + fmtF(parcelle.superficie || parcelle.contenance || 0) + ' m²' + (parcelle.statut ? (' · Statut : ' + escHtml(parcelle.statut)) : '');
+    s2act = '<button class="btn btn-secondary btn-sm" onclick="filiereOpenParcelle(\'' + parcelle.id + '\')">Ouvrir au portefeuille</button>';
+  } else {
+    s2corps = '<span style="color:var(--blanc-dim);">Aucune parcelle rattachée. Transférez l\'opération au Portefeuille Foncier depuis sa fiche (onglet juridique/administratif).</span>';
+    s2act = (typeof afTransfererFoncier === 'function') ? '<button class="btn btn-primary btn-sm" onclick="afTransfererFoncier(\'' + op.id + '\');setTimeout(filiereRender,400);">→ Créer la parcelle</button>' : '';
+  }
+  var s2 = step('2', 'Parcelle / Titre foncier', '#8B5CF6', s2corps, s2act);
+
+  // 3. Morcellement
+  var morc = parcelle ? (DATA.parcelles_morcellement || []).filter(function(m) { return parcelle.programme_id && m.programme_id === parcelle.programme_id; }).length : 0;
+  var s3 = step('3', 'Morcellement / Répartition', '#F59E0B',
+    'Lots prévus à l\'opération : <strong>' + (op.nb_lots || 0) + '</strong>' + (op.cle ? (' · Répartition — propriétaires ' + (op.cle.prop || 0) + '% / aménageur ' + (op.cle.amen || 0) + '% / financier ' + (op.cle.fin || 0) + '%') : '') + (morc ? (' · ' + morc + ' parcelle(s) morcelée(s)') : ''),
+    '');
+
+  // 4. Lots
+  var s4corps = lots.length
+    ? ('<strong>' + lots.length + '</strong> lot(s) créé(s) — <span style="color:#3B82F6;">' + dispo + ' dispo</span> · <span style="color:var(--or);">' + resv + ' réservés</span> · <span style="color:var(--vert);">' + vendu + ' vendus</span>')
+    : '<span style="color:var(--blanc-dim);">Aucun lot créé. Générez la part entreprise (' + partE + ' lots) pour la commercialisation/cession.</span>';
+  var s4act = '<button class="btn btn-secondary btn-sm" onclick="goTo(\'lots\')">Voir les lots</button>'
+    + ((partE > 0) ? (' <button class="btn btn-primary btn-sm" onclick="filiereGenererLots(\'' + op.id + '\')">⚙️ Générer les lots (part entreprise)</button>') : '');
+  var s4 = step('4', 'Lots commercialisables', '#0EA5E9', s4corps, s4act);
+
+  // 5. Cessions
+  var caCedee = cess.reduce(function(s, c) { return s + (c.prix_cession || 0); }, 0);
+  var s5corps = cess.length
+    ? ('<strong>' + cess.length + '</strong> cession(s) · Valeur cédée ' + fmtF(caCedee) + ' F · Encaissé <span style="color:var(--vert);">' + fmtF(caCess) + ' F</span>')
+    : '<span style="color:var(--blanc-dim);">Aucune cession sur cette opération.</span>';
+  var s5act = '<button class="btn btn-primary btn-sm" onclick="cesNewFromOperation(\'' + op.id + '\')">+ Céder des lots</button>'
+    + ' <button class="btn btn-secondary btn-sm" onclick="goTo(\'foncier\');setTimeout(function(){switchTab(\'foncier\',\'cessions\');cesRender();},150);">Voir les cessions</button>';
+  var s5 = step('5', 'Cessions (part entreprise)', '#1A6B3A', s5corps, s5act);
+
+  var c = document.getElementById('fil-content');
+  if (c) c.innerHTML = s1 + arrow + s2 + arrow + s3 + arrow + s4 + arrow + s5;
+}
+
+function filiereOpenOp(id) {
+  goTo('foncierops');
+  setTimeout(function() { if (typeof afOpenOperation === 'function') afOpenOperation(id); }, 200);
+}
+function filiereOpenParcelle(id) {
+  goTo('foncier');
+  setTimeout(function() { if (typeof openParcelle === 'function') openParcelle(id); }, 200);
+}
+
+/* ── Génération des lots de la part entreprise (unification morcellement→lots) ── */
+async function filiereGenererLots(opId) {
+  var op = (DATA.af_operations || []).find(function(x) { return x.id === opId; });
+  if (!op) return;
+  var parcelle = filiereFindParcelle(op);
+  var nb = (op.nb_lots && op.cle && op.cle.amen) ? Math.round(op.nb_lots * op.cle.amen / 100) : (op.nb_lots || 0);
+  if (nb <= 0) { toast('Renseignez le nombre de lots et la répartition sur l\'opération.', 'error'); return; }
+  var dejaLies = filiereOpLots(op, parcelle).length;
+  if (dejaLies > 0 && !confirm(dejaLies + ' lot(s) déjà rattaché(s) à cette opération. Générer ' + nb + ' lot(s) supplémentaire(s) ?')) return;
+  if (dejaLies === 0 && !confirm('Générer ' + nb + ' lot(s) commercialisable(s) (part entreprise) pour « ' + (op.nom || '') + ' » ?')) return;
+
+  var progId = parcelle ? (parcelle.programme_id || '') : (op.programme_id || '');
+  var prefix = (op.code || (op.nom ? op.nom.substring(0, 3).toUpperCase() : 'L'));
+  var base = dejaLies;
+  for (var i = 1; i <= nb; i++) {
+    var lot = {
+      id: uid(),
+      programme_id: progId,
+      numero: prefix + '-' + (base + i),
+      ilot: '', type: '', surface: 0, pieces: 0, prix: 0, cout_revient: 0,
+      standing: '', mode_livraison: 'gros_oeuvre', statut: 'disponible', notes: 'Part entreprise — ' + (op.nom || ''),
+      parcelle_id: parcelle ? parcelle.id : '',
+      operation_id: op.id,
+      source: 'foncier',
+      created_at: today()
+    };
+    DATA.lots.push(lot);
+    await dbPut('lots', lot);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
+  }
+  op.lots_generes = (op.lots_generes || 0) + nb;
+  await dbPut('af_operations', op);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_af_operations', op);
+  filiereRender();
+  if (typeof renderLots === 'function') renderLots();
+  toast(nb + ' lot(s) généré(s) et rattaché(s) à l\'opération.', 'success');
+}
+
+/* ── Selects de filiation dans le modal Lot (Niveau 1) ── */
+function filierePopulateLotSelects(parcelleId, operationId) {
+  var sp = document.getElementById('l-parcelle');
+  if (sp) sp.innerHTML = '<option value="">— Aucune —</option>' + (DATA.parcelles || []).map(function(p) {
+    return '<option value="' + p.id + '"' + (parcelleId === p.id ? ' selected' : '') + '>' + escHtml(p.ref || p.localisation || p.id) + '</option>';
+  }).join('');
+  var so = document.getElementById('l-operation');
+  if (so) so.innerHTML = '<option value="">— Aucune —</option>' + (DATA.af_operations || []).map(function(o) {
+    return '<option value="' + o.id + '"' + (operationId === o.id ? ' selected' : '') + '>' + escHtml(o.nom || o.id) + '</option>';
+  }).join('');
 }
 
 </script>
