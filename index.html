@@ -5402,31 +5402,82 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
       <!-- ── MODAL : Cession foncière ── -->
       <div class="modal-overlay" id="modal-cession">
-        <div class="modal" style="max-width:680px;">
+        <div class="modal" style="max-width:920px;">
           <div class="modal-header"><div class="modal-title" id="ces-titre">Nouvelle cession</div><button class="modal-close" onclick="closeModal('modal-cession')">✕</button></div>
           <div class="modal-body">
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:2px 0 6px;">① Bien cédé</div>
             <div class="form-grid">
               <div class="form-group span-2"><label>Source (part entreprise) *</label><select id="ces-source" class="form-control" onchange="cesOnSource()"></select></div>
               <div class="form-group"><label>Nature</label><select id="ces-nature" class="form-control"><option value="lots">Lots</option><option value="portion_parcelle">Portion de parcelle</option></select></div>
-              <div class="form-group"><label>Date</label><input type="date" id="ces-date" class="form-control"></div>
+              <div class="form-group"><label>Date de l'opération</label><input type="date" id="ces-date" class="form-control"></div>
               <div class="form-group span-2"><label>Désignation cédée</label><input id="ces-designation" class="form-control" placeholder="Ex : 5 lots îlot B / portion 1 200 m²"></div>
-              <div class="form-group"><label>Superficie cédée (m²)</label><input type="number" id="ces-superficie" class="form-control" value="0"></div>
-              <div class="form-group"><label>Nombre de lots cédés</label><input type="number" id="ces-nblots" class="form-control" value="0"></div>
-              <div class="form-group span-2"><label>Acquéreur *</label><input id="ces-acquereur" class="form-control" placeholder="Nom / raison sociale"></div>
-              <div class="form-group span-2"><label>Contact acquéreur</label><input id="ces-contact" class="form-control"></div>
+              <div class="form-group"><label>Superficie cédée (m²)</label><input type="number" id="ces-superficie" class="form-control" value="0" oninput="cesSync()"></div>
+              <div class="form-group"><label>Nombre de lots cédés</label><input type="number" id="ces-nblots" class="form-control" value="0" oninput="cesSync()"></div>
+            </div>
+
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:14px 0 6px;">② Identité de l'acquéreur</div>
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Type d'acquéreur</label><select id="ces-type" class="form-control" onchange="cesToggleType()"><option value="physique">Personne physique</option><option value="morale">Personne morale</option></select></div>
+            </div>
+            <div id="ces-bloc-physique">
+              <div class="form-grid">
+                <div class="form-group"><label>Nom *</label><input id="ces-nom" class="form-control"></div>
+                <div class="form-group"><label>Prénoms</label><input id="ces-prenoms" class="form-control"></div>
+                <div class="form-group"><label>Date de naissance</label><input type="date" id="ces-naiss-date" class="form-control"></div>
+                <div class="form-group"><label>Lieu de naissance</label><input id="ces-naiss-lieu" class="form-control"></div>
+                <div class="form-group"><label>Nationalité</label><input id="ces-nationalite" class="form-control" value="Ivoirienne"></div>
+                <div class="form-group"><label>Profession</label><input id="ces-profession" class="form-control"></div>
+                <div class="form-group"><label>Pièce d'identité</label><select id="ces-piece-type" class="form-control"><option value="CNI">CNI</option><option value="Passeport">Passeport</option><option value="Attestation">Attestation d'identité</option><option value="Carte consulaire">Carte consulaire</option></select></div>
+                <div class="form-group"><label>N° de la pièce</label><input id="ces-piece-num" class="form-control"></div>
+              </div>
+            </div>
+            <div id="ces-bloc-morale" style="display:none;">
+              <div class="form-grid">
+                <div class="form-group span-2"><label>Raison sociale *</label><input id="ces-raison" class="form-control"></div>
+                <div class="form-group"><label>Forme juridique</label><select id="ces-forme" class="form-control"><option>SARL</option><option>SARL-U</option><option>SA</option><option>SAS</option><option>SCI</option><option>SNC</option><option>GIE</option><option>Établissement</option><option>Autre</option></select></div>
+                <div class="form-group"><label>RCCM</label><input id="ces-rccm" class="form-control" placeholder="CI-ABJ-..."></div>
+                <div class="form-group"><label>N° Compte Contribuable (NCC)</label><input id="ces-ncc" class="form-control"></div>
+                <div class="form-group"><label>Régime fiscal</label><input id="ces-regime" class="form-control" placeholder="Réel normal / simplifié"></div>
+                <div class="form-group"><label>Représentant légal</label><input id="ces-rep-nom" class="form-control"></div>
+                <div class="form-group"><label>Qualité du représentant</label><input id="ces-rep-qualite" class="form-control" placeholder="Gérant, DG, PCA..."></div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group span-2"><label>Adresse / Siège social</label><input id="ces-adresse" class="form-control"></div>
+              <div class="form-group"><label>Téléphone</label><input id="ces-tel" class="form-control"></div>
+              <div class="form-group"><label>Email</label><input id="ces-email" class="form-control"></div>
+            </div>
+
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:14px 0 6px;">③ Prix &amp; paiement</div>
+            <div class="form-grid">
               <div class="form-group"><label>Prix de cession (FCFA)</label><input type="number" id="ces-prix" class="form-control" value="0" oninput="cesSync()"></div>
               <div class="form-group"><label>Montant encaissé (FCFA)</label><input type="number" id="ces-encaisse" class="form-control" value="0" oninput="cesSync()"></div>
               <div class="form-group"><label>Mode d'encaissement</label><select id="ces-mode" class="form-control"><option value="virement">Virement</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile Money</option></select></div>
-              <div class="form-group"><label>Statut</label><select id="ces-statut" class="form-control"><option value="promesse">Promesse</option><option value="cedee">Cédée</option><option value="soldee">Soldée</option></select></div>
+              <div class="form-group"><label>Échéance du solde</label><input type="date" id="ces-echeance" class="form-control"></div>
+              <div class="form-group"><label>Statut</label><select id="ces-statut" class="form-control"><option value="promesse">Promesse de vente</option><option value="cedee">Acte signé / Cédée</option><option value="soldee">Soldée</option></select></div>
+            </div>
+
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:14px 0 6px;">④ Notaire &amp; contrat</div>
+            <div class="form-grid">
+              <div class="form-group span-2"><label><input type="checkbox" id="ces-notarie" onchange="cesSync()"> Vente reçue devant notaire</label></div>
+              <div class="form-group"><label>Notaire</label><input id="ces-notaire" class="form-control"></div>
+              <div class="form-group"><label>Étude notariale</label><input id="ces-etude" class="form-control"></div>
+              <div class="form-group"><label>N° de l'acte</label><input id="ces-acte-num" class="form-control"></div>
+              <div class="form-group"><label>Date de l'acte</label><input type="date" id="ces-acte-date" class="form-control"></div>
+              <div class="form-group"><label>Type de contrat</label><select id="ces-contrat-type" class="form-control"><option value="cession">Contrat de cession</option><option value="vente">Contrat de vente</option><option value="promesse">Promesse de vente</option></select></div>
+              <div class="form-group"><label>Référence du contrat</label><input id="ces-contrat-ref" class="form-control"></div>
               <div class="form-group span-2"><label>Notes</label><input id="ces-notes" class="form-control"></div>
             </div>
-            <div id="ces-synth" class="card" style="margin-top:10px;background:var(--card2);"></div>
+
+            <div id="ces-synth" class="card" style="margin-top:12px;background:var(--card2);"></div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-cession')">Annuler</button>
             <button class="btn btn-danger" id="ces-del" onclick="cesDelete()" style="display:none;">🗑 Supprimer</button>
+            <button class="btn btn-secondary" id="ces-contrat-btn" onclick="cesGenererContrat()" style="display:none;">🖨 Acte / Contrat</button>
             <button class="btn btn-primary" onclick="cesSave()">💾 Enregistrer la cession</button>
           </div>
+
         </div>
       </div>
 
@@ -11071,6 +11122,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-lead')">Annuler</button>
       <button class="btn btn-secondary btn-sm" onclick="convertirEnSouscripteur()">🔄 Convertir en souscripteur</button>
+      <button class="btn btn-danger" id="btn-del-lead" onclick="deleteLead()" style="display:none;">🗑 Supprimer</button>
       <button class="btn btn-primary" onclick="saveLead()">Enregistrer</button>
     </div>
   </div>
@@ -32773,7 +32825,21 @@ function openLead(id) {
     document.getElementById('ld-date-contact').value=today();
   }
   document.getElementById('modal-lead-title').textContent = id ? 'Modifier Prospect' : 'Nouveau Prospect';
+  var _dl=document.getElementById('btn-del-lead'); if(_dl) _dl.style.display = id ? '' : 'none';
   document.getElementById('modal-lead').classList.add('open');
+}
+
+async function deleteLead(id) {
+  var lid = id || APP.editingId;
+  if (!lid) return;
+  var l = DATA.leads.find(function(x){ return x.id === lid; });
+  if (!confirm('Supprimer définitivement le prospect « ' + ((l&&l.nom)||'') + ' » ?')) return;
+  DATA.leads = DATA.leads.filter(function(x){ return x.id !== lid; });
+  if (typeof deleteRecord === 'function') await deleteRecord('leads', lid);
+  else { await dbDelete('leads', lid); if (typeof deleteFromSupabase==='function') deleteFromSupabase('pi_leads', lid); }
+  closeModal('modal-lead');
+  renderPipeline();
+  toast('Prospect supprimé.', 'info');
 }
 
 async function saveLead() {
@@ -44303,6 +44369,229 @@ async function cesDelete() {
   if (typeof filterEcritures==='function') filterEcritures();
   if (typeof buildTresorerie==='function') buildTresorerie();
   toast('Cession supprimée', 'info');
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CESSIONS FONCIÈRES — VERSION ÉLABORÉE (override)
+   Identité complète acheteur (physique/morale) · notaire · contrat
+   · KPIs commerciaux pointus · génération d'acte
+══════════════════════════════════════════════════════════ */
+
+function cesToggleType() {
+  var t = (document.getElementById('ces-type')||{}).value || 'physique';
+  var bp = document.getElementById('ces-bloc-physique'), bm = document.getElementById('ces-bloc-morale');
+  if (bp) bp.style.display = (t === 'physique') ? '' : 'none';
+  if (bm) bm.style.display = (t === 'morale') ? '' : 'none';
+}
+
+function _cesGet(id){ var e=document.getElementById(id); return e ? (e.type==='checkbox'?e.checked:e.value) : ''; }
+function _cesSet(id,v){ var e=document.getElementById(id); if(e){ if(e.type==='checkbox') e.checked=!!v; else e.value=(v==null?'':v); } }
+
+function cesAcquereurLabel(a) {
+  if (!a) return '—';
+  if (a.type === 'morale') return (a.raison||'—') + (a.forme?(' ('+a.forme+')'):'');
+  return ((a.nom||'') + ' ' + (a.prenoms||'')).trim() || '—';
+}
+
+function cesNew(sourceKey) {
+  _cesId = null;
+  cesFillSources(sourceKey||'');
+  document.getElementById('ces-titre').textContent = 'Nouvelle cession';
+  document.getElementById('ces-del').style.display = 'none';
+  var cb = document.getElementById('ces-contrat-btn'); if (cb) cb.style.display = 'none';
+  ['ces-designation','ces-naiss-lieu','ces-nationalite','ces-profession','ces-piece-num',
+   'ces-raison','ces-rccm','ces-ncc','ces-regime','ces-rep-nom','ces-rep-qualite',
+   'ces-nom','ces-prenoms','ces-adresse','ces-tel','ces-email','ces-notaire','ces-etude',
+   'ces-acte-num','ces-contrat-ref','ces-notes'].forEach(function(id){ _cesSet(id,''); });
+  _cesSet('ces-nationalite','Ivoirienne');
+  _cesSet('ces-nature','lots'); _cesSet('ces-date',today());
+  _cesSet('ces-superficie',0); _cesSet('ces-nblots',0);
+  _cesSet('ces-prix',0); _cesSet('ces-encaisse',0); _cesSet('ces-mode','virement');
+  _cesSet('ces-statut','promesse'); _cesSet('ces-type','physique');
+  _cesSet('ces-piece-type','CNI'); _cesSet('ces-forme','SARL'); _cesSet('ces-contrat-type','cession');
+  _cesSet('ces-notarie',false); _cesSet('ces-echeance',''); _cesSet('ces-acte-date','');
+  cesToggleType(); cesSync();
+  openModal('modal-cession');
+}
+
+function cesOpen(id) {
+  var c = DATA.cessions_foncieres.find(function(x){ return x.id===id; });
+  if (!c) return;
+  _cesId = id;
+  var a = c.acheteur || {};
+  cesFillSources(c.source_key);
+  document.getElementById('ces-titre').textContent = 'Cession — ' + (c.acquereur || cesAcquereurLabel(a));
+  document.getElementById('ces-del').style.display = '';
+  var cb = document.getElementById('ces-contrat-btn'); if (cb) cb.style.display = '';
+  _cesSet('ces-nature',c.nature||'lots'); _cesSet('ces-date',c.date); _cesSet('ces-designation',c.designation);
+  _cesSet('ces-superficie',c.superficie||0); _cesSet('ces-nblots',c.nb_lots||0);
+  _cesSet('ces-type',a.type||'physique');
+  _cesSet('ces-nom',a.nom); _cesSet('ces-prenoms',a.prenoms); _cesSet('ces-naiss-date',a.naiss_date); _cesSet('ces-naiss-lieu',a.naiss_lieu);
+  _cesSet('ces-nationalite',a.nationalite||'Ivoirienne'); _cesSet('ces-profession',a.profession);
+  _cesSet('ces-piece-type',a.piece_type||'CNI'); _cesSet('ces-piece-num',a.piece_num);
+  _cesSet('ces-raison',a.raison); _cesSet('ces-forme',a.forme||'SARL'); _cesSet('ces-rccm',a.rccm); _cesSet('ces-ncc',a.ncc);
+  _cesSet('ces-regime',a.regime); _cesSet('ces-rep-nom',a.rep_nom); _cesSet('ces-rep-qualite',a.rep_qualite);
+  _cesSet('ces-adresse',a.adresse); _cesSet('ces-tel',a.tel); _cesSet('ces-email',a.email);
+  _cesSet('ces-prix',c.prix_cession||0); _cesSet('ces-encaisse',c.montant_encaisse||0); _cesSet('ces-mode',c.mode||'virement');
+  _cesSet('ces-echeance',c.echeance); _cesSet('ces-statut',c.statut||'promesse');
+  _cesSet('ces-notarie',c.notarie); _cesSet('ces-notaire',c.notaire); _cesSet('ces-etude',c.etude);
+  _cesSet('ces-acte-num',c.acte_num); _cesSet('ces-acte-date',c.acte_date);
+  _cesSet('ces-contrat-type',c.contrat_type||'cession'); _cesSet('ces-contrat-ref',c.contrat_ref); _cesSet('ces-notes',c.notes);
+  cesToggleType(); cesSync();
+  openModal('modal-cession');
+}
+
+function cesSync() {
+  var prix=parseFloat(_cesGet('ces-prix'))||0, enc=parseFloat(_cesGet('ces-encaisse'))||0;
+  var sup=parseFloat(_cesGet('ces-superficie'))||0, nb=parseInt(_cesGet('ces-nblots'))||0;
+  var z=document.getElementById('ces-synth'); if(!z) return;
+  var reste=prix-enc, tx=prix>0?Math.round(enc/prix*100):0;
+  var pum=sup>0?prix/sup:0, pul=nb>0?prix/nb:0;
+  z.innerHTML='Prix : <strong>'+fmtF(prix)+' FCFA</strong> · Encaissé : <strong style="color:var(--vert);">'+fmtF(enc)+'</strong> ('+tx+'%)'
+    +(reste>0?(' · Reste : <strong style="color:var(--rouge);">'+fmtF(reste)+'</strong>'):'')
+    +(sup>0?(' · '+fmtF(Math.round(pum))+' F/m²'):'')+(nb>0?(' · '+fmtF(Math.round(pul))+' F/lot'):'')
+    +(_cesGet('ces-notarie')?'<br><span style="font-size:12px;color:#1A6B3A;">⚖️ Vente notariée</span>':'')
+    +'<br><span style="font-size:12px;color:var(--blanc-dim);">Écriture : vente 4111/707 + encaissement '+((_cesGet('ces-mode')==='especes')?'571':'521')+'/4111.</span>';
+}
+
+async function cesSave() {
+  var src=_cesGet('ces-source');
+  if (!src) { toast('Choisissez la source (parcelle / opération)', 'error'); return; }
+  var type=_cesGet('ces-type');
+  var acheteur={
+    type:type,
+    nom:_cesGet('ces-nom').trim(), prenoms:_cesGet('ces-prenoms').trim(),
+    naiss_date:_cesGet('ces-naiss-date'), naiss_lieu:_cesGet('ces-naiss-lieu').trim(),
+    nationalite:_cesGet('ces-nationalite').trim(), profession:_cesGet('ces-profession').trim(),
+    piece_type:_cesGet('ces-piece-type'), piece_num:_cesGet('ces-piece-num').trim(),
+    raison:_cesGet('ces-raison').trim(), forme:_cesGet('ces-forme'), rccm:_cesGet('ces-rccm').trim(),
+    ncc:_cesGet('ces-ncc').trim(), regime:_cesGet('ces-regime').trim(),
+    rep_nom:_cesGet('ces-rep-nom').trim(), rep_qualite:_cesGet('ces-rep-qualite').trim(),
+    adresse:_cesGet('ces-adresse').trim(), tel:_cesGet('ces-tel').trim(), email:_cesGet('ces-email').trim()
+  };
+  var label=cesAcquereurLabel(acheteur);
+  if ((type==='physique' && !acheteur.nom) || (type==='morale' && !acheteur.raison)) { toast('Identité de l\u2019acquéreur incomplète', 'error'); return; }
+
+  var c = _cesId ? DATA.cessions_foncieres.find(function(x){return x.id===_cesId;}) : null;
+  var isNew=false;
+  if (!c) { c={ id:'ces_'+uid(), created_at:today() }; isNew=true; }
+  c.source_key=src; var parts=src.split(':'); c.source_type=parts[0]; c.source_id=parts[1];
+  c.nature=_cesGet('ces-nature'); c.date=_cesGet('ces-date')||today(); c.designation=_cesGet('ces-designation').trim();
+  c.superficie=parseFloat(_cesGet('ces-superficie'))||0; c.nb_lots=parseInt(_cesGet('ces-nblots'))||0;
+  c.acheteur=acheteur; c.acquereur=label; c.contact=acheteur.tel;
+  c.prix_cession=parseFloat(_cesGet('ces-prix'))||0; c.montant_encaisse=parseFloat(_cesGet('ces-encaisse'))||0;
+  c.mode=_cesGet('ces-mode'); c.echeance=_cesGet('ces-echeance'); c.statut=_cesGet('ces-statut');
+  c.notarie=_cesGet('ces-notarie'); c.notaire=_cesGet('ces-notaire').trim(); c.etude=_cesGet('ces-etude').trim();
+  c.acte_num=_cesGet('ces-acte-num').trim(); c.acte_date=_cesGet('ces-acte-date');
+  c.contrat_type=_cesGet('ces-contrat-type'); c.contrat_ref=_cesGet('ces-contrat-ref').trim(); c.notes=_cesGet('ces-notes').trim();
+
+  if (isNew) DATA.cessions_foncieres.push(c);
+  await dbPut('cessions_foncieres', c);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_cessions_foncieres', c);
+  if (!c.ecriture_vente_id) await cesGenererEcriture(c);
+
+  if (c.source_type==='parcelle') {
+    var p=DATA.parcelles.find(function(x){return x.id===c.source_id;});
+    if (p) { p.superficie_cedee=(p.superficie_cedee||0)+(isNew?c.superficie:0); await dbPut('parcelles',p); if(typeof syncToSupabase==='function') syncToSupabase('pi_parcelles',p); }
+  } else if (c.source_type==='operation') {
+    var op=DATA.af_operations.find(function(x){return x.id===c.source_id;});
+    if (op) { op.lots_cedes=(op.lots_cedes||0)+(isNew?c.nb_lots:0); await dbPut('af_operations',op); }
+  }
+  closeModal('modal-cession');
+  cesRender();
+  if (typeof filterEcritures==='function') filterEcritures();
+  if (typeof buildTresorerie==='function') buildTresorerie();
+  if (typeof buildCompteResultat==='function') buildCompteResultat();
+  toast('Cession enregistrée — écriture + trésorerie mises à jour', 'success');
+}
+
+/* ── KPIs commerciaux pointus + table enrichie ── */
+function cesRender() {
+  var tb = document.getElementById('tbody-cessions'); if (!tb) return;
+  var q = ((document.getElementById('ces-search')||{}).value||'').toLowerCase();
+  var L = DATA.cessions_foncieres || [];
+  var statutBadge = { promesse:'badge-or', cedee:'badge-bleu', soldee:'badge-vert' };
+  var list = L.filter(function(c){ return !q || ((c.acquereur||'')+' '+(c.designation||'')+' '+cesSourceRef(c.source_key)).toLowerCase().indexOf(q)!==-1; })
+              .sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  tb.innerHTML = list.length ? list.map(function(c){
+    var reste=(c.prix_cession||0)-(c.montant_encaisse||0);
+    var at=(c.acheteur&&c.acheteur.type==='morale')?'<span class="badge badge-violet" style="font-size:9px;">PM</span>':'<span class="badge badge-neutre" style="font-size:9px;">PP</span>';
+    return '<tr>'
+      +'<td>'+(c.date||'—')+(c.notarie?' ⚖️':'')+'</td>'
+      +'<td style="font-size:12px;">'+cesSourceRef(c.source_key)+'</td>'
+      +'<td>'+(c.designation||'—')+'</td>'
+      +'<td>'+at+' '+(c.acquereur||'—')+'</td>'
+      +'<td style="text-align:right;">'+(c.superficie?fmtF(c.superficie)+' m²':'')+(c.nb_lots?((c.superficie?' · ':'')+c.nb_lots+' lots'):'')+'</td>'
+      +'<td style="text-align:right;font-weight:700;">'+fmtF(c.prix_cession)+'</td>'
+      +'<td style="text-align:right;color:var(--vert);">'+fmtF(c.montant_encaisse)+(reste>0?('<br><span style="font-size:10px;color:var(--rouge);">reste '+fmtF(reste)+'</span>'):'')+'</td>'
+      +'<td><span class="badge '+(statutBadge[c.statut]||'badge-neutre')+'">'+(c.statut||'—')+'</span></td>'
+      +'<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" title="Acte / contrat" onclick="cesGenererContrat(\''+c.id+'\')">🖨</button> <button class="btn btn-secondary btn-sm btn-icon" onclick="cesOpen(\''+c.id+'\')">✏️</button></td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:18px;">Aucune cession.</td></tr>';
+
+  /* KPIs */
+  var nb=L.length;
+  var prix=L.reduce(function(s,c){return s+(c.prix_cession||0);},0);
+  var enc=L.reduce(function(s,c){return s+(c.montant_encaisse||0);},0);
+  var sup=L.reduce(function(s,c){return s+(c.superficie||0);},0);
+  var lots=L.reduce(function(s,c){return s+(c.nb_lots||0);},0);
+  var tx=prix>0?Math.round(enc/prix*100):0;
+  var pum=sup>0?prix/sup:0, pul=lots>0?prix/lots:0, ticket=nb>0?prix/nb:0;
+  var notaries=L.filter(function(c){return c.notarie;}).length;
+  var pctNot=nb>0?Math.round(notaries/nb*100):0;
+  var soldees=L.filter(function(c){return c.statut==='soldee';}).length;
+  var kpi=function(t,v,c){ return '<div class="kpi-card" style="border-top-color:'+(c||'var(--vert)')+';"><div class="kpi-label">'+t+'</div><div class="kpi-value" style="font-size:16px;color:'+(c||'inherit')+';">'+v+'</div></div>'; };
+  var k=document.getElementById('ces-kpis');
+  if (k) k.innerHTML=
+      kpi('Cessions',nb,'#3B82F6')
+    + kpi('Valeur cédée',fmtF(prix)+' F','#0EA5E9')
+    + kpi('Encaissé',fmtF(enc)+' F','#1A6B3A')
+    + kpi('Reste à recouvrer',fmtF(prix-enc)+' F','#c0392b')
+    + kpi('Taux recouvrement',tx+' %', tx>=80?'#1A6B3A':(tx>=50?'#B8732F':'#c0392b'))
+    + kpi('Superficie cédée',fmtF(sup)+' m²','#8B5CF6')
+    + kpi('Lots cédés',lots,'#8B5CF6')
+    + kpi('Prix moyen / m²',fmtF(Math.round(pum))+' F','#0EA5E9')
+    + kpi('Prix moyen / lot',fmtF(Math.round(pul))+' F','#0EA5E9')
+    + kpi('Ticket moyen',fmtF(Math.round(ticket))+' F','#F59E0B')
+    + kpi('% notarié',pctNot+' %','#1A6B3A')
+    + kpi('Soldées',soldees+' / '+nb,'#16A34A');
+}
+
+/* ── Génération de l'acte / contrat de cession ── */
+function cesGenererContrat(id) {
+  var c = id ? DATA.cessions_foncieres.find(function(x){return x.id===id;}) : (_cesId ? DATA.cessions_foncieres.find(function(x){return x.id===_cesId;}) : null);
+  if (!c) { toast('Enregistrez la cession avant de générer l\u2019acte', 'info'); return; }
+  var a = c.acheteur || {};
+  var soc = (DATA.params && DATA.params.societe) || 'La Société';
+  var titre = c.contrat_type==='vente' ? 'CONTRAT DE VENTE' : (c.contrat_type==='promesse' ? 'PROMESSE DE VENTE' : 'CONTRAT DE CESSION');
+  var cessionnaire = (a.type==='morale')
+    ? ('La société <strong>'+(a.raison||'')+'</strong> ('+(a.forme||'')+'), RCCM '+(a.rccm||'—')+', NCC '+(a.ncc||'—')+', sise '+(a.adresse||'—')+', représentée par '+(a.rep_nom||'—')+' en qualité de '+(a.rep_qualite||'—')+'.')
+    : ('<strong>'+(a.nom||'')+' '+(a.prenoms||'')+'</strong>, né(e) le '+(a.naiss_date||'—')+' à '+(a.naiss_lieu||'—')+', de nationalité '+(a.nationalite||'—')+', '+(a.profession||'—')+', titulaire de la '+(a.piece_type||'pièce')+' n° '+(a.piece_num||'—')+', demeurant '+(a.adresse||'—')+'.');
+  var bien = (c.designation||'—') + (c.superficie?(' — superficie '+fmtF(c.superficie)+' m²'):'') + (c.nb_lots?(' — '+c.nb_lots+' lot(s)'):'') + ' (' + cesSourceRef(c.source_key) + ')';
+  var reste=(c.prix_cession||0)-(c.montant_encaisse||0);
+  var w=window.open('','','width=850,height=900');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titre+'</title><style>'
+    +'body{font-family:Georgia,serif;padding:40px;font-size:13px;line-height:1.6;color:#111;}'
+    +'h1{text-align:center;font-size:18px;letter-spacing:1px;border-bottom:2px solid #1A6B3A;padding-bottom:10px;}'
+    +'h2{font-size:14px;color:#1A6B3A;margin-top:22px;border-left:3px solid #1A6B3A;padding-left:8px;}'
+    +'.sign{display:flex;justify-content:space-between;margin-top:60px;}.sign div{width:45%;text-align:center;border-top:1px solid #333;padding-top:6px;}'
+    +'@media print{button{display:none;}}</style></head><body>'
+    +'<div style="text-align:center;margin-bottom:10px;"><button onclick="window.print()" style="padding:8px 18px;background:#1A6B3A;color:#fff;border:none;border-radius:6px;cursor:pointer;">🖨 Imprimer</button></div>'
+    +'<h1>'+titre+'</h1>'
+    +'<p style="text-align:center;font-size:11px;">'+(c.contrat_ref?('Réf. '+c.contrat_ref+' · '):'')+'Fait le '+(c.acte_date||c.date||today())+'</p>'
+    +'<h2>Entre les soussignés</h2>'
+    +'<p><strong>LE CÉDANT :</strong> '+soc+', ci-après dénommé « le Cédant », d\'une part,</p>'
+    +'<p><strong>LE CESSIONNAIRE :</strong> '+cessionnaire+' ci-après dénommé « le Cessionnaire », d\'autre part.</p>'
+    +'<h2>Article 1 — Objet</h2><p>Le Cédant cède au Cessionnaire, qui accepte, les droits sur le bien suivant : '+bien+'.</p>'
+    +'<h2>Article 2 — Prix</h2><p>La présente cession est consentie au prix de <strong>'+fmtF(c.prix_cession||0)+' FCFA</strong>'
+    +', dont '+fmtF(c.montant_encaisse||0)+' FCFA déjà encaissés ('+(c.mode||'—')+')'
+    +(reste>0?(', le solde de '+fmtF(reste)+' FCFA payable au plus tard le '+(c.echeance||'—')):'')+'.</p>'
+    +'<h2>Article 3 — Propriété et jouissance</h2><p>Le Cessionnaire devient propriétaire à compter de la signature des présentes et du paiement intégral du prix.</p>'
+    +(c.notarie?('<h2>Article 4 — Forme notariée</h2><p>Le présent acte est reçu par Maître '+(c.notaire||'—')+', notaire à l\'étude '+(c.etude||'—')+(c.acte_num?(', acte n° '+c.acte_num):'')+'.</p>'):'')
+    +'<div class="sign"><div>Le Cédant<br>'+soc+'</div><div>Le Cessionnaire<br>'+cesAcquereurLabel(a)+'</div></div>'
+    +'</body></html>');
+  w.document.close();
 }
 
 </script>
