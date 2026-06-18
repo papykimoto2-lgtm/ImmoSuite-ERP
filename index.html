@@ -7910,6 +7910,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="F3">F3 — BEVERLY / MEYERS (180 m²)</option>
               <option value="F4">F4 — EXCELLIUM (250 m²)</option>
               <option value="VILLA">Villa — SOMOLI Prestige (200 m²)</option>
+              <option value="MILITARIS_R4">Immeuble R+4 — Appt 3P (MILITARIS)</option>
             </select>
             <button class="btn btn-secondary btn-sm" onclick="ajouterPosteNomenclature()">+ Ajouter poste</button>
             <button class="btn btn-secondary btn-sm" onclick="exporterNomenclatureCSV()">⬇ CSV</button>
@@ -33282,6 +33283,19 @@ var PRIX_MATERIAUX_CI = [
 
 /* ── Nomenclatures types par logement ────────────────── */
 var NOMENCLATURES_PAR_DEFAUT = {
+  /* DQE réel — Immeuble R+4 Appartements 3P, programme MILITARIS (Partner Immo CI) */
+  MILITARIS_R4: [
+    { poste:'Lot 2 — Gros Œuvre',      materiau:'Gros Œuvre — Bâtiment principal',            unite:'Ens', quantite:1, prix_forfait:228639727 },
+    { poste:'Lot 3 — Étanchéité',      materiau:'Étanchéité (terrasses + salles d\'eau)',     unite:'Ens', quantite:1, prix_forfait:7612568 },
+    { poste:'Lot — Menuiserie Alu',    materiau:'Menuiserie Aluminium / Vitrerie',            unite:'Ens', quantite:1, prix_forfait:21074560 },
+    { poste:'Lot — Menuiserie Bois',   materiau:'Menuiserie Bois',                            unite:'Ens', quantite:1, prix_forfait:1890000 },
+    { poste:'Lot — Faux-Plafonds',     materiau:'Faux-Plafonds',                              unite:'Ens', quantite:1, prix_forfait:0 },
+    { poste:'Lot — Carrelage',         materiau:'Revêtements durs scellés (Carrelage/Faïence)',unite:'Ens', quantite:1, prix_forfait:34590801 },
+    { poste:'Lot — Peinture',          materiau:'Peinture',                                   unite:'Ens', quantite:1, prix_forfait:6026183 },
+    { poste:'Lot — Plomberie',         materiau:'Plomberie / Sanitaires / Assainissement',    unite:'Ens', quantite:1, prix_forfait:28437000 },
+    { poste:'Lot — Électricité',       materiau:'Électricité / Courants forts',               unite:'Ens', quantite:1, prix_forfait:32090000 },
+    { poste:'Lot 20 — Espaces Verts',  materiau:'Espaces Verts',                              unite:'Ens', quantite:1, prix_forfait:343821 },
+  ],
   F2: [
     { poste:'Gros oeuvre', materiau:'Ciment (sac 50kg) - LafargeHolcim', unite:'sac',    quantite:85,   prix_forfait:0 },
     { poste:'Gros oeuvre', materiau:'Parpaing creux 20x20x40',           unite:'unité',  quantite:1200, prix_forfait:0 },
@@ -33450,7 +33464,7 @@ function chargerNomenclature() {
   /* Récap */
   var resume = document.getElementById('resume-dqe');
   if (resume) {
-    var typeLabels = { F2:'F2 — HARMONIE (80 m²)', F3:'F3 — BEVERLY (180 m²)', F4:'F4 — EXCELLIUM (250 m²)', VILLA:'Villa SOMOLI (200 m²)' };
+    var typeLabels = { F2:'F2 — HARMONIE (80 m²)', F3:'F3 — BEVERLY (180 m²)', F4:'F4 — EXCELLIUM (250 m²)', VILLA:'Villa SOMOLI (200 m²)', MILITARIS_R4:'Immeuble R+4 — Appt 3P (MILITARIS)' };
     var marge = 1.35;
     resume.innerHTML = '<div class="form-section-title">Récapitulatif DQE — ' + (typeLabels[type] || type) + '</div>'
       + '<div class="kpi-grid" style="margin-top:8px;">'
