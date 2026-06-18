@@ -13211,7 +13211,11 @@ async function loadAllData() {
   /* v112 — Documents juridiques */
   'docs_juridiques',
   /* v113 — Accueil & Visites */
-  'visites_rdv','visites_log','visites_blacklist'
+  'visites_rdv','visites_log','visites_blacklist',
+  /* v113-116 — Modules déboursé, foncier, cessions (chargement au démarrage) */
+  'eds_ouvrages','eds_etudes','eds_ressources',
+  'af_operations','af_agents',
+  'cessions_foncieres'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -13486,6 +13490,11 @@ var SUPA_STORE_MAP = [
   ['pi_leads',           'leads'],
   ['pi_ecritures',       'ecritures'],
   ['pi_cessions_foncieres','cessions_foncieres'],
+  ['pi_eds_ouvrages',    'eds_ouvrages'],
+  ['pi_eds_etudes',      'eds_etudes'],
+  ['pi_eds_ressources',  'eds_ressources'],
+  ['pi_af_operations',   'af_operations'],
+  ['pi_af_agents',       'af_agents'],
   ['pi_employes',        'employes'],
   ['pi_pointages',       'pointages'],
   ['pi_bulletins',       'bulletins'],
