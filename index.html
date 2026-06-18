@@ -13323,6 +13323,7 @@ function _ts(x) {
    Remplace partout le duo dbDelete() + deleteFromSupabase().
    ─────────────────────────────────────────────────────────────── */
 async function deleteRecord(store, id) {
+  try { if (typeof tombAdd === 'function') tombAdd(store, id); } catch(e){}
   /* 1. Retrait de la RAM */
   if (Array.isArray(DATA[store])) {
     DATA[store] = DATA[store].filter(function(x){ return x.id !== id; });
@@ -13350,6 +13351,7 @@ async function syncToSupabase(table, obj) {
 }
 
 async function deleteFromSupabase(table, id) {
+  try { if (typeof tombAdd === 'function') { var _te = SUPA_STORE_MAP.find(function(x){ return x[0] === table; }); if (_te) tombAdd(_te[1], id); } } catch(e){}
   if (!SB.url || !SB.key) return;
   if (!navigator.onLine) { _outboxEnqueue({ op:'delete', table:table, id:id }); return; }
   try {
@@ -13654,6 +13656,7 @@ async function pullFromCloudSilent() {
         for (var j = 0; j < rows.length; j++) {
           var r = _supaUnwrap(table, rows[j]);
           if (!r || r.id === undefined) continue;
+          if (typeof tombHas === 'function' && tombHas(store, r.id)) { try { if (typeof deleteFromSupabase === 'function') deleteFromSupabase(table, r.id); } catch(e){} continue; }
           var ex = byId[String(r.id)];
           if (!ex || _ts(r) >= _ts(ex)) {
             byId[String(r.id)] = r;
@@ -44042,6 +44045,26 @@ function edsGenererMetreAuto() {
   edsRenderLignes();
   toast(n + ' ouvrage(s) métré(s) automatiquement', 'success');
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   REGISTRE DE SUPPRESSIONS (TOMBSTONES)
+   Empêche la résurrection d'un enregistrement supprimé localement
+   lorsque le pull Supabase re-télécharge la table.
+   Stocké en localStorage : { store: [ids supprimés] }
+══════════════════════════════════════════════════════════ */
+function _tombLoad() { try { return JSON.parse(localStorage.getItem('immosuite_tombstones') || '{}'); } catch (e) { return {}; } }
+function _tombSave(t) { try { localStorage.setItem('immosuite_tombstones', JSON.stringify(t)); } catch (e) {} }
+function tombAdd(store, id) {
+  if (!store || id === undefined || id === null) return;
+  var t = _tombLoad(); t[store] = t[store] || [];
+  if (t[store].indexOf(String(id)) === -1) { t[store].push(String(id)); _tombSave(t); }
+}
+function tombHas(store, id) { var t = _tombLoad(); return (t[store] || []).indexOf(String(id)) !== -1; }
+function tombRemove(store, id) { var t = _tombLoad(); if (t[store]) { t[store] = t[store].filter(function(x){ return x !== String(id); }); _tombSave(t); } }
+function tombList() { return _tombLoad(); }
+/* Réinitialise le registre (à utiliser avec prudence) */
+function tombClear(store) { var t = _tombLoad(); if (store) { delete t[store]; } else { t = {}; } _tombSave(t); }
 
 </script>
 
