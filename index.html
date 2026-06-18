@@ -8154,6 +8154,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <input type="text" id="pn-poste" class="form-control" placeholder="Maçonnerie, Ferraillage...">
               </div>
               <div class="form-group span-2">
+                <label>Ouvrage déboursé (prix composé) — optionnel</label>
+                <select id="pn-ouvrage" class="form-control" onchange="dqeOnPickOuvrage()"><option value="">— Aucun —</option></select>
+              </div>
+              <div class="form-group span-2">
                 <label>Matériau / Prestation *</label>
                 <input type="text" id="pn-materiau" class="form-control" placeholder="Ciment LafargeHolcim 50kg">
               </div>
@@ -33381,6 +33385,8 @@ async function chargerDQE() {
     selFourn.innerHTML = '<option value="">Tous fournisseurs</option>'
       + Object.keys(fournSet).map(function(f) { return '<option value="' + f + '">' + f + '</option>'; }).join('');
   }
+  if (typeof edsLoadRessources==='function') await edsLoadRessources();
+  if (typeof dqeUnifierPrix==='function') await dqeUnifierPrix();
   chargerNomenclature();
   chargerPrix();
   chargerDevis();
@@ -33398,8 +33404,8 @@ function calculerCoutParType(type) {
   }
   var total = 0;
   nomens.forEach(function(n) {
-    var pu = DATA.prix_unitaire.find(function(p) { return p.libelle === n.materiau; });
-    var prixUnit = pu ? (pu.prix || 0) : 0;
+    var prixUnit = dqeLignePU(n);
+    var pu = dqeMatch(n.materiau);
     total += (n.quantite * prixUnit) + (n.prix_forfait || 0);
   });
   return total;
@@ -33422,8 +33428,8 @@ function chargerNomenclature() {
   var total = 0;
   var parPoste = {};
   tbody.innerHTML = nomens.map(function(n) {
-    var pu = DATA.prix_unitaire.find(function(p) { return p.libelle === n.materiau; });
-    var prixUnit = pu ? (pu.prix || 0) : 0;
+    var prixUnit = dqeLignePU(n);
+    var pu = dqeMatch(n.materiau);
     var totalPoste = (n.quantite * prixUnit) + (n.prix_forfait || 0);
     total += totalPoste;
     if (!parPoste[n.poste]) parPoste[n.poste] = 0;
@@ -33462,6 +33468,8 @@ function ajouterPosteNomenclature() {
   var typeEl = document.getElementById('dqe-type-logement');
   var pnType = document.getElementById('pn-type');
   if (pnType && typeEl) pnType.value = typeEl.value;
+  if (typeof dqePopulateOuvrageSelect==='function') dqePopulateOuvrageSelect();
+  var _po=document.getElementById('pn-ouvrage'); if(_po) _po.value='';
   APP.editingId = null;
   openModal('modal-poste-nomen');
 }
@@ -33474,7 +33482,8 @@ async function sauvegarderPosteNomenclature() {
   var quantite  = parseFloat((document.getElementById('pn-quantite') || {}).value) || 0;
   var forfait   = parseFloat((document.getElementById('pn-forfait')  || {}).value) || 0;
   if (!materiau) { toast('Matériau / Prestation obligatoire.','error'); return; }
-  var entry = { id: uid(), type_logement: type, poste: poste || 'Divers', materiau: materiau, unite: unite, quantite: quantite, prix_forfait: forfait };
+  var ouvrageId = (document.getElementById('pn-ouvrage') || {}).value || '';
+  var entry = { id: uid(), type_logement: type, poste: poste || 'Divers', materiau: materiau, unite: unite, quantite: quantite, prix_forfait: forfait, ouvrage_id: ouvrageId };
   DATA.nomenclatures.push(entry);
   await dbPut('nomenclatures', entry);
   closeModal('modal-poste-nomen');
@@ -44230,7 +44239,7 @@ async function edsSaveRes() {
   r.maj = today();
   await dbPut('eds_ressources', r);
   closeModal('modal-eds-res');
-  edsRenderRes(); edsRenderBib();
+  edsRenderRes(); edsRenderBib(); if(typeof chargerPrix==='function') chargerPrix();
   toast('Ressource enregistrée — ouvrages recalculés', 'success');
 }
 async function edsDeleteRes(id) {
@@ -44240,7 +44249,7 @@ async function edsDeleteRes(id) {
   (DATA.eds_ouvrages||[]).forEach(function(o){ (o.composants||[]).forEach(function(c){ if(c.res_id===id){ c.res_id=null; } }); });
   DATA.eds_ressources = DATA.eds_ressources.filter(function(x){return x.id!==id;});
   await dbDelete('eds_ressources', id);
-  edsRenderRes(); edsRenderBib();
+  edsRenderRes(); edsRenderBib(); if(typeof chargerPrix==='function') chargerPrix();
 }
 /* Indexation : applique un % à tous les prix (inflation) */
 async function edsIndexerPrix() {
@@ -44254,7 +44263,7 @@ async function edsIndexerPrix() {
     r.maj = today();
     await dbPut('eds_ressources', r);
   }
-  edsRenderRes(); edsRenderBib();
+  edsRenderRes(); edsRenderBib(); if(typeof chargerPrix==='function') chargerPrix();
   toast('Prix indexés de ' + (pct>0?'+':'') + pct + '% — tous les ouvrages recalculés', 'success');
 }
 
@@ -45123,6 +45132,115 @@ function filierePopulateLotSelects(parcelleId, operationId) {
   if (so) so.innerHTML = '<option value="">— Aucune —</option>' + (DATA.af_operations || []).map(function(o) {
     return '<option value="' + o.id + '"' + (operationId === o.id ? ' selected' : '') + '>' + escHtml(o.nom || o.id) + '</option>';
   }).join('');
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   DQE × DÉBOURSÉ — RÉFÉRENTIEL UNIFIÉ (B) + PIPELINE OUVRAGES (C)
+   - eds_ressources = source unique des prix unitaires
+   - une ligne de nomenclature peut être tarifée par un ouvrage déboursé
+══════════════════════════════════════════════════════════════════ */
+
+/* Recherche unifiée d'une ressource/prix par libellé (eds_ressources prioritaire) */
+function dqeMatch(name) {
+  if (!name) return null;
+  var key = ('' + name).trim().toLowerCase();
+  return (DATA.eds_ressources || []).find(function(x) { return (x.libelle || '').trim().toLowerCase() === key; })
+      || (DATA.prix_unitaire || []).find(function(x) { return (x.libelle || '').trim().toLowerCase() === key; })
+      || null;
+}
+function dqePU(name) {
+  var m = dqeMatch(name);
+  if (!m) return 0;
+  return parseFloat(m.pu != null ? m.pu : m.prix) || 0;
+}
+/* Prix unitaire d'une ligne : ouvrage déboursé si lié, sinon référentiel */
+function dqeLignePU(n) {
+  if (n && n.ouvrage_id) {
+    var o = (DATA.eds_ouvrages || []).find(function(x) { return x.id === n.ouvrage_id; });
+    if (o && typeof edsDebourse === 'function') return Math.round(edsDebourse(o).total || 0);
+  }
+  return dqePU(n && n.materiau);
+}
+
+/* Migration : verse les prix DQE (prix_unitaire) dans le référentiel unifié (idempotent) */
+async function dqeUnifierPrix() {
+  if (!DATA.eds_ressources) DATA.eds_ressources = [];
+  var have = {};
+  DATA.eds_ressources.forEach(function(r) { have[(r.libelle || '').trim().toLowerCase()] = true; });
+  var catType = { 'Matériaux': 'materiau', 'Main d\u2019œuvre': 'mo', 'Main d\'oeuvre': 'mo', 'Matériel': 'materiel', 'Sous-traitance': 'st' };
+  var added = 0;
+  var src = DATA.prix_unitaire || [];
+  for (var i = 0; i < src.length; i++) {
+    var p = src[i];
+    var key = (p.libelle || '').trim().toLowerCase();
+    if (!key || have[key]) continue;
+    var r = {
+      id: 'res_mig_' + (p.id || uid()),
+      code: p.code || ('PU' + (i + 1)),
+      libelle: p.libelle,
+      type: catType[p.categorie] || 'materiau',
+      unite: p.unite || '',
+      pu: parseFloat(p.prix) || 0,
+      fournisseur: p.fournisseur || '',
+      maj: today()
+    };
+    DATA.eds_ressources.push(r); have[key] = true;
+    await dbPut('eds_ressources', r);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_eds_ressources', r);
+    added++;
+  }
+  return added;
+}
+
+/* Sélecteur d'ouvrage déboursé dans le modal poste (C) */
+function dqePopulateOuvrageSelect() {
+  var s = document.getElementById('pn-ouvrage');
+  if (!s) return;
+  s.innerHTML = '<option value="">— Aucun (saisie libre ci-dessous) —</option>' + (DATA.eds_ouvrages || []).map(function(o) {
+    var pu = (typeof edsDebourse === 'function') ? Math.round(edsDebourse(o).total || 0) : 0;
+    return '<option value="' + o.id + '">' + escHtml((o.code ? o.code + ' · ' : '') + (o.designation || o.libelle || '')) + ' (' + fmtF(pu) + ' F/' + (o.unite || 'u') + ')</option>';
+  }).join('');
+}
+function dqeOnPickOuvrage() {
+  var id = (document.getElementById('pn-ouvrage') || {}).value;
+  if (!id) return;
+  var o = (DATA.eds_ouvrages || []).find(function(x) { return x.id === id; });
+  if (!o) return;
+  var m = document.getElementById('pn-materiau'); if (m) m.value = o.designation || o.libelle || '';
+  var u = document.getElementById('pn-unite'); if (u) u.value = o.unite || '';
+  var f = document.getElementById('pn-forfait'); if (f) f.value = 0;
+  var pu = (typeof edsDebourse === 'function') ? Math.round(edsDebourse(o).total || 0) : 0;
+  toast('Prix unitaire déboursé : ' + fmtF(pu) + ' FCFA/' + (o.unite || 'u'), 'info');
+}
+
+/* Onglet « Prix unitaires » du DQE → affiche le RÉFÉRENTIEL UNIFIÉ (eds_ressources) */
+function chargerPrix() {
+  var search = ((document.getElementById('search-prix') || {}).value || '').toLowerCase();
+  var liste = (DATA.eds_ressources || []).filter(function(r) {
+    return !search || ((r.libelle || '') + ' ' + (r.code || '')).toLowerCase().indexOf(search) !== -1;
+  });
+  var tbody = document.getElementById('tbody-prix');
+  if (!tbody) return;
+  var typeLabel = { materiau: 'Matériaux', mo: 'Main d\u2019œuvre', materiel: 'Matériel', st: 'Sous-traitance' };
+  var banner = '<tr><td colspan="7" style="background:var(--card2);font-size:11px;color:var(--bleu);padding:8px;">🔗 Référentiel unifié — partagé avec « Étude de Prix & Déboursé Sec ». Une modification de prix se répercute dans le DQE et tous les déboursés.</td></tr>';
+  if (!liste.length) { tbody.innerHTML = banner + '<tr><td colspan="7" style="text-align:center;color:var(--dim);padding:24px;">Référentiel vide — ajoutez une ressource.</td></tr>'; return; }
+  tbody.innerHTML = banner + liste.map(function(r) {
+    return '<tr>'
+      + '<td style="font-weight:600;">' + escHtml(r.libelle || '') + '</td>'
+      + '<td><span style="font-size:11px;background:var(--card2);padding:2px 7px;border-radius:10px;color:var(--bleu);">' + escHtml(typeLabel[r.type] || r.type || '') + '</span></td>'
+      + '<td style="font-size:11px;color:var(--dim);">' + escHtml(r.unite || '') + '</td>'
+      + '<td style="text-align:right;color:var(--or);font-weight:700;">' + fmtF(r.pu || 0) + '</td>'
+      + '<td style="font-size:11px;">' + escHtml(r.fournisseur || '—') + '</td>'
+      + '<td style="font-size:11px;">' + (r.maj || '—') + '</td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="edsOpenRes(\'' + r.id + '\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="edsDeleteRes(\'' + r.id + '\')" title="Supprimer">🗑</button></td>'
+      + '</tr>';
+  }).join('');
+}
+/* Le bouton « + Ajouter prix » du DQE crée une ressource du référentiel unifié */
+function ouvrirPrixModal() {
+  if (typeof edsOpenRes === 'function') edsOpenRes();
+  else toast('Référentiel de ressources indisponible.', 'error');
 }
 
 </script>
