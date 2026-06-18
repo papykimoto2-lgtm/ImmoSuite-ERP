@@ -7910,7 +7910,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="F3">F3 — BEVERLY / MEYERS (180 m²)</option>
               <option value="F4">F4 — EXCELLIUM (250 m²)</option>
               <option value="VILLA">Villa — SOMOLI Prestige (200 m²)</option>
-              <option value="MILITARIS_R4">Immeuble R+4 — Appt 3P (MILITARIS)</option>
             </select>
             <button class="btn btn-secondary btn-sm" onclick="ajouterPosteNomenclature()">+ Ajouter poste</button>
             <button class="btn btn-secondary btn-sm" onclick="exporterNomenclatureCSV()">⬇ CSV</button>
@@ -27768,6 +27767,7 @@ function renderPlans(){renderPlansFull();}
 
 function renderConceptionsFull(){
   var grid=document.getElementById('conceptions-grid');if(!grid)return;
+  if(typeof seedConceptionMilitaris==='function'){ seedConceptionMilitaris().then(function(created){ if(created) renderConceptionsFull(); }); }
   var q=((document.getElementById('search-conceptions')||{}).value||'').toLowerCase();
   var prog=(document.getElementById('filter-conc-programme')||{}).value||'';
   var phase=(document.getElementById('filter-conc-phase')||{}).value||'';
@@ -33284,7 +33284,7 @@ var PRIX_MATERIAUX_CI = [
 /* ── Nomenclatures types par logement ────────────────── */
 var NOMENCLATURES_PAR_DEFAUT = {
   /* DQE réel — Immeuble R+4 Appartements 3P, programme MILITARIS (Partner Immo CI) */
-  MILITARIS_R4: [
+  'Appartement 3P (MILITARIS)': [
     { poste:'Lot 2 — Gros Œuvre',      materiau:'Gros Œuvre — Bâtiment principal',            unite:'Ens', quantite:1, prix_forfait:228639727 },
     { poste:'Lot 3 — Étanchéité',      materiau:'Étanchéité (terrasses + salles d\'eau)',     unite:'Ens', quantite:1, prix_forfait:7612568 },
     { poste:'Lot — Menuiserie Alu',    materiau:'Menuiserie Aluminium / Vitrerie',            unite:'Ens', quantite:1, prix_forfait:21074560 },
@@ -33401,6 +33401,8 @@ async function chargerDQE() {
   }
   if (typeof edsLoadRessources==='function') await edsLoadRessources();
   if (typeof dqeUnifierPrix==='function') await dqeUnifierPrix();
+  if (typeof seedConceptionMilitaris==='function') await seedConceptionMilitaris();
+  if (typeof dqePopulateTypeLogement==='function') dqePopulateTypeLogement();
   chargerNomenclature();
   chargerPrix();
   chargerDevis();
@@ -33464,7 +33466,7 @@ function chargerNomenclature() {
   /* Récap */
   var resume = document.getElementById('resume-dqe');
   if (resume) {
-    var typeLabels = { F2:'F2 — HARMONIE (80 m²)', F3:'F3 — BEVERLY (180 m²)', F4:'F4 — EXCELLIUM (250 m²)', VILLA:'Villa SOMOLI (200 m²)', MILITARIS_R4:'Immeuble R+4 — Appt 3P (MILITARIS)' };
+    var typeLabels = { F2:'F2 — HARMONIE (80 m²)', F3:'F3 — BEVERLY (180 m²)', F4:'F4 — EXCELLIUM (250 m²)', VILLA:'Villa SOMOLI (200 m²)', 'Appartement 3P (MILITARIS)':'Appartement 3P — Immeuble R+4 (MILITARIS)' };
     var marge = 1.35;
     resume.innerHTML = '<div class="form-section-title">Récapitulatif DQE — ' + (typeLabels[type] || type) + '</div>'
       + '<div class="kpi-grid" style="margin-top:8px;">'
@@ -45255,6 +45257,37 @@ function chargerPrix() {
 function ouvrirPrixModal() {
   if (typeof edsOpenRes === 'function') edsOpenRes();
   else toast('Référentiel de ressources indisponible.', 'error');
+}
+
+
+
+/* ══════════════════════════════════════════════════════════════════
+   DQE × CONCEPTION — types de logement pilotés par les Plans Architecturaux
+══════════════════════════════════════════════════════════════════ */
+function dqePopulateTypeLogement(){
+  var sel=document.getElementById('dqe-type-logement'); if(!sel) return;
+  var cur=sel.value; var types=[];
+  (DATA.conceptions||[]).forEach(function(c){
+    (c.type_logements||'').split('/').forEach(function(t){ t=t.trim(); if(t && types.indexOf(t)===-1) types.push(t); });
+  });
+  Object.keys(NOMENCLATURES_PAR_DEFAUT||{}).forEach(function(t){ if(types.indexOf(t)===-1) types.push(t); });
+  if(!types.length) types=['F2','F3','F4','VILLA'];
+  sel.innerHTML=types.map(function(t){ return '<option value="'+escHtml(t)+'">'+escHtml(t)+'</option>'; }).join('');
+  if(cur && types.indexOf(cur)!==-1) sel.value=cur;
+}
+/* Crée le projet de conception de l'appartement 3P (unité commercialisée) — idempotent */
+async function seedConceptionMilitaris(){
+  if(!DATA.conceptions) DATA.conceptions=[];
+  if(DATA.conceptions.some(function(c){return c.ref==='CONC-MIL-APT3P';})) return false;
+  var prog=(DATA.programmes||[]).find(function(p){ return /militaris|eden|yaou/i.test(((p.nom||'')+' '+(p.localisation||''))); });
+  var c={ id:uid(), ref:'CONC-MIL-APT3P', type_logements:'Appartement 3P (MILITARIS)',
+    programme_id:prog?prog.id:'', architecte:'', surface:0, nb_unites:0, cout:0,
+    phase:'APD', statut:'valide', date_debut:today(), date_fin:'',
+    description:"Projet de conception de l'appartement 3 pièces — immeuble R+4 (unité commercialisée). DQE & déboursé rattachés dans le module DQE & Coût de revient (type « Appartement 3P (MILITARIS) »). Surface et nombre d'unités à renseigner depuis les plans.",
+    phases:[], avancement:0, created_at:today() };
+  DATA.conceptions.push(c); await dbPut('conceptions', c);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_conceptions', c);
+  return true;
 }
 
 </script>
