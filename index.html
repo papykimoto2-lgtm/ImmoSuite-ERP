@@ -5469,6 +5469,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <div class="form-group span-2"><label>Notes</label><input id="ces-notes" class="form-control"></div>
             </div>
 
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:14px 0 6px;">⑤ Commissions (commercial / apporteur)</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Commercial</label><select id="ces-commercial" class="form-control"><option value="">—</option></select></div>
+              <div class="form-group"><label>Taux commercial (%)</label><input type="number" step="0.1" id="ces-taux-commercial" class="form-control" value="0" oninput="cesSync()"></div>
+              <div class="form-group"><label>Apporteur d'affaire</label><select id="ces-apporteur" class="form-control"><option value="">—</option></select></div>
+              <div class="form-group"><label>Taux apporteur (%)</label><input type="number" step="0.1" id="ces-taux-apporteur" class="form-control" value="0" oninput="cesSync()"></div>
+            </div>
             <div id="ces-synth" class="card" style="margin-top:12px;background:var(--card2);"></div>
           </div>
           <div class="modal-footer">
@@ -44592,6 +44599,186 @@ function cesGenererContrat(id) {
     +'<div class="sign"><div>Le Cédant<br>'+soc+'</div><div>Le Cessionnaire<br>'+cesAcquereurLabel(a)+'</div></div>'
     +'</body></html>');
   w.document.close();
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CESSIONS — COMMISSIONS commercial / apporteur d'affaire
+   Branché sur le système de commissions existant (store commissions)
+══════════════════════════════════════════════════════════ */
+
+function cesFillIntervenants(commId, apId) {
+  var selC = document.getElementById('ces-commercial');
+  if (selC) {
+    selC.innerHTML = '<option value="">—</option>' + (DATA.employes||[]).map(function(e){
+      var n = ((e.prenoms||'')+' '+(e.nom||'')).trim();
+      return '<option value="'+e.id+'"'+(commId===e.id?' selected':'')+'>'+n+(e.poste?(' · '+e.poste):'')+'</option>';
+    }).join('');
+  }
+  var selA = document.getElementById('ces-apporteur');
+  if (selA) {
+    selA.innerHTML = '<option value="">—</option>' + (DATA.apporteurs||[]).map(function(a){
+      var n = ((a.prenoms?a.prenoms+' ':'')+(a.nom||'')).trim();
+      return '<option value="'+a.id+'"'+(apId===a.id?' selected':'')+'>'+n+(a.tel?(' · '+a.tel):'')+'</option>';
+    }).join('');
+  }
+}
+
+/* Génère les commissions d'une cession (anti-doublon par cession_id) */
+async function cesGenererCommissions(c) {
+  if (!DATA.commissions) DATA.commissions = [];
+  var exist = DATA.commissions.filter(function(x){ return x.cession_id===c.id && x.statut!=='annulee'; }).map(function(x){ return x.type_beneficiaire; });
+  var base = c.prix_cession || 0;
+  var nouvelles = [];
+
+  if (c.commercial_id && exist.indexOf('commercial')===-1 && (parseFloat(c.taux_commercial)||0)>0) {
+    var emp = DATA.employes.find(function(e){ return e.id===c.commercial_id; });
+    var nomC = emp ? ((emp.prenoms||'')+' '+(emp.nom||'')).trim() : '';
+    var mC = Math.round(base * (parseFloat(c.taux_commercial)||0) / 100);
+    if (mC>0) {
+      var comm = { id:uid(), cession_id:c.id, source:'cession', client_nom:c.acquereur||'',
+        beneficiaire:nomC, beneficiaire_id:c.commercial_id, type_beneficiaire:'commercial',
+        type_versement:'cession', taux:parseFloat(c.taux_commercial)||0, montant_base:base, montant_comm:mC,
+        date_versement:c.date||today(), date_generation:today(), statut:'a_payer', programme_id:'', notes:'Cession foncière' };
+      DATA.commissions.push(comm); nouvelles.push(comm);
+      await dbPut('commissions', comm);
+      if (typeof syncToSupabase==='function') syncToSupabase('pi_commissions', comm);
+    }
+  }
+  if (c.apporteur_id && exist.indexOf('apporteur')===-1 && (parseFloat(c.taux_apporteur)||0)>0) {
+    var ap = DATA.apporteurs.find(function(a){ return a.id===c.apporteur_id; });
+    var nomA = ap ? ((ap.prenoms?ap.prenoms+' ':'')+(ap.nom||'')) : '';
+    var mA = Math.round(base * (parseFloat(c.taux_apporteur)||0) / 100);
+    if (mA>0) {
+      var commA = { id:uid(), cession_id:c.id, source:'cession', client_nom:c.acquereur||'',
+        apporteur_id:c.apporteur_id, beneficiaire:nomA, beneficiaire_tel:ap?(ap.tel||''):'',
+        type_beneficiaire:'apporteur', type_versement:'cession', taux:parseFloat(c.taux_apporteur)||0,
+        montant_base:base, montant_comm:mA, date_versement:c.date||today(), date_generation:today(),
+        statut:'a_payer', programme_id:'', notes:'Cession foncière' };
+      DATA.commissions.push(commA); nouvelles.push(commA);
+      await dbPut('commissions', commA);
+      if (typeof syncToSupabase==='function') syncToSupabase('pi_commissions', commA);
+    }
+  }
+  var autoCompta = (DATA.params && DATA.params.auto_compta_commissions) !== false;
+  if (autoCompta && typeof comptabiliserCommission==='function') {
+    for (var k=0;k<nouvelles.length;k++) await comptabiliserCommission(nouvelles[k], true);
+    if (typeof filterEcritures==='function') filterEcritures();
+  }
+  if (typeof renderCommissions==='function') renderCommissions();
+  if (nouvelles.length) {
+    var tot = nouvelles.reduce(function(s,x){ return s+x.montant_comm; }, 0);
+    toast('Commission(s) cession générée(s) : ' + fmtF(tot) + ' FCFA' + (autoCompta?' — comptabilisées':''), 'success');
+  }
+}
+
+/* ── Versions finales (intègrent les commissions) ── */
+function cesNew(sourceKey) {
+  _cesId = null;
+  cesFillSources(sourceKey||'');
+  cesFillIntervenants('', '');
+  document.getElementById('ces-titre').textContent = 'Nouvelle cession';
+  document.getElementById('ces-del').style.display = 'none';
+  var cb = document.getElementById('ces-contrat-btn'); if (cb) cb.style.display = 'none';
+  ['ces-designation','ces-naiss-lieu','ces-profession','ces-piece-num','ces-raison','ces-rccm','ces-ncc',
+   'ces-regime','ces-rep-nom','ces-rep-qualite','ces-nom','ces-prenoms','ces-adresse','ces-tel','ces-email',
+   'ces-notaire','ces-etude','ces-acte-num','ces-contrat-ref','ces-notes'].forEach(function(id){ _cesSet(id,''); });
+  _cesSet('ces-nationalite','Ivoirienne');
+  _cesSet('ces-nature','lots'); _cesSet('ces-date',today());
+  _cesSet('ces-superficie',0); _cesSet('ces-nblots',0);
+  _cesSet('ces-prix',0); _cesSet('ces-encaisse',0); _cesSet('ces-mode','virement');
+  _cesSet('ces-statut','promesse'); _cesSet('ces-type','physique');
+  _cesSet('ces-piece-type','CNI'); _cesSet('ces-forme','SARL'); _cesSet('ces-contrat-type','cession');
+  _cesSet('ces-notarie',false); _cesSet('ces-echeance',''); _cesSet('ces-acte-date','');
+  var tx = (typeof getTauxCommissions==='function') ? getTauxCommissions() : { commercial_regulier:0, apporteur_regulier:0 };
+  _cesSet('ces-commercial',''); _cesSet('ces-apporteur','');
+  _cesSet('ces-taux-commercial', tx.commercial_regulier||0); _cesSet('ces-taux-apporteur', tx.apporteur_regulier||0);
+  cesToggleType(); cesSync();
+  openModal('modal-cession');
+}
+
+function cesOpen(id) {
+  var c = DATA.cessions_foncieres.find(function(x){ return x.id===id; });
+  if (!c) return;
+  _cesId = id;
+  var a = c.acheteur || {};
+  cesFillSources(c.source_key);
+  cesFillIntervenants(c.commercial_id||'', c.apporteur_id||'');
+  document.getElementById('ces-titre').textContent = 'Cession — ' + (c.acquereur || cesAcquereurLabel(a));
+  document.getElementById('ces-del').style.display = '';
+  var cb = document.getElementById('ces-contrat-btn'); if (cb) cb.style.display = '';
+  _cesSet('ces-nature',c.nature||'lots'); _cesSet('ces-date',c.date); _cesSet('ces-designation',c.designation);
+  _cesSet('ces-superficie',c.superficie||0); _cesSet('ces-nblots',c.nb_lots||0);
+  _cesSet('ces-type',a.type||'physique');
+  _cesSet('ces-nom',a.nom); _cesSet('ces-prenoms',a.prenoms); _cesSet('ces-naiss-date',a.naiss_date); _cesSet('ces-naiss-lieu',a.naiss_lieu);
+  _cesSet('ces-nationalite',a.nationalite||'Ivoirienne'); _cesSet('ces-profession',a.profession);
+  _cesSet('ces-piece-type',a.piece_type||'CNI'); _cesSet('ces-piece-num',a.piece_num);
+  _cesSet('ces-raison',a.raison); _cesSet('ces-forme',a.forme||'SARL'); _cesSet('ces-rccm',a.rccm); _cesSet('ces-ncc',a.ncc);
+  _cesSet('ces-regime',a.regime); _cesSet('ces-rep-nom',a.rep_nom); _cesSet('ces-rep-qualite',a.rep_qualite);
+  _cesSet('ces-adresse',a.adresse); _cesSet('ces-tel',a.tel); _cesSet('ces-email',a.email);
+  _cesSet('ces-prix',c.prix_cession||0); _cesSet('ces-encaisse',c.montant_encaisse||0); _cesSet('ces-mode',c.mode||'virement');
+  _cesSet('ces-echeance',c.echeance); _cesSet('ces-statut',c.statut||'promesse');
+  _cesSet('ces-notarie',c.notarie); _cesSet('ces-notaire',c.notaire); _cesSet('ces-etude',c.etude);
+  _cesSet('ces-acte-num',c.acte_num); _cesSet('ces-acte-date',c.acte_date);
+  _cesSet('ces-contrat-type',c.contrat_type||'cession'); _cesSet('ces-contrat-ref',c.contrat_ref); _cesSet('ces-notes',c.notes);
+  _cesSet('ces-commercial',c.commercial_id||''); _cesSet('ces-apporteur',c.apporteur_id||'');
+  _cesSet('ces-taux-commercial',c.taux_commercial||0); _cesSet('ces-taux-apporteur',c.taux_apporteur||0);
+  cesToggleType(); cesSync();
+  openModal('modal-cession');
+}
+
+async function cesSave() {
+  var src=_cesGet('ces-source');
+  if (!src) { toast('Choisissez la source (parcelle / opération)', 'error'); return; }
+  var type=_cesGet('ces-type');
+  var acheteur={
+    type:type,
+    nom:_cesGet('ces-nom').trim(), prenoms:_cesGet('ces-prenoms').trim(),
+    naiss_date:_cesGet('ces-naiss-date'), naiss_lieu:_cesGet('ces-naiss-lieu').trim(),
+    nationalite:_cesGet('ces-nationalite').trim(), profession:_cesGet('ces-profession').trim(),
+    piece_type:_cesGet('ces-piece-type'), piece_num:_cesGet('ces-piece-num').trim(),
+    raison:_cesGet('ces-raison').trim(), forme:_cesGet('ces-forme'), rccm:_cesGet('ces-rccm').trim(),
+    ncc:_cesGet('ces-ncc').trim(), regime:_cesGet('ces-regime').trim(),
+    rep_nom:_cesGet('ces-rep-nom').trim(), rep_qualite:_cesGet('ces-rep-qualite').trim(),
+    adresse:_cesGet('ces-adresse').trim(), tel:_cesGet('ces-tel').trim(), email:_cesGet('ces-email').trim()
+  };
+  var label=cesAcquereurLabel(acheteur);
+  if ((type==='physique' && !acheteur.nom) || (type==='morale' && !acheteur.raison)) { toast('Identité de l\u2019acquéreur incomplète', 'error'); return; }
+
+  var c = _cesId ? DATA.cessions_foncieres.find(function(x){return x.id===_cesId;}) : null;
+  var isNew=false;
+  if (!c) { c={ id:'ces_'+uid(), created_at:today() }; isNew=true; }
+  c.source_key=src; var parts=src.split(':'); c.source_type=parts[0]; c.source_id=parts[1];
+  c.nature=_cesGet('ces-nature'); c.date=_cesGet('ces-date')||today(); c.designation=_cesGet('ces-designation').trim();
+  c.superficie=parseFloat(_cesGet('ces-superficie'))||0; c.nb_lots=parseInt(_cesGet('ces-nblots'))||0;
+  c.acheteur=acheteur; c.acquereur=label; c.contact=acheteur.tel;
+  c.prix_cession=parseFloat(_cesGet('ces-prix'))||0; c.montant_encaisse=parseFloat(_cesGet('ces-encaisse'))||0;
+  c.mode=_cesGet('ces-mode'); c.echeance=_cesGet('ces-echeance'); c.statut=_cesGet('ces-statut');
+  c.notarie=_cesGet('ces-notarie'); c.notaire=_cesGet('ces-notaire').trim(); c.etude=_cesGet('ces-etude').trim();
+  c.acte_num=_cesGet('ces-acte-num').trim(); c.acte_date=_cesGet('ces-acte-date');
+  c.contrat_type=_cesGet('ces-contrat-type'); c.contrat_ref=_cesGet('ces-contrat-ref').trim(); c.notes=_cesGet('ces-notes').trim();
+  c.commercial_id=_cesGet('ces-commercial'); c.taux_commercial=parseFloat(_cesGet('ces-taux-commercial'))||0;
+  c.apporteur_id=_cesGet('ces-apporteur'); c.taux_apporteur=parseFloat(_cesGet('ces-taux-apporteur'))||0;
+
+  if (isNew) DATA.cessions_foncieres.push(c);
+  await dbPut('cessions_foncieres', c);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_cessions_foncieres', c);
+  if (!c.ecriture_vente_id) await cesGenererEcriture(c);
+  await cesGenererCommissions(c);
+
+  if (c.source_type==='parcelle') {
+    var p=DATA.parcelles.find(function(x){return x.id===c.source_id;});
+    if (p) { p.superficie_cedee=(p.superficie_cedee||0)+(isNew?c.superficie:0); await dbPut('parcelles',p); if(typeof syncToSupabase==='function') syncToSupabase('pi_parcelles',p); }
+  } else if (c.source_type==='operation') {
+    var op=DATA.af_operations.find(function(x){return x.id===c.source_id;});
+    if (op) { op.lots_cedes=(op.lots_cedes||0)+(isNew?c.nb_lots:0); await dbPut('af_operations',op); }
+  }
+  closeModal('modal-cession');
+  cesRender();
+  if (typeof filterEcritures==='function') filterEcritures();
+  if (typeof buildTresorerie==='function') buildTresorerie();
+  if (typeof buildCompteResultat==='function') buildCompteResultat();
+  toast('Cession enregistrée', 'success');
 }
 
 </script>
