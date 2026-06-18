@@ -2539,6 +2539,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div id="lots-dashboard"></div>
         </div>
         <div class="tab-pane" id="tab-lots-grille">
+          <div style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <input type="text" class="search-input" placeholder="🔍 Recherche générale (type, programme…)" id="search-lots" oninput="filterLots()" style="flex:1;min-width:180px;">
+            <input type="text" class="search-input" placeholder="🏘 Îlot (ex : A, B1…)" id="search-lots-ilot" oninput="filterLots()" style="flex:0 0 170px;">
+            <input type="text" class="search-input" placeholder="🏷 N° Lot" id="search-lots-numero" oninput="filterLots()" style="flex:0 0 130px;">
+          </div>
           <div class="lots-grid" id="lots-grid"></div>
         </div>
         <div class="tab-pane" id="tab-lots-terrains">
@@ -17696,11 +17701,32 @@ function renderLots() {
   renderLotsDashboard();
   var filterProg = document.getElementById('filter-programme-lots').value;
   var filterStat = document.getElementById('filter-statut-lot').value;
+  var searchTerm   = (document.getElementById('search-lots')        || {}).value.toLowerCase().trim();
+  var searchIlot   = (document.getElementById('search-lots-ilot')   || {}).value.toLowerCase().trim();
+  var searchNumero = (document.getElementById('search-lots-numero') || {}).value.toLowerCase().trim();
 
   var list = DATA.lots.filter(function(l) {
     var matchProg = !filterProg || l.programme_id === filterProg;
     var matchStat = !filterStat || l.statut === filterStat;
-    return matchProg && matchStat;
+
+    /* Recherche générale (type, programme, îlot, N° lot) */
+    var matchSearch = true;
+    if (searchTerm) {
+      var prog = DATA.programmes.find(function(p) { return p.id === l.programme_id; });
+      var progNom = prog ? prog.nom.toLowerCase() : '';
+      matchSearch = (l.numero && l.numero.toLowerCase().includes(searchTerm))
+        || (l.type   && l.type.toLowerCase().includes(searchTerm))
+        || (l.ilot   && l.ilot.toLowerCase().includes(searchTerm))
+        || progNom.includes(searchTerm);
+    }
+
+    /* Filtre dédié Îlot */
+    var matchIlot = !searchIlot || (l.ilot && l.ilot.toLowerCase().includes(searchIlot));
+
+    /* Filtre dédié N° Lot */
+    var matchNumero = !searchNumero || (l.numero && l.numero.toLowerCase().includes(searchNumero));
+
+    return matchProg && matchStat && matchSearch && matchIlot && matchNumero;
   });
 
   var grid = document.getElementById('lots-grid');
