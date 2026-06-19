@@ -14445,7 +14445,7 @@ function goTo(page) {
   if (page === 'clients') renderClients();
   if (page === 'paiements') { renderVersements(); populateClientSelects(); }
   if (page === 'programmes') renderProgrammes();
-  if (page === 'lots') { renderLots(); renderTerrains(); }
+  if (page === 'lots') { populateFilterProgrammes(); renderLots(); renderTerrains(); }
   if (page === 'filiere') filiereRender();
   if (page === 'comptabilite') { loadComptabilite(); updateCompteSuggestions(); }
   if (page === 'relances') detectRelances();
