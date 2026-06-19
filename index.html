@@ -2588,6 +2588,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <option value="reserve">Réservé</option>
             <option value="vendu">Vendu</option>
           </select>
+          <button class="btn btn-secondary" onclick="lotSerieOpen()">⚡ Génération en série</button>
           <button class="btn btn-primary" onclick="openLotModal()">+ Nouveau Lot</button>
         </div>
 
@@ -9826,6 +9827,101 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 </div>
 
 <!-- Modal Lot -->
+      <!-- ══════ GÉNÉRATION DE LOTS EN SÉRIE ══════ -->
+      <div class="modal-overlay" id="modal-lot-serie">
+        <div class="modal" style="max-width:780px;">
+          <div class="modal-header"><h3>⚡ Génération de lots en série</h3><button class="btn btn-secondary btn-icon" onclick="closeModal('modal-lot-serie')">✕</button></div>
+          <div class="modal-body">
+            <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">Créez des dizaines ou des centaines de lots en une fois : numérotation automatique, répartition par îlots et attributs communs.</div>
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:4px 0 6px;">① Rattachement</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Programme</label><select id="ls-programme" class="form-control"><option value="">— Aucun —</option></select></div>
+              <div class="form-group"><label>Parcelle source</label><select id="ls-parcelle" class="form-control"><option value="">— Aucune —</option></select></div>
+              <div class="form-group"><label>Opération foncière</label><select id="ls-operation" class="form-control"><option value="">— Aucune —</option></select></div>
+            </div>
+
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:14px 0 6px;">② Numérotation</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Préfixe</label><input id="ls-prefixe" class="form-control" value="L-" oninput="lotSeriePreview()"></div>
+              <div class="form-group"><label>N° de départ</label><input type="number" id="ls-debut" class="form-control" value="1" oninput="lotSeriePreview()"></div>
+              <div class="form-group"><label>Nombre de lots</label><input type="number" id="ls-nombre" class="form-control" value="50" oninput="lotSeriePreview()"></div>
+              <div class="form-group"><label>Chiffres (001…)</label><input type="number" id="ls-pad" class="form-control" value="3" oninput="lotSeriePreview()"></div>
+              <div class="form-group span-2"><label>OU répartition par îlots — format <em>A:50, B:30, C:100</em></label><input id="ls-ilots" class="form-control" placeholder="laisser vide pour une séquence simple" oninput="lotSeriePreview()"></div>
+              <div class="form-group"><label>Séparateur îlot</label><input id="ls-sep" class="form-control" value="-" oninput="lotSeriePreview()"></div>
+            </div>
+
+            <div style="font-weight:700;color:var(--vert,#1A6B3A);margin:14px 0 6px;">③ Attributs appliqués à tous les lots</div>
+            <div class="form-grid">
+              <div class="form-group"><label>Îlot (si séquence simple)</label><input id="ls-ilot" class="form-control" placeholder="Îlot A"></div>
+              <div class="form-group"><label>Type</label><input id="ls-type" class="form-control" placeholder="Villa, F3, Parcelle nue..."></div>
+              <div class="form-group"><label>Surface (m²)</label><input type="number" id="ls-surface" class="form-control" value="0" oninput="lotSeriePreview()"></div>
+              <div class="form-group"><label>Pièces</label><input type="number" id="ls-pieces" class="form-control" value="0"></div>
+              <div class="form-group"><label>Prix (FCFA)</label><input type="number" id="ls-prix" class="form-control" value="0" oninput="lotSeriePreview()"></div>
+              <div class="form-group"><label>Statut</label><select id="ls-statut" class="form-control"><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="bloque">Bloqué</option></select></div>
+            </div>
+
+            <div id="ls-preview" class="card" style="margin-top:12px;background:var(--card2);"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-lot-serie')">Annuler</button>
+            <button class="btn btn-primary" onclick="lotSerieGenerer()">⚡ Générer les lots</button>
+          </div>
+        </div>
+      </div>
+
+<!-- ══════ APPARTEMENTS D'UN LOT (immeuble) ══════ -->
+<div class="modal-overlay" id="modal-lot-unites">
+  <div class="modal" style="max-width:880px;">
+    <div class="modal-header"><h3 id="lu-titre">🏢 Appartements du lot</h3><button class="btn btn-secondary btn-icon" onclick="closeModal('modal-lot-unites')">✕</button></div>
+    <div class="modal-body">
+      <div id="lu-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px;"></div>
+
+      <div class="card" style="background:var(--card2);margin-bottom:12px;">
+        <div style="font-weight:700;margin-bottom:6px;">⚡ Générer les appartements</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Nombre de niveaux (RDC inclus)</label><input type="number" id="lu-g-niveaux" class="form-control" value="5"></div>
+          <div class="form-group"><label>Appartements par niveau</label><input type="number" id="lu-g-parniv" class="form-control" value="4"></div>
+          <div class="form-group"><label>Type</label><input id="lu-g-type" class="form-control" placeholder="F3, F4..."></div>
+          <div class="form-group"><label>Surface (m²)</label><input type="number" id="lu-g-surface" class="form-control" value="0"></div>
+          <div class="form-group"><label>Prix (FCFA)</label><input type="number" id="lu-g-prix" class="form-control" value="0"></div>
+          <div class="form-group" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" style="width:100%;" onclick="luGenerer()">⚡ Générer</button></div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-weight:700;">Liste des appartements</div>
+        <button class="btn btn-secondary btn-sm" onclick="luOpenUnite()">+ Appartement</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>N°</th><th>Niveau</th><th>Type</th><th style="text-align:right;">Surface</th><th style="text-align:right;">Prix</th><th>Statut</th><th>Acquéreur</th><th></th></tr></thead>
+        <tbody id="lu-tbody"></tbody>
+      </table></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-lot-unites')">Fermer</button></div>
+  </div>
+</div>
+
+<!-- ══════ APPARTEMENT (unité) ══════ -->
+<div class="modal-overlay" id="modal-unite">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header"><h3 id="u-titre">Appartement</h3><button class="btn btn-secondary btn-icon" onclick="closeModal('modal-unite')">✕</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group"><label>Numéro *</label><input id="u-numero" class="form-control" placeholder="RDC-A, R1-B..."></div>
+      <div class="form-group"><label>Niveau</label><input id="u-etage" class="form-control" placeholder="RDC, R+1..."></div>
+      <div class="form-group"><label>Type</label><input id="u-type" class="form-control" placeholder="F3, F4..."></div>
+      <div class="form-group"><label>Surface (m²)</label><input type="number" id="u-surface" class="form-control" value="0"></div>
+      <div class="form-group"><label>Prix (FCFA)</label><input type="number" id="u-prix" class="form-control" value="0"></div>
+      <div class="form-group"><label>Statut</label><select id="u-statut" class="form-control"><option value="disponible">Disponible</option><option value="reserve">Réservé</option><option value="vendu">Vendu</option></select></div>
+      <div class="form-group span-2"><label>Acquéreur</label><input id="u-acquereur" class="form-control" placeholder="Nom du souscripteur"></div>
+    </div></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-unite')">Annuler</button>
+      <button class="btn btn-danger" id="u-del" onclick="luDeleteUnite()" style="display:none;">🗑 Supprimer</button>
+      <button class="btn btn-primary" onclick="luSaveUnite()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-lot">
   <div class="modal">
     <div class="modal-header">
@@ -9891,6 +9987,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <select class="form-control" id="l-mode-livraison">
             <option value="gros_oeuvre">🧱 Gros œuvre</option>
             <option value="cle_en_main">🔑 Clé en main</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nature du lot</label>
+          <select class="form-control" id="l-nature">
+            <option value="villa">Villa / plain-pied (1 lot = 1 unité)</option>
+            <option value="immeuble">Immeuble (plusieurs appartements)</option>
           </select>
         </div>
         <div class="form-group">
@@ -13103,6 +13206,7 @@ var DATA = {
   eds_etudes: [],
   eds_ressources: [],
   cessions_foncieres: [],
+  lot_unites: [],
   /* v114 — Aménagement foncier */
   af_operations: [],
   af_agents: []
@@ -13112,7 +13216,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 116; /* v116: store cessions_foncieres — cession de la part entreprise */
+var DB_VERSION = 117; /* v117: store lot_unites — appartements d'un lot (immeuble) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -13158,6 +13262,7 @@ var ALL_STORES = [
   'eds_ressources',
   /* v116 — Cessions foncières */
   'cessions_foncieres',
+  /* v117 */ 'lot_unites',
   /* v114 — Acquisition & aménagement foncier */
   'af_operations','af_agents'
 ];
@@ -13293,7 +13398,8 @@ async function loadAllData() {
   /* v113-116 — Modules déboursé, foncier, cessions (chargement au démarrage) */
   'eds_ouvrages','eds_etudes','eds_ressources',
   'af_operations','af_agents',
-  'cessions_foncieres'
+  'cessions_foncieres',
+  'lot_unites'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -13568,6 +13674,7 @@ var SUPA_STORE_MAP = [
   ['pi_leads',           'leads'],
   ['pi_ecritures',       'ecritures'],
   ['pi_cessions_foncieres','cessions_foncieres'],
+  ['pi_lot_unites',       'lot_unites'],
   ['pi_eds_ouvrages',    'eds_ouvrages'],
   ['pi_eds_etudes',      'eds_etudes'],
   ['pi_eds_ressources',  'eds_ressources'],
@@ -17601,6 +17708,7 @@ function openLotModal(id) {
     document.getElementById('l-notes').value = l.notes || '';
     setSelectValue('l-standing', l.standing);
     setSelectValue('l-statut', l.statut);
+    setSelectValue('l-nature', l.nature || 'villa');
     setSelectValue('l-mode-livraison', l.mode_livraison || 'gros_oeuvre');
   } else {
     document.getElementById('modal-lot-title').textContent = 'Nouveau Lot';
@@ -17673,6 +17781,7 @@ async function saveLot() {
     cout_revient: parseFloat(document.getElementById('l-cout-revient').value) || 0,
     standing: document.getElementById('l-standing').value,
     mode_livraison: document.getElementById('l-mode-livraison').value,
+    nature: (document.getElementById('l-nature')||{}).value || 'villa',
     statut: document.getElementById('l-statut').value,
     notes: document.getElementById('l-notes').value,
     created_at: APP.editingId ? undefined : today()
@@ -17845,6 +17954,7 @@ function renderLots() {
       + livBadge
       + '<div class="lot-prix">' + fcfa(l.prix) + '</div>'
       + '<div style="font-size:11px;margin-top:4px;">' + (statutLabels[l.statut] || l.statut) + '</div>'
+      + (l.nature==='immeuble' ? ('<div style="font-size:11px;margin-top:4px;color:var(--bleu,#3B82F6);">🏢 ' + luVendus(l.id) + '/' + luTotal(l.id) + ' apparts vendus</div><button class="btn btn-secondary btn-sm" style="margin-top:4px;padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();luOpen(\'' + l.id + '\')">🏢 Appartements</button>') : '')
       + '<button class="btn btn-danger btn-sm" style="margin-top:6px;padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();deleteLot(\'' + l.id + '\')">🗑</button>'
       + '</div>';
   }).join('');
@@ -45851,6 +45961,267 @@ function dqeSetCoef(){
   var c={ fg:parseFloat((document.getElementById('dqe-fg')||{}).value)||0, marge:parseFloat((document.getElementById('dqe-marge')||{}).value)||0, tva:parseFloat((document.getElementById('dqe-tva')||{}).value)||0 };
   try{ localStorage.setItem('immosuite_dqe_coef', JSON.stringify(c)); }catch(e){}
   if(typeof chargerNomenclature==='function') chargerNomenclature();
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   GÉNÉRATION DE LOTS EN SÉRIE — création massive (centaines de lots)
+══════════════════════════════════════════════════════════════════ */
+function _lsG(id){ var e=document.getElementById(id); return e?e.value:''; }
+function _lsPad(n,w){ var s=''+n; while(s.length<w) s='0'+s; return s; }
+
+/* Construit la liste {ilot, numero} à créer selon le paramétrage */
+function lotSeriePlan(){
+  var ilotsRaw=_lsG('ls-ilots').trim();
+  var pad=Math.max(0,parseInt(_lsG('ls-pad'))||0);
+  var plan=[];
+  if(ilotsRaw){
+    var sep=_lsG('ls-sep')||'-';
+    ilotsRaw.split(',').forEach(function(pair){
+      var m=pair.split(':'); if(m.length<2) return;
+      var nom=m[0].trim(); var nb=parseInt(m[1])||0;
+      for(var j=1;j<=nb;j++) plan.push({ ilot:nom, numero:nom+sep+_lsPad(j,pad) });
+    });
+  } else {
+    var prefixe=_lsG('ls-prefixe'); var debut=parseInt(_lsG('ls-debut'))||1; var nb=parseInt(_lsG('ls-nombre'))||0;
+    var ilot=_lsG('ls-ilot');
+    for(var i=0;i<nb;i++) plan.push({ ilot:ilot, numero:prefixe+_lsPad(debut+i,pad) });
+  }
+  return plan;
+}
+
+function lotSeriePreview(){
+  var z=document.getElementById('ls-preview'); if(!z) return;
+  var plan=lotSeriePlan();
+  var prix=parseFloat(_lsG('ls-prix'))||0;
+  var sample=plan.slice(0,4).map(function(x){return x.numero;}).join(', ')+(plan.length>4?' … '+plan[plan.length-1].numero:'');
+  if(!plan.length){ z.innerHTML='<span style="color:var(--or);">Renseignez un nombre de lots ou une répartition par îlots.</span>'; return; }
+  z.innerHTML='<strong>'+plan.length+' lot(s)</strong> seront créés : <span style="color:var(--vert);">'+sample+'</span>'
+    +'<br><span style="font-size:12px;color:var(--dim);">Valeur totale indicative : '+fmtF(plan.length*prix)+' FCFA'+( (parseFloat(_lsG('ls-surface'))||0)>0 ? (' · surface cumulée '+fmtF(plan.length*(parseFloat(_lsG('ls-surface'))||0))+' m²'):'' )+'</span>';
+}
+
+function lotSerieOpen(){
+  // programmes
+  var sp=document.getElementById('ls-programme');
+  if(sp) sp.innerHTML='<option value="">— Aucun —</option>'+(DATA.programmes||[]).map(function(p){return '<option value="'+p.id+'">'+escHtml(p.nom||p.id)+'</option>';}).join('');
+  var pa=document.getElementById('ls-parcelle');
+  if(pa) pa.innerHTML='<option value="">— Aucune —</option>'+(DATA.parcelles||[]).map(function(p){return '<option value="'+p.id+'">'+escHtml(p.ref||p.localisation||p.id)+'</option>';}).join('');
+  var op=document.getElementById('ls-operation');
+  if(op) op.innerHTML='<option value="">— Aucune —</option>'+(DATA.af_operations||[]).map(function(o){return '<option value="'+o.id+'">'+escHtml(o.nom||o.id)+'</option>';}).join('');
+  ['ls-ilots','ls-ilot','ls-type'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  var set=function(id,v){var e=document.getElementById(id); if(e) e.value=v;};
+  set('ls-prefixe','L-'); set('ls-debut',1); set('ls-nombre',50); set('ls-pad',3); set('ls-sep','-');
+  set('ls-surface',0); set('ls-pieces',0); set('ls-prix',0); set('ls-statut','disponible');
+  lotSeriePreview();
+  openModal('modal-lot-serie');
+}
+
+async function lotSerieGenerer(){
+  var plan=lotSeriePlan();
+  if(!plan.length){ toast('Rien à générer : renseignez le nombre ou les îlots.','error'); return; }
+  if(plan.length>2000){ toast('Limite de 2000 lots par génération.','error'); return; }
+  var progId=_lsG('ls-programme');
+  var existing={};
+  (DATA.lots||[]).forEach(function(l){ if(l.programme_id===progId) existing[l.numero]=true; });
+  var conflits=plan.filter(function(x){return existing[x.numero];}).length;
+  var aCreer=plan.filter(function(x){return !existing[x.numero];});
+  if(!aCreer.length){ toast('Tous ces numéros existent déjà dans ce programme.','error'); return; }
+  if(!confirm('Générer '+aCreer.length+' lot(s)'+(conflits?(' ('+conflits+' doublon(s) ignoré(s))'):'')+' ?')) return;
+
+  var base={
+    programme_id:progId,
+    parcelle_id:_lsG('ls-parcelle'), operation_id:_lsG('ls-operation'),
+    type:_lsG('ls-type'),
+    surface:parseFloat(_lsG('ls-surface'))||0,
+    pieces:parseInt(_lsG('ls-pieces'))||0,
+    prix:parseFloat(_lsG('ls-prix'))||0,
+    cout_revient:0, standing:'', mode_livraison:'',
+    statut:_lsG('ls-statut'), notes:'Généré en série'
+  };
+  var n=0;
+  for(var i=0;i<aCreer.length;i++){
+    var lot=Object.assign({ id:uid(), numero:aCreer[i].numero, ilot:aCreer[i].ilot, created_at:today(), source:'serie' }, base);
+    DATA.lots.push(lot);
+    await dbPut('lots', lot);
+    if(typeof syncToSupabase==='function') syncToSupabase('pi_lots', lot);
+    n++;
+  }
+  closeModal('modal-lot-serie');
+  if(typeof renderLots==='function') renderLots();
+  if(typeof refreshDashboard==='function') refreshDashboard();
+  toast(n+' lot(s) générés avec succès.','success');
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   APPARTEMENTS PAR LOT (immeuble) — un lot porte N unités vendues
+   Store : lot_unites  {id, lot_id, programme_id, numero, etage, type,
+                        surface, prix, statut, acquereur, created_at}
+══════════════════════════════════════════════════════════════════ */
+if (!DATA.lot_unites) DATA.lot_unites = [];
+var _luLot = null, _luUniteId = null;
+
+function luOfLot(lotId){ return (DATA.lot_unites||[]).filter(function(u){ return u.lot_id===lotId; }); }
+function luTotal(lotId){ return luOfLot(lotId).length; }
+function luVendus(lotId){ return luOfLot(lotId).filter(function(u){ return u.statut==='vendu'; }).length; }
+
+function luOpen(lotId){
+  _luLot = lotId;
+  var lot = DATA.lots.find(function(l){ return l.id===lotId; });
+  document.getElementById('lu-titre').textContent = '🏢 Appartements — Lot ' + (lot?lot.numero:'');
+  document.getElementById('lu-g-type').value = lot ? (lot.type||'') : '';
+  document.getElementById('lu-g-surface').value = lot ? (lot.surface||0) : 0;
+  document.getElementById('lu-g-prix').value = lot ? (lot.prix||0) : 0;
+  luRender();
+  openModal('modal-lot-unites');
+}
+
+function luRender(){
+  var us = luOfLot(_luLot);
+  var statutBadge = { disponible:'🟢 Disponible', reserve:'🟡 Réservé', vendu:'🔴 Vendu' };
+  var tb = document.getElementById('lu-tbody');
+  if (tb) tb.innerHTML = us.length ? us.map(function(u){
+    return '<tr>'
+      + '<td><strong>'+escHtml(u.numero||'')+'</strong></td>'
+      + '<td>'+escHtml(u.etage||'—')+'</td>'
+      + '<td>'+escHtml(u.type||'—')+'</td>'
+      + '<td style="text-align:right;">'+(u.surface?u.surface+' m²':'—')+'</td>'
+      + '<td style="text-align:right;">'+fcfa(u.prix||0)+'</td>'
+      + '<td>'+(statutBadge[u.statut]||u.statut)+'</td>'
+      + '<td>'+escHtml(u.acquereur||'—')+'</td>'
+      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="luOpenUnite(\''+u.id+'\')">✏️</button></td>'
+      + '</tr>';
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:16px;">Aucun appartement — générez-les ou ajoutez-les.</td></tr>';
+
+  var dispo=us.filter(function(u){return u.statut==='disponible';}).length;
+  var resv=us.filter(function(u){return u.statut==='reserve';}).length;
+  var vendu=us.filter(function(u){return u.statut==='vendu';}).length;
+  var caVendu=us.filter(function(u){return u.statut==='vendu';}).reduce(function(s,u){return s+(u.prix||0);},0);
+  var caPot=us.reduce(function(s,u){return s+(u.prix||0);},0);
+  var k=document.getElementById('lu-kpis');
+  var kc=function(t,v,c){return '<div class="kpi-card" style="border-top-color:'+(c||'var(--vert)')+';"><div class="kpi-label">'+t+'</div><div class="kpi-value" style="font-size:15px;color:'+(c||'inherit')+';">'+v+'</div></div>';};
+  if(k) k.innerHTML = kc('Appartements',us.length,'#3B82F6')+kc('Disponibles',dispo,'#1A6B3A')+kc('Réservés',resv,'#B8732F')+kc('Vendus',vendu,'#c0392b')+kc('CA encaissé',fcfa(caVendu),'#1A6B3A')+kc('CA potentiel',fcfa(caPot),'#0EA5E9');
+}
+
+function luOpenUnite(id){
+  _luUniteId = id || null;
+  var u = id ? DATA.lot_unites.find(function(x){return x.id===id;}) : null;
+  document.getElementById('u-titre').textContent = u ? ('Appartement '+(u.numero||'')) : 'Nouvel appartement';
+  document.getElementById('u-del').style.display = u ? '' : 'none';
+  var set=function(id,v){document.getElementById(id).value=(v==null?'':v);};
+  set('u-numero',u?u.numero:''); set('u-etage',u?u.etage:''); set('u-type',u?u.type:'');
+  set('u-surface',u?u.surface:0); set('u-prix',u?u.prix:0); set('u-statut',u?u.statut:'disponible'); set('u-acquereur',u?u.acquereur:'');
+  openModal('modal-unite');
+}
+
+async function luSaveUnite(){
+  var num=document.getElementById('u-numero').value.trim();
+  if(!num){ toast('Numéro obligatoire.','error'); return; }
+  var lot=DATA.lots.find(function(l){return l.id===_luLot;});
+  var u = _luUniteId ? DATA.lot_unites.find(function(x){return x.id===_luUniteId;}) : null;
+  if(!u){ u={ id:uid(), lot_id:_luLot, programme_id:lot?lot.programme_id:'', created_at:today() }; DATA.lot_unites.push(u); }
+  u.numero=num; u.etage=document.getElementById('u-etage').value.trim();
+  u.type=document.getElementById('u-type').value.trim();
+  u.surface=parseFloat(document.getElementById('u-surface').value)||0;
+  u.prix=parseFloat(document.getElementById('u-prix').value)||0;
+  u.statut=document.getElementById('u-statut').value;
+  u.acquereur=document.getElementById('u-acquereur').value.trim();
+  if(u.statut==='vendu' && !u.date_vente) u.date_vente=today();
+  if(u.statut!=='vendu') u.date_vente='';
+  await dbPut('lot_unites', u);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_lot_unites', u);
+  // SYSCOHADA : vente d'appartement → écriture 4111 / 702
+  var _venduCompta=false;
+  if(u.statut==='vendu'){ await luGenererEcriture(u); _venduCompta=true; }
+  else if(u.ecriture_vente_id){ await luSupprimerEcriture(u); }
+  await dbPut('lot_unites', u);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_lot_unites', u);
+  closeModal('modal-unite');
+  luRender();
+  if(typeof renderLots==='function') renderLots();
+  if(typeof renderEcritures==='function') try{ renderEcritures(); }catch(e){}
+  toast(_venduCompta ? 'Vente comptabilisée (4111 / 702).' : 'Appartement enregistré.','success');
+}
+
+async function luDeleteUnite(){
+  if(!_luUniteId || !confirm('Supprimer cet appartement ?')) return;
+  var _u=DATA.lot_unites.find(function(x){return x.id===_luUniteId;});
+  if(_u && _u.ecriture_vente_id){ await luSupprimerEcriture(_u); }
+  DATA.lot_unites = DATA.lot_unites.filter(function(x){return x.id!==_luUniteId;});
+  if(typeof deleteRecord==='function') await deleteRecord('lot_unites', _luUniteId);
+  else { await dbDelete('lot_unites', _luUniteId); if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_lot_unites', _luUniteId); }
+  closeModal('modal-unite');
+  luRender();
+  if(typeof renderLots==='function') renderLots();
+  toast('Appartement supprimé.','info');
+}
+
+/* Génération en série des appartements (niveaux × appts/niveau) */
+async function luGenerer(){
+  var lot=DATA.lots.find(function(l){return l.id===_luLot;}); if(!lot) return;
+  var niv=parseInt(document.getElementById('lu-g-niveaux').value)||0;
+  var parNiv=parseInt(document.getElementById('lu-g-parniv').value)||0;
+  if(niv<=0||parNiv<=0){ toast('Renseignez niveaux et appartements par niveau.','error'); return; }
+  var type=document.getElementById('lu-g-type').value.trim();
+  var surface=parseFloat(document.getElementById('lu-g-surface').value)||0;
+  var prix=parseFloat(document.getElementById('lu-g-prix').value)||0;
+  var total=niv*parNiv;
+  if(total>500){ toast('Limite de 500 appartements par génération.','error'); return; }
+  var existing={}; luOfLot(_luLot).forEach(function(u){ existing[u.numero]=true; });
+  var letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var aCreer=[];
+  for(var n=0;n<niv;n++){
+    var etage=(n===0)?'RDC':('R+'+n);
+    for(var a=0;a<parNiv;a++){
+      var lettre=(a<26)?letters[a]:('U'+(a+1));
+      var numero=etage+'-'+lettre;
+      if(!existing[numero]) aCreer.push({ numero:numero, etage:etage });
+    }
+  }
+  if(!aCreer.length){ toast('Ces appartements existent déjà.','error'); return; }
+  if(!confirm('Générer '+aCreer.length+' appartement(s) ?')) return;
+  for(var i=0;i<aCreer.length;i++){
+    var u={ id:uid(), lot_id:_luLot, programme_id:lot.programme_id||'', numero:aCreer[i].numero, etage:aCreer[i].etage,
+      type:type, surface:surface, prix:prix, statut:'disponible', acquereur:'', created_at:today(), source:'serie' };
+    DATA.lot_unites.push(u);
+    await dbPut('lot_unites', u);
+    if(typeof syncToSupabase==='function') syncToSupabase('pi_lot_unites', u);
+  }
+  luRender();
+  if(typeof renderLots==='function') renderLots();
+  toast(aCreer.length+' appartement(s) générés.','success');
+}
+
+
+
+/* ── Vente d'appartement → SYSCOHADA (4111 client / 702 ventes produits finis) ── */
+async function luGenererEcriture(u){
+  if(!DATA.ecritures) DATA.ecritures=[];
+  var lot=DATA.lots.find(function(l){return l.id===u.lot_id;});
+  var an=(u.date_vente||today()).slice(0,4);
+  var lib='Vente appartement '+(u.numero||'')+(lot?(' \u2014 Lot '+lot.numero):'')+(u.acquereur?(' \u00e0 '+u.acquereur):'');
+  var prog=u.programme_id||(lot?lot.programme_id:'')||'';
+  if(u.ecriture_vente_id){
+    var e0=DATA.ecritures.find(function(x){return x.id===u.ecriture_vente_id;});
+    if(e0){ e0.montant=u.prix||0; e0.libelle=lib; e0.date=u.date_vente||e0.date; e0.programme_id=prog;
+      await dbPut('ecritures',e0); if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',e0); return; }
+  }
+  var num=DATA.ecritures.length+1;
+  var e={ id:uid(), ref:'VAPT-'+an+'-'+String(num).padStart(4,'0'), date:u.date_vente||today(), piece:'VENTE APPT',
+    type:'produit', libelle:lib, compte:'702', compte_debit:'4111', compte_credit:'702', montant:u.prix||0,
+    mode:'vente', programme_id:prog, notes:'Vente appartement (immeuble) \u2014 '+(u.numero||''),
+    source:'lot_unite', lot_unite_id:u.id, created_at:today() };
+  DATA.ecritures.push(e); await dbPut('ecritures',e);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',e);
+  u.ecriture_vente_id=e.id;
+}
+async function luSupprimerEcriture(u){
+  if(!u.ecriture_vente_id) return;
+  var eid=u.ecriture_vente_id;
+  DATA.ecritures=(DATA.ecritures||[]).filter(function(e){return e.id!==eid;});
+  if(typeof deleteRecord==='function'){ try{ await deleteRecord('ecritures', eid); }catch(e){} }
+  else { try{ await dbDelete('ecritures', eid); }catch(e){} if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_ecritures', eid); }
+  u.ecriture_vente_id=null;
 }
 
 </script>
