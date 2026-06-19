@@ -856,6 +856,62 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   outline: 2px solid var(--or); outline-offset: 2px;
 }
 
+/* ══ APERÇU AVANT IMPRESSION (DQE & DÉBOURSÉ SEC) ══════════════ */
+.print-preview-overlay {
+  position: fixed; inset: 0; z-index: 3500;
+  background: rgba(10,18,36,0.88);
+  display: none; flex-direction: column;
+}
+.print-preview-overlay.open { display: flex; animation: fadeIn 180ms ease; }
+.print-preview-toolbar {
+  background: var(--card); border-bottom: 2px solid var(--or);
+  padding: 10px 18px; display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+.ppt-title {
+  font-family: var(--fh,'Playfair Display',serif);
+  font-size: 14px; font-weight: 700; color: var(--or); flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.print-preview-scroll {
+  flex: 1; overflow-y: auto; padding: 28px 16px 40px;
+  display: flex; flex-direction: column; align-items: center;
+  background: #1e2736;
+}
+.print-preview-page {
+  background: #fff; color: #1a1a1a;
+  width: 210mm; min-height: 100px;
+  padding: 16mm 14mm 18mm;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.45);
+  border-radius: 2px;
+  font-family: 'Times New Roman', Georgia, serif;
+  font-size: 11pt; line-height: 1.5;
+}
+.print-preview-page table {
+  width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 10pt;
+}
+.print-preview-page td, .print-preview-page th {
+  border: 1px solid #ccc; padding: 5px 8px;
+}
+.print-preview-page th { background: #E8F4EE; font-weight: 700; }
+.print-preview-page .pp-recap td { border: none; padding: 4px 8px; }
+.print-preview-page h1 { margin: 0 0 4px; font-family: Georgia, serif; }
+.print-preview-page hr { border: none; margin: 14px 0; }
+@media (max-width: 870px) {
+  .print-preview-page { width: 100%; padding: 12px; }
+}
+/* ── Impression depuis l'aperçu : seule la page blanche sort ── */
+@media print {
+  body.in-print-preview > *:not(#modal-pp-root) { display: none !important; }
+  #modal-pp-root .print-preview-toolbar { display: none !important; }
+  #modal-pp-root .print-preview-scroll {
+    background: white !important; padding: 0 !important; display: block !important;
+  }
+  #modal-pp-root .print-preview-page {
+    box-shadow: none !important; width: 100% !important; padding: 0 !important;
+  }
+}
+
 @media (max-width: 767px) {
   .chart-row { display: flex; flex-direction: column; gap: 12px; }
   #dash-stepper { flex-direction: row; overflow-x: auto; }
@@ -7891,6 +7947,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <select class="filter-select" id="dqe-filter-programme" onchange="chargerDQE()">
             <option value="">Tous programmes</option>
           </select>
+          <button class="btn btn-secondary btn-sm" onclick="printPreviewDQE()" title="Aperçu avant impression du DQE">👁 Aperçu DQE</button>
           <button class="btn btn-secondary btn-sm" onclick="exportDQE()">⬇ Export CSV</button>
           <button class="btn btn-primary btn-sm" onclick="genererDQEPourProgramme()">⚡ Générer DQE</button>
         </div>
@@ -7913,6 +7970,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </select>
             <button class="btn btn-secondary btn-sm" onclick="ajouterPosteNomenclature()">+ Ajouter poste</button>
             <button class="btn btn-secondary btn-sm" onclick="exporterNomenclatureCSV()">⬇ CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="printPreviewDQE()" title="Aperçu avant impression">🖨️ Aperçu & imprimer</button>
           </div>
           <div class="card">
             <div class="table-wrap">
@@ -8195,6 +8253,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="spacer"></div>
           <button class="btn btn-secondary btn-sm" onclick="edsExportBibCSV()">⬇ CSV bibliothèque</button>
+          <button class="btn btn-secondary btn-sm" onclick="printPreviewDebourse(null,'bib')" title="Aperçu bibliothèque ouvrages">👁 Aperçu bibliothèque</button>
           <button class="btn btn-primary btn-sm" onclick="edsOpenOuvrage()">+ Nouvel ouvrage</button>
         </div>
 
@@ -8376,6 +8435,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-eds-etude')">Annuler</button>
+            <button class="btn btn-secondary" onclick="printPreviewDebourse(null,'modal')" title="Aperçu avant impression de l'étude en cours">👁 Aperçu</button>
             <button class="btn btn-secondary" onclick="edsExportPDF()">🖨 PDF devis</button>
             <button class="btn btn-primary" onclick="edsSaveEtude()">💾 Enregistrer l'étude</button>
           </div>
@@ -42892,6 +42952,7 @@ function edsRenderEtudes() {
       '<td style="text-align:right;font-weight:700;color:var(--vert,#1A6B3A);">' + fmtF(c.prixVente) + '</td>' +
       '<td style="text-align:right;color:#B8732F;">' + fmtF(c.marge) + '</td>' +
       '<td><button class="btn btn-secondary btn-sm" onclick="edsOpenEtude(\'' + e.id + '\')">✎</button> ' +
+      '<button class="btn btn-secondary btn-sm" onclick="printPreviewDebourse(\'' + e.id + '\')" title="Aperçu avant impression">👁</button> ' +
       '<button class="btn btn-secondary btn-sm" onclick="edsExportPDF(\'' + e.id + '\')">🖨</button> ' +
       '<button class="btn btn-secondary btn-sm" onclick="edsDeleteEtude(\'' + e.id + '\')">🗑</button></td>' +
       '</tr>';
@@ -45331,7 +45392,389 @@ async function seedConceptionMilitaris(){
 
 
 
-/* ── DQE : coefficients déboursé sec → coût de revient → prix de vente (réglables) ── */
+
+/* ════════════════════════════════════════════════════════════════
+   APERÇU AVANT IMPRESSION — DQE & DÉBOURSÉ SEC
+   ImmoSuite ERP v32 — SANIX Africa
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Ouvrir / fermer l'overlay ─────────────────────────────────── */
+function openPrintPreview(title, html) {
+  var root = document.getElementById('modal-pp-root');
+  var titleEl = document.getElementById('ppt-title');
+  var content = document.getElementById('ppt-content');
+  if (!root || !content) return;
+  if (titleEl) titleEl.textContent = title || 'Aperçu avant impression';
+  content.innerHTML = html || '';
+  root.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  /* Scroll haut */
+  var scroll = root.querySelector('.print-preview-scroll');
+  if (scroll) scroll.scrollTop = 0;
+}
+
+function closePrintPreview() {
+  var root = document.getElementById('modal-pp-root');
+  if (root) root.classList.remove('open');
+  document.body.style.overflow = '';
+  document.body.classList.remove('in-print-preview');
+}
+
+/* Fermeture par touche Échap */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var root = document.getElementById('modal-pp-root');
+    if (root && root.classList.contains('open')) closePrintPreview();
+  }
+});
+
+/* ── Impression depuis l'aperçu ────────────────────────────────── */
+function doPrintPreview() {
+  var content = document.getElementById('ppt-content');
+  if (!content) return;
+  var html = content.innerHTML;
+  var w = window.open('', '_blank', 'width=920,height=750');
+  if (!w) { alert('Veuillez autoriser les popups pour imprimer.'); return; }
+  w.document.write(
+    '<!DOCTYPE html><html lang="fr"><head>'
+    + '<meta charset="UTF-8">'
+    + '<title>Impression ImmoSuite ERP</title>'
+    + '<style>'
+    + 'body{font-family:"Times New Roman",Georgia,serif;padding:15mm 14mm 18mm;font-size:11pt;color:#1a1a1a;margin:0;}'
+    + 'h1{font-size:19pt;font-family:Georgia,serif;}'
+    + 'table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt;}'
+    + 'td,th{border:1px solid #ccc;padding:5px 8px;}'
+    + 'th{background:#E8F4EE;font-weight:700;}'
+    + 'tr.pp-cat td{background:#F0F4F8;font-weight:700;color:#1D4ED8;}'
+    + 'tfoot tr td{background:#F8FAF5;font-weight:800;}'
+    + '.pp-recap{width:58%;margin-left:auto;}'
+    + '.pp-recap td{border:none;padding:4px 8px;}'
+    + '.pp-recap tr.pp-total td{border-top:2px solid #1A6B3A;background:#E8F4EE;}'
+    + '.pp-footer{margin-top:28px;font-size:9pt;color:#888;border-top:1px solid #ddd;padding-top:6px;}'
+    + '@page{size:A4;margin:0;}'
+    + '@media print{body{padding:10mm 12mm;}}'
+    + '</style>'
+    + '</head><body>' + html + '</body></html>'
+  );
+  w.document.close();
+  w.focus();
+  setTimeout(function() { w.print(); }, 350);
+}
+
+/* ── Helpers HTML réutilisables ────────────────────────────────── */
+function _ppLogo() {
+  var logo = (typeof getLogoBase64 === 'function') ? getLogoBase64() : '';
+  return logo ? '<div style="text-align:right;margin-bottom:10px;"><img src="' + logo + '" style="height:46px;object-fit:contain;border-radius:4px;"></div>' : '';
+}
+function _ppSoc() {
+  return escHtml((DATA.params && DATA.params.societe) || 'ImmoSuite ERP');
+}
+function _ppDate() {
+  return (typeof today === 'function') ? today() : new Date().toISOString().slice(0,10);
+}
+function _ppFcfa(n) { return fmtF(Math.round(n || 0)) + ' FCFA'; }
+
+/* ═══════════════════════════════════════════════════════
+   APERÇU DQE — Détail Quantitatif Estimatif
+   ═══════════════════════════════════════════════════════ */
+function printPreviewDQE() {
+  /* ─ Récupération du type et des données ─ */
+  var type = ((document.getElementById('dqe-type-logement') || {}).value) || 'F2';
+  var nomens = (DATA.nomenclatures || []).filter(function(n) { return n.type_logement === type; });
+  if (!nomens.length) {
+    var defaults = (NOMENCLATURES_PAR_DEFAUT && NOMENCLATURES_PAR_DEFAUT[type]) || [];
+    nomens = defaults.map(function(item) {
+      return { id: uid(), type_logement: type, poste: item.poste, materiau: item.materiau,
+               unite: item.unite, quantite: item.quantite, prix_forfait: item.prix_forfait || 0 };
+    });
+  }
+  /* ─ Regroupement par poste ─ */
+  var postes = {}, totalGlobal = 0;
+  nomens.forEach(function(n) {
+    var prixUnit = dqeLignePU(n);
+    var totalLigne = (n.quantite * prixUnit) + (n.prix_forfait || 0);
+    totalGlobal += totalLigne;
+    if (!postes[n.poste]) postes[n.poste] = { lignes: [], sousTotal: 0 };
+    postes[n.poste].lignes.push({ n: n, prixUnit: prixUnit, totalLigne: totalLigne });
+    postes[n.poste].sousTotal += totalLigne;
+  });
+  /* ─ Coefficients ─ */
+  var co = (typeof dqeCoef === 'function') ? dqeCoef() : { fg: 10, marge: 20, tva: 18 };
+  var fg        = totalGlobal * co.fg   / 100;
+  var coutRev   = totalGlobal + fg;
+  var marge     = coutRev    * co.marge / 100;
+  var pvHT      = coutRev    + marge;
+  var pvTTC     = pvHT       * (1 + co.tva / 100);
+  /* ─ Labels ─ */
+  var typeLabels = {
+    F2: 'F2 — HARMONIE (80 m²)', F3: 'F3 — BEVERLY (180 m²)',
+    F4: 'F4 — EXCELLIUM (250 m²)', VILLA: 'Villa SOMOLI (200 m²)'
+  };
+  var typeLabel = typeLabels[type] || type;
+  var selProg = document.getElementById('dqe-filter-programme');
+  var progLabel = (selProg && selProg.value && selProg.selectedIndex >= 0)
+    ? selProg.options[selProg.selectedIndex].textContent : 'Tous programmes';
+  /* ─ Lignes HTML ─ */
+  var rowsHtml = '';
+  Object.keys(postes).forEach(function(poste) {
+    var grp = postes[poste];
+    rowsHtml += '<tr class="pp-cat">'
+      + '<td colspan="5" style="padding-left:6px;">' + escHtml(poste || '—') + '</td>'
+      + '<td style="text-align:right;color:#B87333;">' + _ppFcfa(grp.sousTotal) + '</td>'
+      + '</tr>';
+    grp.lignes.forEach(function(item) {
+      var n = item.n;
+      var pu = dqeMatch(n.materiau);
+      var puLabel = item.prixUnit ? _ppFcfa(item.prixUnit) : (n.prix_forfait ? 'Forfait' : '—');
+      rowsHtml += '<tr>'
+        + '<td style="padding-left:18px;">' + escHtml(n.materiau || '—') + '</td>'
+        + '<td style="text-align:center;color:#555;">' + escHtml(n.unite || '') + '</td>'
+        + '<td style="text-align:right;">' + (n.quantite || 0) + '</td>'
+        + '<td style="text-align:right;">' + puLabel + '</td>'
+        + '<td style="font-size:9pt;color:#666;">' + escHtml((pu && pu.fournisseur) ? pu.fournisseur : '—') + '</td>'
+        + '<td style="text-align:right;font-weight:600;">' + _ppFcfa(item.totalLigne) + '</td>'
+        + '</tr>';
+    });
+  });
+  /* ─ Récapitulatif ─ */
+  var recapRows = [
+    { label: 'Déboursé sec (coût direct)', val: _ppFcfa(totalGlobal), style: 'color:#B87333;font-weight:700;' },
+    { label: '+ Frais généraux (' + co.fg + ' %)', val: _ppFcfa(fg), style: '' },
+    { label: '= Coût de revient', val: _ppFcfa(coutRev), style: 'color:#1D4ED8;font-weight:700;', sep: true },
+    { label: '+ Marge bénéficiaire (' + co.marge + ' %)', val: _ppFcfa(marge), style: 'color:#B87333;' },
+    { label: 'Prix de vente HT', val: _ppFcfa(pvHT), style: 'font-weight:700;' },
+    { label: 'Prix de vente TTC (TVA ' + co.tva + ' %)', val: _ppFcfa(pvTTC), style: 'color:#1A6B3A;font-weight:800;font-size:12pt;', total: true }
+  ];
+  var recapHtml = recapRows.map(function(r) {
+    var cls = r.total ? 'class="pp-total"' : '';
+    var sep = r.sep ? 'border-top:1px solid #ccc;' : '';
+    return '<tr ' + cls + '>'
+      + '<td style="padding:5px 8px;' + sep + '">' + r.label + '</td>'
+      + '<td style="text-align:right;padding:5px 8px;' + sep + r.style + '">' + r.val + '</td>'
+      + '</tr>';
+  }).join('');
+  /* ─ Immeuble (coût/appartement) ─ */
+  var immInfo = (typeof dqeImmeubleInfo === 'function') ? dqeImmeubleInfo(type) : { immeuble: false, nb: 0 };
+  var perApptHtml = '';
+  if (immInfo.immeuble && immInfo.nb > 0) {
+    perApptHtml = '<tr><td style="padding:5px 8px;border-top:1px solid #e2e8f0;">Déboursé / appartement (÷' + immInfo.nb + ')</td>'
+      + '<td style="text-align:right;padding:5px 8px;color:#B87333;">' + _ppFcfa(totalGlobal / immInfo.nb) + '</td></tr>'
+      + '<tr><td style="padding:5px 8px;">Prix de vente HT / appartement</td>'
+      + '<td style="text-align:right;padding:5px 8px;font-weight:700;color:#1A6B3A;">' + _ppFcfa(pvHT / immInfo.nb) + '</td></tr>';
+  }
+  /* ─ Assemblage HTML final ─ */
+  var html = _ppLogo()
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">'
+    +   '<div>'
+    +     '<h1 style="color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:6px;margin-bottom:6px;">DÉTAIL QUANTITATIF ESTIMATIF</h1>'
+    +     '<div style="font-size:13pt;font-weight:700;">' + _ppSoc() + '</div>'
+    +     '<div style="font-size:10pt;color:#555;margin-top:3px;">Programme : ' + escHtml(progLabel) + ' &nbsp;·&nbsp; Date : ' + _ppDate() + '</div>'
+    +   '</div>'
+    +   '<div style="text-align:right;font-size:10pt;padding-top:4px;">'
+    +     '<strong>Type :</strong><br><span style="color:#1A6B3A;font-weight:700;">' + escHtml(typeLabel) + '</span>'
+    +   '</div>'
+    + '</div>'
+    + '<table>'
+    +   '<thead><tr style="background:#1A6B3A;color:white;">'
+    +     '<th style="text-align:left;">Matériau / Prestation</th>'
+    +     '<th style="text-align:center;width:50px;">Unité</th>'
+    +     '<th style="text-align:right;width:60px;">Qté</th>'
+    +     '<th style="text-align:right;width:120px;">Prix U. (FCFA)</th>'
+    +     '<th style="text-align:left;width:130px;">Fournisseur</th>'
+    +     '<th style="text-align:right;width:130px;">Total (FCFA)</th>'
+    +   '</tr></thead>'
+    +   '<tbody>' + rowsHtml + '</tbody>'
+    +   '<tfoot><tr style="background:#1A6B3A;color:white;">'
+    +     '<td colspan="5" style="text-align:right;font-weight:800;padding:7px 8px;">TOTAL GÉNÉRAL — DÉBOURSÉ SEC</td>'
+    +     '<td style="text-align:right;font-weight:800;font-size:12pt;padding:7px 8px;">' + _ppFcfa(totalGlobal) + '</td>'
+    +   '</tr></tfoot>'
+    + '</table>'
+    + '<table class="pp-recap" style="margin-top:20px;">' + recapHtml + perApptHtml + '</table>'
+    + '<div class="pp-footer">Document généré par <strong>ImmoSuite ERP</strong> · ' + _ppSoc() + ' · ' + _ppDate() + '</div>';
+
+  openPrintPreview('Aperçu DQE — ' + typeLabel, html);
+}
+
+/* ═══════════════════════════════════════════════════════
+   APERÇU DÉBOURSÉ SEC — Étude de prix
+   ═══════════════════════════════════════════════════════ */
+/**
+ * @param {string|null} id     — id d'une étude sauvegardée (depuis la liste), ou null
+ * @param {string}      source — 'list' | 'modal' | 'bib'
+ */
+function printPreviewDebourse(id, source) {
+  /* ─ Construire l'objet étude ─ */
+  var e;
+  if (id) {
+    e = (DATA.eds_etudes || []).find(function(x) { return x.id === id; });
+    if (!e) { toast('Étude introuvable', 'error'); return; }
+  } else if (source === 'modal') {
+    /* Depuis le modal d'édition — lire l'état courant */
+    e = {
+      nom:         ((document.getElementById('eds-e-nom')       || {}).value   || '—'),
+      programme_id:((document.getElementById('eds-e-programme') || {}).value   || ''),
+      date:        ((document.getElementById('eds-e-date')      || {}).value   || _ppDate()),
+      coef:        (typeof edsCurrentCoef === 'function') ? edsCurrentCoef() : { fg: 12, aleas: 3, marge: 15 },
+      lignes:      (typeof _edsLignes !== 'undefined') ? _edsLignes : []
+    };
+  } else if (source === 'bib') {
+    /* Aperçu de toute la bibliothèque d'ouvrages */
+    return _printPreviewBibliotheque();
+  } else {
+    toast('Source inconnue pour l\'aperçu', 'error'); return;
+  }
+  /* ─ Calculs ─ */
+  var c = edsCalcEtude(e);
+  var prog = (DATA.programmes || []).find(function(p) { return p.id === e.programme_id; });
+  /* ─ Regroupement par catégorie ─ */
+  var parCat = {}, hasPrev = false;
+  (e.lignes || []).forEach(function(l) {
+    var o = (DATA.eds_ouvrages || []).find(function(x) { return x.id === l.ouvrage_id; });
+    if (!o) return;
+    hasPrev = true;
+    var u   = (typeof edsDebourse === 'function') ? edsDebourse(o).total : 0;
+    var tot = u * (parseFloat(l.qte) || 0);
+    var cat = o.categorie || 'Divers';
+    if (!parCat[cat]) parCat[cat] = { lignes: [], sousTotal: 0 };
+    parCat[cat].lignes.push({ o: o, l: l, u: u, tot: tot });
+    parCat[cat].sousTotal += tot;
+  });
+  /* ─ Lignes HTML ─ */
+  var rowsHtml = '';
+  if (hasPrev) {
+    Object.keys(parCat).forEach(function(cat) {
+      var grp = parCat[cat];
+      rowsHtml += '<tr class="pp-cat">'
+        + '<td colspan="5" style="padding-left:6px;">' + escHtml(cat) + '</td>'
+        + '<td style="text-align:right;color:#B87333;">' + _ppFcfa(grp.sousTotal) + '</td>'
+        + '</tr>';
+      grp.lignes.forEach(function(item) {
+        var o = item.o, l = item.l;
+        /* Sous-détail composants */
+        var compRows = '';
+        if (o.composants && o.composants.length) {
+          var det = (typeof edsDebourse === 'function') ? edsDebourse(o) : { materiau:0, mo:0, materiel:0, st:0 };
+          var typeAlias = { materiau:'Mat.', mo:'M.O.', materiel:'Matér.', st:'S.T.' };
+          compRows = '<br><span style="font-size:8.5pt;color:#888;">'
+            + o.composants.slice(0,4).map(function(c2) {
+                return escHtml((typeAlias[c2.type]||c2.type||'') + ' ' + (c2.libelle||c2.code||''));
+              }).join(', ')
+            + (o.composants.length > 4 ? '…' : '')
+            + '</span>';
+        }
+        rowsHtml += '<tr>'
+          + '<td style="padding-left:18px;font-weight:600;">' + escHtml(o.code || '') + '</td>'
+          + '<td>' + escHtml(o.designation || '') + compRows + '</td>'
+          + '<td style="text-align:center;color:#555;">' + escHtml(o.unite || '') + '</td>'
+          + '<td style="text-align:right;">' + (l.qte || 0) + '</td>'
+          + '<td style="text-align:right;">' + _ppFcfa(item.u) + '</td>'
+          + '<td style="text-align:right;font-weight:600;">' + _ppFcfa(item.tot) + '</td>'
+          + '</tr>';
+      });
+    });
+  } else {
+    rowsHtml = '<tr><td colspan="6" style="text-align:center;color:#888;padding:16px;">Aucun ouvrage dans cette étude.</td></tr>';
+  }
+  /* ─ Récapitulatif ─ */
+  var coef = e.coef || { fg:12, aleas:3, marge:15 };
+  var nbLots = prog ? (prog.nb_lots || prog.nbLots || 0) : 0;
+  var perLotHtml = (nbLots > 0) ? (
+    '<tr><td style="padding:5px 8px;border-top:1px solid #e2e8f0;">Prix de revient / lot (' + nbLots + ' lots)</td>'
+    + '<td style="text-align:right;padding:5px 8px;">' + _ppFcfa(c.prixRevient / nbLots) + '</td></tr>'
+    + '<tr><td style="padding:5px 8px;">Prix de vente HT / lot</td>'
+    + '<td style="text-align:right;padding:5px 8px;font-weight:700;color:#1A6B3A;">' + _ppFcfa(c.prixVente / nbLots) + '</td></tr>'
+  ) : '';
+  var recapHtml =
+    '<tr><td style="padding:5px 8px;color:#B87333;font-weight:700;">Déboursé sec total</td>'
+    +     '<td style="text-align:right;padding:5px 8px;color:#B87333;font-weight:700;">' + _ppFcfa(c.debSec) + '</td></tr>'
+    + '<tr><td style="padding:5px 8px;">+ Frais généraux (' + coef.fg + ' %)</td>'
+    +     '<td style="text-align:right;padding:5px 8px;">' + _ppFcfa(c.fg) + '</td></tr>'
+    + '<tr><td style="padding:5px 8px;">+ Aléas / imprévus (' + coef.aleas + ' %)</td>'
+    +     '<td style="text-align:right;padding:5px 8px;">' + _ppFcfa(c.aleas) + '</td></tr>'
+    + '<tr style="border-top:1px solid #ccc;"><td style="padding:6px 8px;font-weight:700;color:#1D4ED8;">= Prix de revient</td>'
+    +     '<td style="text-align:right;padding:6px 8px;font-weight:700;color:#1D4ED8;">' + _ppFcfa(c.prixRevient) + '</td></tr>'
+    + '<tr><td style="padding:5px 8px;color:#B87333;">+ Marge bénéficiaire (' + coef.marge + ' %)</td>'
+    +     '<td style="text-align:right;padding:5px 8px;color:#B87333;">' + _ppFcfa(c.marge) + '</td></tr>'
+    + '<tr class="pp-total"><td style="padding:7px 8px;font-size:12pt;">PRIX DE VENTE HT</td>'
+    +     '<td style="text-align:right;padding:7px 8px;font-size:13pt;color:#1A6B3A;">' + _ppFcfa(c.prixVente) + '</td></tr>'
+    + perLotHtml;
+  /* ─ Assemblage HTML final ─ */
+  var html = _ppLogo()
+    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">'
+    +   '<div>'
+    +     '<h1 style="color:#B87333;border-bottom:2px solid #B87333;padding-bottom:6px;margin-bottom:6px;">ÉTUDE DE PRIX — DÉBOURSÉ SEC</h1>'
+    +     '<div style="font-size:13pt;font-weight:700;">' + _ppSoc() + '</div>'
+    +     '<div style="font-size:10pt;color:#555;margin-top:3px;">Étude : <strong>' + escHtml(e.nom || '—') + '</strong></div>'
+    +     '<div style="font-size:10pt;color:#555;">Programme : ' + escHtml(prog ? prog.nom : '—') + ' &nbsp;·&nbsp; Date : ' + escHtml(e.date || _ppDate()) + '</div>'
+    +   '</div>'
+    +   '<div style="text-align:right;font-size:10pt;padding-top:4px;color:#555;">'
+    +     'FG : <strong>' + coef.fg + '%</strong> &nbsp; Aléas : <strong>' + coef.aleas + '%</strong> &nbsp; Marge : <strong>' + coef.marge + '%</strong>'
+    +   '</div>'
+    + '</div>'
+    + '<table>'
+    +   '<thead><tr style="background:#B87333;color:white;">'
+    +     '<th style="width:70px;">Code</th>'
+    +     '<th style="text-align:left;">Désignation</th>'
+    +     '<th style="text-align:center;width:50px;">U.</th>'
+    +     '<th style="text-align:right;width:60px;">Qté</th>'
+    +     '<th style="text-align:right;width:130px;">Déboursé U. (FCFA)</th>'
+    +     '<th style="text-align:right;width:130px;">Total (FCFA)</th>'
+    +   '</tr></thead>'
+    +   '<tbody>' + rowsHtml + '</tbody>'
+    +   '<tfoot><tr style="background:#B87333;color:white;">'
+    +     '<td colspan="5" style="text-align:right;font-weight:800;padding:7px 8px;">TOTAL DÉBOURSÉ SEC</td>'
+    +     '<td style="text-align:right;font-weight:800;font-size:12pt;padding:7px 8px;">' + _ppFcfa(c.debSec) + '</td>'
+    +   '</tr></tfoot>'
+    + '</table>'
+    + '<table class="pp-recap" style="margin-top:20px;">' + recapHtml + '</table>'
+    + '<div class="pp-footer">Document généré par <strong>ImmoSuite ERP</strong> · ' + _ppSoc() + ' · ' + (e.date || _ppDate()) + '</div>';
+
+  openPrintPreview('Aperçu — Déboursé Sec : ' + (e.nom || '—'), html);
+}
+
+/* ── Aperçu bibliothèque d'ouvrages (tous les ouvrages) ─────────── */
+function _printPreviewBibliotheque() {
+  var ouvrages = DATA.eds_ouvrages || [];
+  if (!ouvrages.length) { toast('Bibliothèque vide', 'error'); return; }
+  var parCat = {};
+  ouvrages.forEach(function(o) {
+    var cat = o.categorie || 'Divers';
+    if (!parCat[cat]) parCat[cat] = [];
+    var d = (typeof edsDebourse === 'function') ? edsDebourse(o) : { materiau:0, mo:0, materiel:0, st:0, total:0 };
+    parCat[cat].push({ o: o, d: d });
+  });
+  var rowsHtml = '';
+  Object.keys(parCat).forEach(function(cat) {
+    rowsHtml += '<tr class="pp-cat"><td colspan="6" style="padding-left:6px;">' + escHtml(cat) + '</td></tr>';
+    parCat[cat].forEach(function(item) {
+      var o = item.o, d = item.d;
+      rowsHtml += '<tr>'
+        + '<td style="padding-left:16px;font-weight:600;">' + escHtml(o.code || '') + '</td>'
+        + '<td>' + escHtml(o.designation || '') + '</td>'
+        + '<td style="text-align:center;">' + escHtml(o.unite || '') + '</td>'
+        + '<td style="text-align:right;">' + _ppFcfa(d.materiau) + '</td>'
+        + '<td style="text-align:right;">' + _ppFcfa(d.mo) + '</td>'
+        + '<td style="text-align:right;font-weight:700;color:#B87333;">' + _ppFcfa(d.total) + '</td>'
+        + '</tr>';
+    });
+  });
+  var html = _ppLogo()
+    + '<h1 style="color:#B87333;border-bottom:2px solid #B87333;padding-bottom:6px;">BIBLIOTHÈQUE D\'OUVRAGES — DÉBOURSÉ SEC</h1>'
+    + '<div style="font-size:10pt;color:#555;margin-bottom:14px;">' + _ppSoc() + ' · ' + _ppDate() + ' · ' + ouvrages.length + ' ouvrage(s)</div>'
+    + '<table>'
+    +   '<thead><tr style="background:#B87333;color:white;">'
+    +     '<th>Code</th><th>Désignation</th><th style="text-align:center;">U.</th>'
+    +     '<th style="text-align:right;">Matériaux</th><th style="text-align:right;">Main-d\'œuvre</th>'
+    +     '<th style="text-align:right;">Déboursé sec U.</th>'
+    +   '</tr></thead>'
+    +   '<tbody>' + rowsHtml + '</tbody>'
+    + '</table>'
+    + '<div class="pp-footer">Document généré par <strong>ImmoSuite ERP</strong> · ' + _ppSoc() + ' · ' + _ppDate() + '</div>';
+  openPrintPreview('Aperçu — Bibliothèque d\'ouvrages (' + ouvrages.length + ')', html);
+}
+
+
+/* ── Lecture des coefficients DQE sauvegardés (FG / Marge / TVA) ── */
 function dqeCoef(){
   var d={fg:10,marge:20,tva:18};
   try{ var s=JSON.parse(localStorage.getItem('immosuite_dqe_coef')||'{}'); if(s.fg!=null)d.fg=parseFloat(s.fg); if(s.marge!=null)d.marge=parseFloat(s.marge); if(s.tva!=null)d.tva=parseFloat(s.tva); }catch(e){}
@@ -45344,6 +45787,27 @@ function dqeSetCoef(){
 }
 
 </script>
+
+      <!-- ══════════════════════════════════════════════════
+           MODAL APERÇU AVANT IMPRESSION — DQE & DÉBOURSÉ SEC
+           ImmoSuite ERP v32 — SANIX Africa
+      ══════════════════════════════════════════════════ -->
+      <div class="print-preview-overlay" id="modal-pp-root">
+        <!-- Barre d'outils fixe -->
+        <div class="print-preview-toolbar">
+          <span style="font-size:20px;flex-shrink:0;">🖨️</span>
+          <span class="ppt-title" id="ppt-title">Aperçu avant impression</span>
+          <span style="font-size:11px;color:var(--dim);flex-shrink:0;">Vérifiez le document puis cliquez sur Imprimer</span>
+          <button class="btn btn-primary" onclick="doPrintPreview()" style="flex-shrink:0;">🖨️ Imprimer</button>
+          <button class="btn btn-secondary" onclick="closePrintPreview()" style="flex-shrink:0;">✕ Fermer</button>
+        </div>
+        <!-- Zone de défilement avec la page A4 simulée -->
+        <div class="print-preview-scroll">
+          <div class="print-preview-page" id="ppt-content">
+            <!-- contenu généré dynamiquement -->
+          </div>
+        </div>
+      </div>
 
 </body>
 </html>
