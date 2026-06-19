@@ -33468,18 +33468,38 @@ function chargerNomenclature() {
   var resume = document.getElementById('resume-dqe');
   if (resume) {
     var typeLabels = { F2:'F2 — HARMONIE (80 m²)', F3:'F3 — BEVERLY (180 m²)', F4:'F4 — EXCELLIUM (250 m²)', VILLA:'Villa SOMOLI (200 m²)', 'Appartement 3P (MILITARIS)':'Appartement 3P — Immeuble R+4 (MILITARIS)' };
-    var marge = 1.35;
+    var _co = (typeof dqeCoef==='function') ? dqeCoef() : {fg:10,marge:20,tva:18};
+    var debourse = total;
+    var fg = debourse * _co.fg/100;
+    var coutRevient = debourse + fg;
+    var marge = coutRevient * _co.marge/100;
+    var pvHT = coutRevient + marge;
+    var pvTTC = pvHT * (1 + _co.tva/100);
     var _imm = (typeof dqeImmeubleInfo==='function') ? dqeImmeubleInfo(type) : {immeuble:false,nb:0};
-    var _perAppt = _imm.immeuble ? (_imm.nb>0
-        ? '<div class="kpi-card" style="border:1px solid var(--vert,#1A6B3A);"><div class="kpi-label">Coût / appartement (immeuble ÷ '+_imm.nb+')</div><div class="kpi-value" style="color:var(--vert);">'+fmtF(Math.round(total/_imm.nb))+' FCFA</div></div>'
-        : '<div class="kpi-card" style="border:1px dashed var(--or,#B8732F);"><div class="kpi-label">Coût / appartement</div><div class="kpi-value" style="font-size:12px;color:var(--or);">définir le nb d\'appartements</div></div>') : '';
-    resume.innerHTML = '<div class="form-section-title">Récapitulatif DQE — ' + (typeLabels[type] || type) + '</div>'
-      + '<div class="kpi-grid" style="margin-top:8px;">'
-      + '<div class="kpi-card"><div class="kpi-label">Coût unitaire estimé HT</div><div class="kpi-value or">' + fmtF(total) + ' FCFA</div></div>'
-      + '<div class="kpi-card"><div class="kpi-label">Prix recommandé (× ' + marge + ')</div><div class="kpi-value" style="color:var(--vert);">' + fmtF(Math.round(total * marge)) + ' FCFA</div></div>'
-      + '<div class="kpi-card"><div class="kpi-label">Marge brute estimée</div><div class="kpi-value" style="color:var(--bleu);">' + fmtF(Math.round(total * (marge - 1))) + ' FCFA</div></div>'
-      + '<div class="kpi-card"><div class="kpi-label">Nb postes</div><div class="kpi-value">' + nomens.length + '</div></div>'
-      + _perAppt
+    var _div = (_imm.immeuble && _imm.nb>0) ? _imm.nb : 0;
+    function _c(lib,val,col){ return '<div class="kpi-card"><div class="kpi-label">'+lib+'</div><div class="kpi-value" style="font-size:15px;'+(col?('color:'+col+';'):'')+'">'+val+'</div></div>'; }
+    var _perApptCards = _div ? (
+        _c('Déboursé / appartement (÷'+_div+')', fmtF(Math.round(debourse/_div))+' FCFA', 'var(--or,#B8732F)')
+      + _c('Prix vente HT / appartement', fmtF(Math.round(pvHT/_div))+' FCFA', 'var(--vert,#1A6B3A)')
+      + _c('Prix vente TTC / appartement', fmtF(Math.round(pvTTC/_div))+' FCFA', 'var(--vert,#1A6B3A)')
+      ) : (_imm.immeuble ? '<div class="kpi-card" style="border:1px dashed var(--or,#B8732F);"><div class="kpi-label">Coût / appartement</div><div class="kpi-value" style="font-size:12px;color:var(--or);">renseignez le nb d\'appartements (fiche conception)</div></div>' : '');
+    var coefBar = '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0;font-size:12px;color:var(--dim);">'
+      + '<strong style="color:inherit;">Coefficients :</strong>'
+      + '<span>Frais généraux <input type="number" id="dqe-fg" value="'+_co.fg+'" onchange="dqeSetCoef()" style="width:58px;padding:2px 4px;"> %</span>'
+      + '<span>Marge <input type="number" id="dqe-marge" value="'+_co.marge+'" onchange="dqeSetCoef()" style="width:58px;padding:2px 4px;"> %</span>'
+      + '<span>TVA <input type="number" id="dqe-tva" value="'+_co.tva+'" onchange="dqeSetCoef()" style="width:58px;padding:2px 4px;"> %</span>'
+      + '</div>';
+    resume.innerHTML = '<div class="form-section-title">Récapitulatif — ' + (typeLabels[type] || type) + '</div>'
+      + coefBar
+      + '<div class="kpi-grid" style="margin-top:4px;">'
+      + _c('Déboursé sec (coût direct)', fmtF(debourse)+' FCFA', 'var(--or,#B8732F)')
+      + _c('+ Frais généraux ('+_co.fg+'%)', fmtF(Math.round(fg))+' FCFA', '')
+      + _c('= Coût de revient', fmtF(Math.round(coutRevient))+' FCFA', 'var(--bleu,#3B82F6)')
+      + _c('+ Marge ('+_co.marge+'%)', fmtF(Math.round(marge))+' FCFA', '')
+      + _c('= Prix de vente HT', fmtF(Math.round(pvHT))+' FCFA', 'var(--vert,#1A6B3A)')
+      + _c('Prix de vente TTC ('+_co.tva+'%)', fmtF(Math.round(pvTTC))+' FCFA', 'var(--vert,#1A6B3A)')
+      + _c('Nb postes', nomens.length, '')
+      + _perApptCards
       + '</div>'
       + (isDefault ? '<div class="alert alert-info" style="margin-top:8px;font-size:12px;">ℹ️ Données par défaut — cliquez sur <strong>+ Ajouter poste</strong> pour personnaliser cette nomenclature.</div>' : '');
   }
@@ -45307,6 +45327,20 @@ async function seedConceptionMilitaris(){
   DATA.conceptions.push(c); await dbPut('conceptions', c);
   if(typeof syncToSupabase==='function') syncToSupabase('pi_conceptions', c);
   return true;
+}
+
+
+
+/* ── DQE : coefficients déboursé sec → coût de revient → prix de vente (réglables) ── */
+function dqeCoef(){
+  var d={fg:10,marge:20,tva:18};
+  try{ var s=JSON.parse(localStorage.getItem('immosuite_dqe_coef')||'{}'); if(s.fg!=null)d.fg=parseFloat(s.fg); if(s.marge!=null)d.marge=parseFloat(s.marge); if(s.tva!=null)d.tva=parseFloat(s.tva); }catch(e){}
+  return d;
+}
+function dqeSetCoef(){
+  var c={ fg:parseFloat((document.getElementById('dqe-fg')||{}).value)||0, marge:parseFloat((document.getElementById('dqe-marge')||{}).value)||0, tva:parseFloat((document.getElementById('dqe-tva')||{}).value)||0 };
+  try{ localStorage.setItem('immosuite_dqe_coef', JSON.stringify(c)); }catch(e){}
+  if(typeof chargerNomenclature==='function') chargerNomenclature();
 }
 
 </script>
