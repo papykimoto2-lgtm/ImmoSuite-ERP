@@ -880,7 +880,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 .print-preview-page {
   background: #fff; color: #1a1a1a;
-  width: 210mm; min-height: 100px;
+  width: 210mm; min-height: 297mm;
   padding: 16mm 14mm 18mm;
   box-shadow: 0 12px 48px rgba(0,0,0,0.45);
   border-radius: 2px;
@@ -908,8 +908,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     background: white !important; padding: 0 !important; display: block !important;
   }
   #modal-pp-root .print-preview-page {
-    box-shadow: none !important; width: 100% !important; padding: 0 !important;
+    box-shadow: none !important; width: 100% !important;
+    padding: 12mm 14mm 16mm !important; /* ← marges A4 restaurées */
+    min-height: auto !important;
   }
+  @page { size: A4 portrait; margin: 0; }
 }
 
 @media (max-width: 767px) {
@@ -45433,26 +45436,27 @@ function doPrintPreview() {
   var content = document.getElementById('ppt-content');
   if (!content) return;
   var html = content.innerHTML;
-  var w = window.open('', '_blank', 'width=920,height=750');
+  var w = window.open('', '_blank', 'width=960,height=860');
   if (!w) { alert('Veuillez autoriser les popups pour imprimer.'); return; }
   w.document.write(
     '<!DOCTYPE html><html lang="fr"><head>'
     + '<meta charset="UTF-8">'
     + '<title>Impression ImmoSuite ERP</title>'
     + '<style>'
-    + 'body{font-family:"Times New Roman",Georgia,serif;padding:15mm 14mm 18mm;font-size:11pt;color:#1a1a1a;margin:0;}'
-    + 'h1{font-size:19pt;font-family:Georgia,serif;}'
-    + 'table{width:100%;border-collapse:collapse;margin:10px 0;font-size:10pt;}'
+    + '@page{size:A4 portrait;margin:12mm 14mm 16mm 14mm;}'
+    + 'body{font-family:"Times New Roman",Georgia,serif;margin:0;padding:0;font-size:11pt;color:#1a1a1a;}'
+    + 'h1{font-size:17pt;font-family:Georgia,serif;margin:0 0 4px;}'
+    + 'table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt;}'
     + 'td,th{border:1px solid #ccc;padding:5px 8px;}'
     + 'th{background:#E8F4EE;font-weight:700;}'
     + 'tr.pp-cat td{background:#F0F4F8;font-weight:700;color:#1D4ED8;}'
     + 'tfoot tr td{background:#F8FAF5;font-weight:800;}'
+    + 'tr{page-break-inside:avoid;}thead{display:table-header-group;}tfoot{display:table-footer-group;}'
     + '.pp-recap{width:58%;margin-left:auto;}'
     + '.pp-recap td{border:none;padding:4px 8px;}'
     + '.pp-recap tr.pp-total td{border-top:2px solid #1A6B3A;background:#E8F4EE;}'
-    + '.pp-footer{margin-top:28px;font-size:9pt;color:#888;border-top:1px solid #ddd;padding-top:6px;}'
-    + '@page{size:A4;margin:0;}'
-    + '@media print{body{padding:10mm 12mm;}}'
+    + '.pp-footer{margin-top:24px;font-size:9pt;color:#888;border-top:1px solid #ddd;padding-top:6px;page-break-before:avoid;}'
+    + '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
     + '</style>'
     + '</head><body>' + html + '</body></html>'
   );
