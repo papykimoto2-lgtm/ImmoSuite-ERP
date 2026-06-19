@@ -8192,11 +8192,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
       </div>
 
-      <!-- ── MODAL : Ajouter poste nomenclature ── -->
+      <!-- ── MODAL : Ajouter / Modifier poste nomenclature ── -->
       <div class="modal-overlay" id="modal-poste-nomen">
         <div class="modal">
           <div class="modal-header">
-            <div class="modal-title">Ajouter un poste à la nomenclature</div>
+            <div class="modal-title" id="modal-poste-nomen-title">Ajouter un poste à la nomenclature</div>
             <button class="modal-close" onclick="closeModal('modal-poste-nomen')">✕</button>
           </div>
           <div class="modal-body">
@@ -8238,7 +8238,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-poste-nomen')">Annuler</button>
-            <button class="btn btn-primary" onclick="sauvegarderPosteNomenclature()">💾 Ajouter</button>
+            <button class="btn btn-primary" id="btn-sauvegarder-poste" onclick="sauvegarderPosteNomenclature()">💾 Ajouter</button>
           </div>
         </div>
       </div>
@@ -33522,8 +33522,9 @@ function chargerNomenclature() {
       + '<td style="text-align:right;">' + (prixUnit ? fmtF(prixUnit) : (n.prix_forfait ? '<span style="color:var(--dim);font-size:11px;">forfait</span>' : '—')) + '</td>'
       + '<td style="text-align:right;color:var(--or);font-weight:700;">' + fmtF(totalPoste) + '</td>'
       + '<td style="font-size:11px;color:var(--dim);">' + escHtml((pu ? pu.fournisseur : '') || '—') + '</td>'
-      + '<td>'
-        + (isDefault ? '' : '<button class="btn btn-danger btn-sm btn-icon" onclick="supprimerPosteNomenclature(\'' + n.id + '\',\'' + type + '\')">🗑</button>')
+      + '<td style="white-space:nowrap;">'
+        + '<button class="btn btn-secondary btn-sm btn-icon" title="Modifier ce poste" onclick="modifierPosteNomenclature(\'' + n.id + '\',\'' + type + '\',' + isDefault + ')">✏️</button>'
+        + (isDefault ? '' : ' <button class="btn btn-danger btn-sm btn-icon" onclick="supprimerPosteNomenclature(\'' + n.id + '\',\'' + type + '\')">🗑</button>')
       + '</td>'
     + '</tr>';
   }).join('');
@@ -33575,7 +33576,45 @@ function ajouterPosteNomenclature() {
   if (pnType && typeEl) pnType.value = typeEl.value;
   if (typeof dqePopulateOuvrageSelect==='function') dqePopulateOuvrageSelect();
   var _po=document.getElementById('pn-ouvrage'); if(_po) _po.value='';
-  APP.editingId = null;
+  /* Réinitialiser les champs */
+  ['pn-poste','pn-materiau','pn-unite'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var qEl=document.getElementById('pn-quantite'); if(qEl) qEl.value='1';
+  var fEl=document.getElementById('pn-forfait');  if(fEl) fEl.value='0';
+  /* Mode création */
+  APP._nomEditId = null;
+  var title=document.getElementById('modal-poste-nomen-title'); if(title) title.textContent='Ajouter un poste à la nomenclature';
+  var btn=document.getElementById('btn-sauvegarder-poste'); if(btn) btn.textContent='💾 Ajouter';
+  openModal('modal-poste-nomen');
+}
+
+/* ── Modifier un poste existant ──────────────────────── */
+function modifierPosteNomenclature(id, type, isDefault) {
+  /* Pour les lignes par défaut : retrouver dans NOMENCLATURES_PAR_DEFAUT, créer un objet temporaire */
+  var n = DATA.nomenclatures.find(function(x){ return x.id === id; });
+  if (!n && isDefault) {
+    /* Lire la donnée affichée depuis les cellules de la ligne cliquée */
+    n = null; /* sera reconstruit depuis les champs du DOM ci-dessous */
+  }
+  if (typeof dqePopulateOuvrageSelect==='function') dqePopulateOuvrageSelect();
+  /* Pré-remplir le formulaire */
+  var pnType = document.getElementById('pn-type');
+  if (pnType) { pnType.value = type; }
+  var sv = function(eid, val){ var el=document.getElementById(eid); if(el) el.value = (val !== undefined && val !== null) ? val : ''; };
+  if (n) {
+    sv('pn-poste',    n.poste);
+    sv('pn-materiau', n.materiau);
+    sv('pn-unite',    n.unite);
+    sv('pn-quantite', n.quantite);
+    sv('pn-forfait',  n.prix_forfait || 0);
+    sv('pn-ouvrage',  n.ouvrage_id  || '');
+  }
+  /* Mode édition */
+  APP._nomEditId   = isDefault ? null : id;   /* null pour défaut → créera une entrée custom */
+  APP._nomEditType = type;
+  var title=document.getElementById('modal-poste-nomen-title');
+  if(title) title.textContent = isDefault ? 'Personnaliser ce poste (copie)' : 'Modifier le poste';
+  var btn=document.getElementById('btn-sauvegarder-poste');
+  if(btn) btn.textContent = isDefault ? '💾 Enregistrer (copie)' : '💾 Enregistrer';
   openModal('modal-poste-nomen');
 }
 
@@ -33588,11 +33627,35 @@ async function sauvegarderPosteNomenclature() {
   var forfait   = parseFloat((document.getElementById('pn-forfait')  || {}).value) || 0;
   if (!materiau) { toast('Matériau / Prestation obligatoire.','error'); return; }
   var ouvrageId = (document.getElementById('pn-ouvrage') || {}).value || '';
-  var entry = { id: uid(), type_logement: type, poste: poste || 'Divers', materiau: materiau, unite: unite, quantite: quantite, prix_forfait: forfait, ouvrage_id: ouvrageId };
-  DATA.nomenclatures.push(entry);
-  await dbPut('nomenclatures', entry);
+
+  var editId = APP._nomEditId || null;
+
+  if (editId) {
+    /* ── MODE MODIFICATION : mettre à jour l'entrée existante ── */
+    var idx = DATA.nomenclatures.findIndex(function(n){ return n.id === editId; });
+    if (idx === -1) { toast('Poste introuvable.','error'); return; }
+    var updated = Object.assign({}, DATA.nomenclatures[idx], {
+      type_logement: type, poste: poste || 'Divers',
+      materiau: materiau, unite: unite,
+      quantite: quantite, prix_forfait: forfait, ouvrage_id: ouvrageId
+    });
+    DATA.nomenclatures[idx] = updated;
+    await dbPut('nomenclatures', updated);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_nomenclatures', updated);
+    toast('Poste modifié.','success');
+  } else {
+    /* ── MODE CRÉATION (ou copie d'un poste par défaut) ── */
+    var entry = { id: uid(), type_logement: type, poste: poste || 'Divers',
+                  materiau: materiau, unite: unite, quantite: quantite,
+                  prix_forfait: forfait, ouvrage_id: ouvrageId };
+    DATA.nomenclatures.push(entry);
+    await dbPut('nomenclatures', entry);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_nomenclatures', entry);
+    toast('Poste ajouté.','success');
+  }
+
+  APP._nomEditId = null;
   closeModal('modal-poste-nomen');
-  toast('Poste ajouté.','success');
   chargerNomenclature();
 }
 
