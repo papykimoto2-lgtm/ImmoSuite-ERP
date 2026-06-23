@@ -144,6 +144,15 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
 .foncier-card { background: #FFFFFF; border-color: #D1D9E0; }
 .constructeur-card { background: #FFFFFF; border-color: #D1D9E0; }
 .rapport-card { background: #FFFFFF; border-color: #D1D9E0; }
+/* ── Éditeur architectural ── */
+.archi-tool-btn {
+  width:100%; padding:7px 10px; border-radius:8px;
+  border:1px solid var(--bord); background:var(--card2);
+  color:var(--blanc); font-size:12px; text-align:left;
+  cursor:pointer; transition:all .15s; font-family:var(--fb);
+}
+.archi-tool-btn:hover { background:rgba(74,148,224,0.12); border-color:var(--bleu); }
+.archi-tool-btn.active { background:rgba(74,148,224,0.18); border-color:var(--bleu); color:var(--bleu); font-weight:700; }
 .convention-row { background: #F4F6F9; }
 .alert-row { background: #FFFFFF; border-color: #D1D9E0; }
 .step-badge { background: rgba(184,115,51,0.08); color: #2563EB; border-color: rgba(184,115,51,0.2); }
@@ -6118,6 +6127,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn active" onclick="switchTab('conception','projets')">📐 Projets de conception</button>
           <button class="tab-btn" onclick="switchTab('conception','permis')">📜 Permis de construire</button>
           <button class="tab-btn" onclick="switchTab('conception','plans')">🗂️ Bibliothèque de plans</button>
+          <button class="tab-btn" onclick="switchTab('conception','editeur');archiEditorInit()">✏️ Éditeur de plans</button>
         </div>
 
         <!-- Onglet Projets -->
@@ -6186,6 +6196,133 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <button class="btn btn-secondary btn-sm" onclick="openPlanModal()">+ Enregistrer un plan</button>
           </div>
           <div id="plans-box"></div>
+        </div>
+
+        <!-- ══ ONGLET ÉDITEUR DE PLANS ARCHITECTURAUX ══ -->
+        <div class="tab-pane" id="tab-conception-editeur">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+            <div>
+              <div style="font-weight:700;font-size:14px;">✏️ Éditeur de plans semi-techniques</div>
+              <div style="font-size:11px;color:var(--dim);">Plan de masse du lotissement · Plan intérieur coté · Export PDF</div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+              <select class="filter-select" id="archi-mode" onchange="archiSetMode(this.value)" style="font-size:12px;padding:6px 10px;">
+                <option value="masse">🏘️ Plan de masse</option>
+                <option value="interieur">🏠 Plan intérieur</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="archiNouveauPlan()">🗋 Nouveau</button>
+              <button class="btn btn-secondary btn-sm" onclick="archiUndo()">↩ Annuler</button>
+              <button class="btn btn-primary btn-sm" onclick="archiExportPDF()">⬇ Export PDF</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;min-height:560px;">
+
+            <!-- Panneau outils -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+
+              <!-- Mode masse : outils -->
+              <div id="archi-tools-masse" class="card" style="padding:12px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--dim);margin-bottom:10px;">Outils — Plan de masse</div>
+                <div style="display:flex;flex-direction:column;gap:6px;" id="archi-btns-masse">
+                  <button class="archi-tool-btn active" data-tool="select" onclick="archiSetTool('select')">🖱️ Sélection</button>
+                  <button class="archi-tool-btn" data-tool="batiment" onclick="archiSetTool('batiment')">🏠 Bâtiment</button>
+                  <button class="archi-tool-btn" data-tool="voirie" onclick="archiSetTool('voirie')">🛣️ Voirie</button>
+                  <button class="archi-tool-btn" data-tool="espace_vert" onclick="archiSetTool('espace_vert')">🌳 Espace vert</button>
+                  <button class="archi-tool-btn" data-tool="parking" onclick="archiSetTool('parking')">🅿️ Parking</button>
+                  <button class="archi-tool-btn" data-tool="lot" onclick="archiSetTool('lot')">⬡ Lot (polygone)</button>
+                  <button class="archi-tool-btn" data-tool="cote" onclick="archiSetTool('cote')">📏 Cotation</button>
+                  <button class="archi-tool-btn" data-tool="texte" onclick="archiSetTool('texte')">T Texte</button>
+                </div>
+                <hr style="border-color:var(--bord);margin:10px 0;">
+                <div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:6px;">DIMENSIONS DU TERRAIN</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="display:flex;gap:6px;align-items:center;font-size:12px;">
+                    <label style="width:60px;color:var(--dim);">Long (m)</label>
+                    <input type="number" id="archi-terrain-l" class="form-control" style="font-size:12px;padding:4px 6px;" value="100" oninput="archiSetTerrain()">
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;font-size:12px;">
+                    <label style="width:60px;color:var(--dim);">Larg (m)</label>
+                    <input type="number" id="archi-terrain-w" class="form-control" style="font-size:12px;padding:4px 6px;" value="60" oninput="archiSetTerrain()">
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;font-size:12px;">
+                    <label style="width:60px;color:var(--dim);">Échelle</label>
+                    <select id="archi-echelle" class="form-control" style="font-size:12px;padding:4px 6px;" onchange="archiRedraw()">
+                      <option value="200">1:200</option>
+                      <option value="100" selected>1:100</option>
+                      <option value="50">1:50</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode intérieur : outils -->
+              <div id="archi-tools-interieur" class="card" style="padding:12px;display:none;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--dim);margin-bottom:10px;">Outils — Plan intérieur</div>
+                <div style="display:flex;flex-direction:column;gap:6px;" id="archi-btns-interieur">
+                  <button class="archi-tool-btn active" data-tool="select" onclick="archiSetTool('select')">🖱️ Sélection</button>
+                  <button class="archi-tool-btn" data-tool="mur" onclick="archiSetTool('mur')">▪ Mur porteur</button>
+                  <button class="archi-tool-btn" data-tool="cloison" onclick="archiSetTool('cloison')">│ Cloison</button>
+                  <button class="archi-tool-btn" data-tool="porte" onclick="archiSetTool('porte')">🚪 Porte</button>
+                  <button class="archi-tool-btn" data-tool="fenetre" onclick="archiSetTool('fenetre')">🪟 Fenêtre</button>
+                  <button class="archi-tool-btn" data-tool="piece" onclick="archiSetTool('piece')">⬜ Pièce (zone)</button>
+                  <button class="archi-tool-btn" data-tool="escalier" onclick="archiSetTool('escalier')">🪜 Escalier</button>
+                  <button class="archi-tool-btn" data-tool="cote" onclick="archiSetTool('cote')">📏 Cotation</button>
+                  <button class="archi-tool-btn" data-tool="texte" onclick="archiSetTool('texte')">T Texte</button>
+                </div>
+                <hr style="border-color:var(--bord);margin:10px 0;">
+                <div style="font-size:10px;color:var(--dim);font-weight:700;margin-bottom:6px;">LOGEMENT</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="display:flex;gap:6px;align-items:center;font-size:12px;">
+                    <label style="width:60px;color:var(--dim);">Long (m)</label>
+                    <input type="number" id="archi-lgt-l" class="form-control" style="font-size:12px;padding:4px 6px;" value="15" oninput="archiRedraw()">
+                  </div>
+                  <div style="display:flex;gap:6px;align-items:center;font-size:12px;">
+                    <label style="width:60px;color:var(--dim);">Larg (m)</label>
+                    <input type="number" id="archi-lgt-w" class="form-control" style="font-size:12px;padding:4px 6px;" value="10" oninput="archiRedraw()">
+                  </div>
+                  <select id="archi-type-lgt" class="form-control" style="font-size:12px;padding:4px 6px;margin-top:4px;" onchange="archiLoadTemplate()">
+                    <option value="">— Gabarit —</option>
+                    <option value="f2">F2 (2 pièces)</option>
+                    <option value="f3">F3 (3 pièces)</option>
+                    <option value="f4">F4 (4 pièces)</option>
+                    <option value="villa">Villa (5+ pièces)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Propriétés élément sélectionné -->
+              <div id="archi-props" class="card" style="padding:12px;display:none;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--dim);margin-bottom:8px;">Propriétés</div>
+                <div id="archi-props-content"></div>
+                <button class="btn btn-danger btn-sm" style="width:100%;margin-top:8px;" onclick="archiDeleteSelected()">🗑 Supprimer</button>
+              </div>
+
+              <!-- Légende -->
+              <div class="card" style="padding:12px;flex:1;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:700;color:var(--dim);margin-bottom:8px;">Légende</div>
+                <div id="archi-legend" style="font-size:11px;display:flex;flex-direction:column;gap:5px;"></div>
+              </div>
+            </div>
+
+            <!-- Canvas zone -->
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <!-- Barre d'info -->
+              <div style="display:flex;gap:10px;align-items:center;font-size:11px;color:var(--dim);background:var(--card);border:1px solid var(--bord);border-radius:8px;padding:6px 12px;">
+                <span id="archi-info-tool">Outil : Sélection</span>
+                <span style="margin-left:auto;" id="archi-info-xy">x: — · y: —</span>
+                <span id="archi-info-nb">Éléments : 0</span>
+                <span id="archi-info-surf"></span>
+              </div>
+              <!-- Canvas -->
+              <div style="position:relative;flex:1;min-height:500px;background:#F8F9FA;border:1px solid var(--bord);border-radius:10px;overflow:hidden;" id="archi-canvas-wrap">
+                <canvas id="archi-canvas" style="display:block;cursor:crosshair;touch-action:none;"></canvas>
+                <!-- Règles (affichées via canvas) -->
+              </div>
+              <!-- KPIs surface intérieur -->
+              <div id="archi-kpis-surf" style="display:none;"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -10005,6 +10142,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <button class="tab-btn active" onclick="switchTab('morcellement','plan')">📋 Plan</button>
         <button class="tab-btn" onclick="switchTab('morcellement','parcelles')">🗂 Parcelles</button>
         <button class="tab-btn" onclick="switchTab('morcellement','generation')">⚡ Génération</button>
+        <button class="tab-btn" onclick="switchTab('morcellement','simulateur');simMrcInit()">🧮 Simulateur</button>
       </div>
 
       <!-- TAB 1 : Métadonnées du plan -->
@@ -10163,6 +10301,97 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             ✅ Confirmer & Générer
           </button>
         </div>
+      </div>
+
+      <!-- TAB 4 : Simulateur de morcellement -->
+      <div class="tab-pane" id="tab-morcellement-simulateur">
+
+        <!-- Paramètres de la parcelle mère -->
+        <div style="padding:14px;background:rgba(74,148,224,0.07);border:1px solid rgba(74,148,224,0.3);border-radius:10px;margin-bottom:14px;">
+          <div style="font-weight:700;color:var(--bleu);margin-bottom:10px;">📐 Dimensions de la parcelle mère</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Longueur totale (m)</label>
+              <input type="number" class="form-control" id="sim-longueur" placeholder="100" oninput="simMrcCalc()">
+            </div>
+            <div class="form-group">
+              <label>Largeur totale (m)</label>
+              <input type="number" class="form-control" id="sim-largeur" placeholder="60" oninput="simMrcCalc()">
+            </div>
+            <div class="form-group">
+              <label>Surface mini par lot (m²)</label>
+              <input type="number" class="form-control" id="sim-surf-min" placeholder="300" value="300" oninput="simMrcCalc()">
+            </div>
+            <div class="form-group">
+              <label>Surface maxi par lot (m²)</label>
+              <input type="number" class="form-control" id="sim-surf-max" placeholder="600" value="600" oninput="simMrcCalc()">
+            </div>
+            <div class="form-group">
+              <label>Largeur voirie centrale (m)</label>
+              <input type="number" class="form-control" id="sim-voirie" placeholder="8" value="8" oninput="simMrcCalc()">
+            </div>
+            <div class="form-group">
+              <label>Usage des lots</label>
+              <select class="form-control" id="sim-usage" onchange="simMrcCalc()">
+                <option value="residentiel">🏠 Résidentiel</option>
+                <option value="commercial">🏪 Commercial</option>
+                <option value="mixte">🏘️ Mixte</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs globaux -->
+        <div id="sim-kpis" style="margin-bottom:14px;"></div>
+
+        <!-- Sélecteur de plan -->
+        <div style="font-weight:700;color:var(--blanc);margin-bottom:10px;font-size:13px;">Choisir un plan :</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;" id="sim-plan-selector">
+          <button onclick="simMrcSetPlan('grille')" id="sim-btn-grille"
+            style="padding:12px 8px;border-radius:10px;border:2px solid var(--bord);background:var(--card);cursor:pointer;text-align:center;transition:all .18s;font-size:12px;">
+            <div style="font-size:20px;margin-bottom:4px;">⊞</div>
+            <div style="font-weight:700;color:var(--bleu);">Grille régulière</div>
+            <div style="color:var(--dim);font-size:11px;margin-top:2px;">Lots identiques en rangées</div>
+          </button>
+          <button onclick="simMrcSetPlan('bande')" id="sim-btn-bande"
+            style="padding:12px 8px;border-radius:10px;border:2px solid var(--bord);background:var(--card);cursor:pointer;text-align:center;transition:all .18s;font-size:12px;">
+            <div style="font-size:20px;margin-bottom:4px;">☰</div>
+            <div style="font-weight:700;color:var(--violet);">Bandes parallèles</div>
+            <div style="color:var(--dim);font-size:11px;margin-top:2px;">Lots en colonnes sur toute la longueur</div>
+          </button>
+          <button onclick="simMrcSetPlan('allee')" id="sim-btn-allee"
+            style="padding:12px 8px;border-radius:10px;border:2px solid var(--bord);background:var(--card);cursor:pointer;text-align:center;transition:all .18s;font-size:12px;">
+            <div style="font-size:20px;margin-bottom:4px;">⊟</div>
+            <div style="font-weight:700;color:var(--vert);">Allée centrale</div>
+            <div style="color:var(--dim);font-size:11px;margin-top:2px;">2 rangées face à face + voirie</div>
+          </button>
+        </div>
+
+        <!-- Canvas de visualisation -->
+        <div style="background:var(--card);border:1px solid var(--bord);border-radius:10px;padding:12px;margin-bottom:14px;">
+          <div style="font-size:11px;color:var(--dim);margin-bottom:8px;text-transform:uppercase;font-weight:700;letter-spacing:1px;">Aperçu du plan</div>
+          <canvas id="sim-canvas" style="width:100%;border-radius:6px;display:block;"></canvas>
+          <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:14px;height:14px;background:#4A94E0;border-radius:3px;display:inline-block;"></span> Résidentiel</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:14px;height:14px;background:#B87333;border-radius:3px;display:inline-block;"></span> Commercial</span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:11px;"><span style="width:14px;height:14px;background:#9CA3AF;border-radius:3px;display:inline-block;"></span> Voirie</span>
+          </div>
+        </div>
+
+        <!-- Tableau des lots simulés -->
+        <div id="sim-table-lots" style="margin-bottom:14px;"></div>
+
+        <!-- Bouton d'import dans le module parcelles -->
+        <div id="sim-actions" style="display:none;">
+          <button class="btn btn-primary" onclick="simMrcImporter()"
+            style="background:linear-gradient(135deg,var(--bleu),var(--violet));width:100%;font-size:14px;padding:13px;">
+            ✅ Importer ce plan dans les parcelles du morcellement
+          </button>
+          <div style="font-size:11px;color:var(--dim);margin-top:6px;text-align:center;">
+            Les parcelles existantes ne seront pas supprimées. Les nouvelles seront ajoutées.
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -50378,7 +50607,1408 @@ function qrSvgTag(text){
   try{ var qr=qrcode(0,'M'); qr.addData(String(text)); qr.make(); return qr.createSvgTag({cellSize:3,margin:2}); }
   catch(e){ try{ var q2=qrcode(10,'L'); q2.addData(String(text)); q2.make(); return q2.createSvgTag({cellSize:3,margin:2}); }catch(e2){ return ''; } }
 }
-function _cyrb53(str){ var h1=0xdeadbeef,h2=0x41c6ce57; for(var i=0;i<str.length;i++){var ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);} h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909); h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909); return (4294967296*(2097151&h2)+(h1>>>0)).toString(16); }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   ÉDITEUR DE PLANS ARCHITECTURAUX — Plan de masse & Plan intérieur
+   Semi-technique · Coté · Export PDF · v1.0 · ImmoSuite · Menko
+══════════════════════════════════════════════════════════════════ */
+
+(function() {
+
+  /* ── État global de l'éditeur ── */
+  var ED = {
+    mode:       'masse',   // 'masse' | 'interieur'
+    tool:       'select',
+    elements:   [],        // liste de tous les éléments dessinés
+    history:    [],        // pour undo
+    selected:   null,      // élément sélectionné
+    drawing:    false,
+    drawStart:  null,
+    snapGrid:   0.5,       // grille d'accrochage en mètres
+    canvas:     null,
+    ctx:        null,
+    scale:      5,         // px par mètre (recalculé à l'init)
+    offsetX:    40,
+    offsetY:    40,
+    terrain:    { l: 100, w: 60 },
+    lgt:        { l: 15, w: 10 },
+    dragEl:     null,
+    dragOff:    { x: 0, y: 0 },
+    textInput:  null
+  };
+
+  /* ── Couleurs par type d'élément ── */
+  var COULEURS = {
+    batiment:    { fill: 'rgba(74,148,224,0.25)',  stroke: '#4A94E0', label: '🏠 Bâtiment' },
+    voirie:      { fill: 'rgba(156,163,175,0.35)', stroke: '#6B7280', label: '🛣️ Voirie' },
+    espace_vert: { fill: 'rgba(74,196,122,0.30)',  stroke: '#4AC47A', label: '🌳 Espace vert' },
+    parking:     { fill: 'rgba(184,115,51,0.20)',  stroke: '#B87333', label: '🅿️ Parking' },
+    piece:       { fill: 'rgba(74,148,224,0.12)',  stroke: '#4A94E0', label: '⬜ Pièce' },
+    mur:         { fill: '#374151',                stroke: '#1F2937', label: '▪ Mur porteur' },
+    cloison:     { fill: '#6B7280',                stroke: '#4B5563', label: '│ Cloison' },
+    porte:       { fill: 'rgba(184,115,51,0.5)',   stroke: '#B87333', label: '🚪 Porte' },
+    fenetre:     { fill: 'rgba(147,197,253,0.6)',  stroke: '#60A5FA', label: '🪟 Fenêtre' },
+    escalier:    { fill: 'rgba(139,82,224,0.25)', stroke: '#8A52E0', label: '🪜 Escalier' },
+    cote:        { fill: 'transparent',            stroke: '#EF4444', label: '📏 Cotation' },
+    texte:       { fill: 'transparent',            stroke: '#1C1C2E', label: 'T Texte' },
+    lot:         { fill: 'rgba(245,158,11,0.18)',  stroke: '#F59E0B', label: '⬡ Lot' }
+  };
+
+  /* ── Gabarits de logements ── */
+  var GABARITS = {
+    f2: [
+      { type:'piece', x:0,   y:0,   w:6,   h:4,   label:'Séjour' },
+      { type:'piece', x:6,   y:0,   w:4,   h:4,   label:'Chambre' },
+      { type:'piece', x:0,   y:4,   w:4,   h:3,   label:'Cuisine' },
+      { type:'piece', x:4,   y:4,   w:3,   h:3,   label:'SDB' },
+      { type:'piece', x:7,   y:4,   w:3,   h:3,   label:'WC/Dég.' },
+      { type:'mur',   x:0,   y:0,   w:10,  h:0.2, label:'' },
+      { type:'mur',   x:0,   y:6.8, w:10,  h:0.2, label:'' },
+      { type:'mur',   x:0,   y:0,   w:0.2, h:7,   label:'' },
+      { type:'mur',   x:9.8, y:0,   w:0.2, h:7,   label:'' },
+      { type:'porte', x:4.5, y:3.8, w:1,   h:0.4, label:'' },
+      { type:'porte', x:0,   y:5.5, w:0.4, h:1,   label:'Entrée' }
+    ],
+    f3: [
+      { type:'piece', x:0,   y:0,   w:7,   h:4.5, label:'Séjour/Salle à manger' },
+      { type:'piece', x:7,   y:0,   w:4,   h:4.5, label:'Chambre 1' },
+      { type:'piece', x:0,   y:4.5, w:5,   h:4,   label:'Chambre 2' },
+      { type:'piece', x:5,   y:4.5, w:4,   h:4,   label:'Cuisine' },
+      { type:'piece', x:9,   y:4.5, w:2,   h:4,   label:'SDB' },
+      { type:'piece', x:0,   y:8.5, w:5,   h:2,   label:'Dégagement' },
+      { type:'mur',   x:0,   y:0,   w:11,  h:0.2, label:'' },
+      { type:'mur',   x:0,   y:8.3, w:11,  h:0.2, label:'' },
+      { type:'mur',   x:0,   y:0,   w:0.2, h:8.5, label:'' },
+      { type:'mur',   x:10.8,y:0,   w:0.2, h:8.5, label:'' },
+      { type:'porte', x:4.5, y:4.3, w:1,   h:0.4, label:'' },
+      { type:'porte', x:0,   y:7.5, w:0.4, h:1,   label:'Entrée' }
+    ],
+    f4: [
+      { type:'piece', x:0,   y:0,   w:7,   h:5,   label:'Séjour/Salle à manger' },
+      { type:'piece', x:7,   y:0,   w:5,   h:5,   label:'Chambre maître' },
+      { type:'piece', x:0,   y:5,   w:5,   h:4.5, label:'Chambre 2' },
+      { type:'piece', x:5,   y:5,   w:4,   h:4.5, label:'Chambre 3' },
+      { type:'piece', x:9,   y:5,   w:3,   h:2.5, label:'SDB' },
+      { type:'piece', x:9,   y:7.5, w:3,   h:2,   label:'WC' },
+      { type:'piece', x:0,   y:9.5, w:7,   h:4,   label:'Cuisine / Terrasse' },
+      { type:'mur',   x:0,   y:0,   w:12,  h:0.2, label:'' },
+      { type:'mur',   x:0,   y:13.3,w:12,  h:0.2, label:'' },
+      { type:'mur',   x:0,   y:0,   w:0.2, h:13.5,label:'' },
+      { type:'mur',   x:11.8,y:0,   w:0.2, h:13.5,label:'' },
+      { type:'porte', x:5,   y:4.8, w:1,   h:0.4, label:'' },
+      { type:'porte', x:0,   y:8,   w:0.4, h:1,   label:'Entrée' },
+      { type:'fenetre',x:2,  y:0,   w:3,   h:0.2, label:'' },
+      { type:'fenetre',x:8,  y:0,   w:3,   h:0.2, label:'' }
+    ],
+    villa: [
+      { type:'piece', x:0,   y:0,   w:9,   h:6,   label:'Grand séjour' },
+      { type:'piece', x:9,   y:0,   w:5,   h:6,   label:'Suite parentale' },
+      { type:'piece', x:0,   y:6,   w:5,   h:5,   label:'Chambre 2' },
+      { type:'piece', x:5,   y:6,   w:4.5, h:5,   label:'Chambre 3' },
+      { type:'piece', x:9.5, y:6,   w:4.5, h:5,   label:'Bureau / Chambre 4' },
+      { type:'piece', x:0,   y:11,  w:9,   h:4.5, label:'Cuisine / Salle à manger' },
+      { type:'piece', x:9,   y:11,  w:5,   h:4.5, label:'Garage' },
+      { type:'piece', x:0,   y:15.5,w:14,  h:3.5, label:'Terrasse / Piscine' },
+      { type:'mur',   x:0,   y:0,   w:14,  h:0.25,label:'' },
+      { type:'mur',   x:0,   y:18.75,w:14, h:0.25,label:'' },
+      { type:'mur',   x:0,   y:0,   w:0.25,h:19,  label:'' },
+      { type:'mur',   x:13.75,y:0,  w:0.25,h:19,  label:'' },
+      { type:'porte', x:6.5, y:5.8, w:1.5, h:0.4, label:'' },
+      { type:'porte', x:0,   y:9,   w:0.4, h:1.5, label:'Entrée principale' },
+      { type:'fenetre',x:2,  y:0,   w:4,   h:0.25,label:'' },
+      { type:'fenetre',x:10, y:0,   w:3,   h:0.25,label:'' }
+    ]
+  };
+
+  /* ════════════════════════════════
+     INIT & GESTION DES MODES
+  ════════════════════════════════ */
+  window.archiEditorInit = function() {
+    ED.canvas = document.getElementById('archi-canvas');
+    if (!ED.canvas) return;
+    ED.ctx = ED.canvas.getContext('2d');
+    _archiResizeCanvas();
+    _archiBindEvents();
+    archiSetMode('masse');
+    archiRedraw();
+    _archiUpdateLegend();
+    window.addEventListener('resize', _archiResizeCanvas);
+  };
+
+  window.archiSetMode = function(mode) {
+    ED.mode = mode;
+    document.getElementById('archi-mode').value = mode;
+    document.getElementById('archi-tools-masse').style.display     = mode === 'masse'    ? '' : 'none';
+    document.getElementById('archi-tools-interieur').style.display  = mode === 'interieur'? '' : 'none';
+    document.getElementById('archi-kpis-surf').style.display        = mode === 'interieur'? '' : 'none';
+    ED.selected = null;
+    archiSetTool('select');
+    archiRedraw();
+    _archiUpdateLegend();
+  };
+
+  window.archiSetTool = function(tool) {
+    ED.tool = tool;
+    ED.drawing = false; ED.drawStart = null;
+    ED.polyPoints = []; ED.polyCursor = null;  /* reset polygone lot */
+    document.querySelectorAll('.archi-tool-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.tool === tool);
+    });
+    var labels = { select:'Sélection', batiment:'Bâtiment (cliquer-glisser)',
+      voirie:'Voirie (cliquer-glisser)', espace_vert:'Espace vert',
+      parking:'Parking', piece:'Pièce (cliquer-glisser)',
+      mur:'Mur porteur (cliquer-glisser)', cloison:'Cloison',
+      porte:'Porte (cliquer-glisser)', fenetre:'Fenêtre',
+      escalier:'Escalier', cote:'Cotation (2 clics)', texte:'Texte (clic)' };
+    var el = document.getElementById('archi-info-tool');
+    if (el) el.textContent = 'Outil : ' + (labels[tool] || tool);
+    ED.canvas.style.cursor = tool === 'select' ? 'default' : 'crosshair';
+  };
+
+  window.archiSetTerrain = function() {
+    ED.terrain.l = parseFloat(document.getElementById('archi-terrain-l').value) || 100;
+    ED.terrain.w = parseFloat(document.getElementById('archi-terrain-w').value) || 60;
+    archiRedraw();
+  };
+
+  window.archiNouveauPlan = function() {
+    if (ED.elements.length && !confirm('Créer un nouveau plan ? Les éléments non sauvegardés seront perdus.')) return;
+    _archipush();
+    ED.elements = [];
+    ED.selected = null;
+    archiRedraw();
+    _archiHideProps();
+  };
+
+  window.archiUndo = function() {
+    if (!ED.history.length) { if(window.toast) toast('Rien à annuler.','info'); return; }
+    ED.elements = JSON.parse(ED.history.pop());
+    ED.selected = null;
+    archiRedraw();
+    _archiHideProps();
+  };
+
+  window.archiDeleteSelected = function() {
+    if (!ED.selected) return;
+    _archipush();
+    ED.elements = ED.elements.filter(function(e) { return e !== ED.selected; });
+    ED.selected = null;
+    _archiHideProps();
+    archiRedraw();
+  };
+
+  window.archiLoadTemplate = function() {
+    var type = document.getElementById('archi-type-lgt').value;
+    if (!type || !GABARITS[type]) return;
+    if (ED.elements.length && !confirm('Charger ce gabarit ? Les éléments existants seront remplacés.')) return;
+    _archipush();
+    ED.elements = GABARITS[type].map(function(e, i) {
+      return Object.assign({}, e, { id: 'el_' + Date.now() + '_' + i });
+    });
+    ED.selected = null;
+    archiRedraw();
+    _archiHideProps();
+    _archiUpdateSurfKpis();
+  };
+
+  /* ════════════════════════════════
+     CANVAS RESIZE & SCALE
+  ════════════════════════════════ */
+  function _archiResizeCanvas() {
+    var wrap = document.getElementById('archi-canvas-wrap');
+    if (!wrap || !ED.canvas) return;
+    var W = wrap.clientWidth  || 600;
+    var H = wrap.clientHeight || 520;
+    if (H < 480) H = 480;
+    ED.canvas.width  = W;
+    ED.canvas.height = H;
+    _archiCalcScale();
+    archiRedraw();
+  }
+
+  function _archiCalcScale() {
+    if (!ED.canvas) return;
+    var ref = ED.mode === 'masse' ? ED.terrain : ED.lgt;
+    var L = parseFloat(document.getElementById(ED.mode === 'masse' ? 'archi-terrain-l' : 'archi-lgt-l').value) || ref.l;
+    var W = parseFloat(document.getElementById(ED.mode === 'masse' ? 'archi-terrain-w' : 'archi-lgt-w').value) || ref.w;
+    var availW = ED.canvas.width  - ED.offsetX * 2;
+    var availH = ED.canvas.height - ED.offsetY * 2;
+    var scX = availW / L;
+    var scY = availH / W;
+    ED.scale = Math.min(scX, scY, 30);
+    if (ED.mode === 'masse') {
+      var echEl = document.getElementById('archi-echelle');
+      var ech = echEl ? parseInt(echEl.value) : 100;
+      ED.scale = Math.min(ED.scale, 2000 / ech);
+    }
+  }
+
+  /* ════════════════════════════════
+     DESSIN CANVAS
+  ════════════════════════════════ */
+  window.archiRedraw = function() {
+    _archiCalcScale();
+    if (!ED.ctx || !ED.canvas) return;
+    var ctx = ED.ctx;
+    var W = ED.canvas.width, H = ED.canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    /* Fond */
+    ctx.fillStyle = '#F8F9FA';
+    ctx.fillRect(0, 0, W, H);
+
+    /* Grille */
+    _drawGrid(ctx, W, H);
+
+    /* Périmètre terrain / logement */
+    _drawPerimetre(ctx);
+
+    /* Éléments */
+    ED.elements.forEach(function(el) { _drawElement(ctx, el, el === ED.selected); });
+
+    /* Dessin en cours (rectangles) */
+    if (ED.drawing && ED.drawStart && ED._drawCurrent) {
+      _drawPreview(ctx);
+    }
+    /* Preview polygone lot */
+    if (ED.tool === 'lot' && ED.polyPoints.length > 0) {
+      _drawPreview(ctx);
+    }
+
+    /* Règles */
+    _drawRulers(ctx, W, H);
+
+    /* Info nb éléments */
+    var nbEl = document.getElementById('archi-info-nb');
+    if (nbEl) nbEl.textContent = 'Éléments : ' + ED.elements.length;
+  };
+
+  function _drawGrid(ctx, W, H) {
+    var step = ED.scale; // 1 mètre
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 0.5;
+    for (var x = ED.offsetX; x < W; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (var y = ED.offsetY; y < H; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function _drawPerimetre(ctx) {
+    var L = parseFloat(document.getElementById(ED.mode === 'masse' ? 'archi-terrain-l' : 'archi-lgt-l').value) || 100;
+    var W = parseFloat(document.getElementById(ED.mode === 'masse' ? 'archi-terrain-w' : 'archi-lgt-w').value) || 60;
+    var px = ED.offsetX, py = ED.offsetY;
+    var pw = L * ED.scale, ph = W * ED.scale;
+
+    ctx.save();
+    ctx.fillStyle   = ED.mode === 'masse' ? 'rgba(230,240,230,0.5)' : 'rgba(248,249,252,0.8)';
+    ctx.fillRect(px, py, pw, ph);
+    ctx.strokeStyle = ED.mode === 'masse' ? '#2D6A4F' : '#1D4ED8';
+    ctx.lineWidth   = 2.5;
+    ctx.setLineDash([6, 3]);
+    ctx.strokeRect(px, py, pw, ph);
+    ctx.setLineDash([]);
+
+    /* Cotation du périmètre */
+    ctx.fillStyle = '#374151';
+    ctx.font = '700 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(L + ' m', px + pw / 2, py - 6);
+    ctx.save();
+    ctx.translate(px - 8, py + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(W + ' m', 0, 0);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  /* ── Calcul surface shoelace (m²) ── */
+  function _shoelace(pts) {
+    var a = 0;
+    for (var i = 0; i < pts.length; i++) {
+      var j = (i + 1) % pts.length;
+      a += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+    }
+    return Math.abs(a) / 2;
+  }
+
+  /* ── Point dans polygone (ray casting) ── */
+  function _pointInPoly(px, py, pts) {
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      var xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y;
+      if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  /* ── Fermeture du polygone lot ── */
+  function _archiCloseLot() {
+    if (ED.polyPoints.length < 3) return;
+    _archipush();
+    var pts = ED.polyPoints.slice();
+    /* Bounding box */
+    var xs = pts.map(function(p){ return p.x; });
+    var ys = pts.map(function(p){ return p.y; });
+    var bx = Math.min.apply(null, xs), by = Math.min.apply(null, ys);
+    var bw = Math.max.apply(null, xs) - bx, bh = Math.max.apply(null, ys) - by;
+    ED._lotCounter = (ED._lotCounter || 0) + 1;
+    var num = ED._lotCounter < 10 ? '0' + ED._lotCounter : String(ED._lotCounter);
+    ED.elements.push({
+      id: _id(), type: 'lot',
+      points: pts,
+      x: bx, y: by, w: bw, h: bh,
+      label: 'Lot ' + num,
+      surf: Math.round(_shoelace(pts) * 100) / 100
+    });
+    ED.polyPoints = []; ED.polyCursor = null; ED.drawing = false;
+    archiRedraw();
+    _archiUpdateSurfKpis();
+  }
+
+  function _drawElement(ctx, el, selected) {
+    var c = COULEURS[el.type] || COULEURS['batiment'];
+    var x = ED.offsetX + el.x * ED.scale;
+    var y = ED.offsetY + el.y * ED.scale;
+    var w = (el.w || 0) * ED.scale;
+    var h = (el.h || 0) * ED.scale;
+
+    ctx.save();
+
+    /* ── Lot polygone ── */
+    if (el.type === 'lot' && el.points && el.points.length >= 3) {
+      ctx.beginPath();
+      ctx.moveTo(ED.offsetX + el.points[0].x * ED.scale, ED.offsetY + el.points[0].y * ED.scale);
+      for (var pi = 1; pi < el.points.length; pi++) {
+        ctx.lineTo(ED.offsetX + el.points[pi].x * ED.scale, ED.offsetY + el.points[pi].y * ED.scale);
+      }
+      ctx.closePath();
+      ctx.fillStyle = c.fill;
+      ctx.fill();
+      ctx.strokeStyle = selected ? '#2563EB' : c.stroke;
+      ctx.lineWidth = selected ? 2.5 : 2;
+      if (selected) ctx.setLineDash([6, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      /* Numéro + surface au centroïde */
+      var cx = el.points.reduce(function(s,p){ return s+p.x; },0) / el.points.length;
+      var cy = el.points.reduce(function(s,p){ return s+p.y; },0) / el.points.length;
+      var cxPx = ED.offsetX + cx * ED.scale;
+      var cyPx = ED.offsetY + cy * ED.scale;
+      ctx.fillStyle = '#92400E';
+      ctx.font = '700 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(el.label || '', cxPx, cyPx - 7);
+      var surf = el.surf || _shoelace(el.points);
+      ctx.fillStyle = 'rgba(146,64,14,0.65)';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(Math.round(surf * 10) / 10 + ' m²', cxPx, cyPx + 8);
+      /* Points sommets */
+      el.points.forEach(function(pt) {
+        ctx.beginPath();
+        ctx.arc(ED.offsetX + pt.x * ED.scale, ED.offsetY + pt.y * ED.scale, selected ? 4 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = selected ? '#2563EB' : c.stroke;
+        ctx.fill();
+      });
+      ctx.restore(); return;
+    }
+
+    if (el.type === 'mur' || el.type === 'cloison') {
+      /* Mur / cloison = rectangle plein épais */
+      ctx.fillStyle = c.fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = c.stroke;
+      ctx.lineWidth = selected ? 2.5 : 1;
+      ctx.strokeRect(x, y, w, h);
+
+    } else if (el.type === 'porte') {
+      /* Arc de porte */
+      ctx.strokeStyle = c.stroke;
+      ctx.lineWidth = selected ? 2.5 : 1.5;
+      ctx.fillStyle = c.fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
+      /* Arc symbolique */
+      var r = Math.min(w, h) * 2;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI / 2);
+      ctx.strokeStyle = '#B87333';
+      ctx.lineWidth = 1; ctx.setLineDash([3,2]);
+      ctx.stroke(); ctx.setLineDash([]);
+
+    } else if (el.type === 'fenetre') {
+      /* Fenêtre = rectangle + lignes parallèles */
+      ctx.fillStyle = c.fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = c.stroke;
+      ctx.lineWidth = selected ? 2.5 : 1.5;
+      ctx.strokeRect(x, y, w, h);
+      ctx.beginPath();
+      if (w > h) {
+        var midY = y + h / 2;
+        ctx.moveTo(x + 2, midY); ctx.lineTo(x + w - 2, midY);
+      } else {
+        var midX2 = x + w / 2;
+        ctx.moveTo(midX2, y + 2); ctx.lineTo(midX2, y + h - 2);
+      }
+      ctx.stroke();
+
+    } else if (el.type === 'escalier') {
+      /* Escalier = lignes horizontales */
+      ctx.fillStyle = c.fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = c.stroke;
+      ctx.lineWidth = selected ? 2 : 1;
+      ctx.strokeRect(x, y, w, h);
+      var nbMarches = Math.max(3, Math.round(h / 15));
+      for (var m = 1; m < nbMarches; m++) {
+        var yM = y + (h / nbMarches) * m;
+        ctx.beginPath(); ctx.moveTo(x, yM); ctx.lineTo(x + w, yM);
+        ctx.lineWidth = 0.5; ctx.stroke();
+      }
+
+    } else if (el.type === 'cote') {
+      /* Cotation */
+      _drawCotation(ctx, el, selected);
+      ctx.restore(); return;
+
+    } else if (el.type === 'texte') {
+      ctx.fillStyle = '#1C1C2E';
+      ctx.font = '600 ' + Math.max(10, Math.round(ED.scale * 0.6)) + 'px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(el.label || '', x, y);
+      if (selected) {
+        ctx.strokeStyle = '#4A94E0'; ctx.lineWidth = 1.5; ctx.setLineDash([3,2]);
+        ctx.strokeRect(x - 2, y - 14, (el.label || '').length * 7 + 4, 18);
+        ctx.setLineDash([]);
+      }
+      ctx.restore(); return;
+
+    } else {
+      /* Zone remplie générique */
+      ctx.fillStyle = c.fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = c.stroke;
+      ctx.lineWidth = selected ? 2.5 : 1.5;
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    /* Sélection highlight */
+    if (selected) {
+      ctx.strokeStyle = '#4A94E0';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([5, 3]);
+      ctx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+      ctx.setLineDash([]);
+    }
+
+    /* Label pièce */
+    if (el.label && ['piece','batiment','parking','espace_vert','voirie','escalier'].includes(el.type) && w > 30 && h > 20) {
+      ctx.fillStyle = '#1C1C2E';
+      ctx.font = '600 ' + Math.max(9, Math.min(13, Math.round(w / el.label.length * 1.2))) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(el.label, x + w / 2, y + h / 2);
+      /* Surface m² */
+      var surf = Math.round(el.w * el.h * 10) / 10;
+      if (surf > 0 && h > 34) {
+        ctx.fillStyle = 'rgba(30,30,60,0.55)';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(surf + ' m²', x + w / 2, y + h / 2 + 14);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function _drawCotation(ctx, el, selected) {
+    var x1 = ED.offsetX + el.x  * ED.scale;
+    var y1 = ED.offsetY + el.y  * ED.scale;
+    var x2 = ED.offsetX + el.x2 * ED.scale;
+    var y2 = ED.offsetY + el.y2 * ED.scale;
+    var dist = Math.sqrt(Math.pow(el.x2 - el.x, 2) + Math.pow(el.y2 - el.y, 2));
+    var offset = 14;
+    var dx = x2 - x1, dy = y2 - y1;
+    var len = Math.sqrt(dx * dx + dy * dy);
+    var nx = -dy / len, ny = dx / len;
+    ctx.save();
+    ctx.strokeStyle = selected ? '#2563EB' : '#EF4444';
+    ctx.lineWidth = 1.5;
+    /* Ligne principale */
+    ctx.beginPath();
+    ctx.moveTo(x1 + nx * offset, y1 + ny * offset);
+    ctx.lineTo(x2 + nx * offset, y2 + ny * offset);
+    ctx.stroke();
+    /* Barres d'extrémité */
+    [[x1,y1],[x2,y2]].forEach(function(p) {
+      ctx.beginPath();
+      ctx.moveTo(p[0] + nx * (offset - 5), p[1] + ny * (offset - 5));
+      ctx.lineTo(p[0] + nx * (offset + 5), p[1] + ny * (offset + 5));
+      ctx.stroke();
+    });
+    /* Texte */
+    ctx.fillStyle = selected ? '#2563EB' : '#EF4444';
+    ctx.font = '700 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    var mx = (x1 + x2) / 2 + nx * (offset + 6);
+    var my = (y1 + y2) / 2 + ny * (offset + 6);
+    ctx.fillText(Math.round(dist / ED.scale * 10) / 10 + ' m', mx, my);
+    ctx.restore();
+  }
+
+  function _drawPreview(ctx) {
+    /* Preview polygone lot en cours de tracé */
+    if (ED.tool === 'lot' && ED.polyPoints.length > 0) {
+      var pts = ED.polyPoints;
+      var cur = ED.polyCursor;
+      ctx.save();
+      /* Remplissage provisoire */
+      ctx.beginPath();
+      ctx.moveTo(ED.offsetX + pts[0].x * ED.scale, ED.offsetY + pts[0].y * ED.scale);
+      for (var i = 1; i < pts.length; i++) {
+        ctx.lineTo(ED.offsetX + pts[i].x * ED.scale, ED.offsetY + pts[i].y * ED.scale);
+      }
+      if (cur) ctx.lineTo(ED.offsetX + cur.x * ED.scale, ED.offsetY + cur.y * ED.scale);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(245,158,11,0.10)';
+      ctx.fill();
+      /* Contour en cours */
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      /* Ligne curseur → point courant */
+      if (cur && pts.length > 0) {
+        var last = pts[pts.length - 1];
+        ctx.beginPath();
+        ctx.moveTo(ED.offsetX + last.x * ED.scale, ED.offsetY + last.y * ED.scale);
+        ctx.lineTo(ED.offsetX + cur.x * ED.scale, ED.offsetY + cur.y * ED.scale);
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      /* Points déjà posés */
+      pts.forEach(function(pt, idx) {
+        ctx.beginPath();
+        ctx.arc(ED.offsetX + pt.x * ED.scale, ED.offsetY + pt.y * ED.scale, idx === 0 ? 6 : 4, 0, Math.PI * 2);
+        /* 1er point : cercle vert = zone de fermeture */
+        ctx.fillStyle = idx === 0 ? 'rgba(16,185,129,0.8)' : '#F59E0B';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+      /* Compteur de points */
+      if (cur) {
+        ctx.fillStyle = '#92400E';
+        ctx.font = '700 10px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(pts.length + ' pt' + (pts.length > 1 ? 's' : '') + ' — DblClic ou clic ⬤ pour fermer', ED.offsetX + 4, ED.offsetY + 4);
+      }
+      ctx.restore();
+      return;
+    }
+    if (!ED._drawCurrent) return;
+    var el = Object.assign({}, ED._drawCurrent, { type: ED.tool, label: '' });
+    _drawElement(ctx, el, false);
+  }
+
+  function _drawRulers(ctx, W, H) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(240,242,245,0.92)';
+    ctx.fillRect(0, 0, ED.offsetX - 2, H);
+    ctx.fillRect(0, 0, W, ED.offsetY - 2);
+    ctx.strokeStyle = '#D1D5DB';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ED.offsetX - 2, 0); ctx.lineTo(ED.offsetX - 2, H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, ED.offsetY - 2); ctx.lineTo(W, ED.offsetY - 2); ctx.stroke();
+    /* Graduations */
+    var step = ED.scale;
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    for (var xi = 0; xi * step + ED.offsetX < W; xi++) {
+      var xp = xi * step + ED.offsetX;
+      ctx.beginPath(); ctx.moveTo(xp, ED.offsetY - 8); ctx.lineTo(xp, ED.offsetY - 2); ctx.stroke();
+      if (xi % 5 === 0) ctx.fillText(xi, xp, ED.offsetY - 10);
+    }
+    ctx.textAlign = 'right';
+    for (var yi = 0; yi * step + ED.offsetY < H; yi++) {
+      var yp = yi * step + ED.offsetY;
+      ctx.beginPath(); ctx.moveTo(ED.offsetX - 8, yp); ctx.lineTo(ED.offsetX - 2, yp); ctx.stroke();
+      if (yi % 5 === 0) ctx.fillText(yi, ED.offsetX - 10, yp + 3);
+    }
+    ctx.restore();
+  }
+
+  /* ════════════════════════════════
+     ÉVÉNEMENTS SOURIS / TOUCH
+  ════════════════════════════════ */
+  function _archiBindEvents() {
+    var c = ED.canvas;
+    c.addEventListener('mousedown',  _onDown);
+    c.addEventListener('mousemove',  _onMove);
+    c.addEventListener('mouseup',    _onUp);
+    c.addEventListener('touchstart', function(e){ e.preventDefault(); _onDown(_touchToMouse(e)); }, { passive: false });
+    c.addEventListener('touchmove',  function(e){ e.preventDefault(); _onMove(_touchToMouse(e)); }, { passive: false });
+    c.addEventListener('touchend',   function(e){ e.preventDefault(); _onUp(_touchToMouse(e)); },   { passive: false });
+    c.addEventListener('dblclick',   _onDblClick);
+  }
+
+  function _touchToMouse(e) {
+    var t = e.touches[0] || e.changedTouches[0];
+    return { clientX: t.clientX, clientY: t.clientY, target: e.target };
+  }
+
+  function _canvasPos(e) {
+    var rect = ED.canvas.getBoundingClientRect();
+    return {
+      cx: e.clientX - rect.left,
+      cy: e.clientY - rect.top,
+      mx: (e.clientX - rect.left - ED.offsetX) / ED.scale,
+      my: (e.clientY - rect.top  - ED.offsetY) / ED.scale
+    };
+  }
+
+  function _snap(v) { return Math.round(v / ED.snapGrid) * ED.snapGrid; }
+
+  function _onDown(e) {
+    var p = _canvasPos(e);
+    var mx = _snap(p.mx), my = _snap(p.my);
+
+    if (ED.tool === 'select') {
+      /* Cherche un élément sous le curseur */
+      var hit = null;
+      for (var i = ED.elements.length - 1; i >= 0; i--) {
+        var el = ED.elements[i];
+        if (el.type === 'texte') {
+          if (p.cx >= ED.offsetX + el.x * ED.scale - 4 && p.cx <= ED.offsetX + el.x * ED.scale + 200 &&
+              p.cy >= ED.offsetY + el.y * ED.scale - 16 && p.cy <= ED.offsetY + el.y * ED.scale + 4) { hit = el; break; }
+        } else if (el.type === 'cote') {
+          /* Approximation : bounding box de la cotation */
+          var bx1 = Math.min(el.x, el.x2), bx2 = Math.max(el.x, el.x2);
+          var by1 = Math.min(el.y, el.y2), by2 = Math.max(el.y, el.y2);
+          if (p.mx >= bx1 - 0.5 && p.mx <= bx2 + 0.5 && p.my >= by1 - 0.5 && p.my <= by2 + 0.5) { hit = el; break; }
+        } else if (el.type === 'lot' && el.points && el.points.length) {
+          if (_pointInPoly(p.mx, p.my, el.points)) { hit = el; break; }
+        } else {
+          if (p.mx >= el.x && p.mx <= el.x + el.w && p.my >= el.y && p.my <= el.y + el.h) { hit = el; break; }
+        }
+      }
+      ED.selected = hit;
+      if (hit) {
+        ED.dragEl  = hit;
+        ED.dragOff = { x: p.mx - hit.x, y: p.my - hit.y };
+        _archiShowProps(hit);
+      } else {
+        _archiHideProps();
+      }
+      archiRedraw();
+      return;
+    }
+
+    if (ED.tool === 'texte') {
+      var txt = prompt('Texte à ajouter :');
+      if (!txt) return;
+      _archipush();
+      ED.elements.push({ id: _id(), type: 'texte', x: mx, y: my, w: 0, h: 0, label: txt });
+      archiRedraw();
+      return;
+    }
+
+    if (ED.tool === 'cote') {
+      if (!ED.drawing) {
+        ED.drawing = true;
+        ED.drawStart = { x: mx, y: my };
+      } else {
+        _archipush();
+        ED.elements.push({ id: _id(), type: 'cote', x: ED.drawStart.x, y: ED.drawStart.y, x2: mx, y2: my, w: 0, h: 0, label: '' });
+        ED.drawing = false; ED.drawStart = null; ED._drawCurrent = null;
+        archiRedraw();
+      }
+      return;
+    }
+
+    /* Outil Lot — polygone multi-points */
+    if (ED.tool === 'lot') {
+      /* Si proche du 1er point (< 1.5 m) et déjà >= 3 points → fermer le polygone */
+      if (ED.polyPoints.length >= 3) {
+        var fp = ED.polyPoints[0];
+        var dist = Math.sqrt(Math.pow(mx - fp.x, 2) + Math.pow(my - fp.y, 2));
+        if (dist <= 1.5) {
+          _archiCloseLot();
+          return;
+        }
+      }
+      /* Sinon ajouter le point */
+      ED.polyPoints.push({ x: mx, y: my });
+      ED.drawing = true;
+      archiRedraw();
+      return;
+    }
+
+    /* Outils rectangle */
+    ED.drawing = true;
+    ED.drawStart = { x: mx, y: my };
+  }
+
+  function _onMove(e) {
+    var p = _canvasPos(e);
+    var mx = _snap(p.mx), my = _snap(p.my);
+    /* Info curseur */
+    var xy = document.getElementById('archi-info-xy');
+    if (xy) xy.textContent = 'x: ' + Math.round(mx * 10)/10 + ' m · y: ' + Math.round(my * 10)/10 + ' m';
+
+    if (ED.dragEl && ED.tool === 'select') {
+      ED.dragEl.x = _snap(mx - ED.dragOff.x);
+      ED.dragEl.y = _snap(my - ED.dragOff.y);
+      archiRedraw();
+      return;
+    }
+
+    /* Preview polygone lot */
+    if (ED.tool === 'lot' && ED.polyPoints.length > 0) {
+      ED.polyCursor = { x: mx, y: my };
+      archiRedraw();
+      return;
+    }
+
+    if (ED.drawing && ED.drawStart) {
+      var x0 = Math.min(ED.drawStart.x, mx);
+      var y0 = Math.min(ED.drawStart.y, my);
+      var w0 = Math.abs(mx - ED.drawStart.x);
+      var h0 = Math.abs(my - ED.drawStart.y);
+      if (ED.tool === 'cote') {
+        ED._drawCurrent = { x: ED.drawStart.x, y: ED.drawStart.y, x2: mx, y2: my, w:0, h:0 };
+      } else {
+        ED._drawCurrent = { x: x0, y: y0, w: w0, h: h0 };
+      }
+      archiRedraw();
+    }
+  }
+
+  function _onUp(e) {
+    if (ED.dragEl) {
+      ED.dragEl = null;
+      _archiUpdateSurfKpis();
+      return;
+    }
+    if (ED.tool === 'lot') return;  /* géré par _onDown et _onDblClick */
+    if (!ED.drawing || !ED.drawStart || ED.tool === 'select' || ED.tool === 'texte' || ED.tool === 'cote') return;
+    var p = _canvasPos(e);
+    var mx = _snap(p.mx), my = _snap(p.my);
+    var x0 = Math.min(ED.drawStart.x, mx);
+    var y0 = Math.min(ED.drawStart.y, my);
+    var w0 = Math.abs(mx - ED.drawStart.x);
+    var h0 = Math.abs(my - ED.drawStart.y);
+    if (w0 < 0.3 && h0 < 0.3) { ED.drawing = false; ED.drawStart = null; ED._drawCurrent = null; return; }
+
+    var defaultLabels = { batiment:'Bâtiment', voirie:'Voirie', espace_vert:'Espace vert',
+      parking:'Parking', piece:'Pièce', mur:'', cloison:'', porte:'', fenetre:'', escalier:'Escalier' };
+
+    _archipush();
+    ED.elements.push({
+      id: _id(), type: ED.tool,
+      x: x0, y: y0, w: w0, h: h0,
+      label: defaultLabels[ED.tool] !== undefined ? defaultLabels[ED.tool] : ED.tool
+    });
+    ED.drawing = false; ED.drawStart = null; ED._drawCurrent = null;
+    archiRedraw();
+    _archiUpdateSurfKpis();
+  }
+
+  function _onDblClick(e) {
+    /* Double-clic en mode lot → fermer le polygone */
+    if (ED.tool === 'lot') {
+      if (ED.polyPoints.length >= 3) _archiCloseLot();
+      return;
+    }
+    /* Double-clic sur un élément → éditer le label */
+    var p = _canvasPos(e);
+    var hit = null;
+    for (var i = ED.elements.length - 1; i >= 0; i--) {
+      var el = ED.elements[i];
+      if (el.type === 'lot') {
+        if (_pointInPoly(p.mx, p.my, el.points)) { hit = el; break; }
+      } else if (el.type !== 'cote' && p.mx >= el.x && p.mx <= el.x + (el.w||0) && p.my >= el.y && p.my <= el.y + (el.h||0)) {
+        hit = el; break;
+      }
+    }
+    if (!hit) return;
+    var nv = prompt('Nom de cet élément :', hit.label || '');
+    if (nv !== null) { hit.label = nv; archiRedraw(); _archiUpdateSurfKpis(); }
+  }
+
+  /* ════════════════════════════════
+     PANNEAU PROPRIÉTÉS
+  ════════════════════════════════ */
+  function _archiShowProps(el) {
+    var box = document.getElementById('archi-props');
+    var content = document.getElementById('archi-props-content');
+    if (!box || !content) return;
+    box.style.display = '';
+    var surf = el.type === 'lot' && el.points ? Math.round(_shoelace(el.points) * 10) / 10
+      : (el.type !== 'cote' && el.type !== 'texte' ? Math.round(el.w * el.h * 10) / 10 : null);
+    content.innerHTML = '<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">' + (COULEURS[el.type]||{label:el.type}).label + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:5px;">'
+      + _propInput('Nom', 'archi-prop-label', el.label || '', "archiPropChange('label',this.value)")
+      + (el.type !== 'cote' && el.type !== 'texte' ? [
+          _propInput('X (m)',  'archi-prop-x', el.x, "archiPropChange('x',+this.value)"),
+          _propInput('Y (m)',  'archi-prop-y', el.y, "archiPropChange('y',+this.value)"),
+          _propInput('L (m)',  'archi-prop-w', el.w, "archiPropChange('w',+this.value)"),
+          _propInput('l (m)',  'archi-prop-h', el.h, "archiPropChange('h',+this.value)")
+        ].join('') : '')
+      + (surf !== null ? '<div style="margin-top:4px;font-size:11px;color:var(--or);font-weight:700;">Surface : ' + surf + ' m²</div>' : '')
+      + '</div>';
+  }
+
+  function _propInput(label, id, val, onchange) {
+    return '<div style="display:flex;gap:6px;align-items:center;">'
+      + '<label style="width:42px;font-size:10px;color:var(--dim);">' + label + '</label>'
+      + '<input type="' + (label === 'Nom' ? 'text' : 'number') + '" id="' + id + '" value="' + (Math.round((+val)*100)/100) + '" '
+      + 'oninput="' + onchange + '" class="form-control" style="font-size:11px;padding:3px 6px;flex:1;">'
+      + '</div>';
+  }
+
+  window.archiPropChange = function(prop, val) {
+    if (!ED.selected) return;
+    _archipush();
+    ED.selected[prop] = prop === 'label' ? val : (_snap(+val));
+    archiRedraw();
+    _archiUpdateSurfKpis();
+  };
+
+  function _archiHideProps() {
+    var box = document.getElementById('archi-props');
+    if (box) box.style.display = 'none';
+  }
+
+  /* ════════════════════════════════
+     KPIs SURFACES (mode intérieur)
+  ════════════════════════════════ */
+  function _archiUpdateSurfKpis() {
+    if (ED.mode !== 'interieur') return;
+    var box = document.getElementById('archi-kpis-surf');
+    if (!box) return;
+    var pieces = ED.elements.filter(function(e) { return e.type === 'piece'; });
+    var total = 0;
+    var rows = pieces.map(function(p) {
+      var s = Math.round(p.w * p.h * 10) / 10;
+      total += s;
+      return '<tr style="border-bottom:1px solid var(--bord);">'
+        + '<td style="padding:4px 8px;font-size:12px;">' + (p.label || '—') + '</td>'
+        + '<td style="padding:4px 8px;text-align:right;font-size:12px;font-weight:700;">' + s + ' m²</td>'
+        + '</tr>';
+    }).join('');
+    total = Math.round(total * 10) / 10;
+    box.innerHTML = '<div class="card" style="margin-top:8px;padding:12px;">'
+      + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:8px;">Surfaces par pièce</div>'
+      + (rows ? '<table style="width:100%;border-collapse:collapse;">' + rows + '</table>' : '<div style="font-size:12px;color:var(--dim);">Aucune pièce définie.</div>')
+      + (total ? '<div style="font-weight:700;font-size:13px;color:var(--or);margin-top:8px;padding-top:6px;border-top:1px solid var(--bord);">Total habitable : ' + total + ' m²</div>' : '')
+      + '</div>';
+  }
+
+  /* ════════════════════════════════
+     LÉGENDE
+  ════════════════════════════════ */
+  function _archiUpdateLegend() {
+    var box = document.getElementById('archi-legend');
+    if (!box) return;
+    var types = ED.mode === 'masse'
+      ? ['batiment','voirie','espace_vert','parking']
+      : ['piece','mur','cloison','porte','fenetre','escalier'];
+    box.innerHTML = types.map(function(t) {
+      var c = COULEURS[t];
+      return '<div style="display:flex;align-items:center;gap:6px;">'
+        + '<div style="width:14px;height:14px;background:' + c.fill + ';border:1.5px solid ' + c.stroke + ';border-radius:3px;flex-shrink:0;"></div>'
+        + '<span>' + c.label + '</span></div>';
+    }).join('');
+  }
+
+  /* ════════════════════════════════
+     EXPORT PDF
+  ════════════════════════════════ */
+  window.archiExportPDF = function() {
+    if (!ED.canvas) { if(window.toast) toast('Canvas non disponible.','error'); return; }
+    /* Générer via window.print sur un iframe temporaire */
+    var dataURL = ED.canvas.toDataURL('image/png', 1.0);
+    var titre = ED.mode === 'masse' ? 'Plan de masse' : 'Plan intérieur';
+    var L = document.getElementById(ED.mode === 'masse' ? 'archi-terrain-l' : 'archi-lgt-l').value;
+    var W = document.getElementById(ED.mode === 'masse' ? 'archi-terrain-w' : 'archi-lgt-w').value;
+    var soc = (window.DATA && DATA.params && (DATA.params.societe || DATA.params.nom_societe)) || 'Menko Holding';
+    var date = new Date().toLocaleDateString('fr-FR');
+
+    /* Tableau des surfaces si intérieur */
+    var surfTable = '';
+    if (ED.mode === 'interieur') {
+      var pieces = ED.elements.filter(function(e) { return e.type === 'piece'; });
+      var total = 0;
+      var lignes = pieces.map(function(p) {
+        var s = Math.round(p.w * p.h * 10) / 10; total += s;
+        return '<tr><td style="padding:4px 10px;border-bottom:1px solid #ddd;">' + (p.label||'—') + '</td>'
+          + '<td style="padding:4px 10px;border-bottom:1px solid #ddd;text-align:right;font-weight:700;">' + s + ' m²</td></tr>';
+      }).join('');
+      total = Math.round(total * 10) / 10;
+      if (lignes) surfTable = '<h3 style="font-size:13pt;margin:18px 0 8px;color:#1C1C2E;">Tableau des surfaces</h3>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:11pt;">'
+        + '<thead><tr style="background:#f4f6f9;"><th style="padding:6px 10px;text-align:left;border-bottom:2px solid #ddd;">Pièce</th>'
+        + '<th style="padding:6px 10px;text-align:right;border-bottom:2px solid #ddd;">Surface</th></tr></thead>'
+        + '<tbody>' + lignes + '</tbody>'
+        + '<tfoot><tr><td style="padding:6px 10px;font-weight:800;font-size:13pt;">TOTAL HABITABLE</td>'
+        + '<td style="padding:6px 10px;font-weight:800;font-size:13pt;text-align:right;color:#B87333;">' + total + ' m²</td></tr></tfoot></table>';
+    }
+
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      + '<title>' + titre + ' — ' + soc + '</title>'
+      + '<style>body{font-family:Arial,sans-serif;margin:0;padding:0;}'
+      + '.header{background:#1C1C2E;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;}'
+      + '.header h1{font-size:16pt;margin:0;} .header .meta{font-size:9pt;opacity:.7;text-align:right;}'
+      + '.body{padding:20px 24px;} img{max-width:100%;border:1px solid #ddd;border-radius:6px;}'
+      + '.footer{margin-top:20px;border-top:1px solid #ddd;padding-top:10px;font-size:8pt;color:#888;display:flex;justify-content:space-between;}'
+      + '@media print{body{-webkit-print-color-adjust:exact;}}</style>'
+      + '<script>window.onload=function(){window.print();}<\/script></head><body>'
+      + '<div class="header"><h1>📐 ' + titre + '</h1>'
+      + '<div class="meta"><div>' + soc + '</div><div>' + date + '</div><div>Terrain : ' + L + ' × ' + W + ' m</div></div></div>'
+      + '<div class="body"><img src="' + dataURL + '">' + surfTable + '</div>'
+      + '<div class="footer" style="margin:0 24px 16px;"><span>' + soc + ' · Édité par ImmoSuite</span><span>' + date + '</span></div>'
+      + '</body></html>';
+
+    var win = window.open('', '_blank', 'width=900,height=700');
+    if (win) { win.document.write(html); win.document.close(); }
+    else { if(window.toast) toast('Autoriser les pop-ups pour exporter le PDF.','error'); }
+  };
+
+  /* ════════════════════════════════
+     UTILITAIRES
+  ════════════════════════════════ */
+  function _archipush() {
+    ED.history.push(JSON.stringify(ED.elements));
+    if (ED.history.length > 30) ED.history.shift();
+  }
+
+  function _id() { return 'ae_' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+})(); /* fin IIFE éditeur architectural */
+
+
+/* Version 1.0 · ImmoSuite · Menko Holding
+══════════════════════════════════════════════════════════════════ */
+
+(function() {
+
+  var _plan = 'grille';      // plan actif
+  var _lots = [];            // lots calculés
+  var _canvas = null;
+  var _ctx = null;
+
+  /* ── Expose les fonctions globales ── */
+  window.simMrcInit = function() {
+    _canvas = document.getElementById('sim-canvas');
+    _ctx = _canvas ? _canvas.getContext('2d') : null;
+    simMrcSetPlan(_plan);
+    simMrcCalc();
+  };
+
+  window.simMrcSetPlan = function(plan) {
+    _plan = plan;
+    ['grille','bande','allee'].forEach(function(p) {
+      var btn = document.getElementById('sim-btn-' + p);
+      if (!btn) return;
+      var colors = { grille: 'var(--bleu)', bande: 'var(--violet)', allee: 'var(--vert)' };
+      btn.style.border = p === plan
+        ? '2px solid ' + colors[p]
+        : '2px solid var(--bord)';
+      btn.style.background = p === plan ? 'rgba(74,148,224,0.08)' : 'var(--card)';
+    });
+    simMrcCalc();
+  };
+
+  window.simMrcCalc = function() {
+    var L  = parseFloat(document.getElementById('sim-longueur')?.value) || 0;
+    var la = parseFloat(document.getElementById('sim-largeur')?.value)  || 0;
+    var sMin = parseFloat(document.getElementById('sim-surf-min')?.value) || 300;
+    var sMax = parseFloat(document.getElementById('sim-surf-max')?.value) || 600;
+    var voirie = parseFloat(document.getElementById('sim-voirie')?.value) || 8;
+    var usage  = document.getElementById('sim-usage')?.value || 'residentiel';
+
+    if (L <= 0 || la <= 0) { _lots = []; _simRenderAll([], L, la, voirie, usage); return; }
+
+    if (_plan === 'grille')  _lots = _calcGrille(L, la, sMin, sMax, voirie, usage);
+    if (_plan === 'bande')   _lots = _calcBande(L, la, sMin, sMax, usage);
+    if (_plan === 'allee')   _lots = _calcAllee(L, la, sMin, sMax, voirie, usage);
+
+    _simRenderAll(_lots, L, la, voirie, usage);
+  };
+
+  window.simMrcImporter = function() {
+    if (!_lots || !_lots.length) { if(window.toast) toast('Aucun lot à importer.','info'); return; }
+    var progId = APP.currentMrcProgId;
+    if (!progId) { if(window.toast) toast('Programme non trouvé.','error'); return; }
+    var added = 0;
+    _lots.forEach(function(l) {
+      var p = {
+        id: typeof uid === 'function' ? uid() : Date.now() + Math.random(),
+        programme_id: progId,
+        numero: l.num,
+        ilot: l.ilot || '',
+        usage: l.usage,
+        superficie: Math.round(l.surf),
+        longueur: Math.round(l.h * 10) / 10,
+        largeur:  Math.round(l.w * 10) / 10,
+        lat: '',
+        lng: '',
+        numero_tf: '',
+        numero_acd: '',
+        lot_id: null,
+        created_at: typeof today === 'function' ? today() : new Date().toISOString().slice(0,10)
+      };
+      if (!DATA.parcelles_morcellement) DATA.parcelles_morcellement = [];
+      DATA.parcelles_morcellement.push(p);
+      if (typeof dbPut === 'function') dbPut('parcelles_morcellement', p);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_parcelles_morcellement', p);
+      added++;
+    });
+    if (typeof renderParcelleListe === 'function') renderParcelleListe();
+    if (window.toast) toast('✅ ' + added + ' parcelles importées dans le morcellement !', 'success');
+    if (typeof switchTab === 'function') switchTab('morcellement', 'parcelles');
+  };
+
+  /* ─────────────────────────────────────────────────────────────
+     ALGORITHME 1 : GRILLE RÉGULIÈRE
+     On divise L × la en cellules aussi carrées que possible
+     en respectant sMin / sMax.
+  ───────────────────────────────────────────────────────────── */
+  function _calcGrille(L, la, sMin, sMax, voirie, usage) {
+    // Nb de colonnes : cherche la meilleure décomposition
+    var best = null;
+    for (var nc = 1; nc <= 30; nc++) {
+      var wLot = L / nc;
+      for (var nr = 1; nr <= 30; nr++) {
+        var hLot = la / nr;
+        var surf = wLot * hLot;
+        if (surf >= sMin && surf <= sMax) {
+          var score = Math.abs(wLot - hLot); // favorise les lots carrés
+          if (!best || score < best.score) {
+            best = { nc: nc, nr: nr, wLot: wLot, hLot: hLot, surf: surf, score: score };
+          }
+        }
+      }
+    }
+    if (!best) {
+      // Fallback : on force la surface la plus proche de (sMin+sMax)/2
+      var target = (sMin + sMax) / 2;
+      var nc2 = Math.max(1, Math.round(Math.sqrt(L * la / target)));
+      var nr2 = Math.max(1, Math.round(L * la / target / (L / nc2)));
+      best = { nc: nc2, nr: nr2, wLot: L / nc2, hLot: la / nr2, surf: (L / nc2) * (la / nr2), score: 999 };
+    }
+    var lots = [];
+    var ilotsLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (var r = 0; r < best.nr; r++) {
+      var ilot = ilotsLetters[r % 26];
+      for (var c = 0; c < best.nc; c++) {
+        var num = r * best.nc + c + 1;
+        var u = _assignUsage(usage, num, best.nc * best.nr);
+        lots.push({
+          num: ilot + num,
+          ilot: ilot,
+          usage: u,
+          surf: best.surf,
+          w: best.wLot,
+          h: best.hLot,
+          // position en % pour le canvas
+          px: c / best.nc,
+          py: r / best.nr,
+          pw: 1 / best.nc,
+          ph: 1 / best.nr
+        });
+      }
+    }
+    return lots;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     ALGORITHME 2 : BANDES PARALLÈLES (colonnes sur toute la longueur)
+     Chaque bande = 1 lot de longueur L et de largeur variable
+  ───────────────────────────────────────────────────────────── */
+  function _calcBande(L, la, sMin, sMax, usage) {
+    // Largeur optimale d'une bande
+    var wBande = Math.sqrt((sMin + sMax) / 2 * la / L);
+    wBande = Math.max(wBande, sMin / L);
+    var nb = Math.max(1, Math.round(la / wBande));
+    wBande = la / nb;
+    // Si la surface dépasse sMax, on découpe chaque bande en segments
+    var hSeg = L;
+    var nbSeg = 1;
+    if (wBande * L > sMax) {
+      nbSeg = Math.ceil(wBande * L / sMax);
+      hSeg = L / nbSeg;
+    }
+    // Si la surface < sMin, fusionne des bandes
+    if (wBande * hSeg < sMin && nb > 1) {
+      nb = Math.max(1, Math.floor(nb / 2));
+      wBande = la / nb;
+    }
+    var lots = [];
+    var ilotsLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var count = 1;
+    for (var b = 0; b < nb; b++) {
+      var ilot = ilotsLetters[b % 26];
+      for (var s = 0; s < nbSeg; s++) {
+        var u = _assignUsage(usage, count, nb * nbSeg);
+        lots.push({
+          num: ilot + s,
+          ilot: ilot,
+          usage: u,
+          surf: wBande * hSeg,
+          w: wBande,
+          h: hSeg,
+          px: b / nb,
+          py: s / nbSeg,
+          pw: 1 / nb,
+          ph: 1 / nbSeg
+        });
+        count++;
+      }
+    }
+    return lots;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     ALGORITHME 3 : ALLÉE CENTRALE
+     Voirie au centre (horizontal), 2 rangées de lots de chaque côté.
+  ───────────────────────────────────────────────────────────── */
+  function _calcAllee(L, la, sMin, sMax, voirie, usage) {
+    // Hauteur disponible par rangée (au-dessus et en-dessous de la voirie)
+    var hDispo = (la - voirie) / 2;
+    if (hDispo <= 0) { return []; }
+    // Largeur de lot
+    var wLot = (sMin + sMax) / 2 / hDispo;
+    wLot = Math.max(wLot, sMin / hDispo);
+    var nc = Math.max(1, Math.round(L / wLot));
+    wLot = L / nc;
+    // Ajuster hLot
+    var hLot = hDispo;
+    var surf = wLot * hLot;
+    // Si trop grand, ajouter une rangée supplémentaire verticalement
+    var nbRangees = 1;
+    if (surf > sMax) {
+      nbRangees = Math.ceil(surf / sMax);
+      hLot = hDispo / nbRangees;
+    }
+
+    var lots = [];
+    var sides = [
+      { label: 'A', y0: 0,                   h: hDispo },  // rangée haute
+      { label: 'B', y0: hDispo + voirie,      h: hDispo }   // rangée basse
+    ];
+    var ilotsLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var count = 1;
+    sides.forEach(function(side, sIdx) {
+      for (var r = 0; r < nbRangees; r++) {
+        var ilot = side.label + (r + 1);
+        for (var c = 0; c < nc; c++) {
+          var u = _assignUsage(usage, count, nc * nbRangees * 2);
+          lots.push({
+            num: ilot + '-' + (c + 1),
+            ilot: ilot,
+            usage: u,
+            surf: wLot * hLot,
+            w: wLot,
+            h: hLot,
+            px: c / nc,
+            py: (side.y0 + r * hLot) / la,
+            pw: 1 / nc,
+            ph: hLot / la,
+            isVoirie: false
+          });
+          count++;
+        }
+      }
+    });
+    // Ajouter la bande voirie pour le canvas
+    lots.push({
+      num: 'Voirie',
+      ilot: 'Voirie',
+      usage: 'voirie',
+      surf: L * voirie,
+      w: L,
+      h: voirie,
+      px: 0,
+      py: hDispo / la,
+      pw: 1,
+      ph: voirie / la,
+      isVoirie: true
+    });
+    return lots;
+  }
+
+  /* ── Attribue un usage (résidentiel / commercial / mixte) ── */
+  function _assignUsage(usage, idx, total) {
+    if (usage === 'residentiel') return 'residentiel';
+    if (usage === 'commercial')  return 'commercial';
+    // Mixte : 20% commercial (en bout de rangée), 80% résidentiel
+    return (idx <= Math.ceil(total * 0.2)) ? 'commercial' : 'residentiel';
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     RENDU CANVAS
+  ───────────────────────────────────────────────────────────── */
+  function _simRenderAll(lots, L, la, voirie, usage) {
+    _simRenderCanvas(lots, L, la);
+    _simRenderKpis(lots, L, la, voirie);
+    _simRenderTable(lots);
+  }
+
+  function _simRenderCanvas(lots, L, la) {
+    var canvas = document.getElementById('sim-canvas');
+    if (!canvas) return;
+    var W = canvas.parentElement.clientWidth - 24;
+    if (W < 100) W = 300;
+    var H = la > 0 && L > 0 ? Math.round(W * la / L) : 200;
+    H = Math.min(H, 420);
+    canvas.width  = W;
+    canvas.height = H;
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+
+    // Fond parcelle mère
+    ctx.fillStyle = '#E8EBF0';
+    ctx.fillRect(0, 0, W, H);
+
+    if (!lots.length) {
+      ctx.fillStyle = '#9CA3AF';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Saisissez les dimensions pour voir un aperçu', W/2, H/2);
+      return;
+    }
+
+    var colors = {
+      residentiel: '#4A94E0',
+      commercial:  '#B87333',
+      voirie:      '#9CA3AF',
+      espace_vert: '#4AC47A',
+      equipement:  '#8A52E0'
+    };
+
+    lots.forEach(function(l) {
+      var x = Math.round(l.px * W);
+      var y = Math.round(l.py * H);
+      var w = Math.round(l.pw * W);
+      var h = Math.round(l.ph * H);
+      // Fond
+      ctx.fillStyle = colors[l.usage] || '#4A94E0';
+      ctx.globalAlpha = l.isVoirie ? 0.55 : 0.75;
+      ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+      ctx.globalAlpha = 1;
+      // Bordure
+      ctx.strokeStyle = l.isVoirie ? '#6B7280' : '#FFFFFF';
+      ctx.lineWidth = l.isVoirie ? 1 : 1.5;
+      ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      // Label
+      if (!l.isVoirie && w > 22 && h > 14) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = h > 28 ? '600 10px sans-serif' : '9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(l.num, x + w / 2, y + h / 2);
+      } else if (l.isVoirie && w > 40 && h > 10) {
+        ctx.fillStyle = '#374151';
+        ctx.font = '600 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Voirie', x + w / 2, y + h / 2);
+      }
+    });
+
+    // Dimensions sur le canvas
+    ctx.fillStyle = '#374151';
+    ctx.font = '600 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(L + ' m', 4, 4);
+    ctx.save();
+    ctx.translate(6, H - 4);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(la + ' m', 0, 0);
+    ctx.restore();
+  }
+
+  function _simRenderKpis(lots, L, la, voirie) {
+    var box = document.getElementById('sim-kpis');
+    if (!box) return;
+    var lotsReels = lots.filter(function(l) { return !l.isVoirie; });
+    var surfTotale = L * la;
+    var surfVoirie = lots.filter(function(l) { return l.isVoirie; }).reduce(function(a,l) { return a + l.surf; }, 0);
+    var surfNette  = lotsReels.reduce(function(a,l) { return a + l.surf; }, 0);
+    var nbRes  = lotsReels.filter(function(l) { return l.usage === 'residentiel'; }).length;
+    var nbCom  = lotsReels.filter(function(l) { return l.usage === 'commercial'; }).length;
+    var surfMoyenne = lotsReels.length ? Math.round(surfNette / lotsReels.length) : 0;
+
+    box.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;">'
+      + _kpi('🏘️ Lots totaux',  lotsReels.length, '', '#4A94E0')
+      + _kpi('📐 Surface mère', Math.round(surfTotale) + ' m²', '', '#B87333')
+      + _kpi('✅ Surface nette', Math.round(surfNette) + ' m²', Math.round(surfNette / surfTotale * 100) + '% utile', '#4AC47A')
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+      + _kpi('🛣️ Voirie',    Math.round(surfVoirie) + ' m²', Math.round(surfVoirie / surfTotale * 100) + '%', '#9CA3AF')
+      + _kpi('📏 Surf moy/lot', surfMoyenne + ' m²', '', '#8A52E0')
+      + _kpi('🏠/🏪 Résid/Com', nbRes + ' / ' + nbCom, '', '#4A94E0')
+      + '</div>';
+  }
+
+  function _kpi(label, val, sub, color) {
+    return '<div class="kpi-card" style="border-top:3px solid ' + color + ';padding:10px 12px;">'
+      + '<div class="kpi-label" style="font-size:10px;">' + label + '</div>'
+      + '<div class="kpi-value" style="color:' + color + ';font-size:16px;">' + val + '</div>'
+      + (sub ? '<div class="kpi-delta" style="font-size:10px;">' + sub + '</div>' : '')
+      + '</div>';
+  }
+
+  function _simRenderTable(lots) {
+    var box = document.getElementById('sim-table-lots');
+    var act = document.getElementById('sim-actions');
+    if (!box) return;
+    var lotsReels = lots.filter(function(l) { return !l.isVoirie; });
+    if (!lotsReels.length) {
+      box.innerHTML = '';
+      if (act) act.style.display = 'none';
+      return;
+    }
+    var rows = lotsReels.slice(0, 50).map(function(l) {
+      return '<tr style="border-bottom:1px solid var(--bord);">'
+        + '<td style="padding:6px 8px;font-weight:700;color:var(--or);">' + l.num + '</td>'
+        + '<td style="padding:6px 8px;">' + (l.ilot || '—') + '</td>'
+        + '<td style="padding:6px 8px;">' + (l.usage === 'commercial' ? '🏪 Commercial' : '🏠 Résidentiel') + '</td>'
+        + '<td style="padding:6px 8px;text-align:right;">' + Math.round(l.surf) + ' m²</td>'
+        + '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--dim);">' + Math.round(l.w * 10) / 10 + ' × ' + Math.round(l.h * 10) / 10 + ' m</td>'
+        + '</tr>';
+    }).join('');
+    var extra = lotsReels.length > 50 ? '<tr><td colspan="5" style="padding:8px;color:var(--dim);font-size:11px;text-align:center;">… et ' + (lotsReels.length - 50) + ' lots supplémentaires</td></tr>' : '';
+    box.innerHTML = '<div style="font-weight:700;margin-bottom:8px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;">Détail des lots simulés</div>'
+      + '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">'
+      + '<thead><tr>'
+      + '<th style="text-align:left;padding:6px 8px;background:var(--card2);font-size:10px;">N° Lot</th>'
+      + '<th style="text-align:left;padding:6px 8px;background:var(--card2);font-size:10px;">Îlot</th>'
+      + '<th style="text-align:left;padding:6px 8px;background:var(--card2);font-size:10px;">Usage</th>'
+      + '<th style="text-align:right;padding:6px 8px;background:var(--card2);font-size:10px;">Surface</th>'
+      + '<th style="text-align:right;padding:6px 8px;background:var(--card2);font-size:10px;">Dim. (L×l)</th>'
+      + '</tr></thead><tbody>' + rows + extra + '</tbody></table></div>';
+    if (act) act.style.display = 'block';
+  }
+
+})(); /* fin IIFE simulateur */
+
 function printQrFooter(ref){
   var soc=(window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
   ref=(ref||'DOC').toString().replace(/[<>&]/g,'').slice(0,40);
