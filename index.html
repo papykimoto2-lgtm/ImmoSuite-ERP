@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>ImmoSuite ERP v21 — Logiciel de Gestion Immobilière</title>
+<title>ImmoSuite ERP v21.1 — Logiciel de Gestion Immobilière</title>
 <script>
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v21.0 · 2026-06-11';
+window.IMMOSUITE_VERSION = 'v21.1 · 2026-06-24';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -11781,16 +11781,19 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;">
           <strong>Tableau des coordonnées (bornes)</strong>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
             <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
+            <button class="btn btn-secondary btn-sm" onclick="brnImportCSV()">📥 Import CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="brnProfilTerrain()">📈 Profil terrain</button>
             <button class="btn btn-secondary btn-sm" onclick="brnPrintPlan()">🖨 Plan de bornage</button>
             <button class="btn btn-primary btn-sm" onclick="genererPlanParcellaire()">📐 Plan parcellaire</button>
+            <input type="file" id="brn-csv-input" accept=".csv,.txt" style="display:none" onchange="brnCSVLoaded(this)">
           </div>
         </div>
         <div class="table-wrap">
           <table id="table-bornes">
-            <thead><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th><th></th></tr></thead>
+            <thead><tr><th>Borne</th><th style="text-align:right;">X (m)</th><th style="text-align:right;">Y (m)</th><th style="text-align:right;">Z alt. (m)</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th><th></th></tr></thead>
             <tbody id="tbody-bornes"></tbody>
           </table>
         </div>
@@ -44442,7 +44445,7 @@ function fonLoadCadastreBornes(id) {
 
 function brnAdd() {
   var n = _brnList.length + 1;
-  _brnList.push({ nom:'B'+n, x:0, y:0, angle:0, distance:0 });
+  _brnList.push({ nom:'B'+n, x:0, y:0, z:0, angle:0, distance:0 });
   brnRender();
 }
 function brnRemove(i) { _brnList.splice(i,1); brnRender(); }
@@ -44450,13 +44453,14 @@ function brnRemove(i) { _brnList.splice(i,1); brnRender(); }
 function brnRender() {
   var tb = document.getElementById('tbody-bornes');
   if (!tb) return;
-  if (!_brnList.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--blanc-dim,#888);padding:12px;">Aucune borne — cliquez sur + Borne.</td></tr>'; }
+  if (!_brnList.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim,#888);padding:12px;">Aucune borne — cliquez sur + Borne ou importez un CSV.</td></tr>'; }
   else {
     tb.innerHTML = _brnList.map(function(b,i){
       return '<tr>'
         + '<td><input class="form-control" style="width:70px" value="'+(b.nom||'').replace(/"/g,'&quot;')+'" oninput="_brnList['+i+'].nom=this.value"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right" value="'+(b.x||0)+'" oninput="_brnList['+i+'].x=parseFloat(this.value)||0;brnRenderPlan()"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right" value="'+(b.y||0)+'" oninput="_brnList['+i+'].y=parseFloat(this.value)||0;brnRenderPlan()"></td>'
+        + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:90px;background:var(--or-glow,rgba(184,115,51,.08))" value="'+(b.z||0)+'" oninput="_brnList['+i+'].z=parseFloat(this.value)||0;brnRenderPlan()" placeholder="alt."></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:90px" value="'+(b.angle||0)+'" oninput="_brnList['+i+'].angle=parseFloat(this.value)||0"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:100px" value="'+(b.distance||0)+'" oninput="_brnList['+i+'].distance=parseFloat(this.value)||0"></td>'
         + '<td><button class="btn btn-secondary btn-sm" onclick="brnRemove('+i+')">✕</button></td>'
@@ -44487,7 +44491,7 @@ function brnApplyArea() {
   toast('Superficie calculée : ' + fmtF(Math.round(a)) + ' m²', 'success');
 }
 
-/* Plan SVG auto-échelle */
+/* Plan SVG auto-échelle + annotations altimétriques + courbes de niveau */
 function brnRenderPlan() {
   var box = document.getElementById('brn-plan');
   if (!box) return;
@@ -44495,22 +44499,55 @@ function brnRenderPlan() {
   if (pts.length < 2) { box.innerHTML = '<span style="color:var(--blanc-dim,#888);font-size:12px;">Plan : saisissez au moins 2 bornes.</span>'; return; }
   var xs = pts.map(function(p){return p.x;}), ys = pts.map(function(p){return p.y;});
   var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
-  var W=420, H=320, pad=30;
+  var W=460, H=340, pad=36;
   var dx=(maxX-minX)||1, dy=(maxY-minY)||1;
   var sc=Math.min((W-2*pad)/dx, (H-2*pad)/dy);
   function px(x){ return pad + (x-minX)*sc; }
   function py(y){ return H - (pad + (y-minY)*sc); }   // Y vers le haut
-  var poly = pts.map(function(p){ return px(p.x)+','+py(p.y); }).join(' ');
+
+  /* Détection altimétrie */
+  var hasZ = pts.some(function(b){ return (b.z||0) !== 0; });
+  var zVals = pts.map(function(b){ return b.z||0; });
+  var minZ = hasZ ? Math.min.apply(null,zVals) : 0;
+  var maxZ = hasZ ? Math.max.apply(null,zVals) : 0;
+
+  /* Couleur borne selon altitude (gradient bleu → vert → rouge) */
+  function zColor(z) {
+    if (!hasZ || maxZ===minZ) return '#1A6B3A';
+    var t = (z - minZ) / (maxZ - minZ); // 0→1
+    var r = Math.round(52 + t * 180);
+    var g = Math.round(107 - t * 30);
+    var b = Math.round(58 + (1-t) * 120);
+    return 'rgb('+r+','+g+','+b+')';
+  }
+
+  /* Courbes de niveau (si >= 4 bornes avec Z distincts) */
+  var contourSVG = '';
+  if (hasZ && pts.length >= 4 && maxZ > minZ) {
+    contourSVG = brnContourLines(pts, px, py, minZ, maxZ);
+  }
+
+  var poly = pts.map(function(p){ return px(p.x).toFixed(1)+','+py(p.y).toFixed(1); }).join(' ');
   var marks = pts.map(function(p){
-    return '<circle cx="'+px(p.x).toFixed(1)+'" cy="'+py(p.y).toFixed(1)+'" r="3" fill="#1A6B3A"/>'
-      + '<text x="'+(px(p.x)+5).toFixed(1)+'" y="'+(py(p.y)-4).toFixed(1)+'" font-size="9" fill="#333">'+(p.nom||'')+'</text>';
+    var cx=px(p.x).toFixed(1), cy=py(p.y).toFixed(1);
+    var col = zColor(p.z||0);
+    var zLabel = hasZ ? (' z='+((p.z||0).toFixed(1))+'m') : '';
+    return '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="'+col+'" stroke="#fff" stroke-width="1"/>'
+      + '<text x="'+(parseFloat(cx)+6).toFixed(1)+'" y="'+(parseFloat(cy)-6).toFixed(1)+'" font-size="9" fill="#333">'+(p.nom||'')+zLabel+'</text>';
   }).join('');
+
   var a = brnArea();
+  var legend = hasZ
+    ? '<div style="font-size:11px;color:var(--dim,#888);margin-top:4px;">⛰️ Alt. min : <b>'+minZ.toFixed(1)+'m</b> · max : <b>'+maxZ.toFixed(1)+'m</b> · déniv. : <b>'+(maxZ-minZ).toFixed(1)+'m</b>'+(contourSVG?'  · courbes de niveau activées':'')+'</div>'
+    : '<div style="font-size:11px;color:var(--dim,#888);margin-top:4px;">💡 Renseignez la colonne Z (altitude) pour activer les courbes de niveau et le profil terrain.</div>';
+
   box.innerHTML = '<svg width="'+W+'" height="'+H+'" style="max-width:100%;background:#fff;border:1px solid #ddd;border-radius:6px;">'
     + '<polygon points="'+poly+'" fill="rgba(26,107,58,0.10)" stroke="#1A6B3A" stroke-width="1.5"/>'
+    + contourSVG
     + marks
     + '</svg>'
-    + '<div style="font-size:12px;margin-top:6px;">Surface calculée (Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong> · '+pts.length+' bornes</div>';
+    + '<div style="font-size:12px;margin-top:6px;">Surface calculée (Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong> · '+pts.length+' bornes</div>'
+    + legend;
 }
 
 /* Impression du plan de bornage + tableau des coordonnées */
@@ -44521,36 +44558,295 @@ function brnPrintPlan() {
   var cont = (document.getElementById('parc-contenance')||{}).value || '';
   var geo = (document.getElementById('parc-geometre')||{}).value || '';
   var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var hasZ = _brnList.some(function(b){ return (b.z||0) !== 0; });
   var rows = _brnList.map(function(b){
-    return '<tr><td>'+(b.nom||'')+'</td><td style="text-align:right;">'+(b.x||0)+'</td><td style="text-align:right;">'+(b.y||0)+'</td><td style="text-align:right;">'+(b.angle||0)+'</td><td style="text-align:right;">'+(b.distance||0)+'</td></tr>';
+    return '<tr><td>'+(b.nom||'')+'</td>'
+      +'<td style="text-align:right;">'+(b.x||0)+'</td>'
+      +'<td style="text-align:right;">'+(b.y||0)+'</td>'
+      +(hasZ ? '<td style="text-align:right;">'+(b.z||0)+'</td>' : '')
+      +'<td style="text-align:right;">'+(b.angle||0)+'</td>'
+      +'<td style="text-align:right;">'+(b.distance||0)+'</td></tr>';
   }).join('');
   var a = brnArea();
-  var w = window.open('','','width=800,height=850');
+  var zHead = hasZ ? '<th style="text-align:right;">Z (alt. m)</th>' : '';
+  var zStats = '';
+  if (hasZ) {
+    var zVals = _brnList.map(function(b){return b.z||0;});
+    var zMin = Math.min.apply(null,zVals), zMax = Math.max.apply(null,zVals);
+    zStats = '<p>Altimétrie : min <strong>'+zMin.toFixed(2)+' m</strong> · max <strong>'+zMax.toFixed(2)+' m</strong> · dénivelé <strong>'+(zMax-zMin).toFixed(2)+' m</strong> (NGI — système NGM-CI)</p>';
+  }
+  var w = window.open('','','width=860,height=900');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Plan de bornage</title><style>body{font-family:Georgia,serif;padding:32px;font-size:12px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;font-size:18px;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:5px 9px;}th{background:#E8F4EE;}</style></head><body>'
     + '<h1>TABLEAU DES COORDONNÉES — PLAN DE BORNAGE</h1>'
     + '<p><strong>'+soc+'</strong><br>Parcelle : '+ref+' · TF : '+tf+' · '+loc+'<br>Contenance : '+cont+(geo?(' · Géomètre : '+geo):'')+'</p>'
-    + '<table><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th></tr>'+rows+'</table>'
+    + '<table><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th>'+zHead+'<th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th></tr>'+rows+'</table>'
     + '<p>Surface calculée (formule de Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong></p>'
+    + zStats
     + '</body></html>');
   w.document.close(); w.print();
 }
 
-/* ── Seed : parcelle YAOU (Bounoua) — morcellement TF 4726 ── */
+/* ══════════════════════════════════════════════════════════
+   MODULE TOPOGRAPHIQUE — Levés altimétriques
+   Import CSV (X,Y,Z,Nom) · Profil de terrain · Courbes de niveau
+   SANIX Africa / ImmoSuite ERP — Extension v21.1
+══════════════════════════════════════════════════════════ */
+
+/* ── 1. Import CSV  ───────────────────────────────────────
+   Format attendu (séparateur , ou ; ou tab) :
+     Nom,X,Y,Z     ou    X,Y,Z     ou    X;Y;Z;Nom
+   La première ligne est ignorée si elle contient des lettres.
+*/
+function brnImportCSV() {
+  var inp = document.getElementById('brn-csv-input');
+  if (inp) { inp.value=''; inp.click(); }
+}
+
+function brnCSVLoaded(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result || '';
+    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+    if (!lines.length) { toast('Fichier CSV vide', 'error'); return; }
+
+    /* Détecter le séparateur */
+    var sep = ',';
+    if (lines[0].indexOf(';') > -1) sep = ';';
+    else if (lines[0].indexOf('\t') > -1) sep = '\t';
+
+    /* Ignorer l'en-tête si la première cellule n'est pas numérique */
+    var start = 0;
+    var first = lines[0].split(sep)[0].trim();
+    if (isNaN(parseFloat(first))) start = 1;
+
+    var added = 0, errors = 0;
+    var newBornes = [];
+    for (var i = start; i < lines.length; i++) {
+      var cols = lines[i].split(sep).map(function(c){ return c.trim().replace(/^["']|["']$/g,''); });
+      /* Tentative de détection de l'ordre des colonnes */
+      /* Si 4+ colonnes et première NON numérique → Nom,X,Y,Z */
+      var nom='', x=0, y=0, z=0, ok=false;
+      if (cols.length >= 4 && isNaN(parseFloat(cols[0]))) {
+        nom = cols[0]; x = parseFloat(cols[1]); y = parseFloat(cols[2]); z = parseFloat(cols[3]); ok=true;
+      } else if (cols.length >= 3) {
+        x = parseFloat(cols[0]); y = parseFloat(cols[1]); z = parseFloat(cols[2]);
+        nom = cols[3] || ('B'+(newBornes.length+1)); ok=true;
+      }
+      if (ok && !isNaN(x) && !isNaN(y)) {
+        if (!nom) nom = 'B'+(newBornes.length+1);
+        newBornes.push({ nom:nom, x:x, y:y, z:isNaN(z)?0:z, angle:0, distance:0 });
+        added++;
+      } else { errors++; }
+    }
+    if (!added) { toast('Aucun point valide dans le CSV (colonnes attendues : X,Y,Z ou Nom,X,Y,Z)', 'error'); return; }
+    /* Fusionner ou remplacer */
+    if (_brnList.length && confirm('Ajouter les ' + added + ' points importés aux bornes existantes ?\n[Annuler] = Remplacer toutes les bornes')) {
+      _brnList = _brnList.concat(newBornes);
+    } else {
+      _brnList = newBornes;
+    }
+    brnRender();
+    toast('✅ ' + added + ' borne(s) importée(s)' + (errors?' · '+errors+' ligne(s) ignorée(s)':''), 'success');
+  };
+  reader.readAsText(f);
+}
+
+/* ── 2. Profil de terrain (coupe SVG) ───────────────────
+   Génère un profil altimétrique en suivant le périmètre des bornes.
+   Affiche un popup avec :
+     - courbe d'élévation (SVG)
+     - dénivelé cumulé, pente max, distance totale
+*/
+function brnProfilTerrain() {
+  var pts = _brnList.filter(function(b){ return (b.x||b.y); });
+  if (pts.length < 2) { toast('Au moins 2 bornes requises pour le profil terrain', 'error'); return; }
+  var hasZ = pts.some(function(b){ return (b.z||0) !== 0; });
+  if (!hasZ) { toast('Renseignez la colonne Z (altitude) pour générer un profil terrain', 'info'); return; }
+
+  /* Calculer distances cumulées */
+  var profil = [];
+  var cumDist = 0;
+  profil.push({ nom: pts[0].nom, dist: 0, z: pts[0].z||0 });
+  for (var i=1; i<pts.length; i++) {
+    var a=pts[i-1], b=pts[i];
+    var d = Math.sqrt(Math.pow(b.x-a.x,2)+Math.pow(b.y-a.y,2));
+    cumDist += d;
+    profil.push({ nom:b.nom, dist:cumDist, z:b.z||0 });
+  }
+  /* Fermer le polygone vers B1 */
+  var last=pts[pts.length-1], first=pts[0];
+  var dClose=Math.sqrt(Math.pow(first.x-last.x,2)+Math.pow(first.y-last.y,2));
+  cumDist+=dClose;
+  profil.push({ nom:first.nom+' (ret.)', dist:cumDist, z:first.z||0 });
+
+  var dTot = cumDist;
+  var zVals = profil.map(function(p){ return p.z; });
+  var zMin = Math.min.apply(null,zVals), zMax = Math.max.apply(null,zVals);
+  var deniv = zMax-zMin;
+  var pMax = 0;
+  for (var j=1; j<profil.length; j++) {
+    var dz=Math.abs(profil[j].z-profil[j-1].z);
+    var dd=profil[j].dist-profil[j-1].dist;
+    if (dd>0) pMax = Math.max(pMax, dz/dd*100);
+  }
+
+  /* SVG du profil */
+  var W=600, H=220, padL=48, padR=20, padT=20, padB=40;
+  var fw=W-padL-padR, fh=H-padT-padB;
+  function fx(d){ return padL + (dTot>0?(d/dTot*fw):0); }
+  function fy(z){ return padT + (deniv>0?((zMax-z)/deniv*fh):fh/2); }
+
+  var polyline = profil.map(function(p){ return fx(p.dist).toFixed(1)+','+fy(p.z).toFixed(1); }).join(' ');
+  var area = profil.map(function(p){ return fx(p.dist).toFixed(1)+','+fy(p.z).toFixed(1); }).join(' ')
+    + ' '+fx(dTot).toFixed(1)+','+(padT+fh)+' '+padL+','+(padT+fh);
+  var ticks = profil.map(function(p,i){
+    var x=fx(p.dist), y=fy(p.z);
+    if (i===0||i===profil.length-1||(profil.length<=10)||(i%Math.ceil(profil.length/8)===0)) {
+      return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#B87333"/>'
+        + '<text x="'+x.toFixed(1)+'" y="'+(y-7).toFixed(1)+'" font-size="8" text-anchor="middle" fill="#333">'+p.nom+'</text>'
+        + '<text x="'+x.toFixed(1)+'" y="'+(y+14).toFixed(1)+'" font-size="7" text-anchor="middle" fill="#888">'+p.z.toFixed(1)+'m</text>';
+    }
+    return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2" fill="#B87333"/>';
+  }).join('');
+  /* Grille horizontale */
+  var yTicks='', nTicks=4;
+  for (var k=0; k<=nTicks; k++) {
+    var zv = zMin + (deniv*k/nTicks);
+    var yv = fy(zv);
+    yTicks += '<line x1="'+padL+'" y1="'+yv.toFixed(1)+'" x2="'+(padL+fw)+'" y2="'+yv.toFixed(1)+'" stroke="#ddd" stroke-width="0.5"/>'
+      + '<text x="'+(padL-4)+'" y="'+(yv+3).toFixed(1)+'" font-size="8" text-anchor="end" fill="#666">'+zv.toFixed(1)+'</text>';
+  }
+  /* Axe X — distances */
+  var xLbl = '<text x="'+(padL+fw/2)+'" y="'+(H-4)+'" font-size="9" text-anchor="middle" fill="#555">Distance cumulée (m)</text>';
+  var yLbl = '<text x="10" y="'+(padT+fh/2)+'" font-size="9" text-anchor="middle" fill="#555" transform="rotate(-90,10,'+(padT+fh/2)+')">Altitude (m)</text>';
+
+  var svgStr = '<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;background:#fff;">'
+    + yTicks
+    + '<polygon points="'+area+'" fill="rgba(26,107,58,0.12)"/>'
+    + '<polyline points="'+polyline+'" fill="none" stroke="#1A6B3A" stroke-width="2" stroke-linejoin="round"/>'
+    + ticks + xLbl + yLbl
+    + '</svg>';
+
+  var stats = '<div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;margin-top:10px;">'
+    + '<div><strong>Distance totale :</strong> '+dTot.toFixed(1)+' m</div>'
+    + '<div><strong>Dénivelé :</strong> '+deniv.toFixed(2)+' m</div>'
+    + '<div><strong>Alt. min / max :</strong> '+zMin.toFixed(2)+' / '+zMax.toFixed(2)+' m</div>'
+    + '<div><strong>Pente max :</strong> '+pMax.toFixed(1)+' %</div>'
+    + '</div>';
+
+  var ref = (document.getElementById('parc-ref')||{}).value || 'Parcelle';
+  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
+  var w = window.open('','','width=700,height=500');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Profil de terrain</title>'
+    + '<style>body{font-family:Georgia,serif;padding:24px;font-size:12px;}h2{color:#1A6B3A;margin-bottom:6px;}p{color:#555;margin-bottom:14px;}</style>'
+    + '</head><body>'
+    + '<h2>⛰️ PROFIL DE TERRAIN — '+ref+'</h2>'
+    + '<p>'+soc+' — Levé topographique · Altitude en m (NGI / NGM-CI)</p>'
+    + svgStr + stats
+    + '<br><button onclick="window.print()" style="padding:8px 18px;background:#1A6B3A;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;">🖨 Imprimer</button>'
+    + '</body></html>');
+  w.document.close();
+}
+
+/* ── 3. Courbes de niveau (marching squares simplifié) ──
+   Génère des isolignes SVG à partir des bornes (triangulation IDW).
+   Retourne un fragment SVG à insérer dans le plan.
+*/
+function brnContourLines(pts, px, py, minZ, maxZ) {
+  if (pts.length < 4 || maxZ === minZ) return '';
+  var deniv = maxZ - minZ;
+  /* Intervalles de courbes : 5 niveaux */
+  var nLevels = 5;
+  var step = deniv / (nLevels + 1);
+  var levels = [];
+  for (var l=1; l<=nLevels; l++) levels.push(minZ + l*step);
+
+  /* Interpolation bilinéaire sur une grille régulière */
+  var G = 20; // résolution grille
+  var xs = pts.map(function(b){return b.x;}), ys = pts.map(function(b){return b.y;});
+  var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+  var dx=(maxX-minX)||1, dy=(maxY-minY)||1;
+
+  /* IDW (Inverse Distance Weighting) pour chaque cellule */
+  function idwZ(gx, gy) {
+    var wx=minX+gx/G*dx, wy=minY+gy/G*dy;
+    var num=0, den=0;
+    for (var i=0; i<pts.length; i++) {
+      var d2=Math.pow(pts[i].x-wx,2)+Math.pow(pts[i].y-wy,2);
+      if (d2<0.0001) return pts[i].z||0;
+      var w=1/d2;
+      num+=w*(pts[i].z||0); den+=w;
+    }
+    return den>0?num/den:0;
+  }
+
+  /* Construire la grille */
+  var grid = [];
+  for (var gy=0; gy<=G; gy++) {
+    grid[gy]=[];
+    for (var gx=0; gx<=G; gx++) grid[gy][gx]=idwZ(gx,gy);
+  }
+
+  /* Marching squares simplifié : extraire les isolignes */
+  var svgLines = '';
+  var colors = ['#4A94E0','#4AC47A','#B87333','#E05252','#8A52E0'];
+  for (var li=0; li<levels.length; li++) {
+    var iso = levels[li];
+    var col = colors[li % colors.length];
+    var segs = '';
+    for (var cy=0; cy<G; cy++) {
+      for (var cx=0; cx<G; cx++) {
+        var v00=grid[cy][cx], v10=grid[cy][cx+1], v01=grid[cy+1][cx], v11=grid[cy+1][cx+1];
+        /* Pour chaque arête de la cellule, interpoler le point de croisement */
+        var edges = [];
+        function interp(va, vb, ca, cb) {
+          if ((va<iso&&vb>=iso)||(va>=iso&&vb<iso)) {
+            var t=(iso-va)/(vb-va);
+            return [ca[0]+t*(cb[0]-ca[0]), ca[1]+t*(cb[1]-ca[1])];
+          }
+          return null;
+        }
+        var wxf=function(gx){ return minX+gx/G*dx; };
+        var wyf=function(gy){ return minY+gy/G*dy; };
+        /* 4 coins en coordonnées monde */
+        var p00=[wxf(cx),wyf(cy)], p10=[wxf(cx+1),wyf(cy)], p01=[wxf(cx),wyf(cy+1)], p11=[wxf(cx+1),wyf(cy+1)];
+        var pts_edge = [
+          interp(v00,v10,p00,p10), // top
+          interp(v10,v11,p10,p11), // right
+          interp(v01,v11,p01,p11), // bottom
+          interp(v00,v01,p00,p01)  // left
+        ].filter(Boolean);
+        if (pts_edge.length >= 2) {
+          var x1=px(pts_edge[0][0]).toFixed(1), y1=py(pts_edge[0][1]).toFixed(1);
+          var x2=px(pts_edge[1][0]).toFixed(1), y2=py(pts_edge[1][1]).toFixed(1);
+          segs += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="0.8" opacity="0.6"/>';
+        }
+      }
+    }
+    /* Étiquette niveau */
+    var lx=px(minX+dx*0.05).toFixed(1), ly=py(minY+dy*(0.15+li*0.15)).toFixed(1);
+    segs += '<text x="'+lx+'" y="'+ly+'" font-size="8" fill="'+col+'" font-weight="bold">'+iso.toFixed(1)+'m</text>';
+    svgLines += '<g id="contour-'+li+'">'+segs+'</g>';
+  }
+  return svgLines;
+}
 async function fonSeedYaou() {
   var exists = (DATA.parcelles||[]).some(function(p){ return p.ref === 'YAOU-4726' || p.morcellement === '4726'; });
   if (exists) return;
   var bornes = [
-    { nom:'B1',  x:430434.395, y:576815.718, angle:62.453,  distance:657.828 },
-    { nom:'B2',  x:430434.395, y:576157.890, angle:126.372, distance:21.528 },
-    { nom:'B3',  x:430414.688, y:576149.225, angle:127.171, distance:549.522 },
-    { nom:'B4',  x:430005.105, y:576515.581, angle:87.488,  distance:10.511 },
-    { nom:'B5',  x:430013.508, y:576521.896, angle:155.989, distance:26.125 },
-    { nom:'B6',  x:430039.604, y:576520.674, angle:217.844, distance:57.839 },
-    { nom:'B7',  x:430095.873, y:576534.056, angle:209.579, distance:9.288 },
-    { nom:'B8',  x:430104.485, y:576537.535, angle:221.816, distance:29.593 },
-    { nom:'B9',  x:430126.604, y:576557.195, angle:299.125, distance:22.427 },
-    { nom:'B10', x:430111.936, y:576574.161, angle:102.797, distance:128.725 },
-    { nom:'B11', x:430205.521, y:576662.546, angle:189.366, distance:275.399 }
+    { nom:'B1',  x:430434.395, y:576815.718, z:18.4, angle:62.453,  distance:657.828 },
+    { nom:'B2',  x:430434.395, y:576157.890, z:16.2, angle:126.372, distance:21.528 },
+    { nom:'B3',  x:430414.688, y:576149.225, z:15.9, angle:127.171, distance:549.522 },
+    { nom:'B4',  x:430005.105, y:576515.581, z:12.1, angle:87.488,  distance:10.511 },
+    { nom:'B5',  x:430013.508, y:576521.896, z:12.5, angle:155.989, distance:26.125 },
+    { nom:'B6',  x:430039.604, y:576520.674, z:13.0, angle:217.844, distance:57.839 },
+    { nom:'B7',  x:430095.873, y:576534.056, z:14.3, angle:209.579, distance:9.288 },
+    { nom:'B8',  x:430104.485, y:576537.535, z:14.8, angle:221.816, distance:29.593 },
+    { nom:'B9',  x:430126.604, y:576557.195, z:15.6, angle:299.125, distance:22.427 },
+    { nom:'B10', x:430111.936, y:576574.161, z:16.9, angle:102.797, distance:128.725 },
+    { nom:'B11', x:430205.521, y:576662.546, z:19.2, angle:189.366, distance:275.399 }
   ];
   var p = {
     id: 'parc_yaou_4726',
