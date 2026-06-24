@@ -3897,6 +3897,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchTab('recliv','rect')">🏗️ Réceptions de travaux</button>
           <button class="tab-btn" onclick="switchTab('recliv','liv')">🔑 Livraisons souscripteurs</button>
+          <button class="tab-btn" onclick="switchTab('recliv','dos')">📋 Dossiers de réception (processus)</button>
         </div>
         <div class="tab-pane active" id="tab-recliv-rect">
           <div class="card"><div class="table-wrap"><table>
@@ -3910,6 +3911,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <tbody id="tbody-liv"></tbody>
           </table></div></div>
         </div>
+        <div class="tab-pane" id="tab-recliv-dos">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <strong style="color:var(--or);">Processus de réception en 5 étapes</strong>
+            <button class="btn btn-primary btn-sm" onclick="openDossier()">➕ Nouveau dossier</button>
+          </div>
+          <div class="kpi-grid" id="kpi-dos" style="margin-bottom:16px;"></div>
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>Souscripteur</th><th>Lot</th><th>Programme</th><th>Étape</th><th>Réserves</th><th>Portail</th><th></th></tr></thead>
+            <tbody id="tbody-dos"></tbody>
+          </table></div></div>
+        </div>
+
       </div>
 
       <!-- Modal Réception de travaux -->
@@ -3964,6 +3977,42 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </div>
           </div>
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-liv')">Annuler</button><button class="btn btn-primary" onclick="saveLiv()">Enregistrer</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Dossier de réception (processus) -->
+      <div class="modal-overlay" id="modal-dossier">
+        <div class="modal" style="max-width:840px;">
+          <div class="modal-header"><div class="modal-title" id="dossier-title">📋 Dossier de réception</div><button class="modal-close" onclick="closeModal('modal-dossier')">✕</button></div>
+          <div class="modal-body" id="dossier-body"></div>
+        </div>
+      </div>
+      <!-- Modal Réserve -->
+      <div class="modal-overlay" id="modal-reserve">
+        <div class="modal" style="max-width:480px;">
+          <div class="modal-header"><div class="modal-title" id="reserve-title">Réserve</div><button class="modal-close" onclick="closeModal('modal-reserve')">✕</button></div>
+          <div class="modal-body">
+            <div class="form-group"><label>Libellé *</label><input class="form-control" id="res-libelle" placeholder="ex : Fissure mur salon"></div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+              <div class="form-group"><label>Localisation</label><input class="form-control" id="res-loc" placeholder="ex : Salon, mur Est"></div>
+              <div class="form-group"><label>Gravité</label><select class="form-control" id="res-gravite"><option value="mineure">Mineure</option><option value="majeure">Majeure</option><option value="bloquante">Bloquante</option></select></div>
+              <div class="form-group"><label>Délai de levée</label><input type="date" class="form-control" id="res-delai"></div>
+              <div class="form-group"><label>Origine</label><select class="form-control" id="res-origine"><option value="constructeur">Constructeur</option><option value="souscripteur">Souscripteur</option><option value="promoteur">Promoteur</option></select></div>
+            </div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-reserve')">Annuler</button><button class="btn btn-primary" onclick="saveReserve()">Enregistrer</button></div>
+        </div>
+      </div>
+      <!-- Modal Traitement réserve -->
+      <div class="modal-overlay" id="modal-traitement">
+        <div class="modal" style="max-width:480px;">
+          <div class="modal-header"><div class="modal-title">🛠️ Levée de réserve</div><button class="modal-close" onclick="closeModal('modal-traitement')">✕</button></div>
+          <div class="modal-body">
+            <div class="form-group"><label>Description du traitement</label><input class="form-control" id="trt-desc" placeholder="ex : Rebouché et repeint"></div>
+            <div class="form-group"><label>Photo justificative (URL ou référence)</label><input class="form-control" id="trt-photo" placeholder="lien photo / réf."></div>
+            <div style="font-size:11px;color:var(--blanc-dim);">Après traitement, le souscripteur est invité à valider la levée depuis son portail.</div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-traitement')">Annuler</button><button class="btn btn-primary" onclick="saveTraitement()">Marquer traitée</button></div>
         </div>
       </div>
 
@@ -14095,6 +14144,7 @@ var DATA = {
   validations: [],
   receptions_travaux: [],
   livraisons: [],
+  receptions_dossiers: [],
   cessions_foncieres: [],
   lot_unites: [],
   /* v114 — Aménagement foncier */
@@ -14106,7 +14156,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 125; /* v125: réception travaux + livraisons (souscripteurs/portail) */
+var DB_VERSION = 126; /* v126: dossiers de réception (processus 5 étapes) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -14166,7 +14216,8 @@ var ALL_STORES = [
   'factures_fournisseur',
   'validations',
   'receptions_travaux',
-  'livraisons'
+  'livraisons',
+  'receptions_dossiers'
 ];
 
 function initDB() {
@@ -14593,6 +14644,7 @@ var SUPA_STORE_MAP = [
   ['pi_validations',     'validations'],
   ['pi_receptions_travaux','receptions_travaux'],
   ['pi_livraisons',      'livraisons'],
+  ['pi_receptions_dossiers','receptions_dossiers'],
   ['pi_af_operations',   'af_operations'],
   ['pi_af_agents',       'af_agents'],
   ['pi_employes',        'employes'],
@@ -46181,17 +46233,18 @@ function renderValidations(){
 function rlConstrName(id){ var c=(DATA.constructeurs||[]).find(function(x){return x.id===id;}); return c?(c.raison_sociale||c.nom||'—'):'—'; }
 function rlConvLabel(id){ var c=(DATA.conventions||[]).find(function(x){return x.id===id;}); return c?(c.numero+(c.objet?(' — '+c.objet):'')):'—'; }
 function rlProgName(id){ var p=(DATA.programmes||[]).find(function(x){return x.id===id;}); return p?(p.nom||p.libelle||p.numero||'—'):'—'; }
-function rlClientLabel(id){ var c=(DATA.clients||[]).find(function(x){return x.id===id;}); return c?((c.nom||'')+' '+(c.prenom||'')).trim():'—'; }
-function rlLotLabel(id){ var l=(DATA.lot_unites||[]).find(function(x){return x.id===id;}); return l?('Lot '+(l.numero||'?')+(l.type?(' ('+l.type+')'):'')):''; }
+function rlClientLabel(id){ var c=(DATA.clients||[]).find(function(x){return x.id===id;}); return c?((c.nom||'')+' '+(c.prenoms||c.prenom||'')).trim():'—'; }
+function rlLotLabel(id){ var l=(DATA.lots||[]).find(function(x){return x.id===id;}); return l?('Lot '+(l.numero||l.nom||'?')+(l.type?(' ('+l.type+')'):'')):''; }
 function rlConvOptions(sel){ var h='<option value="">— convention —</option>'; (DATA.conventions||[]).forEach(function(c){ h+='<option value="'+c.id+'"'+(sel===c.id?' selected':'')+'>'+c.numero+' — '+rlConstrName(c.constructeur_id)+'</option>'; }); return h; }
-function rlClientOptions(sel){ var h='<option value="">— souscripteur —</option>'; (DATA.clients||[]).slice().sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');}).forEach(function(c){ h+='<option value="'+c.id+'"'+(sel===c.id?' selected':'')+'>'+((c.nom||'')+' '+(c.prenom||'')).trim()+'</option>'; }); return h; }
+function rlClientOptions(sel){ var h='<option value="">— souscripteur —</option>'; (DATA.clients||[]).slice().sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');}).forEach(function(c){ h+='<option value="'+c.id+'"'+(sel===c.id?' selected':'')+'>'+((c.nom||'')+' '+(c.prenoms||c.prenom||'')).trim()+(c.dossier?(' · '+c.dossier):'')+'</option>'; }); return h; }
 function rlProgOptions(sel){ var h='<option value="">— programme —</option>'; (DATA.programmes||[]).forEach(function(p){ h+='<option value="'+p.id+'"'+(sel===p.id?' selected':'')+'>'+(p.nom||p.libelle||p.numero)+'</option>'; }); return h; }
-function rlLotOptions(sel){ var h='<option value="">— lot / unité —</option>'; (DATA.lot_unites||[]).forEach(function(l){ h+='<option value="'+l.id+'" data-prog="'+(l.programme_id||'')+'"'+(sel===l.id?' selected':'')+'>Lot '+(l.numero||'?')+(l.type?(' ('+l.type+')'):'')+'</option>'; }); return h; }
+function rlLotOptions(sel){ var h='<option value="">— lot —</option>'; (DATA.lots||[]).forEach(function(l){ h+='<option value="'+l.id+'" data-prog="'+(l.programme_id||'')+'"'+(sel===l.id?' selected':'')+'>Lot '+(l.numero||l.nom||'?')+(l.type?(' ('+l.type+')'):'')+'</option>'; }); return h; }
 function rlTypeBadge(t){ return t==='definitive'?'<span class="badge badge-vert">Définitive</span>':'<span class="badge badge-bleu">Provisoire</span>'; }
 function rlRectStatutBadge(st){ var m={enregistre:'badge-bleu',brouillon:'badge-or',en_attente_validation:'badge-bleu',valide:'badge-vert'}; var l={enregistre:'Enregistrée',brouillon:'Brouillon',en_attente_validation:'⏳ À valider',valide:'✅ Validée'}; return '<span class="badge '+(m[st]||'badge-or')+'">'+(l[st]||st)+'</span>'; }
 function rlReservesTxt(arr){ arr=arr||[]; if(!arr.length)return '—'; var lev=arr.filter(function(r){return r.leve;}).length; return lev+' / '+arr.length+' levées'; }
 
 function renderRecliv(){
+  if(typeof renderDossiers==='function')renderDossiers();
   var rts=(DATA.receptions_travaux||[]); var livs=(DATA.livraisons||[]);
   var mois=new Date().toISOString().slice(0,7);
   var rgEnCours=rts.filter(function(r){return (parseFloat(r.retenue_garantie)||0)>0 && !r.rg_libere;}).reduce(function(s,r){return s+(parseFloat(r.retenue_garantie)||0);},0);
@@ -46327,11 +46380,13 @@ function printRect(id){
 
 /* ── Livraison souscripteur ── */
 function livNextNum(){ var y=new Date().getFullYear(); var n=(DATA.livraisons||[]).length+1; return 'LIV-'+y+'-'+('000'+n).slice(-3); }
-function livLotInfo(){ var sel=document.getElementById('liv-lot'); var l=(DATA.lot_unites||[]).find(function(x){return x.id===sel.value;}); if(l){ document.getElementById('liv-bien').value=rlLotLabel(l.id); if(l.programme_id)document.getElementById('liv-prog').value=l.programme_id; } }
+function livLotInfo(){ var sel=document.getElementById('liv-lot'); var l=(DATA.lots||[]).find(function(x){return x.id===sel.value;}); if(l){ document.getElementById('liv-bien').value=rlLotLabel(l.id); if(l.programme_id)document.getElementById('liv-prog').value=l.programme_id; } }
+function livClientInfo(){ var c=(DATA.clients||[]).find(function(x){return x.id===document.getElementById('liv-client').value;}); if(!c)return; if(c.lot_id){ document.getElementById('liv-lot').value=c.lot_id; document.getElementById('liv-bien').value=rlLotLabel(c.lot_id); } if(c.programme_id){ document.getElementById('liv-prog').value=c.programme_id; } }
 function openLiv(id){
   document.getElementById('liv-client').innerHTML=rlClientOptions('');
   document.getElementById('liv-prog').innerHTML=rlProgOptions('');
   document.getElementById('liv-lot').innerHTML=rlLotOptions('');
+  document.getElementById('liv-client').onchange=livClientInfo;
   APP.editingId=id||null;
   if(id){ var l=(DATA.livraisons||[]).find(function(x){return x.id===id;}); if(!l)return;
     document.getElementById('liv-title').textContent='✏️ Livraison '+l.numero;
@@ -46389,6 +46444,185 @@ function printLiv(id){
     +'<p><strong>État des lieux :</strong> '+(l.etat_lieux||'Constat contradictoire effectué.')+'</p>'
     +'<h3>Réserves de l\'acquéreur</h3><table><thead><tr><th>#</th><th>Libellé</th><th>État</th></tr></thead><tbody>'+res+'</tbody></table>'
     +'<div class="sign"><div class="muted">Le Promoteur<br><br><br>____________</div><div class="muted">Le Souscripteur<br>'+(l.signe?('(signé le '+(l.signature_date||l.date)+')'):'')+'<br><br>____________</div></div>'
+    +'</body></html>');
+  win.document.close(); win.print();
+}
+
+
+/* ══════════════════════════════════════════════════════
+   DOSSIER DE RÉCEPTION — processus 5 étapes (souscripteur/portail)
+   1.Pré-réception 2.Visite 3.Levée réserves 4.Définitive 5.Suivi
+   ══════════════════════════════════════════════════════ */
+var dosCurrent=null;
+var DOS_ETAPES=['Pré-réception','Visite de réception','Levée des réserves','Réception définitive','Clôturé / Suivi'];
+function dosNextNum(){ var y=new Date().getFullYear(); var n=(DATA.receptions_dossiers||[]).length+1; return 'DRC-'+y+'-'+('000'+n).slice(-3); }
+function dosGraviteBadge(g){ var m={mineure:'badge-bleu',majeure:'badge-or',bloquante:'badge-rouge'}; return '<span class="badge '+(m[g]||'badge-bleu')+'" style="font-size:9px;">'+(g||'mineure')+'</span>'; }
+function dosResStatutBadge(st){ var m={ouverte:'badge-rouge',traitee:'badge-or',levee_validee:'badge-vert',acceptee:'badge-vert'}; var l={ouverte:'Ouverte',traitee:'Traitée (à valider)',levee_validee:'Levée validée',acceptee:'Acceptée'}; return '<span class="badge '+(m[st]||'badge-rouge')+'" style="font-size:9px;">'+(l[st]||st)+'</span>'; }
+function dosResLevee(r){ return r.statut==='levee_validee'||r.statut==='acceptee'; }
+function dosAllLevees(d){ var rs=(d.reserves||[]); return rs.length===0 || rs.every(dosResLevee); }
+function dosEtapeBadge(e){ var c=['','badge-or','badge-bleu','badge-bleu','badge-or','badge-vert']; return '<span class="badge '+(c[e]||'badge-or')+'">'+e+'/5 · '+(DOS_ETAPES[e-1]||'')+'</span>'; }
+
+function renderDossiers(){
+  var ds=(DATA.receptions_dossiers||[]);
+  var kpi=document.getElementById('kpi-dos');
+  if(kpi){
+    var ouvertes=ds.reduce(function(s,d){return s+((d.reserves||[]).filter(function(r){return !dosResLevee(r);}).length);},0);
+    var enCours=ds.filter(function(d){return d.etape<5;}).length;
+    var livres=ds.filter(function(d){return d.etape>=4;}).length;
+    kpi.innerHTML=[
+      {l:'Dossiers en cours',v:enCours,i:'📋',c:'kpi-blue'},
+      {l:'Réserves ouvertes',v:ouvertes,i:'⚠️',c:'kpi-red'},
+      {l:'Réceptionnés (déf.)',v:livres,i:'🔑',c:'kpi-green'},
+      {l:'Total dossiers',v:ds.length,i:'🏠',c:''},
+    ].map(function(k){return '<div class="kpi-card '+(k.c||'')+'"><div class="kpi-icon">'+k.i+'</div><div class="kpi-value">'+k.v+'</div><div class="kpi-label">'+k.l+'</div></div>';}).join('');
+  }
+  var tb=document.getElementById('tbody-dos');
+  if(tb){
+    if(!ds.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun dossier de réception.</td></tr>'; }
+    else tb.innerHTML=ds.slice().sort(function(a,b){return (b.created_at||'').localeCompare(a.created_at||'');}).map(function(d){
+      var rs=(d.reserves||[]); var lev=rs.filter(dosResLevee).length;
+      var port=d.publie_portail?'<span class="badge badge-vert">🌐 Publié</span>':'<span class="badge badge-or">—</span>';
+      return '<tr><td style="font-family:monospace;color:var(--or);">'+d.numero+'</td><td style="font-size:12px;">'+rlClientLabel(d.client_id)+'</td><td style="font-size:11px;">'+(rlLotLabel(d.lot_id)||'—')+'</td><td style="font-size:11px;">'+rlProgName(d.programme_id)+'</td><td>'+dosEtapeBadge(d.etape)+'</td><td style="font-size:11px;">'+lev+'/'+rs.length+' levées</td><td>'+port+'</td><td><button class="btn btn-primary btn-sm" onclick="openDossier(\''+d.id+'\')">Ouvrir</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteDossier(\''+d.id+'\')">🗑</button></td></tr>';
+    }).join('');
+  }
+}
+async function deleteDossier(id){ if(!confirm('Supprimer ce dossier ?'))return; DATA.receptions_dossiers=DATA.receptions_dossiers.filter(function(x){return x.id!==id;}); await dbDelete('receptions_dossiers',id); renderDossiers(); toast('Supprimé.','info'); }
+
+function dosFindConvention(programmeId){ return (DATA.conventions||[]).find(function(c){return c.programme_id===programmeId;}); }
+function openDossier(id){
+  if(id){ dosCurrent=JSON.parse(JSON.stringify((DATA.receptions_dossiers||[]).find(function(x){return x.id===id;}))); }
+  else { dosCurrent={ id:uid(), numero:dosNextNum(), client_id:'', lot_id:'', programme_id:'', convention_id:'', constructeur_id:'', etape:1, reserves:[], pre_reception:{date:today(),etat_lieux:'',fait:false}, visite:{date_prevue:'',invite:false,observations_souscripteur:'',pv_provisoire:false,signe_date:''}, definitive:{date:'',cles_remises:0,docs_garantie:false,pv:false}, publie_portail:false, statut:'en_cours', created_at:today() }; }
+  dosRenderModal();
+  document.getElementById('modal-dossier').classList.add('open');
+}
+function dosClientChange(v){
+  dosCurrent.client_id=v;
+  var c=(DATA.clients||[]).find(function(x){return x.id===v;});
+  if(c){ if(c.lot_id)dosCurrent.lot_id=c.lot_id; if(c.programme_id)dosCurrent.programme_id=c.programme_id;
+    var cv=dosFindConvention(dosCurrent.programme_id); if(cv){ dosCurrent.convention_id=cv.id; dosCurrent.constructeur_id=cv.constructeur_id; } }
+  dosRenderModal();
+}
+function dosSetField(path,val){ var p=path.split('.'); var o=dosCurrent; for(var i=0;i<p.length-1;i++){ if(!o[p[i]])o[p[i]]={}; o=o[p[i]]; } o[p[p.length-1]]=val; }
+async function dosPersist(rerender){
+  dosCurrent.updated_at=new Date().toISOString();
+  var i=(DATA.receptions_dossiers||[]).findIndex(function(x){return x.id===dosCurrent.id;});
+  if(i>=0)DATA.receptions_dossiers[i]=JSON.parse(JSON.stringify(dosCurrent)); else DATA.receptions_dossiers.push(JSON.parse(JSON.stringify(dosCurrent)));
+  await dbPut('receptions_dossiers',dosCurrent); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions_dossiers',dosCurrent);
+  renderDossiers(); if(rerender)dosRenderModal();
+}
+async function saveDossier(){ if(!dosCurrent.client_id){ toast('Choisissez un souscripteur.','error'); return; } await dosPersist(false); toast('Dossier enregistré.','success'); }
+
+function dosStepper(e){
+  return '<div style="display:flex;gap:4px;margin:10px 0 14px;">'+DOS_ETAPES.map(function(lab,i){ var n=i+1; var on=n<=e; return '<div style="flex:1;text-align:center;font-size:9.5px;padding:6px 2px;border-radius:6px;background:'+(on?'var(--or)':'var(--card2)')+';color:'+(on?'#000':'var(--blanc-dim)')+';font-weight:'+(n===e?'700':'400')+';">'+n+'. '+lab+'</div>'; }).join('')+'</div>';
+}
+function dosReserveRows(editable){
+  var rs=dosCurrent.reserves||[];
+  if(!rs.length) return '<tr><td colspan="6" style="text-align:center;color:var(--blanc-dim);padding:8px;">Aucune réserve.</td></tr>';
+  return rs.map(function(r,i){
+    var acts='';
+    if(editable){
+      if(r.statut==='ouverte') acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="openTraitement('+i+')" title="Traiter / lever">🛠️</button> ';
+      if(r.statut==='traitee') acts+='<button class="btn btn-secondary btn-sm" onclick="dosAccepterReserve('+i+')" title="Accepter au nom du souscripteur">✔️</button> ';
+      acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="openReserve('+i+')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="dosDeleteReserve('+i+')">✕</button>';
+    }
+    return '<tr><td style="font-size:11px;">'+(r.libelle||'')+(r.souscripteur_obs?('<br><em style="color:var(--blanc-dim);">obs. acq.: '+r.souscripteur_obs+'</em>'):'')+'</td><td style="font-size:11px;">'+(r.localisation||'—')+'</td><td>'+dosGraviteBadge(r.gravite)+'</td><td style="font-size:10px;">'+(r.delai||'—')+'</td><td>'+dosResStatutBadge(r.statut)+(r.sous_valide?' <span title="validée par souscripteur">👤✓</span>':'')+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
+  }).join('');
+}
+function dosRenderModal(){
+  var d=dosCurrent; var e=d.etape;
+  var isNew=!(DATA.receptions_dossiers||[]).some(function(x){return x.id===d.id;});
+  document.getElementById('dossier-title').textContent='📋 Dossier '+d.numero;
+  var head = isNew
+    ? '<div class="form-group"><label>Souscripteur *</label><select class="form-control" onchange="dosClientChange(this.value)">'+rlClientOptions(d.client_id)+'</select></div>'
+    : '<div style="font-size:13px;margin-bottom:6px;"><strong>'+rlClientLabel(d.client_id)+'</strong></div>';
+  var info='<div style="font-size:12px;color:var(--blanc-dim);margin-bottom:8px;">Lot : <strong>'+(rlLotLabel(d.lot_id)||'—')+'</strong> · Programme : '+rlProgName(d.programme_id)+' · Constructeur : '+(rlConstrName(d.constructeur_id)||'—')+'</div>';
+
+  // Étape 1
+  var s1='<div class="card" style="margin-bottom:12px;padding:12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="color:var(--or);">① Pré-réception (constructeur)</strong>'+(d.pre_reception.fait?'<span class="badge badge-vert">Faite</span>':'')+'</div>'
+    +'<div class="form-grid" style="grid-template-columns:1fr 2fr;margin-top:8px;"><div class="form-group"><label>Date</label><input type="date" class="form-control" value="'+(d.pre_reception.date||'')+'" onchange="dosSetField(\'pre_reception.date\',this.value)"></div><div class="form-group"><label>État des lieux technique</label><input class="form-control" value="'+((d.pre_reception.etat_lieux||'').replace(/"/g,'&quot;'))+'" onchange="dosSetField(\'pre_reception.etat_lieux\',this.value)"></div></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;"><span style="font-size:12px;">Réserves (localisation · gravité · délai)</span><button class="btn btn-secondary btn-sm" onclick="openReserve()">➕ Réserve</button></div>'
+    +'<div class="table-wrap"><table style="font-size:12px;"><thead><tr><th>Libellé</th><th>Localisation</th><th>Gravité</th><th>Délai</th><th>Statut</th><th></th></tr></thead><tbody>'+dosReserveRows(true)+'</tbody></table></div>'
+    +(e===1?'<button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="dosCloturePre()">Clôturer la pré-réception → étape 2</button> <button class="btn btn-secondary btn-sm" onclick="dosPrintPV(\'pre\')">🖨️ PV pré-réception</button>':'')
+    +'</div>';
+
+  // Étape 2
+  var s2='<div class="card" style="margin-bottom:12px;padding:12px;opacity:'+(e>=2?'1':'0.5')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="color:var(--or);">② Visite de réception (promoteur + souscripteur)</strong>'+(d.visite.pv_provisoire?'<span class="badge badge-vert">PV provisoire signé</span>':'')+'</div>'
+    +'<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:8px;"><div class="form-group"><label>Date de visite</label><input type="date" class="form-control" value="'+(d.visite.date_prevue||'')+'" onchange="dosSetField(\'visite.date_prevue\',this.value)"></div><div class="form-group"><label>Invitation</label><div>'+(d.visite.invite?'<span class="badge badge-vert">Souscripteur invité</span>':(e===2?'<button class="btn btn-secondary btn-sm" onclick="dosInviter()">📩 Inviter le souscripteur</button>':'—'))+'</div></div></div>'
+    +'<div class="form-group"><label>Observations du souscripteur (saisies au portail)</label><div style="font-size:12px;padding:6px 8px;background:var(--card2);border-radius:6px;min-height:30px;">'+(d.visite.observations_souscripteur||'<em style="color:var(--blanc-dim);">aucune</em>')+'</div></div>'
+    +(e===2&&d.visite.invite?'<button class="btn btn-primary btn-sm" onclick="dosSignerProvisoire()">Signer le PV de réception provisoire → étape 3</button> <button class="btn btn-secondary btn-sm" onclick="dosPrintPV(\'provisoire\')">🖨️ PV provisoire</button>':'')
+    +'</div>';
+
+  // Étape 3
+  var prog=(d.reserves||[]).length?Math.round((d.reserves.filter(dosResLevee).length/d.reserves.length)*100):100;
+  var s3='<div class="card" style="margin-bottom:12px;padding:12px;opacity:'+(e>=3?'1':'0.5')+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="color:var(--or);">③ Levée des réserves (constructeur)</strong><span style="font-size:12px;">'+prog+'% levées</span></div>'
+    +'<div class="table-wrap" style="margin-top:8px;"><table style="font-size:12px;"><thead><tr><th>Libellé</th><th>Localisation</th><th>Gravité</th><th>Délai</th><th>Statut</th><th></th></tr></thead><tbody>'+dosReserveRows(e>=3&&e<5)+'</tbody></table></div>'
+    +(e===3?(dosAllLevees(d)?'<div style="color:var(--vert);font-size:12px;margin-top:8px;">✅ Toutes les réserves sont levées → passez à la réception définitive.</div>':'<div style="color:var(--or);font-size:12px;margin-top:8px;">Traitez les réserves ; le souscripteur valide chaque levée depuis le portail.</div>'):'')
+    +'</div>';
+
+  // Étape 4
+  var canDef=e>=3&&dosAllLevees(d);
+  var s4='<div class="card" style="margin-bottom:12px;padding:12px;opacity:'+(e>=4?'1':(canDef?'1':'0.5'))+';"><div style="display:flex;justify-content:space-between;align-items:center;"><strong style="color:var(--or);">④ Réception définitive (promoteur)</strong>'+(d.definitive.pv?'<span class="badge badge-vert">PV définitif</span>':'')+'</div>'
+    +'<div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:8px;"><div class="form-group"><label>Date</label><input type="date" class="form-control" value="'+(d.definitive.date||'')+'" onchange="dosSetField(\'definitive.date\',this.value)"></div><div class="form-group"><label>Clés remises</label><input type="number" class="form-control" value="'+(d.definitive.cles_remises||0)+'" onchange="dosSetField(\'definitive.cles_remises\',parseFloat(this.value)||0)"></div><div class="form-group"><label>Docs de garantie</label><label style="font-size:12px;font-weight:normal;"><input type="checkbox" '+(d.definitive.docs_garantie?'checked':'')+' onchange="dosSetField(\'definitive.docs_garantie\',this.checked)"> remis</label></div></div>'
+    +((e===3||e===4)&&canDef?'<button class="btn btn-primary btn-sm" onclick="dosCloreDefinitive()">Générer PV définitif & remise des clés → clôture</button> ':'')
+    +(e>=4?'<button class="btn btn-secondary btn-sm" onclick="dosPrintPV(\'definitif\')">🖨️ PV définitif</button>':'')
+    +'</div>';
+
+  // Étape 5 / publication
+  var s5='<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:4px;"><label style="font-size:12px;font-weight:normal;"><input type="checkbox" '+(d.publie_portail?'checked':'')+' onchange="dosTogglePortail(this.checked)"> 🌐 Publier au portail souscripteur</label>'+(e>=5?'<span class="badge badge-vert">Dossier clôturé</span>':'')+'</div>';
+
+  document.getElementById('dossier-body').innerHTML = head+info+dosStepper(e)+s1+s2+s3+s4+s5
+    +'<div class="modal-footer" style="margin-top:12px;"><button class="btn btn-secondary" onclick="closeModal(\'modal-dossier\')">Fermer</button><button class="btn btn-primary" onclick="saveDossier()">Enregistrer</button></div>';
+}
+
+/* Réserves */
+var _resEdit=null;
+function openReserve(idx){
+  _resEdit=(idx===undefined||idx===null)?null:idx;
+  var r=(_resEdit!==null)?dosCurrent.reserves[_resEdit]:{libelle:'',localisation:'',gravite:'mineure',delai:'',origine:'constructeur'};
+  document.getElementById('reserve-title').textContent=(_resEdit!==null)?'Modifier la réserve':'Nouvelle réserve';
+  document.getElementById('res-libelle').value=r.libelle||''; document.getElementById('res-loc').value=r.localisation||'';
+  document.getElementById('res-gravite').value=r.gravite||'mineure'; document.getElementById('res-delai').value=r.delai||'';
+  document.getElementById('res-origine').value=r.origine||'constructeur';
+  document.getElementById('modal-reserve').classList.add('open');
+}
+async function saveReserve(){
+  var lib=document.getElementById('res-libelle').value.trim(); if(!lib){ toast('Libellé requis.','error'); return; }
+  var obj={ libelle:lib, localisation:document.getElementById('res-loc').value.trim(), gravite:document.getElementById('res-gravite').value, delai:document.getElementById('res-delai').value, origine:document.getElementById('res-origine').value };
+  if(_resEdit!==null){ Object.assign(dosCurrent.reserves[_resEdit],obj); }
+  else { obj.id=uid(); obj.statut='ouverte'; obj.sous_valide=false; dosCurrent.reserves.push(obj); }
+  closeModal('modal-reserve'); await dosPersist(true); toast('Réserve enregistrée.','success');
+}
+async function dosDeleteReserve(i){ if(!confirm('Supprimer cette réserve ?'))return; dosCurrent.reserves.splice(i,1); await dosPersist(true); }
+var _trtIdx=null;
+function openTraitement(i){ _trtIdx=i; var r=dosCurrent.reserves[i]; document.getElementById('trt-desc').value=r.traitement_desc||''; document.getElementById('trt-photo').value=r.traitement_photo||''; document.getElementById('modal-traitement').classList.add('open'); }
+async function saveTraitement(){ var r=dosCurrent.reserves[_trtIdx]; r.traitement_desc=document.getElementById('trt-desc').value.trim(); r.traitement_photo=document.getElementById('trt-photo').value.trim(); r.statut='traitee'; r.traite_date=today(); closeModal('modal-traitement'); await dosPersist(true); toast('Réserve traitée — en attente de validation souscripteur.','success'); }
+async function dosAccepterReserve(i){ var r=dosCurrent.reserves[i]; r.statut='acceptee'; r.sous_valide=true; r.sous_valide_date=today(); await dosPersist(true); toast('Réserve acceptée.','success'); }
+
+/* Transitions d'étape */
+async function dosCloturePre(){ if(!dosCurrent.client_id){ toast('Souscripteur requis.','error'); return; } dosCurrent.pre_reception.fait=true; dosCurrent.pre_reception.date=dosCurrent.pre_reception.date||today(); dosCurrent.etape=2; await dosPersist(true); toast('Pré-réception clôturée. PV disponible.','success'); }
+async function dosInviter(){ dosCurrent.visite.invite=true; if(!dosCurrent.visite.date_prevue)dosCurrent.visite.date_prevue=today(); dosCurrent.publie_portail=true; await dosPersist(true); toast('📩 Souscripteur invité (visible au portail).','success'); }
+async function dosSignerProvisoire(){ dosCurrent.visite.pv_provisoire=true; dosCurrent.visite.signe_date=today(); dosCurrent.etape=3; await dosPersist(true); toast('PV de réception provisoire signé.','success'); }
+async function dosCloreDefinitive(){ if(!dosAllLevees(dosCurrent)){ toast('Toutes les réserves doivent être levées/acceptées.','error'); return; } dosCurrent.definitive.pv=true; dosCurrent.definitive.date=dosCurrent.definitive.date||today(); dosCurrent.etape=5; dosCurrent.statut='clos'; await dosPersist(true); toast('🔑 Réception définitive prononcée.','success'); }
+async function dosTogglePortail(v){ dosCurrent.publie_portail=v; await dosPersist(false); toast(v?'🌐 Publié au portail.':'Retiré du portail.','info'); }
+
+/* PV */
+function dosPrintPV(kind){
+  var d=dosCurrent; var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var titres={pre:'PROCÈS-VERBAL DE PRÉ-RÉCEPTION',provisoire:'PROCÈS-VERBAL DE RÉCEPTION PROVISOIRE',definitif:'PROCÈS-VERBAL DE RÉCEPTION DÉFINITIVE'};
+  var res=(d.reserves||[]).map(function(r,i){return '<tr><td>'+(i+1)+'</td><td>'+r.libelle+'</td><td>'+(r.localisation||'')+'</td><td>'+(r.gravite||'')+'</td><td>'+(r.delai||'')+'</td><td>'+(dosResLevee(r)?'Levée':(r.statut||'ouverte'))+'</td></tr>';}).join('')||'<tr><td colspan="6" style="text-align:center;">Aucune réserve</td></tr>';
+  var extra='';
+  if(kind==='definitif') extra='<p><strong>Clés remises :</strong> '+(d.definitive.cles_remises||0)+' &nbsp;·&nbsp; <strong>Documents de garantie :</strong> '+(d.definitive.docs_garantie?'remis':'—')+'</p>';
+  if(kind==='provisoire'&&d.visite.observations_souscripteur) extra='<p><strong>Observations du souscripteur :</strong> '+d.visite.observations_souscripteur+'</p>';
+  var dt=(kind==='pre')?d.pre_reception.date:(kind==='provisoire'?d.visite.signe_date||d.visite.date_prevue:d.definitive.date);
+  var win=window.open('','','width=820,height=760');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titres[kind]+' '+d.numero+'</title><style>body{font-family:Georgia,serif;padding:40px;font-size:13px;}h1{color:#1A3A6B;text-align:center;font-size:18px;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 9px;}th{background:#EEF2F9;}.muted{color:#666;font-size:12px;}.sign{margin-top:46px;display:flex;justify-content:space-between;}</style></head><body>'
+    +'<div style="display:flex;justify-content:space-between;"><strong style="font-size:15px;">'+soc+'</strong><span class="muted">N° '+d.numero+'<br>Date : '+(dt||'')+'</span></div>'
+    +'<h1>'+titres[kind]+'</h1>'
+    +'<p><strong>Souscripteur :</strong> '+rlClientLabel(d.client_id)+'<br><strong>Bien :</strong> '+(rlLotLabel(d.lot_id)||'—')+'<br><strong>Programme :</strong> '+rlProgName(d.programme_id)+'<br><strong>Constructeur :</strong> '+(rlConstrName(d.constructeur_id)||'—')+'</p>'
+    +(d.pre_reception.etat_lieux?('<p><strong>État des lieux :</strong> '+d.pre_reception.etat_lieux+'</p>'):'')
+    +extra
+    +'<h3>Réserves</h3><table><thead><tr><th>#</th><th>Libellé</th><th>Localisation</th><th>Gravité</th><th>Délai</th><th>État</th></tr></thead><tbody>'+res+'</tbody></table>'
+    +'<div class="sign"><div class="muted">Le Promoteur<br><br>____________</div>'+(kind!=='pre'?'<div class="muted">Le Souscripteur<br><br>____________</div>':'')+'<div class="muted">Le Constructeur<br><br>____________</div></div>'
     +'</body></html>');
   win.document.close(); win.print();
 }
