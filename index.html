@@ -11781,7 +11781,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;">
           <strong>Tableau des coordonnées (bornes)</strong>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
             <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
             <button class="btn btn-secondary btn-sm" onclick="brnImportCSV()">📥 Import CSV</button>
@@ -11790,6 +11790,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <button class="btn btn-primary btn-sm" onclick="genererPlanParcellaire()">📐 Plan parcellaire</button>
             <input type="file" id="brn-csv-input" accept=".csv,.txt" style="display:none" onchange="brnCSVLoaded(this)">
           </div>
+        </div>
+        <!-- Barre démo données -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--or-glow,rgba(184,115,51,.10));border-radius:8px;border:1px dashed var(--or,#B87333);">
+          <span style="font-size:12px;color:var(--or,#B87333);font-weight:600;">🎲 Jeu de démo :</span>
+          <select id="brn-demo-select" class="form-control" style="flex:1;font-size:12px;max-width:280px;">
+            <option value="songon">📍 Songon (résidentiel · 2 500 m² · 8 bornes · UTM 30N)</option>
+            <option value="bounoua">📍 Bounoua – TF 4726 (agricole · 14 ha · 11 bornes · relief 12-19 m)</option>
+            <option value="divo">📍 Divo (industriel · 5 000 m² · 7 bornes · relief 185-210 m)</option>
+            <option value="assinie">📍 Assinie-Mafia (balnéaire · 1 200 m² · 5 bornes · bord de mer)</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="brnLoadDemo()">⚡ Injecter</button>
         </div>
         <div class="table-wrap">
           <table id="table-bornes">
@@ -44653,6 +44664,156 @@ function brnCSVLoaded(input) {
   reader.readAsText(f);
 }
 
+/* ── 4. Jeux de données démo (bornage + cadastre) ────────
+   Injecte bornes X/Y/Z + champs cadastraux dans le modal ouvert.
+   4 parcelles types : Songon · Bounoua · Divo · Assinie
+*/
+var BRN_DEMO_DATA = {
+
+  /* ─────────────────────────────────────────────────────
+     SONGON — Parcelle résidentielle périurbaine Abidjan
+     Zone : Songon Agban · Commune d'Abidjan (Yopougon)
+     Titre : ACD (Attestation Coutumière de Droits)
+     Superficie : ≈ 2 500 m² · Relief légèrement vallonné (6-14 m)
+  ───────────────────────────────────────────────────── */
+  songon: {
+    cadastre: {
+      'parc-tf-num':       'ACD 1182/YOP',
+      'parc-morcellement': 'SONGON-AGBAN',
+      'parc-livre-foncier':'Abidjan',
+      'parc-cedant':       'Communauté villageoise de Songon',
+      'parc-demandeur':    'SANIX Africa SARL',
+      'parc-contenance':   '25 a 12 ca',
+      'parc-geometre':     'COULIBALY MOUSSA (Géomètre Assermenté)',
+      'parc-date-plan':    '2024-03-15',
+      'parc-echelle':      '1/500'
+    },
+    bornes: [
+      { nom:'B1',  x:263480.220, y:585312.440, z: 8.32, angle:  0.000, distance:   0.000 },
+      { nom:'B2',  x:263530.875, y:585312.440, z: 8.95, angle: 90.000, distance:  50.655 },
+      { nom:'B3',  x:263530.875, y:585361.880, z:11.20, angle:  0.000, distance:  49.440 },
+      { nom:'B4',  x:263560.110, y:585361.880, z:12.85, angle: 90.000, distance:  29.235 },
+      { nom:'B5',  x:263560.110, y:585412.920, z:13.74, angle:  0.000, distance:  51.040 },
+      { nom:'B6',  x:263480.220, y:585412.920, z:10.60, angle:270.000, distance:  79.890 },
+      { nom:'B7',  x:263455.680, y:585390.530, z: 9.18, angle:200.000, distance:  32.145 },
+      { nom:'B8',  x:263455.680, y:585312.440, z: 7.45, angle:270.000, distance:  78.090 }
+    ]
+  },
+
+  /* ─────────────────────────────────────────────────────
+     BOUNOUA — Parcelle agricole (morcellement TF 4726)
+     Zone : YAOU · Sous-préfecture de Bonoua · Grand-Bassam
+     Titre : TF 21289 · Plan certifié 09/06/2022
+     Superficie : 14 ha 39 a 25 ca · Relief 12-19 m NGI
+  ───────────────────────────────────────────────────── */
+  bounoua: {
+    cadastre: {
+      'parc-tf-num':       'TF 21289',
+      'parc-morcellement': '4726',
+      'parc-livre-foncier':'Bassam',
+      'parc-cedant':       'ÉTAT-CI',
+      'parc-demandeur':    'LGI-BTP',
+      'parc-contenance':   '14 ha 39 a 25 ca',
+      'parc-geometre':     'SORO NANGA DIDIER (Géomètre-Expert Assermenté)',
+      'parc-date-plan':    '2022-06-09',
+      'parc-echelle':      '1/7000'
+    },
+    bornes: [
+      { nom:'B1',  x:430434.395, y:576815.718, z:18.4, angle: 62.453, distance:657.828 },
+      { nom:'B2',  x:430434.395, y:576157.890, z:16.2, angle:126.372, distance: 21.528 },
+      { nom:'B3',  x:430414.688, y:576149.225, z:15.9, angle:127.171, distance:549.522 },
+      { nom:'B4',  x:430005.105, y:576515.581, z:12.1, angle: 87.488, distance: 10.511 },
+      { nom:'B5',  x:430013.508, y:576521.896, z:12.5, angle:155.989, distance: 26.125 },
+      { nom:'B6',  x:430039.604, y:576520.674, z:13.0, angle:217.844, distance: 57.839 },
+      { nom:'B7',  x:430095.873, y:576534.056, z:14.3, angle:209.579, distance:  9.288 },
+      { nom:'B8',  x:430104.485, y:576537.535, z:14.8, angle:221.816, distance: 29.593 },
+      { nom:'B9',  x:430126.604, y:576557.195, z:15.6, angle:299.125, distance: 22.427 },
+      { nom:'B10', x:430111.936, y:576574.161, z:16.9, angle:102.797, distance:128.725 },
+      { nom:'B11', x:430205.521, y:576662.546, z:19.2, angle:189.366, distance:275.399 }
+    ]
+  },
+
+  /* ─────────────────────────────────────────────────────
+     DIVO — Parcelle industrielle (zone MI)
+     Zone : Quartier Industriel Divo · Département de Divo
+     Titre : TF 3841 · Lotissement SODEFOR-CI
+     Superficie : ≈ 5 000 m² · Relief marqué 185-212 m (plateaux)
+  ───────────────────────────────────────────────────── */
+  divo: {
+    cadastre: {
+      'parc-tf-num':       'TF 3841/DIVO',
+      'parc-morcellement': 'ZI-DIVO-B2',
+      'parc-livre-foncier':'Divo',
+      'parc-cedant':       'SODEFOR-CI / État-CI',
+      'parc-demandeur':    'SANIX Factory SARL',
+      'parc-contenance':   '50 a 20 ca',
+      'parc-geometre':     'BROU JEAN-CLAUDE (Géomètre Agréé DAT)',
+      'parc-date-plan':    '2023-11-08',
+      'parc-echelle':      '1/1000'
+    },
+    bornes: [
+      { nom:'B1', x:199320.500, y:544180.200, z:185.20, angle:  0.000, distance:  0.000 },
+      { nom:'B2', x:199420.800, y:544180.200, z:188.75, angle: 90.000, distance:100.300 },
+      { nom:'B3', x:199420.800, y:544280.450, z:197.40, angle:  0.000, distance:100.250 },
+      { nom:'B4', x:199395.600, y:544310.880, z:205.60, angle: 45.000, distance: 39.520 },
+      { nom:'B5', x:199355.200, y:544310.880, z:211.80, angle:270.000, distance: 40.400 },
+      { nom:'B6', x:199320.500, y:544280.450, z:206.35, angle:210.000, distance: 44.070 },
+      { nom:'B7', x:199300.400, y:544230.320, z:194.50, angle:230.000, distance: 55.680 }
+    ]
+  },
+
+  /* ─────────────────────────────────────────────────────
+     ASSINIE-MAFIA — Parcelle balnéaire/résidentielle
+     Zone : Assinie-Mafia · Sous-préfecture d'Assinie
+     Titre : TF 1056/AM · Bord de lagune
+     Superficie : ≈ 1 200 m² · Terrain quasi-plat (2-5 m NGI)
+  ───────────────────────────────────────────────────── */
+  assinie: {
+    cadastre: {
+      'parc-tf-num':       'TF 1056/AM',
+      'parc-morcellement': 'ASSINIE-LAC-B',
+      'parc-livre-foncier':'Aboisso',
+      'parc-cedant':       'Héritiers KONAN YAPI',
+      'parc-demandeur':    'RÉSIDENCE LAGUNE BLEUE SARL',
+      'parc-contenance':   '12 a 05 ca',
+      'parc-geometre':     'DOSSO ABOUBACAR (Expert Foncier DAT)',
+      'parc-date-plan':    '2025-01-22',
+      'parc-echelle':      '1/250'
+    },
+    bornes: [
+      { nom:'B1', x:401780.340, y:551240.120, z:2.15, angle:  0.000, distance:  0.000 },
+      { nom:'B2', x:401840.680, y:551240.120, z:2.45, angle: 90.000, distance: 60.340 },
+      { nom:'B3', x:401840.680, y:551320.550, z:3.80, angle:  0.000, distance: 80.430 },
+      { nom:'B4', x:401800.120, y:551340.770, z:4.95, angle:150.000, distance: 45.210 },
+      { nom:'B5', x:401780.340, y:551320.550, z:3.10, angle:225.000, distance: 27.850 }
+    ]
+  }
+};
+
+function brnLoadDemo() {
+  var sel = document.getElementById('brn-demo-select');
+  var key = sel ? sel.value : 'songon';
+  var demo = BRN_DEMO_DATA[key];
+  if (!demo) { toast('Jeu de démo introuvable', 'error'); return; }
+
+  /* Peupler les champs cadastraux */
+  Object.keys(demo.cadastre).forEach(function(fid) {
+    var el = document.getElementById(fid);
+    if (el) el.value = demo.cadastre[fid];
+  });
+
+  /* Peupler les bornes */
+  _brnList = JSON.parse(JSON.stringify(demo.bornes));
+  brnRender();
+
+  /* Calculer et afficher la superficie */
+  var a = brnArea();
+  var sfEl = document.getElementById('parc-sf-totale');
+  if (sfEl && a) sfEl.value = Math.round(a);
+
+  var labels = { songon:'Songon Agban', bounoua:'Bounoua TF 4726', divo:'Divo Zone Industrielle', assinie:'Assinie-Mafia' };
+  toast('✅ Démo « '+labels[key]+' » injectée — '+demo.bornes.length+' bornes · superficie '+fmtF(Math.round(a))+' m²', 'success');
+}
 /* ── 2. Profil de terrain (coupe SVG) ───────────────────
    Génère un profil altimétrique en suivant le périmètre des bornes.
    Affiche un popup avec :
