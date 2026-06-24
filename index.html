@@ -2167,6 +2167,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('stock')" data-page="stock">
         <span class="nav-icon">📦</span><span>Stock Materiaux</span>
       </div>
+      <div class="nav-item" onclick="goTo('achats')" data-page="achats">
+        <span class="nav-icon">🛒</span><span>Achats &amp; Commandes</span>
+      </div>
+      <div class="nav-item" onclick="goTo('validations')" data-page="validations">
+        <span class="nav-icon">✅</span><span>Validations</span>
+      </div>
 
       <!-- ÉTAPE 4 : COMMERCIAL — prospecter et convertir -->
       <div class="nav-section"><span class="nav-step">4</span><span>Commercial &amp; CRM</span></div>
@@ -3745,6 +3751,130 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-stock-compta')">Annuler</button><button class="btn btn-primary" onclick="saveStockCompta()">Enregistrer</button></div>
         </div>
+      </div>
+
+      <!-- ══ ACHATS & COMMANDES ══════════════════════════════════════ -->
+      <div class="page" id="page-achats">
+        <div class="page-header">
+          <div>
+            <div class="step-badge">③ Études &amp; Chantier</div>
+            <div class="page-title">🛒 Achats &amp; Commandes</div>
+            <div class="page-subtitle">Cycle achat matériaux : bon de commande → réception (BL) → facture</div>
+          </div>
+          <button class="btn btn-primary" onclick="openBC()">➕ Bon de commande</button>
+        </div>
+        <div class="kpi-grid" id="kpi-achats" style="margin-bottom:18px;"></div>
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('achats','bc')">📑 Bons de commande</button>
+          <button class="tab-btn" onclick="switchTab('achats','rec')">📥 Réceptions (BL)</button>
+          <button class="tab-btn" onclick="switchTab('achats','fac')">🧾 Factures fournisseur</button>
+        </div>
+        <div class="tab-pane active" id="tab-achats-bc">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>Fournisseur</th><th>Date</th><th>Chantier</th><th style="text-align:right;">Montant HT</th><th>Réceptionné</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="tbody-bc"></tbody>
+          </table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-achats-rec">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>BC</th><th>Date</th><th>Dépôt</th><th>Fournisseur</th><th style="text-align:right;">Valeur HT</th><th>Facture</th><th></th></tr></thead>
+            <tbody id="tbody-rec"></tbody>
+          </table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-achats-fac">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N° facture</th><th>Date</th><th>Fournisseur</th><th>Réception</th><th style="text-align:right;">HT</th><th style="text-align:right;">TVA</th><th style="text-align:right;">AIRSI</th><th style="text-align:right;">Net à payer</th><th></th></tr></thead>
+            <tbody id="tbody-fac"></tbody>
+          </table></div></div>
+        </div>
+      </div>
+
+      <!-- Modal Bon de commande -->
+      <div class="modal-overlay" id="modal-bc">
+        <div class="modal" style="max-width:760px;">
+          <div class="modal-header"><div class="modal-title" id="bc-modal-title">➕ Bon de commande</div><button class="modal-close" onclick="closeModal('modal-bc')">✕</button></div>
+          <div class="modal-body">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <div class="form-group"><label>N°</label><input class="form-control" id="bc-numero" placeholder="auto"></div>
+              <div class="form-group"><label>Date</label><input type="date" class="form-control" id="bc-date"></div>
+              <div class="form-group"><label>Fournisseur *</label><select class="form-control" id="bc-fournisseur"></select></div>
+              <div class="form-group"><label>Chantier (convention)</label><select class="form-control" id="bc-chantier"></select></div>
+              <div class="form-group"><label>Dépôt de réception</label><select class="form-control" id="bc-depot"></select></div>
+              <div class="form-group"><label>Délai souhaité</label><input type="date" class="form-control" id="bc-delai"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 6px;">
+              <strong style="color:var(--or);">Lignes de commande</strong>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="bcAddLine()">➕ Ligne</button>
+            </div>
+            <div class="table-wrap"><table style="font-size:12px;">
+              <thead><tr><th>Matériau</th><th style="width:90px;">Qté</th><th style="width:110px;">PU HT</th><th style="width:110px;text-align:right;">Total</th><th style="width:34px;"></th></tr></thead>
+              <tbody id="bc-lines"></tbody>
+              <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700;">Total HT</td><td style="text-align:right;font-weight:700;" id="bc-total">0</td><td></td></tr></tfoot>
+            </table></div>
+            <div class="form-group" style="margin-top:10px;"><label>Notes</label><input class="form-control" id="bc-notes" placeholder="Conditions, référence devis…"></div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-bc')">Annuler</button><button class="btn btn-primary" onclick="saveBC()">Enregistrer (brouillon)</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Réception -->
+      <div class="modal-overlay" id="modal-reception">
+        <div class="modal" style="max-width:680px;">
+          <div class="modal-header"><div class="modal-title">📥 Réception de matériaux (BL)</div><button class="modal-close" onclick="closeModal('modal-reception')">✕</button></div>
+          <div class="modal-body">
+            <div id="rec-entete" style="font-size:13px;margin-bottom:10px;"></div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+              <div class="form-group"><label>Date de réception</label><input type="date" class="form-control" id="rec-date"></div>
+              <div class="form-group"><label>Dépôt de réception</label><select class="form-control" id="rec-depot"></select></div>
+            </div>
+            <div class="table-wrap" style="margin-top:8px;"><table style="font-size:12px;">
+              <thead><tr><th>Matériau</th><th style="text-align:right;">Commandé</th><th style="text-align:right;">Déjà reçu</th><th style="text-align:right;">Reliquat</th><th style="width:100px;">À recevoir</th></tr></thead>
+              <tbody id="rec-lines"></tbody>
+            </table></div>
+            <div id="rec-info" style="font-size:11px;color:var(--blanc-dim);margin-top:8px;">La réception alimente le stock (CUMP) et provisionne la dette en 408 (factures non parvenues) ; la facture soldera 408 → 401.</div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-reception')">Annuler</button><button class="btn btn-primary" onclick="saveReception()">Valider la réception</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Facture fournisseur -->
+      <div class="modal-overlay" id="modal-facture">
+        <div class="modal" style="max-width:560px;">
+          <div class="modal-header"><div class="modal-title">🧾 Facture fournisseur</div><button class="modal-close" onclick="closeModal('modal-facture')">✕</button></div>
+          <div class="modal-body">
+            <div id="fac-entete" style="font-size:13px;margin-bottom:10px;"></div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+              <div class="form-group"><label>N° facture fournisseur *</label><input class="form-control" id="fac-numero" placeholder="ex : F-2026-0148"></div>
+              <div class="form-group"><label>Date facture</label><input type="date" class="form-control" id="fac-date"></div>
+              <div class="form-group"><label>Montant HT facturé *</label><input type="number" class="form-control" id="fac-ht" min="0" step="any"></div>
+              <div class="form-group"><label>TVA</label><select class="form-control" id="fac-tvamode"><option value="deductible">Déductible 18 %</option><option value="non_deductible">Non déductible 18 %</option><option value="exonere">Exonéré / 0 %</option></select></div>
+              <div class="form-group"><label>Mode de règlement</label><select class="form-control" id="fac-mode" onchange="facModeToggle()"><option value="credit">À crédit (401)</option><option value="comptant">Comptant (trésorerie)</option></select></div>
+              <div class="form-group" id="fac-treso-wrap" style="display:none;"><label>Compte trésorerie</label><select class="form-control" id="fac-tresorerie"></select></div>
+            </div>
+            <div id="fac-rappro" style="font-size:11.5px;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--card2);"></div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-facture')">Annuler</button><button class="btn btn-primary" onclick="saveFactureFournisseur()">Comptabiliser la facture</button></div>
+        </div>
+      </div>
+
+      <!-- ══ VALIDATIONS HIÉRARCHIQUES ══════════════════════════════ -->
+      <div class="page" id="page-validations">
+        <div class="page-header">
+          <div>
+            <div class="step-badge">Contrôle interne</div>
+            <div class="page-title">✅ Validations hiérarchiques</div>
+            <div class="page-subtitle">Engagements et actes soumis au visa de la Direction</div>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpi-validations" style="margin-bottom:18px;"></div>
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="valSetFilter('en_attente')">⏳ En attente</button>
+          <button class="tab-btn" onclick="valSetFilter('histo')">📜 Historique</button>
+        </div>
+        <div class="card"><div class="table-wrap"><table>
+          <thead><tr><th>Type</th><th>Objet</th><th style="text-align:right;">Montant</th><th>Demandeur</th><th>Date</th><th>Statut</th><th></th></tr></thead>
+          <tbody id="tbody-validations"></tbody>
+        </table></div></div>
       </div>
 
       <div class="page" id="page-parametres">
@@ -13869,6 +13999,10 @@ var DATA = {
   chantier_couts: [],
   depots: [],
   fournisseurs: [],
+  bons_commande: [],
+  receptions: [],
+  factures_fournisseur: [],
+  validations: [],
   cessions_foncieres: [],
   lot_unites: [],
   /* v114 — Aménagement foncier */
@@ -13880,7 +14014,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 122; /* v122: fournisseurs (appro matériaux) */
+var DB_VERSION = 124; /* v124: cycle achat (bons_commande, receptions, factures_fournisseur) + validations */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -13934,7 +14068,11 @@ var ALL_STORES = [
   'stock_mouvements',
   'chantier_couts',
   'depots',
-  'fournisseurs'
+  'fournisseurs',
+  'bons_commande',
+  'receptions',
+  'factures_fournisseur',
+  'validations'
 ];
 
 function initDB() {
@@ -14355,6 +14493,10 @@ var SUPA_STORE_MAP = [
   ['pi_chantier_couts',  'chantier_couts'],
   ['pi_depots',          'depots'],
   ['pi_fournisseurs',    'fournisseurs'],
+  ['pi_bons_commande',   'bons_commande'],
+  ['pi_receptions',      'receptions'],
+  ['pi_factures_fournisseur','factures_fournisseur'],
+  ['pi_validations',     'validations'],
   ['pi_af_operations',   'af_operations'],
   ['pi_af_agents',       'af_agents'],
   ['pi_employes',        'employes'],
@@ -15157,6 +15299,8 @@ function goTo(page) {
   if (page === 'amenagement') { loadAmenagement(); }
   if (page === 'debourse') { edsRender(); }
   if (page === 'stock') { renderStock(); renderMargeChantiers(); }
+  if (page === 'achats') { renderAchats(); }
+  if (page === 'validations') { renderValidations(); }
   if (page === 'foncierops') { afRender(); }
 }
 
@@ -15225,6 +15369,7 @@ function switchTab(context, tab) {
   else if (context === 'params-reporting') prefix = 'tab-params-reporting-';
   else if (context === 'debourse')         prefix = 'tab-debourse-';
   else if (context === 'stock')            prefix = 'tab-stock-';
+  else if (context === 'achats')           prefix = 'tab-achats-';
   else if (context === 'af')               prefix = 'tab-af-';
   else if (context === 'af-op')            prefix = 'tab-af-op-';
   else return;
@@ -45443,7 +45588,8 @@ async function saveStockEntree(){
 }
 function stockComptaCfg(){
   if(!DATA.params) DATA.params={};
-  if(!DATA.params.stock_compta) DATA.params.stock_compta={methode:'permanent',c_achat:'601',c_stock:'31',c_variation:'6031',c_tva:'4452',airsi_taux:0,c_airsi:'4471',c_perte:'658'};
+  if(!DATA.params.stock_compta) DATA.params.stock_compta={methode:'permanent',c_achat:'601',c_stock:'31',c_variation:'6031',c_tva:'4452',airsi_taux:0,c_airsi:'4471',c_perte:'658',c_fnp:'408'};
+  if(DATA.params.stock_compta && !DATA.params.stock_compta.c_fnp) DATA.params.stock_compta.c_fnp='408';
   return DATA.params.stock_compta;
 }
 function openStockCompta(){
@@ -45530,6 +45676,398 @@ async function saveStockRetour(){
   }
   closeModal('modal-stock-retour'); renderStock(); toast('Retour enregistré.','success');
 }
+/* ══════════════════════════════════════════════════════
+   ACHATS — Bon de commande → Réception (BL) → [Facture]
+   ══════════════════════════════════════════════════════ */
+var bcLines=[];
+function bcNextNum(){ var y=new Date().getFullYear(); var n=(DATA.bons_commande||[]).filter(function(b){return (b.numero||'').indexOf('BC-'+y)===0;}).length+1; return 'BC-'+y+'-'+('000'+n).slice(-3); }
+function recNextNum(){ var y=new Date().getFullYear(); var n=(DATA.receptions||[]).length+1; return 'BL-'+y+'-'+('000'+n).slice(-3); }
+function bcFournisseurName(id){ var f=(DATA.fournisseurs||[]).find(function(x){return x.id===id;}); return f?f.nom:'—'; }
+function bcChantierLabel(id){ if(!id)return '—'; var c=(DATA.conventions||[]).find(function(x){return x.id===id;}); return c?c.numero:'—'; }
+function bcReceivedQty(bcId,idx){ var t=0; (DATA.receptions||[]).forEach(function(r){ if(r.bc_id===bcId){ (r.lignes||[]).forEach(function(l){ if(l.idx===idx) t+=parseFloat(l.qte)||0; }); } }); return t; }
+function bcLineLabel(l){ if(l.res_id){ var r=(DATA.eds_ressources||[]).find(function(x){return x.id===l.res_id;}); if(r)return r.libelle; } return l.designation||'—'; }
+function bcTotalHT(b){ return (b.lignes||[]).reduce(function(s,l){return s+(parseFloat(l.qte)||0)*(parseFloat(l.pu)||0);},0); }
+function bcStatutBadge(st){ var m={brouillon:'badge-or',en_attente_validation:'badge-bleu',valide:'badge-vert',rejete:'badge-rouge',envoye:'badge-bleu',receptionne_partiel:'badge-or',receptionne:'badge-vert',annule:'badge-rouge'}; var lib={brouillon:'Brouillon',en_attente_validation:'⏳ À valider',valide:'Validé',rejete:'Rejeté',envoye:'Envoyé',receptionne_partiel:'Reçu partiel',receptionne:'Reçu',annule:'Annulé'}; return '<span class="badge '+(m[st]||'badge-or')+'">'+(lib[st]||st)+'</span>'; }
+
+function renderAchats(){
+  var bcs=(DATA.bons_commande||[]);
+  var enCours=bcs.filter(function(b){return b.statut!=='receptionne'&&b.statut!=='annule';});
+  var engage=enCours.reduce(function(s,b){return s+bcTotalHT(b);},0);
+  var mois=new Date().toISOString().slice(0,7);
+  var recMois=(DATA.receptions||[]).filter(function(r){return (r.date||'').slice(0,7)===mois;}).length;
+  var kpi=document.getElementById('kpi-achats');
+  if(kpi){ kpi.innerHTML=[
+    {l:'BC en cours',v:enCours.length,i:'📑',c:'kpi-blue'},
+    {l:'À réceptionner',v:bcs.filter(function(b){return b.statut==='valide'||b.statut==='envoye'||b.statut==='receptionne_partiel';}).length,i:'📥',c:''},
+    {l:'Montant engagé',v:fmtF(Math.round(engage))+' F',i:'💰',c:'kpi-green'},
+    {l:'Réceptions du mois',v:recMois,i:'📅',c:''},
+  ].map(function(k){return '<div class="kpi-card '+(k.c||'')+'"><div class="kpi-icon">'+k.i+'</div><div class="kpi-value">'+k.v+'</div><div class="kpi-label">'+k.l+'</div></div>';}).join(''); }
+
+  var tb=document.getElementById('tbody-bc');
+  if(tb){
+    if(!bcs.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun bon de commande.</td></tr>'; }
+    else tb.innerHTML=bcs.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).map(function(b){
+      var tot=bcTotalHT(b);
+      var nbL=(b.lignes||[]).length; var recL=(b.lignes||[]).filter(function(l,i){return bcReceivedQty(b.id,i)>=(parseFloat(l.qte)||0)-1e-9;}).length;
+      var canRec=(b.statut==='valide'||b.statut==='envoye'||b.statut==='receptionne_partiel');
+      var acts='';
+      if(b.statut==='brouillon'||b.statut==='rejete') acts+='<button class="btn btn-secondary btn-sm" onclick="submitBC(\''+b.id+'\')" title="Soumettre à validation">📤</button> ';
+      if(b.statut==='en_attente_validation') acts+='<span class="badge badge-bleu" style="font-size:9px;">en validation</span> ';
+      if(canRec) acts+='<button class="btn btn-primary btn-sm" onclick="openReception(\''+b.id+'\')" title="Réceptionner">📥</button> ';
+      acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="printBC(\''+b.id+'\')" title="Imprimer">🖨️</button> ';
+      if(b.statut==='brouillon'||b.statut==='rejete') acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="openBC(\''+b.id+'\')">✏️</button> ';
+      acts+='<button class="btn btn-danger btn-sm btn-icon" onclick="deleteBC(\''+b.id+'\')">🗑</button>';
+      return '<tr><td style="font-family:monospace;color:var(--or);">'+b.numero+'</td>'
+        +'<td style="font-size:12px;">'+bcFournisseurName(b.fournisseur_id)+'</td>'
+        +'<td>'+(b.date||'—')+'</td><td style="font-size:11px;">'+bcChantierLabel(b.chantier_id)+'</td>'
+        +'<td style="text-align:right;font-weight:600;">'+fmtF(Math.round(tot))+'</td>'
+        +'<td style="font-size:11px;">'+recL+' / '+nbL+' lignes</td>'
+        +'<td>'+bcStatutBadge(b.statut)+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
+    }).join('');
+  }
+
+  var tr=document.getElementById('tbody-rec');
+  if(tr){
+    var recs=(DATA.receptions||[]);
+    if(!recs.length){ tr.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune réception.</td></tr>'; }
+    else tr.innerHTML=recs.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).map(function(r){
+      var bc=(DATA.bons_commande||[]).find(function(x){return x.id===r.bc_id;})||{numero:'—'};
+      var val=(r.lignes||[]).reduce(function(s,l){return s+(parseFloat(l.qte)||0)*(parseFloat(l.pu)||0);},0);
+      var fact=r.facture_id?'<span class="badge badge-vert">Facturée</span>':'<span class="badge badge-or">En attente</span>';
+      return '<tr><td style="font-family:monospace;color:var(--or);">'+r.numero+'</td><td style="font-size:11px;">'+bc.numero+'</td><td>'+(r.date||'—')+'</td><td style="font-size:11px;">'+depotName(r.depot_id)+'</td><td style="font-size:12px;">'+bcFournisseurName(r.fournisseur_id)+'</td><td style="text-align:right;font-weight:600;">'+fmtF(Math.round(val))+'</td><td>'+fact+'</td><td>'+(r.facture_id?'':'<button class="btn btn-primary btn-sm" onclick="openFacture(\''+r.id+'\')">🧾 Facturer</button>')+'</td></tr>';
+    }).join('');
+  }
+  var tf=document.getElementById('tbody-fac');
+  if(tf){
+    var facs=(DATA.factures_fournisseur||[]);
+    if(!facs.length){ tf.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune facture fournisseur.</td></tr>'; }
+    else tf.innerHTML=facs.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).map(function(fc){
+      var rec=(DATA.receptions||[]).find(function(x){return x.id===fc.reception_id;})||{numero:'—'};
+      return '<tr><td style="font-family:monospace;color:var(--or);">'+fc.numero+'</td><td>'+(fc.date||'—')+'</td><td style="font-size:12px;">'+bcFournisseurName(fc.fournisseur_id)+'</td><td style="font-size:11px;">'+rec.numero+'</td><td style="text-align:right;">'+fmtF(Math.round(fc.ht||0))+'</td><td style="text-align:right;">'+fmtF(Math.round(fc.tva||0))+'</td><td style="text-align:right;">'+fmtF(Math.round(fc.airsi||0))+'</td><td style="text-align:right;font-weight:700;">'+fmtF(Math.round(fc.net||0))+'</td><td><button class="btn btn-secondary btn-sm btn-icon" onclick="printFacture(\''+fc.id+'\')">🖨️</button></td></tr>';
+    }).join('');
+  }
+}
+
+/* ── Bon de commande ── */
+function bcMatOptions(sel){ var h='<option value="">— matériau —</option><option value="__libre__"'+(sel==='__libre__'?' selected':'')+'>(saisie libre)</option>'; (DATA.eds_ressources||[]).filter(function(r){return r.type==='materiau';}).forEach(function(r){ h+='<option value="'+r.id+'"'+(sel===r.id?' selected':'')+'>'+r.libelle+'</option>'; }); return h; }
+function bcRenderLines(){
+  var tb=document.getElementById('bc-lines'); if(!tb) return;
+  if(!bcLines.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--blanc-dim);padding:10px;">Ajoutez une ligne.</td></tr>'; }
+  else tb.innerHTML=bcLines.map(function(l,i){
+    var tot=(parseFloat(l.qte)||0)*(parseFloat(l.pu)||0);
+    var libreInput=(l.res_id==='__libre__')?'<input class="form-control" style="margin-top:4px;font-size:11px;" placeholder="désignation" value="'+(l.designation||'').replace(/"/g,'&quot;')+'" onchange="bcLineSet('+i+',\'designation\',this.value)">':'';
+    return '<tr>'
+      +'<td><select class="form-control" style="font-size:12px;" onchange="bcLineSet('+i+',\'res_id\',this.value)">'+bcMatOptions(l.res_id)+'</select>'+libreInput+'</td>'
+      +'<td><input type="number" class="form-control" style="font-size:12px;" min="0" step="any" value="'+(l.qte||0)+'" onchange="bcLineSet('+i+',\'qte\',this.value)"></td>'
+      +'<td><input type="number" class="form-control" style="font-size:12px;" min="0" step="any" value="'+(l.pu||0)+'" onchange="bcLineSet('+i+',\'pu\',this.value)"></td>'
+      +'<td style="text-align:right;font-weight:600;">'+fmtF(Math.round(tot))+'</td>'
+      +'<td><button class="btn btn-danger btn-sm btn-icon" onclick="bcRemoveLine('+i+')">✕</button></td></tr>';
+  }).join('');
+  var tot=bcLines.reduce(function(s,l){return s+(parseFloat(l.qte)||0)*(parseFloat(l.pu)||0);},0);
+  var el=document.getElementById('bc-total'); if(el)el.textContent=fmtF(Math.round(tot));
+}
+function bcLineSet(i,field,val){
+  if(!bcLines[i])return;
+  bcLines[i][field]=val;
+  if(field==='res_id'&&val&&val!=='__libre__'){ var r=(DATA.eds_ressources||[]).find(function(x){return x.id===val;}); if(r){ bcLines[i].unite=r.unite; if(!bcLines[i].pu||bcLines[i].pu==0)bcLines[i].pu=r.pu||0; bcLines[i].designation=''; } }
+  bcRenderLines();
+}
+function bcAddLine(){ bcLines.push({res_id:'',designation:'',unite:'',qte:1,pu:0}); bcRenderLines(); }
+function bcRemoveLine(i){ bcLines.splice(i,1); bcRenderLines(); }
+function openBC(id){
+  stockEnsureDepots();
+  document.getElementById('bc-fournisseur').innerHTML=fournisseurOptions('');
+  document.getElementById('bc-depot').innerHTML=depotOptions('dep_central',false);
+  document.getElementById('bc-chantier').innerHTML=stockChantierOptions();
+  APP.editingId=id||null;
+  if(id){
+    var b=(DATA.bons_commande||[]).find(function(x){return x.id===id;});
+    if(!b)return;
+    document.getElementById('bc-modal-title').textContent='✏️ Bon de commande '+b.numero;
+    document.getElementById('bc-numero').value=b.numero;
+    document.getElementById('bc-date').value=b.date||today();
+    document.getElementById('bc-fournisseur').value=b.fournisseur_id||'';
+    document.getElementById('bc-chantier').value=b.chantier_id||'';
+    document.getElementById('bc-depot').value=b.depot_id||'dep_central';
+    document.getElementById('bc-delai').value=b.delai||'';
+    document.getElementById('bc-notes').value=b.notes||'';
+    bcLines=(b.lignes||[]).map(function(l){return {res_id:l.res_id||'',designation:l.designation||'',unite:l.unite||'',qte:l.qte,pu:l.pu};});
+  } else {
+    document.getElementById('bc-modal-title').textContent='➕ Bon de commande';
+    document.getElementById('bc-numero').value=bcNextNum();
+    document.getElementById('bc-date').value=today();
+    document.getElementById('bc-chantier').value=''; document.getElementById('bc-depot').value='dep_central';
+    document.getElementById('bc-delai').value=''; document.getElementById('bc-notes').value='';
+    bcLines=[{res_id:'',designation:'',unite:'',qte:1,pu:0}];
+  }
+  bcRenderLines();
+  document.getElementById('modal-bc').classList.add('open');
+}
+async function saveBC(){
+  var fid=document.getElementById('bc-fournisseur').value;
+  if(!fid){ toast('Choisissez un fournisseur.','error'); return; }
+  var lignes=bcLines.filter(function(l){return (parseFloat(l.qte)||0)>0 && (l.res_id&&l.res_id!=='__libre__'||l.designation);}).map(function(l){
+    return { res_id:(l.res_id&&l.res_id!=='__libre__')?l.res_id:null, designation:(l.res_id==='__libre__')?(l.designation||''):'', unite:l.unite||'', qte:parseFloat(l.qte)||0, pu:parseFloat(l.pu)||0 };
+  });
+  if(!lignes.length){ toast('Ajoutez au moins une ligne valide.','error'); return; }
+  var b={ id:APP.editingId||uid(), numero:document.getElementById('bc-numero').value.trim()||bcNextNum(),
+    fournisseur_id:fid, date:document.getElementById('bc-date').value||today(),
+    chantier_id:document.getElementById('bc-chantier').value||null,
+    depot_id:document.getElementById('bc-depot').value||'dep_central',
+    delai:document.getElementById('bc-delai').value||'',
+    notes:document.getElementById('bc-notes').value.trim(),
+    lignes:lignes, statut:(APP.editingId?(function(){var ex=DATA.bons_commande.find(function(x){return x.id===APP.editingId;});return ex?ex.statut:'brouillon';})():'brouillon'),
+    created_at:APP.editingId?undefined:today() };
+  if(APP.editingId){ var idx=DATA.bons_commande.findIndex(function(x){return x.id===APP.editingId;}); if(idx>=0){ b.created_at=DATA.bons_commande[idx].created_at; b.valide_par=DATA.bons_commande[idx].valide_par; b.valide_date=DATA.bons_commande[idx].valide_date; DATA.bons_commande[idx]=b; } }
+  else DATA.bons_commande.push(b);
+  await dbPut('bons_commande',b); if(typeof syncToSupabase==='function')syncToSupabase('pi_bons_commande',b);
+  closeModal('modal-bc'); renderAchats(); toast('Bon de commande enregistré.','success');
+}
+async function validateBC(id){
+  var b=DATA.bons_commande.find(function(x){return x.id===id;}); if(!b)return;
+  if(!hasRole('admin') && !confirm('Valider ce bon de commande (engagement) ?')) return;
+  b.statut='valide'; b.valide_par=(APP.currentUser&&APP.currentUser.nom)||'—'; b.valide_date=today();
+  await dbPut('bons_commande',b); if(typeof syncToSupabase==='function')syncToSupabase('pi_bons_commande',b);
+  renderAchats(); toast('✅ BC validé.','success');
+}
+async function deleteBC(id){
+  var b=DATA.bons_commande.find(function(x){return x.id===id;});
+  if(b && (DATA.receptions||[]).some(function(r){return r.bc_id===id;})){ toast('Des réceptions existent : suppression impossible.','error'); return; }
+  if(!confirm('Supprimer ce bon de commande ?'))return;
+  DATA.bons_commande=DATA.bons_commande.filter(function(x){return x.id!==id;});
+  await dbDelete('bons_commande',id); renderAchats(); toast('Supprimé.','info');
+}
+function printBC(id){
+  var b=DATA.bons_commande.find(function(x){return x.id===id;}); if(!b)return;
+  var f=(DATA.fournisseurs||[]).find(function(x){return x.id===b.fournisseur_id;})||{nom:'—'};
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var rows=(b.lignes||[]).map(function(l,i){ var t=(l.qte||0)*(l.pu||0); return '<tr><td>'+(i+1)+'</td><td>'+bcLineLabel(l)+'</td><td style="text-align:right;">'+fmtF(l.qte)+' '+(l.unite||'')+'</td><td style="text-align:right;">'+fmtF(l.pu)+'</td><td style="text-align:right;">'+fmtF(Math.round(t))+'</td></tr>'; }).join('');
+  var tot=bcTotalHT(b);
+  var win=window.open('','','width=800,height=700');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bon de commande '+b.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;color:#1a1a1a;}h1{color:#1A3A6B;border-bottom:2px solid #1A3A6B;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.r{text-align:right;}.tot{font-weight:700;font-size:15px;color:#1A3A6B;}.muted{color:#666;font-size:12px;}</style></head><body>'
+    +'<div style="display:flex;justify-content:space-between;"><div><strong style="font-size:16px;">'+soc+'</strong><br><span class="muted">'+(DATA.params&&DATA.params.adresse||'')+'</span></div><div class="r muted">N° '+b.numero+'<br>Date : '+(b.date||'')+(b.delai?('<br>Livraison : '+b.delai):'')+'</div></div>'
+    +'<h1>BON DE COMMANDE</h1>'
+    +'<p><strong>Fournisseur :</strong> '+f.nom+(f.rccm?(' — RCCM '+f.rccm):'')+'<br>'+(b.chantier_id?('<strong>Chantier :</strong> '+bcChantierLabel(b.chantier_id)+'<br>'):'')+'<strong>Dépôt de livraison :</strong> '+depotName(b.depot_id)+'</p>'
+    +'<table><thead><tr><th>#</th><th>Désignation</th><th class="r">Quantité</th><th class="r">PU HT</th><th class="r">Total HT</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="4" class="r tot">TOTAL HT</td><td class="r tot">'+fmtF(Math.round(tot))+' FCFA</td></tr></tfoot></table>'
+    +(b.notes?('<p class="muted"><strong>Notes :</strong> '+b.notes+'</p>'):'')
+    +'<div style="margin-top:40px;display:flex;justify-content:space-between;"><div class="muted">Établi par : '+((APP.currentUser&&APP.currentUser.nom)||'')+'</div><div class="muted">Visa Direction : '+(b.valide_par?(b.valide_par+' ('+b.valide_date+')'):'____________')+'</div></div>'
+    +'</body></html>');
+  win.document.close(); win.print();
+}
+
+/* ── Réception (BL) ── */
+var recCtxBc=null;
+function openReception(bcId){
+  var b=DATA.bons_commande.find(function(x){return x.id===bcId;}); if(!b)return;
+  recCtxBc=b;
+  document.getElementById('rec-depot').innerHTML=depotOptions(b.depot_id||'dep_central',false);
+  document.getElementById('rec-date').value=today();
+  document.getElementById('rec-entete').innerHTML='<strong>BC '+b.numero+'</strong> — '+bcFournisseurName(b.fournisseur_id)+(b.chantier_id?(' — chantier '+bcChantierLabel(b.chantier_id)):'');
+  var tb=document.getElementById('rec-lines');
+  tb.innerHTML=(b.lignes||[]).map(function(l,i){
+    var cmd=parseFloat(l.qte)||0; var recu=bcReceivedQty(b.id,i); var reliq=Math.max(0,cmd-recu);
+    return '<tr><td>'+bcLineLabel(l)+'</td><td style="text-align:right;">'+fmtF(cmd)+' '+(l.unite||'')+'</td><td style="text-align:right;">'+fmtF(recu)+'</td><td style="text-align:right;font-weight:600;">'+fmtF(reliq)+'</td>'
+      +'<td><input type="number" class="form-control" style="font-size:12px;" min="0" max="'+reliq+'" step="any" value="'+reliq+'" data-idx="'+i+'" data-pu="'+(l.pu||0)+'" data-res="'+(l.res_id||'')+'" data-des="'+((l.designation||'').replace(/"/g,'&quot;'))+'" data-unite="'+(l.unite||'')+'"></td></tr>';
+  }).join('');
+  document.getElementById('modal-reception').classList.add('open');
+}
+async function saveReception(){
+  if(!recCtxBc){ return; }
+  var b=recCtxBc;
+  var dep=document.getElementById('rec-depot').value||'dep_central';
+  var dat=document.getElementById('rec-date').value||today();
+  var inputs=document.querySelectorAll('#rec-lines input[data-idx]');
+  var lignes=[]; var anyOver=false;
+  inputs.forEach(function(inp){
+    var q=parseFloat(inp.value)||0; if(q<=0)return;
+    var idx=parseInt(inp.getAttribute('data-idx'));
+    var max=parseFloat(inp.getAttribute('max'))||0; if(q>max+1e-9)anyOver=true;
+    lignes.push({ idx:idx, res_id:inp.getAttribute('data-res')||null, designation:inp.getAttribute('data-des')||'', unite:inp.getAttribute('data-unite')||'', qte:q, pu:parseFloat(inp.getAttribute('data-pu'))||0 });
+  });
+  if(!lignes.length){ toast('Aucune quantité à réceptionner.','error'); return; }
+  if(anyOver){ toast('Une quantité dépasse le reliquat.','error'); return; }
+  var recId=uid(); var recNum=recNextNum();
+  var totalHT=0;
+  // mouvements de stock (entrée) par ligne
+  for(var i=0;i<lignes.length;i++){ var l=lignes[i];
+    var mv={ id:uid(), type:'entree', res_id:(l.res_id&&l.res_id!=='__libre__')?l.res_id:null, designation:(l.res_id&&l.res_id!=='__libre__')?'':(l.designation||''), unite:l.unite, qte:l.qte, pu:l.pu, depot_id:dep, fournisseur_id:b.fournisseur_id, fournisseur:bcFournisseurName(b.fournisseur_id), source:'reception', bc_id:b.id, reception_id:recId, facture_id:null, date:dat, created_at:new Date().toISOString() };
+    DATA.stock_mouvements.push(mv); await dbPut('stock_mouvements',mv); if(typeof syncToSupabase==='function')syncToSupabase('pi_stock_mouvements',mv);
+    totalHT+=l.qte*l.pu;
+  }
+  totalHT=Math.round(totalHT);
+  // réception
+  var rec={ id:recId, numero:recNum, bc_id:b.id, fournisseur_id:b.fournisseur_id, depot_id:dep, date:dat, lignes:lignes, total_ht:totalHT, facture_id:null, created_at:today() };
+  DATA.receptions.push(rec); await dbPut('receptions',rec); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions',rec);
+  // comptabilisation provisoire : achat / FNP 408 + stock permanent
+  var cfg=stockComptaCfg();
+  if(totalHT>0){
+    var e1={ id:'ecr_rec_'+recId, ref:recNum, date:dat, piece:recNum, libelle:'Réception '+recNum+' (BC '+b.numero+') — '+bcFournisseurName(b.fournisseur_id), compte:cfg.c_achat, compte_debit:cfg.c_achat, compte_credit:(cfg.c_fnp||'408'), montant:totalHT, type:'charge', mode:'', created_at:today() };
+    DATA.ecritures.push(e1); await dbPut('ecritures',e1); if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',e1);
+    if(cfg.methode==='permanent'){
+      var e2={ id:'ecr_recstk_'+recId, ref:'STK-'+recNum, date:dat, piece:recNum, libelle:'Entrée en stock '+recNum, compte:cfg.c_stock, compte_debit:cfg.c_stock, compte_credit:cfg.c_variation, montant:totalHT, type:'charge', mode:'', created_at:today() };
+      DATA.ecritures.push(e2); await dbPut('ecritures',e2); if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',e2);
+    }
+  }
+  // statut BC
+  var complete=(b.lignes||[]).every(function(l,i){ return bcReceivedQty(b.id,i) >= (parseFloat(l.qte)||0)-1e-9; });
+  b.statut=complete?'receptionne':'receptionne_partiel';
+  await dbPut('bons_commande',b); if(typeof syncToSupabase==='function')syncToSupabase('pi_bons_commande',b);
+  closeModal('modal-reception'); renderAchats(); if(typeof renderStock==='function')renderStock();
+  toast('📥 Réception '+recNum+' enregistrée (stock + 408).','success');
+}
+
+/* ── Facture fournisseur (rapprochement 3 voies, solde 408 → 401) ── */
+function facModeToggle(){ var w=document.getElementById('fac-treso-wrap'); if(w) w.style.display=(document.getElementById('fac-mode').value==='comptant')?'block':'none'; }
+var facCtxRec=null;
+function openFacture(recId){
+  var r=(DATA.receptions||[]).find(function(x){return x.id===recId;}); if(!r){ toast('Réception introuvable.','error'); return; }
+  if(r.facture_id){ toast('Réception déjà facturée.','error'); return; }
+  facCtxRec=r;
+  var b=(DATA.bons_commande||[]).find(function(x){return x.id===r.bc_id;})||{numero:'—'};
+  document.getElementById('fac-entete').innerHTML='<strong>Réception '+r.numero+'</strong> — '+bcFournisseurName(r.fournisseur_id)+' — BC '+b.numero;
+  document.getElementById('fac-numero').value='';
+  document.getElementById('fac-date').value=today();
+  document.getElementById('fac-ht').value=Math.round(r.total_ht||0);
+  document.getElementById('fac-tvamode').value='deductible';
+  document.getElementById('fac-mode').value='credit';
+  document.getElementById('fac-tresorerie').innerHTML=tresorerieOptions('521');
+  facModeToggle(); facRappro();
+  document.getElementById('fac-ht').oninput=facRappro;
+  document.getElementById('fac-tvamode').onchange=facRappro;
+  document.getElementById('modal-facture').classList.add('open');
+}
+function facRappro(){
+  if(!facCtxRec)return;
+  var recHT=Math.round(facCtxRec.total_ht||0);
+  var ht=parseFloat(document.getElementById('fac-ht').value)||0;
+  var ecart=ht-recHT;
+  var four=(DATA.fournisseurs||[]).find(function(x){return x.id===facCtxRec.fournisseur_id;});
+  var cfg=stockComptaCfg();
+  var tvamode=document.getElementById('fac-tvamode').value;
+  var tva=(tvamode!=='exonere')?Math.round(ht*0.18):0;
+  var airsi=(four&&four.airsi&&cfg.airsi_taux>0)?Math.round(ht*cfg.airsi_taux/100):0;
+  var net=ht+tva-airsi;
+  var col=Math.abs(ecart)<1?'var(--vert)':(Math.abs(ecart)<=recHT*0.05?'var(--or)':'var(--rouge)');
+  document.getElementById('fac-rappro').innerHTML=
+    '<strong>Rapprochement</strong><br>Réception (attendu) : '+fmtF(recHT)+' F &nbsp;|&nbsp; Facturé : '+fmtF(Math.round(ht))+' F &nbsp;|&nbsp; Écart : <strong style="color:'+col+';">'+fmtF(Math.round(ecart))+' F</strong>'
+    +'<br>TVA : '+fmtF(tva)+' F'+(airsi>0?(' &nbsp;|&nbsp; AIRSI '+cfg.airsi_taux+'% : −'+fmtF(airsi)+' F'):'')+' &nbsp;|&nbsp; <strong>Net à payer : '+fmtF(Math.round(net))+' F</strong>'
+    +(Math.abs(ecart)>=1?'<br><span style="color:'+col+';">⚠️ Écart de prix BC/facture — l\'écart sera comptabilisé en 60 (charge).</span>':'');
+}
+async function saveFactureFournisseur(){
+  if(!facCtxRec){ return; }
+  var r=facCtxRec; var num=document.getElementById('fac-numero').value.trim();
+  if(!num){ toast('N° de facture obligatoire.','error'); return; }
+  var ht=parseFloat(document.getElementById('fac-ht').value)||0;
+  if(ht<=0){ toast('Montant HT invalide.','error'); return; }
+  var dat=document.getElementById('fac-date').value||today();
+  var tvamode=document.getElementById('fac-tvamode').value;
+  var mode=document.getElementById('fac-mode').value;
+  var four=(DATA.fournisseurs||[]).find(function(x){return x.id===r.fournisseur_id;});
+  var cfg=stockComptaCfg();
+  var creditCompte = mode==='comptant' ? (document.getElementById('fac-tresorerie').value||'521') : (four&&four.compte?four.compte:'401');
+  var recHT=Math.round(r.total_ht||0);
+  var ecart=Math.round(ht-recHT);
+  var tva=(tvamode!=='exonere')?Math.round(ht*0.18):0;
+  var tvaDeduct=(tvamode==='deductible')?tva:0;
+  var airsi=(four&&four.airsi&&cfg.airsi_taux>0)?Math.round(ht*cfg.airsi_taux/100):0;
+  var net=ht+tva-airsi;
+  var fid=uid(); var pieces=num;
+  async function pushEcr(e){ DATA.ecritures.push(e); await dbPut('ecritures',e); if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',e); }
+  var lib='Facture '+num+' — '+bcFournisseurName(r.fournisseur_id)+' (récep. '+r.numero+')';
+  // solde provision 408 -> fournisseur
+  await pushEcr({ id:'ecr_fac408_'+fid, ref:num, date:dat, piece:pieces, libelle:'Solde FNP s/ '+lib, compte:(cfg.c_fnp||'408'), compte_debit:(cfg.c_fnp||'408'), compte_credit:creditCompte, montant:recHT, type:'passif', mode:mode, created_at:today() });
+  // écart de prix -> charge
+  if(ecart>0) await pushEcr({ id:'ecr_facecP_'+fid, ref:num, date:dat, piece:pieces, libelle:'Écart de prix (facture > BC) — '+lib, compte:cfg.c_achat, compte_debit:cfg.c_achat, compte_credit:creditCompte, montant:ecart, type:'charge', mode:mode, created_at:today() });
+  else if(ecart<0) await pushEcr({ id:'ecr_facecN_'+fid, ref:num, date:dat, piece:pieces, libelle:'Écart de prix (facture < BC) — '+lib, compte:cfg.c_achat, compte_debit:creditCompte, compte_credit:cfg.c_achat, montant:-ecart, type:'charge', mode:mode, created_at:today() });
+  // TVA
+  if(tvaDeduct>0) await pushEcr({ id:'ecr_factva_'+fid, ref:'TVA-'+num, date:dat, piece:pieces, libelle:'TVA déductible s/ '+lib, compte:cfg.c_tva, compte_debit:cfg.c_tva, compte_credit:creditCompte, montant:tvaDeduct, type:'charge', mode:mode, created_at:today() });
+  else if(tvamode==='non_deductible'&&tva>0) await pushEcr({ id:'ecr_factvand_'+fid, ref:'TVA-'+num, date:dat, piece:pieces, libelle:'TVA non déductible (charge) s/ '+lib, compte:cfg.c_achat, compte_debit:cfg.c_achat, compte_credit:creditCompte, montant:tva, type:'charge', mode:mode, created_at:today() });
+  // AIRSI
+  if(airsi>0) await pushEcr({ id:'ecr_facairsi_'+fid, ref:'AIRSI-'+num, date:dat, piece:pieces, libelle:'AIRSI '+cfg.airsi_taux+'% s/ '+lib, compte:cfg.c_airsi, compte_debit:creditCompte, compte_credit:cfg.c_airsi, montant:airsi, type:'passif', mode:mode, created_at:today() });
+  var fc={ id:fid, numero:num, date:dat, fournisseur_id:r.fournisseur_id, reception_id:r.id, bc_id:r.bc_id, ht:ht, tva:tva, tva_mode:tvamode, airsi:airsi, net:net, ecart:ecart, mode:mode, credit_compte:creditCompte, created_at:today() };
+  DATA.factures_fournisseur.push(fc); await dbPut('factures_fournisseur',fc); if(typeof syncToSupabase==='function')syncToSupabase('pi_factures_fournisseur',fc);
+  r.facture_id=fid; await dbPut('receptions',r); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions',r);
+  (DATA.stock_mouvements||[]).forEach(function(m){ if(m.reception_id===r.id){ m.facture_id=fid; dbPut('stock_mouvements',m); } });
+  closeModal('modal-facture'); renderAchats(); toast('🧾 Facture comptabilisée (408 soldé → '+creditCompte+').','success');
+}
+function printFacture(id){
+  var fc=(DATA.factures_fournisseur||[]).find(function(x){return x.id===id;}); if(!fc)return;
+  var r=(DATA.receptions||[]).find(function(x){return x.id===fc.reception_id;})||{numero:'—',lignes:[]};
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var rows=(r.lignes||[]).map(function(l,i){ var t=(l.qte||0)*(l.pu||0); return '<tr><td>'+(i+1)+'</td><td>'+bcLineLabel(l)+'</td><td style="text-align:right;">'+fmtF(l.qte)+' '+(l.unite||'')+'</td><td style="text-align:right;">'+fmtF(l.pu)+'</td><td style="text-align:right;">'+fmtF(Math.round(t))+'</td></tr>'; }).join('');
+  var win=window.open('','','width=800,height=700');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture '+fc.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1A3A6B;border-bottom:2px solid #1A3A6B;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.r{text-align:right;}.muted{color:#666;font-size:12px;}</style></head><body>'
+    +'<div style="display:flex;justify-content:space-between;"><div><strong style="font-size:16px;">'+soc+'</strong></div><div class="r muted">Facture fourn. N° '+fc.numero+'<br>Date : '+fc.date+'<br>Récep. : '+r.numero+'</div></div>'
+    +'<h1>FACTURE FOURNISSEUR</h1><p><strong>Fournisseur :</strong> '+bcFournisseurName(fc.fournisseur_id)+'</p>'
+    +'<table><thead><tr><th>#</th><th>Désignation</th><th class="r">Qté</th><th class="r">PU</th><th class="r">Total</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<table style="width:300px;margin-left:auto;"><tr><td>HT</td><td class="r">'+fmtF(Math.round(fc.ht))+'</td></tr><tr><td>TVA</td><td class="r">'+fmtF(Math.round(fc.tva))+'</td></tr>'+(fc.airsi>0?('<tr><td>AIRSI</td><td class="r">−'+fmtF(Math.round(fc.airsi))+'</td></tr>'):'')+'<tr><td><strong>Net à payer</strong></td><td class="r"><strong>'+fmtF(Math.round(fc.net))+' FCFA</strong></td></tr></table>'
+    +'</body></html>');
+  win.document.close(); win.print();
+}
+
+
+/* ══════════════════════════════════════════════════════
+   VALIDATIONS HIÉRARCHIQUES — workflow générique
+   ══════════════════════════════════════════════════════ */
+function valTypeLabel(t){ var m={bon_commande:'Bon de commande',situation:'Situation de travaux',convention:'Convention',facture_fournisseur:'Facture fournisseur',liberation_garantie:'Libération retenue garantie',cession:'Cession foncière',autre:'Autre'}; return m[t]||t; }
+function valStatutBadge(st){ var m={en_attente:'badge-or',valide:'badge-vert',rejete:'badge-rouge'}; var l={en_attente:'⏳ En attente',valide:'✅ Validé',rejete:'⛔ Rejeté'}; return '<span class="badge '+(m[st]||'badge-or')+'">'+(l[st]||st)+'</span>'; }
+function valPending(type,refId){ return (DATA.validations||[]).find(function(v){return v.type===type&&v.ref_id===refId&&v.statut==='en_attente';}); }
+async function valCreate(type,refId,libelle,montant,meta){
+  if(valPending(type,refId)){ toast('Déjà en attente de validation.','info'); return null; }
+  var v={ id:uid(), type:type, ref_id:refId, libelle:libelle||valTypeLabel(type), montant:montant||0, meta:meta||{}, statut:'en_attente', demandeur:(APP.currentUser&&APP.currentUser.nom)||'—', date_demande:today(), valideur:null, date_decision:null, motif:'', created_at:today() };
+  DATA.validations.push(v); await dbPut('validations',v); if(typeof syncToSupabase==='function')syncToSupabase('pi_validations',v);
+  return v;
+}
+async function valDecide(id,decision,motif){
+  var v=(DATA.validations||[]).find(function(x){return x.id===id;}); if(!v)return;
+  if(decision==='valide' && typeof hasRole==='function' && !hasRole('admin') && !hasRole('manager')){ toast('Validation réservée à la hiérarchie.','error'); return; }
+  v.statut=decision; v.valideur=(APP.currentUser&&APP.currentUser.nom)||'—'; v.date_decision=today(); v.motif=motif||'';
+  await dbPut('validations',v); if(typeof syncToSupabase==='function')syncToSupabase('pi_validations',v);
+  await valApply(v.type,v.ref_id,decision);
+  renderValidations(); if(typeof renderAchats==='function')renderAchats();
+  toast(decision==='valide'?'✅ Validé.':'⛔ Rejeté.',decision==='valide'?'success':'info');
+}
+async function valApply(type,refId,decision){
+  if(type==='bon_commande'){
+    var b=(DATA.bons_commande||[]).find(function(x){return x.id===refId;});
+    if(b){ b.statut=(decision==='valide')?'valide':'rejete'; if(decision==='valide'){ b.valide_par=(APP.currentUser&&APP.currentUser.nom)||'—'; b.valide_date=today(); } await dbPut('bons_commande',b); if(typeof syncToSupabase==='function')syncToSupabase('pi_bons_commande',b); }
+  }
+  /* extensible : situation, convention, liberation_garantie, cession … */
+}
+async function submitBC(id){
+  var b=(DATA.bons_commande||[]).find(function(x){return x.id===id;}); if(!b)return;
+  var v=await valCreate('bon_commande', id, 'BC '+b.numero+' — '+bcFournisseurName(b.fournisseur_id), bcTotalHT(b), {chantier:b.chantier_id});
+  if(v){ b.statut='en_attente_validation'; await dbPut('bons_commande',b); if(typeof syncToSupabase==='function')syncToSupabase('pi_bons_commande',b); renderAchats(); toast('📤 Soumis à validation.','success'); }
+}
+var valFilter='en_attente';
+function valSetFilter(fl){ valFilter=fl; document.querySelectorAll('#page-validations .tab-btn').forEach(function(b){ b.classList.toggle('active', (b.getAttribute('onclick')||'').indexOf("'"+fl+"'")!==-1); }); renderValidations(); }
+function valReject(id){ var m=prompt('Motif du rejet ?',''); if(m===null)return; valDecide(id,'rejete',m||''); }
+function renderValidations(){
+  var all=(DATA.validations||[]);
+  var enAtt=all.filter(function(v){return v.statut==='en_attente';});
+  var kpi=document.getElementById('kpi-validations');
+  if(kpi){ kpi.innerHTML=[
+    {l:'En attente',v:enAtt.length,i:'⏳',c:''},
+    {l:'Validées',v:all.filter(function(v){return v.statut==='valide';}).length,i:'✅',c:'kpi-green'},
+    {l:'Rejetées',v:all.filter(function(v){return v.statut==='rejete';}).length,i:'⛔',c:'kpi-red'},
+    {l:'Montant en attente',v:fmtF(Math.round(enAtt.reduce(function(s,v){return s+(v.montant||0);},0)))+' F',i:'💰',c:'kpi-blue'},
+  ].map(function(k){return '<div class="kpi-card '+(k.c||'')+'"><div class="kpi-icon">'+k.i+'</div><div class="kpi-value">'+k.v+'</div><div class="kpi-label">'+k.l+'</div></div>';}).join(''); }
+  var list = valFilter==='en_attente'?enAtt:all.filter(function(v){return v.statut!=='en_attente';});
+  var canDecide=(typeof hasRole!=='function')||hasRole('admin')||hasRole('manager');
+  var tb=document.getElementById('tbody-validations');
+  if(tb){
+    if(!list.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun élément.</td></tr>'; }
+    else tb.innerHTML=list.slice().sort(function(a,b){return (b.date_demande||'').localeCompare(a.date_demande||'');}).map(function(v){
+      var acts='';
+      if(v.statut==='en_attente'){
+        if(canDecide) acts='<button class="btn btn-primary btn-sm" onclick="valDecide(\''+v.id+'\',\'valide\')">✅ Valider</button> <button class="btn btn-danger btn-sm" onclick="valReject(\''+v.id+'\')">⛔ Rejeter</button>';
+        else acts='<span style="font-size:11px;color:var(--blanc-dim);">réservé à la hiérarchie</span>';
+      } else { acts='<span style="font-size:11px;color:var(--blanc-dim);">'+(v.valideur||'')+' · '+(v.date_decision||'')+(v.motif?(' · '+v.motif):'')+'</span>'; }
+      return '<tr><td>'+valTypeLabel(v.type)+'</td><td style="font-size:12px;">'+v.libelle+'</td><td style="text-align:right;font-weight:600;">'+fmtF(Math.round(v.montant||0))+'</td><td style="font-size:11px;">'+(v.demandeur||'—')+'</td><td>'+(v.date_demande||'—')+'</td><td>'+valStatutBadge(v.statut)+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
+    }).join('');
+  }
+}
+
 function fournisseurOptions(sel){
   var html='<option value="">— aucun / non renseigné —</option>';
   (DATA.fournisseurs||[]).forEach(function(fr){ html+='<option value="'+fr.id+'"'+(sel===fr.id?' selected':'')+'>'+fr.nom+'</option>'; });
