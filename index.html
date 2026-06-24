@@ -2173,6 +2173,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-item" onclick="goTo('validations')" data-page="validations">
         <span class="nav-icon">✅</span><span>Validations</span>
       </div>
+      <div class="nav-item" onclick="goTo('recliv')" data-page="recliv">
+        <span class="nav-icon">📦</span><span>Réception &amp; Livraison</span>
+      </div>
 
       <!-- ÉTAPE 4 : COMMERCIAL — prospecter et convertir -->
       <div class="nav-section"><span class="nav-step">4</span><span>Commercial &amp; CRM</span></div>
@@ -3875,6 +3878,93 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <thead><tr><th>Type</th><th>Objet</th><th style="text-align:right;">Montant</th><th>Demandeur</th><th>Date</th><th>Statut</th><th></th></tr></thead>
           <tbody id="tbody-validations"></tbody>
         </table></div></div>
+      </div>
+
+      <!-- ══ RÉCEPTION & LIVRAISON ══════════════════════════════════ -->
+      <div class="page" id="page-recliv">
+        <div class="page-header">
+          <div>
+            <div class="step-badge">③ Études &amp; Chantier</div>
+            <div class="page-title">📦 Réception &amp; Livraison</div>
+            <div class="page-subtitle">Réception des travaux (constructeurs) · Livraison des biens (souscripteurs / portail)</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick="openRect()">🏗️ Réception travaux</button>
+            <button class="btn btn-primary" onclick="openLiv()">🔑 Livraison souscripteur</button>
+          </div>
+        </div>
+        <div class="kpi-grid" id="kpi-recliv" style="margin-bottom:18px;"></div>
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab('recliv','rect')">🏗️ Réceptions de travaux</button>
+          <button class="tab-btn" onclick="switchTab('recliv','liv')">🔑 Livraisons souscripteurs</button>
+        </div>
+        <div class="tab-pane active" id="tab-recliv-rect">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>Type</th><th>Convention</th><th>Constructeur</th><th>Date</th><th>Réserves</th><th style="text-align:right;">Retenue gar.</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="tbody-rect"></tbody>
+          </table></div></div>
+        </div>
+        <div class="tab-pane" id="tab-recliv-liv">
+          <div class="card"><div class="table-wrap"><table>
+            <thead><tr><th>N°</th><th>Souscripteur</th><th>Bien</th><th>Date</th><th>Type</th><th>Réserves</th><th>Signature</th><th>Portail</th><th></th></tr></thead>
+            <tbody id="tbody-liv"></tbody>
+          </table></div></div>
+        </div>
+      </div>
+
+      <!-- Modal Réception de travaux -->
+      <div class="modal-overlay" id="modal-rect">
+        <div class="modal" style="max-width:680px;">
+          <div class="modal-header"><div class="modal-title" id="rect-title">🏗️ Réception de travaux</div><button class="modal-close" onclick="closeModal('modal-rect')">✕</button></div>
+          <div class="modal-body">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <div class="form-group"><label>N°</label><input class="form-control" id="rect-num" placeholder="auto"></div>
+              <div class="form-group"><label>Type *</label><select class="form-control" id="rect-type"><option value="provisoire">Réception provisoire</option><option value="definitive">Réception définitive</option></select></div>
+              <div class="form-group"><label>Date</label><input type="date" class="form-control" id="rect-date"></div>
+              <div class="form-group" style="grid-column:span 3;"><label>Convention / marché *</label><select class="form-control" id="rect-conv" onchange="rectConvInfo()"></select></div>
+            </div>
+            <div id="rect-conv-info" style="font-size:12px;color:var(--blanc-dim);margin:4px 0 8px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;"><strong style="color:var(--or);">Réserves</strong><button type="button" class="btn btn-secondary btn-sm" onclick="rectAddReserve()">➕ Réserve</button></div>
+            <div class="table-wrap"><table style="font-size:12px;"><thead><tr><th>Libellé</th><th style="width:80px;text-align:center;">Levée</th><th style="width:34px;"></th></tr></thead><tbody id="rect-reserves"></tbody></table></div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;margin-top:10px;">
+              <div class="form-group"><label>Retenue de garantie (FCFA)</label><input type="number" class="form-control" id="rect-rg" min="0" step="any" value="0"></div>
+              <div class="form-group"><label>Libération prévue le</label><input type="date" class="form-control" id="rect-rg-date"></div>
+              <div class="form-group" style="grid-column:span 2;"><label>Observations</label><input class="form-control" id="rect-obs" placeholder="Conformité, points de contrôle…"></div>
+            </div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-rect')">Annuler</button><button class="btn btn-primary" onclick="saveRect()">Enregistrer</button></div>
+        </div>
+      </div>
+
+      <!-- Modal Livraison souscripteur -->
+      <div class="modal-overlay" id="modal-liv">
+        <div class="modal" style="max-width:680px;">
+          <div class="modal-header"><div class="modal-title" id="liv-title">🔑 Livraison souscripteur</div><button class="modal-close" onclick="closeModal('modal-liv')">✕</button></div>
+          <div class="modal-body">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <div class="form-group"><label>N°</label><input class="form-control" id="liv-num" placeholder="auto"></div>
+              <div class="form-group"><label>Type *</label><select class="form-control" id="liv-type"><option value="provisoire">Livraison provisoire</option><option value="definitive">Livraison définitive</option></select></div>
+              <div class="form-group"><label>Date</label><input type="date" class="form-control" id="liv-date"></div>
+              <div class="form-group" style="grid-column:span 2;"><label>Souscripteur *</label><select class="form-control" id="liv-client"></select></div>
+              <div class="form-group"><label>Programme</label><select class="form-control" id="liv-prog"></select></div>
+              <div class="form-group" style="grid-column:span 2;"><label>Bien / lot</label><select class="form-control" id="liv-lot" onchange="livLotInfo()"></select></div>
+              <div class="form-group"><label>Réf. bien (libre)</label><input class="form-control" id="liv-bien" placeholder="ex : Villa B12"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px;"><strong style="color:var(--or);">Réserves de l'acquéreur</strong><button type="button" class="btn btn-secondary btn-sm" onclick="livAddReserve()">➕ Réserve</button></div>
+            <div class="table-wrap"><table style="font-size:12px;"><thead><tr><th>Libellé</th><th style="width:80px;text-align:center;">Levée</th><th style="width:34px;"></th></tr></thead><tbody id="liv-reserves"></tbody></table></div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;margin-top:10px;">
+              <div class="form-group"><label>Compteur eau</label><input class="form-control" id="liv-ceau" placeholder="index"></div>
+              <div class="form-group"><label>Compteur élec.</label><input class="form-control" id="liv-celec" placeholder="index"></div>
+              <div class="form-group"><label>Clés remises</label><input type="number" class="form-control" id="liv-cles" min="0" value="0"></div>
+              <div class="form-group" style="grid-column:span 3;"><label>État des lieux / observations</label><input class="form-control" id="liv-etat" placeholder="Constat contradictoire…"></div>
+            </div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;">
+              <label style="font-weight:normal;font-size:12px;"><input type="checkbox" id="liv-signe" style="margin-right:6px;"> Signé par le souscripteur</label>
+              <label style="font-weight:normal;font-size:12px;"><input type="checkbox" id="liv-portail" style="margin-right:6px;"> 🌐 Publier au portail souscripteur</label>
+            </div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-liv')">Annuler</button><button class="btn btn-primary" onclick="saveLiv()">Enregistrer</button></div>
+        </div>
       </div>
 
       <div class="page" id="page-parametres">
@@ -14003,6 +14093,8 @@ var DATA = {
   receptions: [],
   factures_fournisseur: [],
   validations: [],
+  receptions_travaux: [],
+  livraisons: [],
   cessions_foncieres: [],
   lot_unites: [],
   /* v114 — Aménagement foncier */
@@ -14014,7 +14106,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 124; /* v124: cycle achat (bons_commande, receptions, factures_fournisseur) + validations */
+var DB_VERSION = 125; /* v125: réception travaux + livraisons (souscripteurs/portail) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -14072,7 +14164,9 @@ var ALL_STORES = [
   'bons_commande',
   'receptions',
   'factures_fournisseur',
-  'validations'
+  'validations',
+  'receptions_travaux',
+  'livraisons'
 ];
 
 function initDB() {
@@ -14497,6 +14591,8 @@ var SUPA_STORE_MAP = [
   ['pi_receptions',      'receptions'],
   ['pi_factures_fournisseur','factures_fournisseur'],
   ['pi_validations',     'validations'],
+  ['pi_receptions_travaux','receptions_travaux'],
+  ['pi_livraisons',      'livraisons'],
   ['pi_af_operations',   'af_operations'],
   ['pi_af_agents',       'af_agents'],
   ['pi_employes',        'employes'],
@@ -15301,6 +15397,7 @@ function goTo(page) {
   if (page === 'stock') { renderStock(); renderMargeChantiers(); }
   if (page === 'achats') { renderAchats(); }
   if (page === 'validations') { renderValidations(); }
+  if (page === 'recliv') { renderRecliv(); }
   if (page === 'foncierops') { afRender(); }
 }
 
@@ -15370,6 +15467,7 @@ function switchTab(context, tab) {
   else if (context === 'debourse')         prefix = 'tab-debourse-';
   else if (context === 'stock')            prefix = 'tab-stock-';
   else if (context === 'achats')           prefix = 'tab-achats-';
+  else if (context === 'recliv')           prefix = 'tab-recliv-';
   else if (context === 'af')               prefix = 'tab-af-';
   else if (context === 'af-op')            prefix = 'tab-af-op-';
   else return;
@@ -46009,7 +46107,7 @@ function printFacture(id){
 /* ══════════════════════════════════════════════════════
    VALIDATIONS HIÉRARCHIQUES — workflow générique
    ══════════════════════════════════════════════════════ */
-function valTypeLabel(t){ var m={bon_commande:'Bon de commande',situation:'Situation de travaux',convention:'Convention',facture_fournisseur:'Facture fournisseur',liberation_garantie:'Libération retenue garantie',cession:'Cession foncière',autre:'Autre'}; return m[t]||t; }
+function valTypeLabel(t){ var m={bon_commande:'Bon de commande',situation:'Situation de travaux',convention:'Convention',facture_fournisseur:'Facture fournisseur',liberation_garantie:'Libération retenue garantie',reception_travaux:'Réception de travaux',livraison:'Livraison souscripteur',cession:'Cession foncière',autre:'Autre'}; return m[t]||t; }
 function valStatutBadge(st){ var m={en_attente:'badge-or',valide:'badge-vert',rejete:'badge-rouge'}; var l={en_attente:'⏳ En attente',valide:'✅ Validé',rejete:'⛔ Rejeté'}; return '<span class="badge '+(m[st]||'badge-or')+'">'+(l[st]||st)+'</span>'; }
 function valPending(type,refId){ return (DATA.validations||[]).find(function(v){return v.type===type&&v.ref_id===refId&&v.statut==='en_attente';}); }
 async function valCreate(type,refId,libelle,montant,meta){
@@ -46032,7 +46130,15 @@ async function valApply(type,refId,decision){
     var b=(DATA.bons_commande||[]).find(function(x){return x.id===refId;});
     if(b){ b.statut=(decision==='valide')?'valide':'rejete'; if(decision==='valide'){ b.valide_par=(APP.currentUser&&APP.currentUser.nom)||'—'; b.valide_date=today(); } await dbPut('bons_commande',b); if(typeof syncToSupabase==='function')syncToSupabase('pi_bons_commande',b); }
   }
-  /* extensible : situation, convention, liberation_garantie, cession … */
+  if(type==='reception_travaux'){
+    var rt=(DATA.receptions_travaux||[]).find(function(x){return x.id===refId;});
+    if(rt){ rt.statut=(decision==='valide')?'valide':'rejete'; if(decision==='valide'){ rt.valide_par=(APP.currentUser&&APP.currentUser.nom)||'—'; rt.valide_date=today(); } await dbPut('receptions_travaux',rt); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions_travaux',rt); }
+  }
+  if(type==='liberation_garantie'){
+    var rgr=(DATA.receptions_travaux||[]).find(function(x){return x.id===refId;});
+    if(rgr && decision==='valide'){ rgr.rg_libere=true; rgr.rg_libere_date=today(); await dbPut('receptions_travaux',rgr); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions_travaux',rgr); }
+  }
+  /* extensible : situation, convention, cession … */
 }
 async function submitBC(id){
   var b=(DATA.bons_commande||[]).find(function(x){return x.id===id;}); if(!b)return;
@@ -46066,6 +46172,225 @@ function renderValidations(){
       return '<tr><td>'+valTypeLabel(v.type)+'</td><td style="font-size:12px;">'+v.libelle+'</td><td style="text-align:right;font-weight:600;">'+fmtF(Math.round(v.montant||0))+'</td><td style="font-size:11px;">'+(v.demandeur||'—')+'</td><td>'+(v.date_demande||'—')+'</td><td>'+valStatutBadge(v.statut)+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
     }).join('');
   }
+}
+
+
+/* ══════════════════════════════════════════════════════
+   RÉCEPTION DES TRAVAUX (constructeurs) & LIVRAISON (souscripteurs)
+   ══════════════════════════════════════════════════════ */
+function rlConstrName(id){ var c=(DATA.constructeurs||[]).find(function(x){return x.id===id;}); return c?(c.raison_sociale||c.nom||'—'):'—'; }
+function rlConvLabel(id){ var c=(DATA.conventions||[]).find(function(x){return x.id===id;}); return c?(c.numero+(c.objet?(' — '+c.objet):'')):'—'; }
+function rlProgName(id){ var p=(DATA.programmes||[]).find(function(x){return x.id===id;}); return p?(p.nom||p.libelle||p.numero||'—'):'—'; }
+function rlClientLabel(id){ var c=(DATA.clients||[]).find(function(x){return x.id===id;}); return c?((c.nom||'')+' '+(c.prenom||'')).trim():'—'; }
+function rlLotLabel(id){ var l=(DATA.lot_unites||[]).find(function(x){return x.id===id;}); return l?('Lot '+(l.numero||'?')+(l.type?(' ('+l.type+')'):'')):''; }
+function rlConvOptions(sel){ var h='<option value="">— convention —</option>'; (DATA.conventions||[]).forEach(function(c){ h+='<option value="'+c.id+'"'+(sel===c.id?' selected':'')+'>'+c.numero+' — '+rlConstrName(c.constructeur_id)+'</option>'; }); return h; }
+function rlClientOptions(sel){ var h='<option value="">— souscripteur —</option>'; (DATA.clients||[]).slice().sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');}).forEach(function(c){ h+='<option value="'+c.id+'"'+(sel===c.id?' selected':'')+'>'+((c.nom||'')+' '+(c.prenom||'')).trim()+'</option>'; }); return h; }
+function rlProgOptions(sel){ var h='<option value="">— programme —</option>'; (DATA.programmes||[]).forEach(function(p){ h+='<option value="'+p.id+'"'+(sel===p.id?' selected':'')+'>'+(p.nom||p.libelle||p.numero)+'</option>'; }); return h; }
+function rlLotOptions(sel){ var h='<option value="">— lot / unité —</option>'; (DATA.lot_unites||[]).forEach(function(l){ h+='<option value="'+l.id+'" data-prog="'+(l.programme_id||'')+'"'+(sel===l.id?' selected':'')+'>Lot '+(l.numero||'?')+(l.type?(' ('+l.type+')'):'')+'</option>'; }); return h; }
+function rlTypeBadge(t){ return t==='definitive'?'<span class="badge badge-vert">Définitive</span>':'<span class="badge badge-bleu">Provisoire</span>'; }
+function rlRectStatutBadge(st){ var m={enregistre:'badge-bleu',brouillon:'badge-or',en_attente_validation:'badge-bleu',valide:'badge-vert'}; var l={enregistre:'Enregistrée',brouillon:'Brouillon',en_attente_validation:'⏳ À valider',valide:'✅ Validée'}; return '<span class="badge '+(m[st]||'badge-or')+'">'+(l[st]||st)+'</span>'; }
+function rlReservesTxt(arr){ arr=arr||[]; if(!arr.length)return '—'; var lev=arr.filter(function(r){return r.leve;}).length; return lev+' / '+arr.length+' levées'; }
+
+function renderRecliv(){
+  var rts=(DATA.receptions_travaux||[]); var livs=(DATA.livraisons||[]);
+  var mois=new Date().toISOString().slice(0,7);
+  var rgEnCours=rts.filter(function(r){return (parseFloat(r.retenue_garantie)||0)>0 && !r.rg_libere;}).reduce(function(s,r){return s+(parseFloat(r.retenue_garantie)||0);},0);
+  var kpi=document.getElementById('kpi-recliv');
+  if(kpi){ kpi.innerHTML=[
+    {l:'Réceptions travaux',v:rts.length,i:'🏗️',c:'kpi-blue'},
+    {l:'Définitives',v:rts.filter(function(r){return r.type==='definitive';}).length,i:'✅',c:'kpi-green'},
+    {l:'Livraisons du mois',v:livs.filter(function(l){return (l.date||'').slice(0,7)===mois;}).length,i:'🔑',c:''},
+    {l:'Retenues garanties en cours',v:fmtF(Math.round(rgEnCours))+' F',i:'🛡️',c:'kpi-red'},
+  ].map(function(k){return '<div class="kpi-card '+(k.c||'')+'"><div class="kpi-icon">'+k.i+'</div><div class="kpi-value">'+k.v+'</div><div class="kpi-label">'+k.l+'</div></div>';}).join(''); }
+
+  var tb=document.getElementById('tbody-rect');
+  if(tb){
+    if(!rts.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune réception de travaux.</td></tr>'; }
+    else tb.innerHTML=rts.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).map(function(r){
+      var conv=(DATA.conventions||[]).find(function(x){return x.id===r.convention_id;})||{};
+      var rg=parseFloat(r.retenue_garantie)||0;
+      var acts='';
+      if(r.type==='definitive'&&(r.statut==='brouillon'||r.statut==='rejete')) acts+='<button class="btn btn-secondary btn-sm" onclick="submitRect(\''+r.id+'\')" title="Soumettre à validation DG">📤</button> ';
+      if(r.statut==='en_attente_validation') acts+='<span class="badge badge-bleu" style="font-size:9px;">en validation</span> ';
+      if(rg>0&&!r.rg_libere&&(r.statut==='valide'||r.type==='definitive')) acts+='<button class="btn btn-secondary btn-sm" onclick="demanderLiberationGarantie(\''+r.id+'\')" title="Demander libération retenue">🛡️</button> ';
+      acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="printRect(\''+r.id+'\')" title="Imprimer PV">🖨️</button> ';
+      acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="openRect(\''+r.id+'\')">✏️</button> ';
+      acts+='<button class="btn btn-danger btn-sm btn-icon" onclick="deleteRect(\''+r.id+'\')">🗑</button>';
+      return '<tr><td style="font-family:monospace;color:var(--or);">'+r.numero+'</td><td>'+rlTypeBadge(r.type)+'</td><td style="font-size:11px;">'+(conv.numero||'—')+'</td><td style="font-size:12px;">'+rlConstrName(r.constructeur_id)+'</td><td>'+(r.date||'—')+'</td><td style="font-size:11px;">'+rlReservesTxt(r.reserves)+'</td><td style="text-align:right;">'+(rg>0?(fmtF(Math.round(rg))+(r.rg_libere?' ✅':'')):'—')+'</td><td>'+rlRectStatutBadge(r.statut)+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
+    }).join('');
+  }
+
+  var tl=document.getElementById('tbody-liv');
+  if(tl){
+    if(!livs.length){ tl.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucune livraison.</td></tr>'; }
+    else tl.innerHTML=livs.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).map(function(l){
+      var bien=l.bien||rlLotLabel(l.lot_id)||'—';
+      var sig=l.signe?'<span class="badge badge-vert">Signée</span>':'<span class="badge badge-or">En attente</span>';
+      var port=l.publie_portail?'<span class="badge badge-vert" title="Visible portail">🌐 Publié</span>':'<button class="btn btn-secondary btn-sm" onclick="toggleLivPortail(\''+l.id+'\')">Publier</button>';
+      var acts='<button class="btn btn-secondary btn-sm btn-icon" onclick="printLiv(\''+l.id+'\')" title="PV de livraison">🖨️</button> <button class="btn btn-secondary btn-sm btn-icon" onclick="openLiv(\''+l.id+'\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteLiv(\''+l.id+'\')">🗑</button>';
+      return '<tr><td style="font-family:monospace;color:var(--or);">'+l.numero+'</td><td style="font-size:12px;">'+rlClientLabel(l.client_id)+'</td><td style="font-size:11px;">'+bien+'</td><td>'+(l.date||'—')+'</td><td>'+rlTypeBadge(l.type)+'</td><td style="font-size:11px;">'+rlReservesTxt(l.reserves)+'</td><td>'+sig+'</td><td>'+port+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
+    }).join('');
+  }
+}
+
+/* ── Réserves dynamiques ── */
+var rectReserves=[]; var livReserves=[];
+function _resRender(tbId,arr,fnSet,fnDel){
+  var tb=document.getElementById(tbId); if(!tb)return;
+  if(!arr.length){ tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--blanc-dim);padding:8px;">Aucune réserve.</td></tr>'; return; }
+  tb.innerHTML=arr.map(function(r,i){ return '<tr><td><input class="form-control" style="font-size:12px;" value="'+(r.libelle||'').replace(/"/g,'&quot;')+'" onchange="'+fnSet+'('+i+',\'libelle\',this.value)"></td><td style="text-align:center;"><input type="checkbox" '+(r.leve?'checked':'')+' onchange="'+fnSet+'('+i+',\'leve\',this.checked)"></td><td><button class="btn btn-danger btn-sm btn-icon" onclick="'+fnDel+'('+i+')">✕</button></td></tr>'; }).join('');
+}
+function rectRenderReserves(){ _resRender('rect-reserves',rectReserves,'rectSetReserve','rectRemoveReserve'); }
+function rectAddReserve(){ rectReserves.push({libelle:'',leve:false}); rectRenderReserves(); }
+function rectSetReserve(i,f,v){ if(rectReserves[i]){ rectReserves[i][f]=v; } }
+function rectRemoveReserve(i){ rectReserves.splice(i,1); rectRenderReserves(); }
+function livRenderReserves(){ _resRender('liv-reserves',livReserves,'livSetReserve','livRemoveReserve'); }
+function livAddReserve(){ livReserves.push({libelle:'',leve:false}); livRenderReserves(); }
+function livSetReserve(i,f,v){ if(livReserves[i]){ livReserves[i][f]=v; } }
+function livRemoveReserve(i){ livReserves.splice(i,1); livRenderReserves(); }
+
+/* ── Réception de travaux ── */
+function rectNextNum(){ var y=new Date().getFullYear(); var n=(DATA.receptions_travaux||[]).length+1; return 'PVR-'+y+'-'+('000'+n).slice(-3); }
+function rectConvInfo(){ var c=(DATA.conventions||[]).find(function(x){return x.id===document.getElementById('rect-conv').value;}); document.getElementById('rect-conv-info').innerHTML = c?('Constructeur : <strong>'+rlConstrName(c.constructeur_id)+'</strong> · Programme : '+rlProgName(c.programme_id)+' · Marché : '+fmtF(Math.round(c.montant||0))+' F'):''; }
+function openRect(id){
+  document.getElementById('rect-conv').innerHTML=rlConvOptions('');
+  APP.editingId=id||null;
+  if(id){ var r=(DATA.receptions_travaux||[]).find(function(x){return x.id===id;}); if(!r)return;
+    document.getElementById('rect-title').textContent='✏️ Réception '+r.numero;
+    document.getElementById('rect-num').value=r.numero; document.getElementById('rect-type').value=r.type||'provisoire';
+    document.getElementById('rect-date').value=r.date||today(); document.getElementById('rect-conv').value=r.convention_id||'';
+    document.getElementById('rect-rg').value=r.retenue_garantie||0; document.getElementById('rect-rg-date').value=r.retenue_liberation_date||'';
+    document.getElementById('rect-obs').value=r.observations||'';
+    rectReserves=(r.reserves||[]).map(function(x){return {libelle:x.libelle,leve:!!x.leve};});
+  } else {
+    document.getElementById('rect-title').textContent='🏗️ Réception de travaux';
+    document.getElementById('rect-num').value=rectNextNum(); document.getElementById('rect-type').value='provisoire';
+    document.getElementById('rect-date').value=today(); document.getElementById('rect-conv').value='';
+    document.getElementById('rect-rg').value=0; document.getElementById('rect-rg-date').value=''; document.getElementById('rect-obs').value='';
+    rectReserves=[];
+  }
+  rectRenderReserves(); rectConvInfo();
+  document.getElementById('modal-rect').classList.add('open');
+}
+async function saveRect(){
+  var convId=document.getElementById('rect-conv').value;
+  if(!convId){ toast('Choisissez une convention.','error'); return; }
+  var conv=(DATA.conventions||[]).find(function(x){return x.id===convId;})||{};
+  var type=document.getElementById('rect-type').value;
+  var ex=APP.editingId?(DATA.receptions_travaux.find(function(x){return x.id===APP.editingId;})):null;
+  var r={ id:APP.editingId||uid(), numero:document.getElementById('rect-num').value.trim()||rectNextNum(),
+    type:type, convention_id:convId, constructeur_id:conv.constructeur_id||null, programme_id:conv.programme_id||null,
+    date:document.getElementById('rect-date').value||today(),
+    reserves:rectReserves.filter(function(x){return (x.libelle||'').trim();}),
+    retenue_garantie:parseFloat(document.getElementById('rect-rg').value)||0,
+    retenue_liberation_date:document.getElementById('rect-rg-date').value||'',
+    observations:document.getElementById('rect-obs').value.trim(),
+    statut: ex?ex.statut:(type==='definitive'?'brouillon':'enregistre'),
+    rg_libere: ex?ex.rg_libere:false,
+    valide_par: ex?ex.valide_par:null, valide_date: ex?ex.valide_date:null,
+    created_at: ex?ex.created_at:today() };
+  if(ex){ var i=DATA.receptions_travaux.findIndex(function(x){return x.id===APP.editingId;}); DATA.receptions_travaux[i]=r; }
+  else DATA.receptions_travaux.push(r);
+  await dbPut('receptions_travaux',r); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions_travaux',r);
+  closeModal('modal-rect'); renderRecliv(); toast('Réception enregistrée.','success');
+}
+async function submitRect(id){
+  var r=DATA.receptions_travaux.find(function(x){return x.id===id;}); if(!r)return;
+  if(typeof valCreate!=='function'){ toast('Module validations absent.','error'); return; }
+  var v=await valCreate('reception_travaux', id, 'PV réception définitive '+r.numero+' — '+rlConstrName(r.constructeur_id), 0, {convention:r.convention_id});
+  if(v){ r.statut='en_attente_validation'; await dbPut('receptions_travaux',r); if(typeof syncToSupabase==='function')syncToSupabase('pi_receptions_travaux',r); renderRecliv(); toast('📤 Soumis à validation.','success'); }
+}
+async function demanderLiberationGarantie(id){
+  var r=DATA.receptions_travaux.find(function(x){return x.id===id;}); if(!r)return;
+  var rg=parseFloat(r.retenue_garantie)||0; if(rg<=0){ toast('Aucune retenue à libérer.','info'); return; }
+  if(typeof valCreate!=='function'){ toast('Module validations absent.','error'); return; }
+  var v=await valCreate('liberation_garantie', id, 'Libération retenue '+fmtF(Math.round(rg))+' F — '+r.numero+' ('+rlConstrName(r.constructeur_id)+')', rg, {convention:r.convention_id});
+  if(v) toast('📤 Demande de libération soumise à validation.','success');
+}
+async function deleteRect(id){ if(!confirm('Supprimer cette réception ?'))return; DATA.receptions_travaux=DATA.receptions_travaux.filter(function(x){return x.id!==id;}); await dbDelete('receptions_travaux',id); renderRecliv(); toast('Supprimé.','info'); }
+function printRect(id){
+  var r=DATA.receptions_travaux.find(function(x){return x.id===id;}); if(!r)return;
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var res=(r.reserves||[]).map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+x.libelle+'</td><td style="text-align:center;">'+(x.leve?'Levée':'En cours')+'</td></tr>';}).join('')||'<tr><td colspan="3" style="text-align:center;">Aucune réserve</td></tr>';
+  var win=window.open('','','width=820,height=720');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PV réception '+r.numero+'</title><style>body{font-family:Georgia,serif;padding:40px;font-size:13px;color:#1a1a1a;}h1{color:#1A3A6B;text-align:center;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.muted{color:#666;font-size:12px;}.sign{margin-top:50px;display:flex;justify-content:space-between;}</style></head><body>'
+    +'<div style="display:flex;justify-content:space-between;"><strong style="font-size:15px;">'+soc+'</strong><span class="muted">N° '+r.numero+'<br>Date : '+(r.date||'')+'</span></div>'
+    +'<h1>PROCÈS-VERBAL DE RÉCEPTION '+(r.type==='definitive'?'DÉFINITIVE':'PROVISOIRE')+' DES TRAVAUX</h1>'
+    +'<p><strong>Marché / convention :</strong> '+rlConvLabel(r.convention_id)+'<br><strong>Constructeur :</strong> '+rlConstrName(r.constructeur_id)+'<br><strong>Programme :</strong> '+rlProgName(r.programme_id)+'</p>'
+    +'<p>'+(r.observations||'Les travaux ont été examinés contradictoirement.')+'</p>'
+    +'<h3>Réserves</h3><table><thead><tr><th>#</th><th>Libellé</th><th>État</th></tr></thead><tbody>'+res+'</tbody></table>'
+    +(((parseFloat(r.retenue_garantie)||0)>0)?('<p><strong>Retenue de garantie :</strong> '+fmtF(Math.round(r.retenue_garantie))+' FCFA'+(r.retenue_liberation_date?(' — libération prévue le '+r.retenue_liberation_date):'')+'</p>'):'')
+    +'<div class="sign"><div class="muted">Le Maître d\'ouvrage<br><br><br>____________</div><div class="muted">Le Constructeur<br><br><br>____________</div></div>'
+    +'</body></html>');
+  win.document.close(); win.print();
+}
+
+/* ── Livraison souscripteur ── */
+function livNextNum(){ var y=new Date().getFullYear(); var n=(DATA.livraisons||[]).length+1; return 'LIV-'+y+'-'+('000'+n).slice(-3); }
+function livLotInfo(){ var sel=document.getElementById('liv-lot'); var l=(DATA.lot_unites||[]).find(function(x){return x.id===sel.value;}); if(l){ document.getElementById('liv-bien').value=rlLotLabel(l.id); if(l.programme_id)document.getElementById('liv-prog').value=l.programme_id; } }
+function openLiv(id){
+  document.getElementById('liv-client').innerHTML=rlClientOptions('');
+  document.getElementById('liv-prog').innerHTML=rlProgOptions('');
+  document.getElementById('liv-lot').innerHTML=rlLotOptions('');
+  APP.editingId=id||null;
+  if(id){ var l=(DATA.livraisons||[]).find(function(x){return x.id===id;}); if(!l)return;
+    document.getElementById('liv-title').textContent='✏️ Livraison '+l.numero;
+    document.getElementById('liv-num').value=l.numero; document.getElementById('liv-type').value=l.type||'provisoire';
+    document.getElementById('liv-date').value=l.date||today(); document.getElementById('liv-client').value=l.client_id||'';
+    document.getElementById('liv-prog').value=l.programme_id||''; document.getElementById('liv-lot').value=l.lot_id||'';
+    document.getElementById('liv-bien').value=l.bien||''; document.getElementById('liv-ceau').value=l.compteur_eau||'';
+    document.getElementById('liv-celec').value=l.compteur_elec||''; document.getElementById('liv-cles').value=l.cles||0;
+    document.getElementById('liv-etat').value=l.etat_lieux||''; document.getElementById('liv-signe').checked=!!l.signe;
+    document.getElementById('liv-portail').checked=!!l.publie_portail;
+    livReserves=(l.reserves||[]).map(function(x){return {libelle:x.libelle,leve:!!x.leve};});
+  } else {
+    document.getElementById('liv-title').textContent='🔑 Livraison souscripteur';
+    document.getElementById('liv-num').value=livNextNum(); document.getElementById('liv-type').value='provisoire';
+    document.getElementById('liv-date').value=today(); ['liv-client','liv-prog','liv-lot'].forEach(function(i){document.getElementById(i).value='';});
+    document.getElementById('liv-bien').value=''; document.getElementById('liv-ceau').value=''; document.getElementById('liv-celec').value='';
+    document.getElementById('liv-cles').value=0; document.getElementById('liv-etat').value='';
+    document.getElementById('liv-signe').checked=false; document.getElementById('liv-portail').checked=false;
+    livReserves=[];
+  }
+  livRenderReserves();
+  document.getElementById('modal-liv').classList.add('open');
+}
+async function saveLiv(){
+  var cid=document.getElementById('liv-client').value;
+  if(!cid){ toast('Choisissez un souscripteur.','error'); return; }
+  var ex=APP.editingId?(DATA.livraisons.find(function(x){return x.id===APP.editingId;})):null;
+  var l={ id:APP.editingId||uid(), numero:document.getElementById('liv-num').value.trim()||livNextNum(),
+    type:document.getElementById('liv-type').value, date:document.getElementById('liv-date').value||today(),
+    client_id:cid, programme_id:document.getElementById('liv-prog').value||null, lot_id:document.getElementById('liv-lot').value||null,
+    bien:document.getElementById('liv-bien').value.trim(),
+    compteur_eau:document.getElementById('liv-ceau').value.trim(), compteur_elec:document.getElementById('liv-celec').value.trim(),
+    cles:parseFloat(document.getElementById('liv-cles').value)||0, etat_lieux:document.getElementById('liv-etat').value.trim(),
+    reserves:livReserves.filter(function(x){return (x.libelle||'').trim();}),
+    signe:document.getElementById('liv-signe').checked, signature_date:document.getElementById('liv-signe').checked?today():'',
+    publie_portail:document.getElementById('liv-portail').checked,
+    created_at: ex?ex.created_at:today() };
+  if(ex){ var i=DATA.livraisons.findIndex(function(x){return x.id===APP.editingId;}); DATA.livraisons[i]=l; }
+  else DATA.livraisons.push(l);
+  await dbPut('livraisons',l); if(typeof syncToSupabase==='function')syncToSupabase('pi_livraisons',l);
+  closeModal('modal-liv'); renderRecliv(); toast('Livraison enregistrée.'+(l.publie_portail?' 🌐 Publiée au portail.':''),'success');
+}
+async function toggleLivPortail(id){ var l=DATA.livraisons.find(function(x){return x.id===id;}); if(!l)return; l.publie_portail=!l.publie_portail; await dbPut('livraisons',l); if(typeof syncToSupabase==='function')syncToSupabase('pi_livraisons',l); renderRecliv(); toast(l.publie_portail?'🌐 Publié au portail.':'Retiré du portail.','info'); }
+async function deleteLiv(id){ if(!confirm('Supprimer cette livraison ?'))return; DATA.livraisons=DATA.livraisons.filter(function(x){return x.id!==id;}); await dbDelete('livraisons',id); renderRecliv(); toast('Supprimé.','info'); }
+function printLiv(id){
+  var l=DATA.livraisons.find(function(x){return x.id===id;}); if(!l)return;
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var res=(l.reserves||[]).map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+x.libelle+'</td><td style="text-align:center;">'+(x.leve?'Levée':'En cours')+'</td></tr>';}).join('')||'<tr><td colspan="3" style="text-align:center;">Aucune réserve</td></tr>';
+  var win=window.open('','','width=820,height=720');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PV livraison '+l.numero+'</title><style>body{font-family:Georgia,serif;padding:40px;font-size:13px;}h1{color:#1A3A6B;text-align:center;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.muted{color:#666;font-size:12px;}.sign{margin-top:50px;display:flex;justify-content:space-between;}</style></head><body>'
+    +'<div style="display:flex;justify-content:space-between;"><strong style="font-size:15px;">'+soc+'</strong><span class="muted">N° '+l.numero+'<br>Date : '+(l.date||'')+'</span></div>'
+    +'<h1>PROCÈS-VERBAL DE LIVRAISON '+(l.type==='definitive'?'DÉFINITIVE':'PROVISOIRE')+'</h1>'
+    +'<p><strong>Souscripteur :</strong> '+rlClientLabel(l.client_id)+'<br><strong>Bien :</strong> '+(l.bien||rlLotLabel(l.lot_id)||'—')+'<br><strong>Programme :</strong> '+rlProgName(l.programme_id)+'</p>'
+    +'<table><tr><th>Compteur eau</th><td>'+(l.compteur_eau||'—')+'</td><th>Compteur élec.</th><td>'+(l.compteur_elec||'—')+'</td><th>Clés remises</th><td>'+(l.cles||0)+'</td></tr></table>'
+    +'<p><strong>État des lieux :</strong> '+(l.etat_lieux||'Constat contradictoire effectué.')+'</p>'
+    +'<h3>Réserves de l\'acquéreur</h3><table><thead><tr><th>#</th><th>Libellé</th><th>État</th></tr></thead><tbody>'+res+'</tbody></table>'
+    +'<div class="sign"><div class="muted">Le Promoteur<br><br><br>____________</div><div class="muted">Le Souscripteur<br>'+(l.signe?('(signé le '+(l.signature_date||l.date)+')'):'')+'<br><br>____________</div></div>'
+    +'</body></html>');
+  win.document.close(); win.print();
 }
 
 function fournisseurOptions(sel){
