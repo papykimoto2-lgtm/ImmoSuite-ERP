@@ -9324,6 +9324,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="page-subtitle">Prospection → Négociation → Juridique → Administratif → Aménagement → Répartition → Commercialisation</div>
           </div>
           <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="switchTab('af','relances');afCheckInactivity();afRenderRelances();">🔔 Relances <span id="af-relance-badge" class="badge badge-rouge" style="display:none;">0</span></button>
           <button class="btn btn-secondary btn-sm" onclick="ouvrirCarteFoncier()">🗺️ Géolocaliser</button>
           <button class="btn btn-primary btn-sm" onclick="afNewOperation()">+ Nouvelle opération</button>
         </div>
@@ -9332,6 +9333,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn active" onclick="switchTab('af','pipeline')">🗂 Pipeline</button>
           <button class="tab-btn" onclick="switchTab('af','agents')">🧑‍💼 Agents du foncier</button>
           <button class="tab-btn" onclick="switchTab('af','dashboard')">📊 Tableau de bord</button>
+          <button class="tab-btn" onclick="switchTab('af','relances');afRenderRelances();">🔔 Relances</button>
         </div>
 
         <div class="tab-pane active" id="tab-af-pipeline">
@@ -9353,6 +9355,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-af-dashboard">
           <div id="af-dashboard"></div>
         </div>
+
+        <div class="tab-pane" id="tab-af-relances">
+          <div id="af-relances"></div>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="modal-af-relance-cfg">
+        <div class="modal" style="max-width:560px;"><div id="af-relance-cfg-body"></div></div>
       </div>
 
       <!-- ── MODAL : Opération foncière (7 pipelines) ── -->
@@ -11830,10 +11840,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <label style="font-size:12px;">Coef. compactage <input type="number" id="terr-kc" step="0.01" value="1" style="width:64px;"></label>
               <button class="btn btn-secondary btn-sm" onclick="terrAuto()">⚖️ Niveau optimal (équilibre)</button>
               <button class="btn btn-primary btn-sm" onclick="terrCalc()">Calculer</button>
-              <button class="btn btn-secondary btn-sm" onclick="terrDevis()" id="btn-terr-devis" style="display:none;background:linear-gradient(135deg,#B87333,#D4956A);color:#fff;border-color:#B87333;">📋 Budget prévisionnel FCFA</button>
             </div>
             <div id="terr-out"></div>
-            <div id="terr-devis-out" style="margin-top:12px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px;">
+              <label style="font-size:12px;">Foisonnement (transport) <input type="number" id="terr-foi" step="0.01" value="1.25" style="width:64px;"></label>
+              <label style="font-size:12px;">Imprévus <input type="number" id="terr-imp" step="1" value="10" style="width:56px;"> %</label>
+              <label style="font-size:12px;">TVA <input type="number" id="terr-tva" step="1" value="18" style="width:56px;"> %</label>
+              <button class="btn btn-primary btn-sm" onclick="terrBudgetCalc()">💰 Budget prévisionnel</button>
+            </div>
+            <div id="terr-budget"></div>
           </div>
         </div>
       </div>
@@ -14190,14 +14205,15 @@ var DATA = {
   lot_unites: [],
   /* v114 — Aménagement foncier */
   af_operations: [],
-  af_agents: []
+  af_agents: [],
+  af_relances: []
 };
 
 /* ──────────────────────────────────────────────────────
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 126; /* v126: dossiers de réception (processus 5 étapes) */
+var DB_VERSION = 127; /* v127: relances d'inactivité foncier (af_relances) */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -14245,7 +14261,7 @@ var ALL_STORES = [
   'cessions_foncieres',
   /* v117 */ 'lot_unites',
   /* v114 — Acquisition & aménagement foncier */
-  'af_operations','af_agents',
+  'af_operations','af_agents','af_relances',
   /* v118 — Financiers partenaires & versements */
   'af_financiers','af_versements_financiers',
   'stock_mouvements',
@@ -14391,7 +14407,7 @@ async function loadAllData() {
   'visites_rdv','visites_log','visites_blacklist',
   /* v113-116 — Modules déboursé, foncier, cessions (chargement au démarrage) */
   'eds_ouvrages','eds_etudes','eds_ressources',
-  'af_operations','af_agents',
+  'af_operations','af_agents','af_relances',
   'af_financiers','af_versements_financiers',
   'cessions_foncieres',
   'lot_unites'
@@ -14688,6 +14704,7 @@ var SUPA_STORE_MAP = [
   ['pi_receptions_dossiers','receptions_dossiers'],
   ['pi_af_operations',   'af_operations'],
   ['pi_af_agents',       'af_agents'],
+  ['pi_af_relances',     'af_relances'],
   ['pi_employes',        'employes'],
   ['pi_pointages',       'pointages'],
   ['pi_bulletins',       'bulletins'],
@@ -32533,6 +32550,7 @@ async function saveParcelle() {
     echelle: (document.getElementById('parc-echelle')||{}).value||'',
     bornes: (typeof _brnList!=='undefined') ? JSON.parse(JSON.stringify(_brnList)) : ((existing&&existing.bornes)||[]),
     points_altimetriques: (typeof _topoPoints!=='undefined') ? JSON.parse(JSON.stringify(_topoPoints)) : ((existing&&existing.points_altimetriques)||[]),
+    budget_terrassement: (typeof _terrBudgetState!=='undefined' && _terrBudgetState && _terrBudgetState._saved) ? {P:_terrBudgetState.P,Kc:_terrBudgetState.Kc,foi:_terrBudgetState.foi,cut:_terrBudgetState.cut,fill:_terrBudgetState.fill,area:_terrBudgetState.area,lignes:_terrBudgetState.lignes,totaux:_terrBudgetState._tot} : ((existing&&existing.budget_terrassement)||null),
     created_at: (existing && existing.created_at) ? existing.created_at : today()
   };
   if (APP.editingId) { var idx=DATA.parcelles.findIndex(function(x){return x.id===APP.editingId;}); if(idx>=0)DATA.parcelles[idx]=p; }
@@ -44498,6 +44516,8 @@ function fonLoadCadastreBornes(id) {
   _brnList = (p && p.bornes) ? JSON.parse(JSON.stringify(p.bornes)) : [];
   _topoPoints = (p && p.points_altimetriques) ? JSON.parse(JSON.stringify(p.points_altimetriques)) : [];
   _brnShowContours = false;
+  _terrBudgetState = null;
+  var _tbz=document.getElementById('terr-budget'); if(_tbz)_tbz.innerHTML='';
   brnRender();
 }
 
@@ -44702,9 +44722,6 @@ function terrOptimalLevel(Kc){
   for(var it=0;it<34;it++){ var mid=(lo+hi)/2; var v=terrVolumes(mid,Kc); if(!v)return null; if((v.cut-Kc*v.fill)>0)lo=mid; else hi=mid; }
   return (lo+hi)/2;
 }
-/* ─── cache partagé terrCalc → terrDevis ─── */
-var _terrLastVolumes = null;
-
 function terrCalc(){
   var Kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1;
   var P=parseFloat((document.getElementById('terr-niv')||{}).value);
@@ -44712,10 +44729,6 @@ function terrCalc(){
   var v=terrVolumes(P,Kc);
   if(!v){ toast('Besoin d\'au moins 3 bornes et 3 points avec Z.','error'); return; }
   var fillC=v.fill*Kc; var solde=v.cut-fillC;
-  /* ── cache pour terrDevis ── */
-  _terrLastVolumes = { cut: v.cut, fill: v.fill, fillC: fillC, solde: solde, area: v.area, P: P, Kc: Kc };
-  var btn=document.getElementById('btn-terr-devis'); if(btn) btn.style.display='inline-flex';
-  document.getElementById('terr-devis-out').innerHTML='';
   var msg=solde>=0?('🚚 Excédent à évacuer : <strong>'+fmtF(Math.round(solde))+' m³</strong>'):('🚚 Déficit à apporter : <strong>'+fmtF(Math.round(-solde))+' m³</strong>');
   var maxCut=0,maxFill=0; v.cells.forEach(function(c){ if(c.d>0)maxCut=Math.max(maxCut,c.d); else maxFill=Math.max(maxFill,-c.d); });
   var W=420,H=320,pad=20, dx=(v.maxX-v.minX)||1, dy=(v.maxY-v.minY)||1, sc=Math.min((W-2*pad)/dx,(H-2*pad)/dy);
@@ -44734,147 +44747,101 @@ function terrCalc(){
 }
 function terrAuto(){ var Kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1; var P=terrOptimalLevel(Kc); if(P==null){ toast('Besoin d\'au moins 3 bornes et 3 points Z.','error'); return; } document.getElementById('terr-niv').value=P.toFixed(2); terrCalc(); toast('Niveau d\'équilibre déblai/remblai : '+P.toFixed(2)+' m','success'); }
 
-/* ══════════════════════════════════════════════════════════════════
-   terrDevis() — Budget prévisionnel d'aménagement en FCFA
-   Tarifs unitaires Côte d'Ivoire / marché Abidjan (2024-2025)
-   ══════════════════════════════════════════════════════════════════ */
-function terrDevis(){
-  if(!_terrLastVolumes){ toast('Lancez d\'abord le calcul Terrassement.','error'); return; }
-  var d = _terrLastVolumes;
-  var cutM3  = Math.round(d.cut);
-  var fillM3 = Math.round(d.fill);
-  var fillCM3= Math.round(d.fillC);
-  var soldeM3= Math.round(d.solde);
-
-  /* Tarifs unitaires FCFA — bordereau BTP MCLAU-CI + marchés Abidjan 2024-2025 */
-  var T = {
-    decapage      : 1200,
-    deblai_manu   : 4500,
-    deblai_engin  : 2800,
-    charg_camion  : 1500,
-    evacuation    : 3500,
-    remblai_propre: 6000,
-    remblai_reutil: 2500,
-    compactage    : 1800,
-    plateforme_niv: 1400,
-    imprevu       : 0.10
-  };
-
-  var aireM2 = Math.round(d.area);
-  var useEngins = (cutM3 > 200);
-  var prixDeblaiU = useEngins ? T.deblai_engin : T.deblai_manu;
-  var cDeblai     = cutM3 * prixDeblaiU;
-  var cCharg      = (cutM3 > 50) ? cutM3 * T.charg_camion : 0;
-  var cEvac       = soldeM3 > 0 ? soldeM3 * T.evacuation : 0;
-  var remblaiApport = Math.max(0, -soldeM3);
-  var remblaiReutil = Math.min(fillCM3, cutM3);
-  var cRemblaiApport = remblaiApport * T.remblai_propre;
-  var cRemblaiReutil = remblaiReutil * T.remblai_reutil;
-  var cCompact = fillCM3 * T.compactage;
-  var cDecap   = aireM2 * T.decapage;
-  var cPlatef  = aireM2 * T.plateforme_niv;
-
-  var sousTotal = cDeblai + cCharg + cEvac + cRemblaiApport + cRemblaiReutil + cCompact + cDecap + cPlatef;
-  var cImprevu  = Math.round(sousTotal * T.imprevu);
-  var totalHT   = sousTotal + cImprevu;
-  var tva18     = Math.round(totalHT * 0.18);
-  var totalTTC  = totalHT + tva18;
-
-  function row(emoji, lib, qte, unite, pu, total, color){
-    return '<tr>'
-      +'<td style="padding:6px 8px;font-size:12px;">'+emoji+' '+lib+'</td>'
-      +'<td style="padding:6px 8px;text-align:right;font-size:12px;">'+fmtF(qte)+'</td>'
-      +'<td style="padding:6px 8px;font-size:12px;color:var(--dim);">'+unite+'</td>'
-      +'<td style="padding:6px 8px;text-align:right;font-size:12px;">'+fmtF(pu)+'</td>'
-      +'<td style="padding:6px 8px;text-align:right;font-weight:700;color:'+(color||'var(--blanc)')+';">'+fmtF(Math.round(total))+'</td>'
-      +'</tr>';
-  }
-  function rowSep(label){
-    return '<tr><td colspan="5" style="padding:4px 8px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);background:var(--card2);">'+label+'</td></tr>';
-  }
-  function rowTotal(label, val, color, big){
-    var fs = big ? '14px' : '12px';
-    return '<tr style="background:var(--card2);">'
-      +'<td colspan="4" style="padding:7px 8px;font-weight:700;font-size:'+fs+';">'+label+'</td>'
-      +'<td style="padding:7px 8px;text-align:right;font-weight:700;font-size:'+fs+';color:'+(color||'var(--or)')+';">'+fmtF(Math.round(val))+' FCFA</td>'
-      +'</tr>';
-  }
-
-  var now = new Date();
-  var dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  var parcelleNom = (function(){ var el=document.getElementById('brn-parcelle-sel'); return (el&&el.options&&el.selectedIndex>=0)?el.options[el.selectedIndex].text:'Parcelle'; })();
-
-  var html =
-    '<div style="border:1px solid var(--bord);border-radius:12px;overflow:hidden;margin-top:4px;background:var(--card);">'
-    +'<div style="background:linear-gradient(135deg,#1C1C2E 0%,#2D2D44 100%);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">'
-    +'<div>'
-    +'<div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:#D4956A;letter-spacing:0.3px;">📋 Budget Prévisionnel — Terrassement</div>'
-    +'<div style="font-size:11px;color:#93C5FD;margin-top:2px;">'+parcelleNom+' &nbsp;·&nbsp; Plateforme '+d.P.toFixed(2)+' m &nbsp;·&nbsp; Emprise '+fmtF(aireM2)+' m²</div>'
-    +'</div>'
-    +'<div style="text-align:right;font-size:10px;color:rgba(255,255,255,.5);">Édité le '+dateStr+'<br><em>Estimation — non contractuel</em></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--bord);">'
-    +[['🟥 Déblai',fmtF(cutM3)+' m³','#dc2626'],['🟦 Remblai',fmtF(fillCM3)+' m³','#2563eb'],['⚖️ Solde',(soldeM3>=0?'+':'')+fmtF(soldeM3)+' m³',(soldeM3>=0?'#dc2626':'#4AC47A')],['📐 Emprise',fmtF(aireM2)+' m²','var(--or)']].map(function(p){
-        return '<div style="padding:10px 12px;border-right:1px solid var(--bord);">'
-          +'<div style="font-size:10px;color:var(--dim);">'+p[0]+'</div>'
-          +'<div style="font-size:15px;font-weight:700;color:'+p[2]+';">'+p[1]+'</div>'
-          +'</div>';
-      }).join('')
-    +'</div>'
-    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'
-    +'<thead><tr style="background:var(--card2);">'
-    +'<th style="padding:8px;text-align:left;font-size:10px;color:var(--dim);">DÉSIGNATION</th>'
-    +'<th style="padding:8px;text-align:right;font-size:10px;color:var(--dim);">QTÉ</th>'
-    +'<th style="padding:8px;font-size:10px;color:var(--dim);">U.</th>'
-    +'<th style="padding:8px;text-align:right;font-size:10px;color:var(--dim);">P.U. FCFA</th>'
-    +'<th style="padding:8px;text-align:right;font-size:10px;color:var(--dim);">TOTAL FCFA</th>'
-    +'</tr></thead><tbody>'
-    +rowSep('Préparation de site')
-    +row('🌿','Décapage végétale + terrassement superficiel',aireM2,'m²',T.decapage,cDecap)
-    +rowSep(useEngins ? 'Déblai mécanisé (engins)' : 'Déblai manuel')
-    +row('🚜','Déblai terrain ordinaire',cutM3,'m³',prixDeblaiU,cDeblai,'#dc2626')
-    +(cCharg>0 ? row('🔃','Chargement & mise en stock sur site',cutM3,'m³',T.charg_camion,cCharg) : '')
-    +(cEvac>0  ? row('🚚','Évacuation excédent (≈15 km)',soldeM3,'m³',T.evacuation,cEvac,'#E05252') : '')
-    +rowSep('Remblai & compactage')
-    +(remblaiReutil>0 ? row('♻️','Réutilisation déblais en remblai',remblaiReutil,'m³',T.remblai_reutil,cRemblaiReutil,'#4AC47A') : '')
-    +(remblaiApport>0 ? row('🪨','Apport matériaux d\'emprunt compactés',remblaiApport,'m³',T.remblai_propre,cRemblaiApport,'#E05252') : '')
-    +row('🔨','Compactage mécanique par couches 20 cm',fillCM3,'m³',T.compactage,cCompact)
-    +rowSep('Finition plateforme')
-    +row('📏','Nivellement fin de plateforme',aireM2,'m²',T.plateforme_niv,cPlatef)
-    +rowSep('')
-    +rowTotal('Sous-total HT',sousTotal)
-    +rowTotal('Aléas & imprévus (10 %)',cImprevu,'var(--dim)')
-    +rowTotal('TOTAL HT',totalHT,'var(--or)')
-    +rowTotal('TVA 18 %',tva18,'var(--dim)')
-    +rowTotal('★ TOTAL TTC',totalTTC,'#4AC47A',true)
-    +'</tbody></table></div>'
-    +'<div style="padding:10px 14px;font-size:10px;color:var(--dim);border-top:1px solid var(--bord);line-height:1.6;">'
-    +'<strong>Hypothèses :</strong> '
-    +(useEngins?'Déblai mécanisé retenu (volume > 200 m³). ':'Déblai manuel retenu (volume ≤ 200 m³). ')
-    +'Kc = '+d.Kc+'. Remblai : réutilisation max des déblais avant apport emprunt. '
-    +'Tarifs unitaires : bordereau BTP MCLAU-CI + marchés publics Abidjan 2024-2025. '
-    +'Estimation non contractuelle — à affiner par consultation d\'entreprises.'
-    +'</div>'
-    +'<div style="padding:10px 14px;border-top:1px solid var(--bord);display:flex;gap:8px;flex-wrap:wrap;">'
-    +'<button class="btn btn-primary btn-sm" onclick="terrDevisImprimer()">🖨️ Imprimer / PDF</button>'
-    +'</div>'
-    +'</div>';
-
-  document.getElementById('terr-devis-out').innerHTML = html;
-  setTimeout(function(){ var el=document.getElementById('terr-devis-out'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 100);
-  toast('Budget généré — '+fmtF(totalTTC)+' FCFA TTC','success');
+/* ── Budget prévisionnel terrassement / aménagement (FCFA) ── */
+var _terrPrix = { instal:1500000, decap:800, deblai:2500, remblai:3000, evac:3500, apport:8000, regl:1200 };
+var _terrBudgetState = null;
+function terrBudgetCalc(){
+  var Kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1;
+  var P=parseFloat((document.getElementById('terr-niv')||{}).value);
+  if(isNaN(P)){ toast('Renseignez le niveau de plateforme (ou ⚖️ optimal) puis Calculer.','error'); return; }
+  var v=terrVolumes(P,Kc);
+  if(!v){ toast('Besoin d\'au moins 3 bornes et 3 points avec Z.','error'); return; }
+  var foi=parseFloat((document.getElementById('terr-foi')||{}).value)||1.25;
+  var cut=v.cut, fill=v.fill, area=v.area, fillC=fill*Kc;
+  var excedent=Math.max(0, cut-fillC), evac=excedent*foi, apport=Math.max(0, fillC-cut), remblaiSite=Math.min(fillC, cut);
+  var lignes=[
+    {key:'instal', d:'Installation de chantier, amenée &amp; repli des engins', u:'forfait', q:1, pu:_terrPrix.instal},
+    {key:'decap',  d:'Décapage de la terre végétale (emprise)', u:'m²', q:Math.round(area), pu:_terrPrix.decap},
+    {key:'deblai', d:'Déblai en pleine masse (terrain naturel → plateforme)', u:'m³', q:Math.round(cut), pu:_terrPrix.deblai},
+    {key:'remblai',d:'Remblai compacté en provenance du site', u:'m³', q:Math.round(remblaiSite), pu:_terrPrix.remblai},
+    {key:'evac',   d:'Évacuation des excédents en dépôt (foisonné ×'+foi+')', u:'m³', q:Math.round(evac), pu:_terrPrix.evac},
+    {key:'apport', d:'Remblai d\'apport (emprunt latéritique fourni &amp; compacté)', u:'m³', q:Math.round(apport), pu:_terrPrix.apport},
+    {key:'regl',   d:'Réglage &amp; compactage final de la plateforme', u:'m²', q:Math.round(area), pu:_terrPrix.regl}
+  ];
+  _terrBudgetState={P:P,Kc:Kc,foi:foi,cut:cut,fill:fill,area:area,lignes:lignes};
+  terrBudgetRender();
+}
+function terrBudgetRender(){
+  var st=_terrBudgetState; if(!st)return;
+  var rows=st.lignes.map(function(l,i){
+    return '<tr><td style="text-align:left;">'+l.d+'</td><td style="text-align:center;">'+l.u+'</td>'
+      +'<td class="num" id="tb-q-'+i+'" data-q="'+l.q+'">'+fmtF(l.q)+'</td>'
+      +'<td><input type="number" id="tb-pu-'+i+'" value="'+l.pu+'" oninput="terrBudgetRecalc()" style="width:96px;text-align:right;"></td>'
+      +'<td class="num" id="tb-m-'+i+'">0</td></tr>';
+  }).join('');
+  var html='<div style="margin-top:10px;border:1px solid var(--bord);border-radius:8px;padding:10px;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;"><strong>💰 Budget prévisionnel — Terrassement / Aménagement</strong>'
+    +'<span style="font-size:11px;color:var(--blanc-dim);">Plateforme '+st.P.toFixed(2)+' m · emprise '+fmtF(Math.round(st.area))+' m² · déblai '+fmtF(Math.round(st.cut))+' / remblai '+fmtF(Math.round(st.fill))+' m³</span></div>'
+    +'<table class="table" style="width:100%;margin-top:8px;font-size:12px;"><thead><tr><th style="text-align:left;">Désignation</th><th>Unité</th><th class="num">Qté</th><th>P.U. (FCFA)</th><th class="num">Montant (FCFA)</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody><tfoot>'
+    +'<tr><td colspan="4" style="text-align:right;font-weight:600;">Sous-total travaux HT</td><td class="num" id="tb-sous">0</td></tr>'
+    +'<tr><td colspan="4" style="text-align:right;">Imprévus (<span id="tb-imp-p">10</span> %)</td><td class="num" id="tb-imp">0</td></tr>'
+    +'<tr><td colspan="4" style="text-align:right;font-weight:600;">Total HT</td><td class="num" id="tb-ht">0</td></tr>'
+    +'<tr><td colspan="4" style="text-align:right;">TVA (<span id="tb-tva-p">18</span> %)</td><td class="num" id="tb-tva">0</td></tr>'
+    +'<tr><td colspan="4" style="text-align:right;font-weight:700;">Total TTC</td><td class="num" id="tb-ttc" style="font-weight:700;">0</td></tr>'
+    +'<tr><td colspan="4" style="text-align:right;color:var(--blanc-dim);">Ratio</td><td class="num" id="tb-ratio" style="color:var(--blanc-dim);">—</td></tr>'
+    +'</tfoot></table>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button class="btn btn-secondary btn-sm" onclick="terrBudgetPrint()">🖨 Imprimer le devis</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="terrBudgetSave()">💾 Enregistrer dans la parcelle</button></div>'
+    +'<div style="font-size:11px;color:var(--blanc-dim);margin-top:6px;">P.U. indicatifs — à ajuster selon devis entreprise / cours du marché. Modifiez les P.U. : les montants se recalculent.</div></div>';
+  document.getElementById('terr-budget').innerHTML=html;
+  terrBudgetRecalc();
+}
+function terrBudgetRecalc(){
+  var st=_terrBudgetState; if(!st)return; var sous=0;
+  st.lignes.forEach(function(l,i){
+    var puEl=document.getElementById('tb-pu-'+i); var qEl=document.getElementById('tb-q-'+i);
+    var pu=puEl?parseFloat(puEl.value)||0:l.pu; var q=qEl?parseFloat(qEl.getAttribute('data-q'))||0:l.q;
+    var m=pu*q; l.pu=pu; l._m=m; _terrPrix[l.key]=pu;
+    var c=document.getElementById('tb-m-'+i); if(c)c.textContent=fmtF(Math.round(m)); sous+=m;
+  });
+  var impP=parseFloat((document.getElementById('terr-imp')||{}).value)||0;
+  var tvaP=parseFloat((document.getElementById('terr-tva')||{}).value)||0;
+  var imp=sous*impP/100, ht=sous+imp, tva=ht*tvaP/100, ttc=ht+tva;
+  function set(id,val){var e=document.getElementById(id); if(e)e.textContent=val;}
+  set('tb-sous',fmtF(Math.round(sous))); set('tb-imp-p',impP); set('tb-imp',fmtF(Math.round(imp)));
+  set('tb-ht',fmtF(Math.round(ht))); set('tb-tva-p',tvaP); set('tb-tva',fmtF(Math.round(tva))); set('tb-ttc',fmtF(Math.round(ttc)));
+  set('tb-ratio', st.area?(fmtF(Math.round(ttc/st.area))+' FCFA/m²'):'—');
+  st._tot={sous:sous,imp:imp,impP:impP,ht:ht,tva:tva,tvaP:tvaP,ttc:ttc};
+}
+function terrBudgetSave(){
+  if(!_terrBudgetState){ toast('Calculez d\'abord le budget.','error'); return; }
+  terrBudgetRecalc(); _terrBudgetState._saved=true;
+  toast('Budget mémorisé — enregistré avec la parcelle (bouton Enregistrer).','success');
+}
+function terrBudgetPrint(){
+  var st=_terrBudgetState; if(!st){ toast('Calculez d\'abord le budget.','error'); return; }
+  terrBudgetRecalc(); var t=st._tot;
+  var ref=(document.getElementById('parc-ref')||{}).value||'', loc=(document.getElementById('parc-localisation')||{}).value||'';
+  var soc=(DATA.params&&DATA.params.societe)||'Menko Immo';
+  var n=0; var rows=st.lignes.filter(function(l){return l.q>0;}).map(function(l){ n++; return '<tr><td>'+n+'</td><td>'+l.d+'</td><td style="text-align:center;">'+l.u+'</td><td class="num">'+fmtF(l.q)+'</td><td class="num">'+fmtF(l.pu)+'</td><td class="num">'+fmtF(Math.round(l.pu*l.q))+'</td></tr>'; }).join('');
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Devis terrassement '+ref+'</title><style>'
+    +'body{font-family:Arial,sans-serif;padding:36px;font-size:12px;color:#111;}h1{color:#1A6B3A;font-size:18px;border-bottom:2px solid #1A6B3A;padding-bottom:6px;}'
+    +'table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:6px 8px;}th{background:#E8F4EE;}.num{text-align:right;}tfoot td{font-weight:600;}</style></head><body>'
+    +'<h1>DEVIS PRÉVISIONNEL — TERRASSEMENT / AMÉNAGEMENT</h1>'
+    +'<p><strong>'+soc+'</strong><br>Parcelle : '+(ref||loc||'—')+(loc&&ref?(' · '+loc):'')+' · Date : '+today()+'<br>'
+    +'Niveau plateforme : '+st.P.toFixed(2)+' m · Emprise : '+fmtF(Math.round(st.area))+' m² · Déblai '+fmtF(Math.round(st.cut))+' m³ / Remblai '+fmtF(Math.round(st.fill))+' m³</p>'
+    +'<table><thead><tr><th>N°</th><th>Désignation</th><th>Unité</th><th class="num">Qté</th><th class="num">P.U.</th><th class="num">Montant</th></tr></thead><tbody>'+rows+'</tbody><tfoot>'
+    +'<tr><td colspan="5" class="num">Sous-total travaux HT</td><td class="num">'+fmtF(Math.round(t.sous))+'</td></tr>'
+    +'<tr><td colspan="5" class="num">Imprévus '+t.impP+' %</td><td class="num">'+fmtF(Math.round(t.imp))+'</td></tr>'
+    +'<tr><td colspan="5" class="num">Total HT</td><td class="num">'+fmtF(Math.round(t.ht))+'</td></tr>'
+    +'<tr><td colspan="5" class="num">TVA '+t.tvaP+' %</td><td class="num">'+fmtF(Math.round(t.tva))+'</td></tr>'
+    +'<tr><td colspan="5" class="num">TOTAL TTC</td><td class="num">'+fmtF(Math.round(t.ttc))+'</td></tr></tfoot></table>'
+    +'<p style="font-size:11px;color:#555;">Montants en FCFA. Devis prévisionnel établi sur volumes topographiques interpolés ; quantités à confirmer par implantation contradictoire avant exécution.</p>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:40px;font-size:11px;"><div>Établi par '+soc+'</div><div>Bon pour accord<br><br>Le Client</div></div></body></html>';
+  var w=window.open('','','width=900,height=820'); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){w.print();},400);
 }
 
-/* Impression devis terrassement */
-function terrDevisImprimer(){
-  var el=document.getElementById('terr-devis-out'); if(!el||!el.innerHTML){ toast('Générez d\'abord le budget.','error'); return; }
-  var soc=(window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
-  var html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Budget Terrassement — '+soc+'</title>'
-    +'<style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a2e;margin:24px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px 8px;}th{background:#f4f6f9;}</style>'
-    +'</head><body>'+el.innerHTML+'</body></html>';
-  html = menkoStamp(html, 'BUD-TERR');
-  var w=window.open('','','width=860,height=800'); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){w.print();},400);
-}
 
 function brnAdd() {
   var n = _brnList.length + 1;
@@ -45376,13 +45343,138 @@ function afStage(k){ return AF_STAGES.find(function(s){ return s.k===k; }) || AF
 var _afOp = null;   /* opération en cours d'édition (copie de travail) */
 
 /* ── Entrée page ── */
+/* ════════ RELANCES D'INACTIVITÉ (pipeline foncier) ════════ */
+function _afNowTs(){ return new Date().toISOString(); }
+function afDaysSince(d){ if(!d)return 9999; var t=Date.parse(d); if(isNaN(t))return 9999; return Math.floor((Date.now()-t)/86400000); }
+function afRelanceCfg(){
+  var c=(DATA.params&&DATA.params.af_relance)||{};
+  return { actif:c.actif!==false, delai:c.delai||15, par_stage:c.par_stage||{},
+    roles:c.roles||['admin','manager'], agent_id:c.agent_id||'', relance_tous:c.relance_tous||7, canal:c.canal||'app' };
+}
+function afOpDelai(op){ var c=afRelanceCfg(); var ps=c.par_stage[op.stage]; return (ps!=null&&ps!=='')?parseInt(ps):c.delai; }
+function afInactiveDays(op){ return afDaysSince(op.updated_at||op.stage_changed_at||op.created_at); }
+function afOpActive(op){ return op && op.stage!=='commercialisation' && !op.archive && !op.clos; }
+function afAgentName(id){ var a=(DATA.af_agents||[]).find(function(x){return x.id===id;}); return a?a.nom:''; }
+function afRelanceBadge(n){ var b=document.getElementById('af-relance-badge'); if(b){ b.textContent=n; b.style.display=n>0?'':'none'; } }
+function afCheckInactivity(){
+  DATA.af_relances=DATA.af_relances||[];
+  var c=afRelanceCfg();
+  if(!c.actif){ afRelanceBadge(DATA.af_relances.filter(function(r){return r.statut==='ouverte';}).length); return 0; }
+  var now=_afNowTs();
+  (DATA.af_operations||[]).forEach(function(op){
+    var rel=DATA.af_relances.find(function(r){ return r.op_id===op.id && (r.statut==='ouverte'||r.statut==='reportee'); });
+    if(!afOpActive(op)){ if(rel){ rel.statut='traitee'; rel.note='Opération clôturée/commercialisée'; rel.closed_at=now; dbPut('af_relances',rel); } return; }
+    var d=afInactiveDays(op), seuil=afOpDelai(op);
+    if(d>=seuil){
+      if(rel){
+        if(rel.statut==='reportee' && afDaysSince(rel.snooze_until)<0){ /* encore en report */ }
+        else { rel.statut='ouverte'; rel.jours=d; rel.seuil=seuil; rel.stage=op.stage; dbPut('af_relances',rel); if(typeof syncToSupabase==='function')syncToSupabase('pi_af_relances',rel); }
+      } else {
+        var handled=DATA.af_relances.find(function(r){ return r.op_id===op.id && (r.statut==='traitee'||r.statut==='reportee') && ( (r.snooze_until&&afDaysSince(r.snooze_until)<0) || (r.closed_at&&afDaysSince(r.closed_at)<c.relance_tous) ); });
+        if(handled)return;
+        var nr={ id:'afr_'+uid(), op_id:op.id, op_nom:op.nom, stage:op.stage, jours:d, seuil:seuil, created_at:now, statut:'ouverte', notifie:[], note:'' };
+        DATA.af_relances.push(nr); dbPut('af_relances',nr); if(typeof syncToSupabase==='function')syncToSupabase('pi_af_relances',nr);
+      }
+    } else if(rel && rel.statut==='ouverte'){
+      rel.statut='traitee'; rel.note='Activité reprise'; rel.closed_at=now; dbPut('af_relances',rel); if(typeof syncToSupabase==='function')syncToSupabase('pi_af_relances',rel);
+    }
+  });
+  var open=DATA.af_relances.filter(function(r){return r.statut==='ouverte';}).length;
+  afRelanceBadge(open); return open;
+}
+function afRelanceHist(hist){
+  if(!hist.length)return '';
+  return '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:13px;">Historique des relances ('+hist.length+')</summary><div class="card" style="margin-top:6px;font-size:12px;">'
+    +hist.map(function(r){return '<div style="padding:4px 0;border-bottom:1px solid var(--bord);">'+afEsc(r.op_nom||'')+' — '+(r.jours||0)+' j · '+(r.statut==='reportee'?('reportée au '+String(r.snooze_until||'').slice(0,10)):('traitée'+(r.note?(' ('+afEsc(r.note)+')'):'')))+'</div>';}).join('')+'</div></details>';
+}
+function afRenderRelances(){
+  var box=document.getElementById('af-relances'); if(!box)return;
+  var c=afRelanceCfg(); DATA.af_relances=DATA.af_relances||[];
+  var open=DATA.af_relances.filter(function(r){return r.statut==='ouverte';}).sort(function(a,b){return (b.jours||0)-(a.jours||0);});
+  var hist=DATA.af_relances.filter(function(r){return r.statut!=='ouverte';}).sort(function(a,b){return String(b.closed_at||'').localeCompare(String(a.closed_at||''));}).slice(0,40);
+  var who=[]; if((c.roles||[]).indexOf('admin')>=0)who.push('DG/Admin'); if((c.roles||[]).indexOf('manager')>=0)who.push('Manager'); if(c.agent_id)who.push(afAgentName(c.agent_id));
+  var head='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+    +'<div><strong>🔔 Relances d\'inactivité</strong> <span style="font-size:12px;color:var(--blanc-dim);">— délai '+c.delai+' j · '+(c.actif?'actif':'<span style="color:var(--rouge);">désactivé</span>')+' · notifiés : '+(who.join(', ')||'—')+'</span></div>'
+    +'<div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm" onclick="afCheckInactivity();afRenderRelances();toast(\'Vérification effectuée\',\'success\');">🔄 Vérifier</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="afOpenRelanceCfg()">⚙️ Paramètres</button></div></div>';
+  if(!open.length){ box.innerHTML=head+'<div class="card" style="text-align:center;color:var(--blanc-dim);padding:18px;">Aucune opération en retard d\'activité. 👍</div>'+afRelanceHist(hist); return; }
+  var rows=open.map(function(r){
+    var st=afStage(r.stage); var op=DATA.af_operations.find(function(x){return x.id===r.op_id;});
+    var grav=r.jours>=r.seuil*2?'badge-rouge':'badge-or';
+    return '<tr>'
+      +'<td><strong>'+afEsc(r.op_nom||'')+'</strong><br><span style="font-size:11px;color:var(--blanc-dim);">'+(op?afEsc(op.commune||op.village||''):'')+'</span></td>'
+      +'<td><span class="badge" style="background:'+st.c+'22;color:'+st.c+';">'+st.e+' '+st.t+'</span></td>'
+      +'<td><span class="badge '+grav+'">'+r.jours+' j</span> <span style="font-size:11px;color:var(--blanc-dim);">/ '+r.seuil+'</span></td>'
+      +'<td style="font-size:12px;">'+(op&&op.agent_id?afEsc(afAgentName(op.agent_id)):'—')+(r.notifie&&r.notifie.length?'<br><span style="font-size:10px;color:var(--vert);">notifié '+r.notifie.length+'×</span>':'')+'</td>'
+      +'<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" onclick="afOpenOperation(\''+r.op_id+'\')">Ouvrir</button> '
+      +'<button class="btn btn-secondary btn-sm" onclick="afNotifierRelance(\''+r.id+'\')">📲 Notifier</button> '
+      +'<button class="btn btn-secondary btn-sm" onclick="afRelanceSnooze(\''+r.id+'\',7)">⏰ +7j</button> '
+      +'<button class="btn btn-primary btn-sm" onclick="afRelanceTraiter(\''+r.id+'\')">✓ Traiter</button></td></tr>';
+  }).join('');
+  box.innerHTML=head+'<div class="card" style="overflow-x:auto;"><table class="table" style="width:100%;font-size:13px;"><thead><tr><th>Opération</th><th>Stade</th><th>Immobilité</th><th>Responsable</th><th>Actions</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+afRelanceHist(hist);
+}
+function afRelanceTraiter(id){
+  if(!(hasRole('admin')||hasRole('manager'))){ toast('Action réservée au DG / Admin.','error'); return; }
+  var r=DATA.af_relances.find(function(x){return x.id===id;}); if(!r)return;
+  r.statut='traitee'; r.closed_at=_afNowTs(); r.note='Traitée manuellement';
+  dbPut('af_relances',r); if(typeof syncToSupabase==='function')syncToSupabase('pi_af_relances',r);
+  afCheckInactivity(); afRenderRelances(); toast('Relance traitée.','success');
+}
+function afRelanceSnooze(id,days){
+  var r=DATA.af_relances.find(function(x){return x.id===id;}); if(!r)return;
+  r.statut='reportee'; r.snooze_until=new Date(Date.now()+days*86400000).toISOString();
+  dbPut('af_relances',r); if(typeof syncToSupabase==='function')syncToSupabase('pi_af_relances',r);
+  afCheckInactivity(); afRenderRelances(); toast('Relance reportée de '+days+' jours.','success');
+}
+function afNotifierRelance(id){
+  var r=DATA.af_relances.find(function(x){return x.id===id;}); if(!r)return;
+  var op=DATA.af_operations.find(function(x){return x.id===r.op_id;}); var st=afStage(r.stage);
+  var msg='🔔 Relance foncier — opération "'+(r.op_nom||'')+'" sans activité depuis '+r.jours+' jours (stade : '+st.t+'). Merci de mettre à jour le dossier.';
+  var ag=(DATA.af_agents||[]).find(function(a){return op&&a.id===op.agent_id;});
+  var tel=ag&&(ag.tel||ag.telephone||ag.contact||ag.phone);
+  r.notifie=r.notifie||[]; r.notifie.push({date:_afNowTs(), canal:tel?'whatsapp':'app', cible:ag?ag.nom:'DG/Admin'});
+  dbPut('af_relances',r); if(typeof syncToSupabase==='function')syncToSupabase('pi_af_relances',r);
+  if(tel){ window.open('https://wa.me/'+String(tel).replace(/[^0-9]/g,'')+'?text='+encodeURIComponent(msg),'_blank'); toast('Notification WhatsApp préparée.','success'); }
+  else { toast('Notification enregistrée (agent sans n° — visible par le DG/Admin dans la boîte).','info'); }
+  afRenderRelances();
+}
+function afOpenRelanceCfg(){
+  var c=afRelanceCfg();
+  var stages=AF_STAGES.map(function(s){ var v=(c.par_stage[s.k]!=null?c.par_stage[s.k]:''); return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;margin:3px 0;">'+s.e+' '+s.t+'<input type="number" id="afrc-stage-'+s.k+'" value="'+v+'" placeholder="déf." style="width:74px;margin-left:auto;"> j</label>'; }).join('');
+  var agents='<option value="">— Aucun —</option>'+(DATA.af_agents||[]).map(function(a){return '<option value="'+a.id+'"'+(c.agent_id===a.id?' selected':'')+'>'+afEsc(a.nom)+'</option>';}).join('');
+  document.getElementById('af-relance-cfg-body').innerHTML=
+    '<div class="modal-header"><h3>⚙️ Paramètres des relances d\'inactivité</h3><button class="modal-close" onclick="closeModal(\'modal-af-relance-cfg\')">×</button></div>'
+    +'<div class="modal-body">'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><input type="checkbox" id="afrc-actif"'+(c.actif?' checked':'')+'> Activer les relances automatiques</label>'
+    +'<div class="form-group"><label>Délai d\'inactivité par défaut (jours)</label><input type="number" class="form-control" id="afrc-delai" value="'+c.delai+'"></div>'
+    +'<div class="form-group"><label>Seuils par stade <span style="color:var(--blanc-dim);font-size:11px;">(vide = défaut)</span></label><div style="border:1px solid var(--bord);border-radius:8px;padding:8px;">'+stages+'</div></div>'
+    +'<div class="form-group"><label>Personnes à notifier</label>'
+    +'<label style="display:flex;gap:6px;align-items:center;font-size:13px;"><input type="checkbox" id="afrc-role-admin"'+((c.roles||[]).indexOf('admin')>=0?' checked':'')+'> DG / Admin</label>'
+    +'<label style="display:flex;gap:6px;align-items:center;font-size:13px;"><input type="checkbox" id="afrc-role-manager"'+((c.roles||[]).indexOf('manager')>=0?' checked':'')+'> Manager</label>'
+    +'<label style="display:block;font-size:13px;margin-top:6px;">Personne identifiée (agent du foncier)</label><select class="form-control" id="afrc-agent">'+agents+'</select></div>'
+    +'<div class="form-group"><label>Re-notifier tous les (jours)</label><input type="number" class="form-control" id="afrc-throttle" value="'+c.relance_tous+'"></div>'
+    +'</div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal(\'modal-af-relance-cfg\')">Annuler</button><button class="btn btn-primary" onclick="afSaveRelanceCfg()">💾 Enregistrer</button></div>';
+  openModal('modal-af-relance-cfg');
+}
+async function afSaveRelanceCfg(){
+  var roles=[]; if(document.getElementById('afrc-role-admin').checked)roles.push('admin'); if(document.getElementById('afrc-role-manager').checked)roles.push('manager');
+  var ps={}; AF_STAGES.forEach(function(s){ var v=document.getElementById('afrc-stage-'+s.k).value; if(v!=='')ps[s.k]=parseInt(v); });
+  DATA.params=DATA.params||{};
+  DATA.params.af_relance={ actif:document.getElementById('afrc-actif').checked, delai:parseInt(document.getElementById('afrc-delai').value)||15, par_stage:ps, roles:roles, agent_id:document.getElementById('afrc-agent').value, relance_tous:parseInt(document.getElementById('afrc-throttle').value)||7, canal:'app' };
+  await dbPut('params',DATA.params);
+  closeModal('modal-af-relance-cfg'); afCheckInactivity(); afRenderRelances(); toast('Paramètres de relance enregistrés.','success');
+}
+
 async function afRender() {
   if (!DATA.af_operations.length) { var o = await dbGetAll('af_operations'); if (o&&o.length) DATA.af_operations = o; }
   if (!DATA.af_agents.length)     { var a = await dbGetAll('af_agents');     if (a&&a.length) DATA.af_agents = a; }
+  if (!DATA.af_relances || !DATA.af_relances.length) { var rr = await dbGetAll('af_relances'); if (rr&&rr.length) DATA.af_relances = rr; }
   afFillAgentSelects();
   afRenderPipeline();
   afRenderAgents();
   afRenderDashboard();
+  afCheckInactivity();
+  afRenderRelances();
 }
 
 function afFillAgentSelects() {
@@ -45435,7 +45527,7 @@ function afNewOperation() {
     proprietaires:[], documents:[], rencontres:[], prop_cle:'', accord_principe:false,
     verif_droits:'', juridique_valide:false, litiges:[], demarches:[],
     postes_vrd:[], nb_lots:0, cle:{prop:40,amen:35,fin:25},
-    prix_lot:0, lots_reserves:0, lots_vendus:0, titres:0, created_at:today() };
+    prix_lot:0, lots_reserves:0, lots_vendus:0, titres:0, created_at:today(), updated_at:new Date().toISOString(), stage_changed_at:new Date().toISOString() };
   afBindOperation(false);
 }
 
@@ -45655,11 +45747,15 @@ async function afSaveOperation(){
   _afOp.cle={prop:parseFloat(g('af-cle-prop'))||0,amen:parseFloat(g('af-cle-amen'))||0,fin:parseFloat(g('af-cle-fin'))||0};
   _afOp.prix_lot=parseFloat(g('af-prix-lot'))||0; _afOp.lots_reserves=parseInt(g('af-lots-reserves'))||0;
   _afOp.lots_vendus=parseInt(g('af-lots-vendus'))||0; _afOp.titres=parseInt(g('af-titres'))||0;
+  var _prev=DATA.af_operations.find(function(x){return x.id===_afOp.id;});
+  var _nowTs=new Date().toISOString();
+  if(_prev && _prev.stage!==_afOp.stage){ _afOp.stage_changed_at=_nowTs; } else if(!_afOp.stage_changed_at){ _afOp.stage_changed_at=_nowTs; }
+  _afOp.updated_at=_nowTs;
   var idx=DATA.af_operations.findIndex(function(x){return x.id===_afOp.id;});
   if(idx>=0) DATA.af_operations[idx]=_afOp; else DATA.af_operations.push(_afOp);
   await dbPut('af_operations',_afOp);
   closeModal('modal-af-operation');
-  afRenderPipeline(); afRenderDashboard();
+  afRenderPipeline(); afRenderDashboard(); if(typeof afCheckInactivity==='function'){afCheckInactivity(); afRenderRelances();}
   toast('Opération enregistrée','success');
 }
 
