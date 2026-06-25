@@ -32563,8 +32563,7 @@ async function saveParcelle() {
 
 async function deleteParcelle(id) {
   if (!confirm('Supprimer cette parcelle ?')) return;
-  DATA.parcelles = DATA.parcelles.filter(function(p){ return p.id!==id; });
-  await dbDelete('parcelles', id);
+  await deleteRecord('parcelles', id);   /* RAM + IndexedDB + Supabase + tombstone */
   renderParcelles(); updateFoncierKPIs();
   toast('Parcelle supprimée.', 'info');
 }
@@ -44961,6 +44960,7 @@ function brnPrintPlan() {
 async function fonSeedYaou() {
   var exists = (DATA.parcelles||[]).some(function(p){ return p.ref === 'YAOU-4726' || p.morcellement === '4726'; });
   if (exists) return;
+  if (typeof tombHas === 'function' && tombHas('parcelles', 'parc_yaou_4726')) return; /* supprimée → ne pas recréer */
   var bornes = [
     { nom:'B1',  x:430434.395, y:576815.718, angle:62.453,  distance:657.828 },
     { nom:'B2',  x:430434.395, y:576157.890, angle:126.372, distance:21.528 },
