@@ -6,12 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>ImmoSuite ERP v21.1 — Logiciel de Gestion Immobilière</title>
+<title>ImmoSuite ERP v21 — Logiciel de Gestion Immobilière</title>
 <script>
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v21.1 · 2026-06-24';
+window.IMMOSUITE_VERSION = 'v21.0 · 2026-06-11';
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -6860,6 +6860,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <input type="checkbox" id="geo-show-parcelles" checked onchange="renderCarteGeo()" style="accent-color:#1A6B3A;">
             <span style="color:#1A6B3A;font-weight:600;">🟩 Parcelles (bornage)</span>
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;">
+            <input type="checkbox" id="geo-show-courbes" onchange="renderCarteGeo()" style="accent-color:#8a5a2b;">
+            <span style="color:#8a5a2b;font-weight:600;">⛰️ Courbes de niveau</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;">
+            <input type="checkbox" id="geo-show-terrass" onchange="renderCarteGeo()" style="accent-color:#dc2626;">
+            <span style="color:#b91c1c;font-weight:600;">🚜 Déblai / Remblai</span>
+          </label>
+          <select id="geo-terr-parcelle" onchange="renderCarteGeo()" title="Parcelle pour le calcul déblai/remblai" style="font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid #FECACA;background:#FEF2F2;color:#b91c1c;"></select>
           <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;">
             <input type="checkbox" id="geo-show-operations" checked onchange="renderCarteGeo()" style="accent-color:#3B82F6;">
             <span style="color:#2563EB;font-weight:600;">📍 Opérations foncières</span>
@@ -11714,6 +11723,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group span-2"><label>Localisation précise *</label><input type="text" class="form-control" id="parc-localisation" placeholder="Quartier, voie, repères..."></div>
           <div class="form-group"><label>Commune</label><input type="text" class="form-control" id="parc-commune" placeholder="Ex: Cocody, Yopougon..."></div>
           <div class="form-group"><label>Sous-préfecture / Département</label><input type="text" class="form-control" id="parc-sous-prefecture"></div>
+          <div class="form-group"><label>Zone UTM (levé)</label><select class="form-control" id="parc-utm-zone"><option value="30">30N — Centre/Est (Abidjan, Yamoussoukro, Bouaké…)</option><option value="29">29N — Ouest (San Pedro, Man, Daloa, Odienné…)</option></select></div>
           <div class="form-group"><label>Superficie totale (m²) *</label><input type="number" class="form-control" id="parc-sf-totale"></div>
           <div class="form-group"><label>Superficie constructible (m²)</label><input type="number" class="form-control" id="parc-superficie-const"></div>
           <div class="form-group span-2"><label>Description / Limites</label><textarea class="form-control" id="parc-description" placeholder="Bornage, limites géographiques, accès..."></textarea></div>
@@ -11781,34 +11791,51 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;">
           <strong>Tableau des coordonnées (bornes)</strong>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;gap:8px;">
             <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
             <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
-            <button class="btn btn-secondary btn-sm" onclick="brnImportCSV()">📥 Import CSV</button>
-            <button class="btn btn-secondary btn-sm" onclick="brnProfilTerrain()">📈 Profil terrain</button>
             <button class="btn btn-secondary btn-sm" onclick="brnPrintPlan()">🖨 Plan de bornage</button>
             <button class="btn btn-primary btn-sm" onclick="genererPlanParcellaire()">📐 Plan parcellaire</button>
-            <input type="file" id="brn-csv-input" accept=".csv,.txt" style="display:none" onchange="brnCSVLoaded(this)">
           </div>
-        </div>
-        <!-- Barre démo données -->
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 10px;background:var(--or-glow,rgba(184,115,51,.10));border-radius:8px;border:1px dashed var(--or,#B87333);">
-          <span style="font-size:12px;color:var(--or,#B87333);font-weight:600;">🎲 Jeu de démo :</span>
-          <select id="brn-demo-select" class="form-control" style="flex:1;font-size:12px;max-width:280px;">
-            <option value="songon">📍 Songon (résidentiel · 2 500 m² · 8 bornes · UTM 30N)</option>
-            <option value="bounoua">📍 Bounoua – TF 4726 (agricole · 14 ha · 11 bornes · relief 12-19 m)</option>
-            <option value="divo">📍 Divo (industriel · 5 000 m² · 7 bornes · relief 185-210 m)</option>
-            <option value="assinie">📍 Assinie-Mafia (balnéaire · 1 200 m² · 5 bornes · bord de mer)</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="brnLoadDemo()">⚡ Injecter</button>
         </div>
         <div class="table-wrap">
           <table id="table-bornes">
-            <thead><tr><th>Borne</th><th style="text-align:right;">X (m)</th><th style="text-align:right;">Y (m)</th><th style="text-align:right;">Z alt. (m)</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th><th></th></tr></thead>
+            <thead><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Z (alt.)</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th><th></th></tr></thead>
             <tbody id="tbody-bornes"></tbody>
           </table>
         </div>
         <div id="brn-plan" class="card" style="margin-top:12px;background:var(--card2);text-align:center;"></div>
+        <div class="card" id="brn-topo" style="margin-top:12px;">
+          <strong>⛰️ Topographie — levé, courbes de niveau, coupe</strong>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center;">
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;">📥 Importer levé CSV (X;Y;Z)<input type="file" accept=".csv,.txt" style="display:none;" onchange="brnImportCSV(this)"></label>
+            <button class="btn btn-secondary btn-sm" id="brn-ct-btn" onclick="brnToggleContours()">⛰️ Courbes de niveau</button>
+            <button class="btn btn-secondary btn-sm" onclick="brnShowQuality()">🎯 Qualité levé</button>
+            <button class="btn btn-secondary btn-sm" onclick="topoExportCSV()">⬇️ Export CSV</button>
+            <button class="btn btn-secondary btn-sm" onclick="topoGenererRapport()">📄 Rapport topo</button>
+            <label style="font-size:12px;">Équidistance <input type="number" id="brn-ct-int" value="0" step="0.5" style="width:64px;" oninput="if(_brnShowContours)brnRenderPlan()"> m (0=auto)</label>
+            <span id="brn-topo-info" style="font-size:11px;color:var(--blanc-dim);"></span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:12px;">📈 Coupe :</span>
+            <select id="brn-coupe-a" class="form-control" style="width:96px;font-size:12px;"></select><span>→</span>
+            <select id="brn-coupe-b" class="form-control" style="width:96px;font-size:12px;"></select>
+            <button class="btn btn-secondary btn-sm" onclick="brnCoupe()">Générer la coupe</button>
+          </div>
+          <div id="brn-coupe-out" style="margin-top:10px;text-align:center;"></div>
+          <div style="border-top:1px solid var(--bord);margin-top:12px;padding-top:10px;">
+            <strong>🚜 Terrassement — déblai / remblai (m³)</strong>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;">
+              <label style="font-size:12px;">Niveau plateforme <input type="number" id="terr-niv" step="0.1" style="width:80px;"> m</label>
+              <label style="font-size:12px;">Coef. compactage <input type="number" id="terr-kc" step="0.01" value="1" style="width:64px;"></label>
+              <button class="btn btn-secondary btn-sm" onclick="terrAuto()">⚖️ Niveau optimal (équilibre)</button>
+              <button class="btn btn-primary btn-sm" onclick="terrCalc()">Calculer</button>
+              <button class="btn btn-secondary btn-sm" onclick="terrDevis()" id="btn-terr-devis" style="display:none;background:linear-gradient(135deg,#B87333,#D4956A);color:#fff;border-color:#B87333;">📋 Budget prévisionnel FCFA</button>
+            </div>
+            <div id="terr-out"></div>
+            <div id="terr-devis-out" style="margin-top:12px;"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -23568,6 +23595,8 @@ var _geoLayerCommerciaux = null;
 var _geoLayerProgrammes = null;
 var _geoLayerParcelles = null;
 var _geoLayerOperations = null;
+var _geoLayerCourbes = null;
+var _geoLayerTerrass = null;
 var _leafletLoaded = false;
 
 // Coordonnées des communes d'Abidjan et villes CI
@@ -23585,6 +23614,16 @@ var GEO_COMMUNES = {
   'France':       [48.8566,  2.3522], 'Paris':        [48.8566,  2.3522],
   'Diaspora':     [48.8566,  2.3522], 'San Pedro':    [4.7485, -6.6363],
   'Yamoussoukro': [6.8276, -5.2893], 'Bouaké':       [7.6898, -5.0207],
+  'Korhogo':[9.4580,-5.6296], 'Daloa':[6.8770,-6.4502], 'Man':[7.4125,-7.5538], 'Gagnoa':[6.1319,-5.9506],
+  'Abengourou':[6.7297,-3.4964], 'Divo':[5.8390,-5.3570], 'Bondoukou':[8.0402,-2.8000], 'Odienné':[9.5000,-7.5667],
+  'Séguéla':[7.9611,-6.6731], 'Soubré':[5.7847,-6.5936], 'Agboville':[5.9280,-4.2130], 'Bouna':[9.2667,-3.0000],
+  'Ferkessédougou':[9.5928,-5.1942], 'Ferké':[9.5928,-5.1942], 'Touba':[8.2833,-7.6833], 'Sassandra':[4.9500,-6.0833],
+  'Tabou':[4.4230,-7.3528], 'Grand-Lahou':[5.1389,-5.0089], 'Tiassalé':[5.8983,-4.8228], 'Adzopé':[6.1067,-3.8606],
+  'Bongouanou':[6.6500,-4.2000], 'Dimbokro':[6.6500,-4.7000], 'Issia':[6.4922,-6.5869], 'Duékoué':[6.7411,-7.3433],
+  'Guiglo':[6.5436,-7.4933], 'Katiola':[8.1333,-5.1000], 'Boundiali':[9.5217,-6.4869], 'Minignan':[9.6167,-7.8500],
+  'Danané':[7.2606,-8.1550], 'Bangolo':[7.0119,-7.4869], 'Toumodi':[6.5667,-5.0167], 'Tanda':[7.8042,-3.1681],
+  'Agnibilékrou':[7.1300,-3.2058], 'Adiaké':[5.2864,-3.3042], 'Daoukro':[7.0589,-3.9628], 'Béoumi':[7.6722,-5.5806],
+  'Sinfra':[6.6206,-5.9189], 'Vavoua':[7.3811,-6.4778], 'Bouaflé':[6.9900,-5.7444], 'Zuénoula':[7.4281,-6.0533],
 };
 
 // Extraire commune depuis adresse texte
@@ -23699,6 +23738,8 @@ function _buildMap() {
   _geoLayerProgrammes  = L.layerGroup().addTo(_geoMap);
   _geoLayerParcelles   = L.layerGroup().addTo(_geoMap);
   _geoLayerOperations  = L.layerGroup().addTo(_geoMap);
+  _geoLayerCourbes     = L.layerGroup().addTo(_geoMap);
+  _geoLayerTerrass     = L.layerGroup().addTo(_geoMap);
 
   // Marqueurs des programmes (fixes)
   DATA.programmes.forEach(function(p) {
@@ -23760,6 +23801,7 @@ function renderCarteGeo() {
   if (_geoLayerParcelles)   _geoLayerParcelles.clearLayers();
   if (_geoLayerOperations)  _geoLayerOperations.clearLayers();
   if (typeof renderParcellesCarte === 'function') renderParcellesCarte();
+  if (typeof renderTopoCarte === 'function') renderTopoCarte();
   if (typeof afRenderOperationsCarte === 'function') afRenderOperationsCarte();
 
   var nbP = 0, nbC = 0, nbComm = 0;
@@ -32460,6 +32502,7 @@ async function saveParcelle() {
     ref: ref, localisation: document.getElementById('parc-localisation').value.trim(),
     commune: document.getElementById('parc-commune').value.trim(),
     sous_prefecture: document.getElementById('parc-sous-prefecture').value.trim(),
+    utm_zone: parseInt((document.getElementById('parc-utm-zone')||{}).value)||30,
     superficie: parseFloat(document.getElementById('parc-sf-totale').value)||0,
     superficie_const: parseFloat(document.getElementById('parc-superficie-const').value)||0,
     description: document.getElementById('parc-description').value.trim(),
@@ -32489,6 +32532,7 @@ async function saveParcelle() {
     date_plan: (document.getElementById('parc-date-plan')||{}).value||'',
     echelle: (document.getElementById('parc-echelle')||{}).value||'',
     bornes: (typeof _brnList!=='undefined') ? JSON.parse(JSON.stringify(_brnList)) : ((existing&&existing.bornes)||[]),
+    points_altimetriques: (typeof _topoPoints!=='undefined') ? JSON.parse(JSON.stringify(_topoPoints)) : ((existing&&existing.points_altimetriques)||[]),
     created_at: (existing && existing.created_at) ? existing.created_at : today()
   };
   if (APP.editingId) { var idx=DATA.parcelles.findIndex(function(x){return x.id===APP.editingId;}); if(idx>=0)DATA.parcelles[idx]=p; }
@@ -44450,8 +44494,386 @@ function fonLoadCadastreBornes(id) {
     var el = document.getElementById(fid); if (!el) return;
     el.value = p ? (p[FONC_CADASTRE_MAP[fid]] || '') : '';
   });
+  var _zEl=document.getElementById('parc-utm-zone'); if(_zEl)_zEl.value=String((p&&p.utm_zone)||30);
   _brnList = (p && p.bornes) ? JSON.parse(JSON.stringify(p.bornes)) : [];
+  _topoPoints = (p && p.points_altimetriques) ? JSON.parse(JSON.stringify(p.points_altimetriques)) : [];
+  _brnShowContours = false;
   brnRender();
+}
+
+/* ── Topographie : levé, courbes de niveau, coupe ── */
+var _topoPoints = [];
+var _brnShowContours = false;
+function brnSamplePoints(){
+  var arr=[];
+  (_topoPoints||[]).forEach(function(p){ if(typeof p.z==='number'&&!isNaN(p.z)) arr.push({x:p.x,y:p.y,z:p.z}); });
+  (_brnList||[]).forEach(function(b){ if(typeof b.z==='number'&&!isNaN(b.z)&&b.z!==0&&(b.x||b.y)) arr.push({x:b.x,y:b.y,z:b.z}); });
+  return arr;
+}
+function _idwZ(x,y,samples,power){
+  power=power||2; var num=0,den=0;
+  for(var i=0;i<samples.length;i++){ var sp=samples[i]; var ddx=x-sp.x,ddy=y-sp.y; var d2=ddx*ddx+ddy*ddy; if(d2<1e-9)return sp.z; var w=1/Math.pow(d2,power/2); num+=w*sp.z; den+=w; }
+  return den?num/den:0;
+}
+function _marchingSquares(grid,nx,ny,level){
+  var segs=[]; function it(v0,v1){ return (level-v0)/((v1-v0)||1e-9); }
+  for(var j=0;j<ny-1;j++){ for(var i=0;i<nx-1;i++){
+    var tl=grid[j*nx+i],tr=grid[j*nx+i+1],br=grid[(j+1)*nx+i+1],bl=grid[(j+1)*nx+i];
+    var idx=0; if(tl>level)idx|=8; if(tr>level)idx|=4; if(br>level)idx|=2; if(bl>level)idx|=1;
+    if(idx===0||idx===15)continue;
+    var T=[i+it(tl,tr),j], R=[i+1,j+it(tr,br)], B=[i+it(bl,br),j+1], L=[i,j+it(tl,bl)];
+    function ad(a,b){ segs.push([a[0],a[1],b[0],b[1]]); }
+    switch(idx){ case 1:ad(L,B);break; case 2:ad(B,R);break; case 3:ad(L,R);break; case 4:ad(T,R);break;
+      case 5:ad(L,T);ad(B,R);break; case 6:ad(T,B);break; case 7:ad(L,T);break; case 8:ad(T,L);break;
+      case 9:ad(T,B);break; case 10:ad(T,R);ad(B,L);break; case 11:ad(T,R);break; case 12:ad(R,L);break;
+      case 13:ad(R,B);break; case 14:ad(B,L);break; }
+  }}
+  return segs;
+}
+function _brnContourSvg(px,py,minX,maxX,minY,maxY){
+  var info=document.getElementById('brn-topo-info');
+  var samples=brnSamplePoints();
+  if(samples.length<3){ if(info)info.textContent='Levé insuffisant (≥3 points avec Z).'; return ''; }
+  var zs=samples.map(function(s){return s.z;}); var zmin=Math.min.apply(null,zs), zmax=Math.max.apply(null,zs);
+  if(zmax-zmin<1e-6){ if(info)info.textContent='Altitudes constantes.'; return ''; }
+  var nx=56,ny=56,dx=(maxX-minX)||1,dy=(maxY-minY)||1; var grid=new Array(nx*ny);
+  for(var j=0;j<ny;j++){ for(var i=0;i<nx;i++){ var X=minX+(i/(nx-1))*dx,Y=minY+(j/(ny-1))*dy; grid[j*nx+i]=_idwZ(X,Y,samples,2); } }
+  var interval=parseFloat((document.getElementById('brn-ct-int')||{}).value)||0;
+  if(interval<=0){ var raw=(zmax-zmin)/8; var mag=Math.pow(10,Math.floor(Math.log10(raw||1))); interval=Math.max(mag,Math.round(raw/mag)*mag)||raw; }
+  function gx(i){ return px(minX+(i/(nx-1))*dx); } function gy(j){ return py(minY+(j/(ny-1))*dy); }
+  var paths=''; var levels=[]; for(var L=Math.ceil(zmin/interval)*interval; L<zmax; L+=interval){ levels.push(L); if(levels.length>60)break; }
+  levels.forEach(function(L,li){
+    var segs=_marchingSquares(grid,nx,ny,L); var d='';
+    segs.forEach(function(sg){ d+='M'+gx(sg[0]).toFixed(1)+' '+gy(sg[1]).toFixed(1)+'L'+gx(sg[2]).toFixed(1)+' '+gy(sg[3]).toFixed(1); });
+    var major=(li%5===0);
+    paths+='<path d="'+d+'" fill="none" stroke="#8a5a2b" stroke-width="'+(major?1.1:0.55)+'" opacity="'+(major?0.95:0.55)+'"/>';
+    if(major && segs.length){ var ms=segs[Math.floor(segs.length/2)]; var lx=(gx(ms[0])+gx(ms[2]))/2, ly=(gy(ms[1])+gy(ms[3]))/2; paths+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="8" fill="#6b4423" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="2">'+L.toFixed(1)+'</text>'; }
+  });
+  if(info)info.textContent='Z '+zmin.toFixed(1)+'→'+zmax.toFixed(1)+' m · équidistance '+interval.toFixed(2)+' m · '+levels.length+' courbes · '+samples.length+' pts';
+  return paths;
+}
+function brnToggleContours(){ _brnShowContours=!_brnShowContours; var b=document.getElementById('brn-ct-btn'); if(b){ b.classList.toggle('btn-primary',_brnShowContours); b.classList.toggle('btn-secondary',!_brnShowContours); } brnRenderPlan(); }
+function brnFillCoupeSelects(){
+  var a=document.getElementById('brn-coupe-a'), b=document.getElementById('brn-coupe-b'); if(!a||!b)return;
+  var opts=(_brnList||[]).map(function(bo,i){ return '<option value="'+i+'">'+(bo.nom||('B'+(i+1)))+'</option>'; }).join('');
+  var va=a.value, vb=b.value; a.innerHTML=opts; b.innerHTML=opts;
+  if(va)a.value=va; if(vb)b.value=vb; else if(_brnList.length>1)b.value='1';
+}
+function brnCoupe(){
+  var ia=parseInt((document.getElementById('brn-coupe-a')||{}).value), ib=parseInt((document.getElementById('brn-coupe-b')||{}).value);
+  var A=_brnList[ia], B=_brnList[ib]; if(!A||!B||A===B){ toast('Choisissez deux bornes distinctes.','error'); return; }
+  var samples=brnSamplePoints(); if(samples.length<3){ toast('Levé insuffisant (≥3 points Z).','error'); return; }
+  var N=80, prof=[], totalD=Math.hypot(B.x-A.x,B.y-A.y);
+  for(var k=0;k<=N;k++){ var t=k/N; prof.push({d:totalD*t, z:_idwZ(A.x+(B.x-A.x)*t,A.y+(B.y-A.y)*t,samples,2)}); }
+  var zs=prof.map(function(p){return p.z;}), zmin=Math.min.apply(null,zs), zmax=Math.max.apply(null,zs), dz=(zmax-zmin)||1;
+  var W=480,H=220,padL=46,padB=30,padT=12,padR=12;
+  function sx(d){ return padL+(d/(totalD||1))*(W-padL-padR); } function sy(z){ return H-padB-((z-zmin)/dz)*(H-padT-padB); }
+  var line=prof.map(function(p,i){ return (i?'L':'M')+sx(p.d).toFixed(1)+' '+sy(p.z).toFixed(1); }).join('');
+  var area=line+'L'+sx(totalD).toFixed(1)+' '+(H-padB)+'L'+padL+' '+(H-padB)+'Z';
+  var ticks=''; for(var g=0;g<=4;g++){ var zv=zmin+dz*g/4, yy=sy(zv); ticks+='<line x1="'+padL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+yy.toFixed(1)+'" stroke="#eee"/><text x="4" y="'+(yy+3).toFixed(1)+'" font-size="9" fill="#666">'+zv.toFixed(1)+'</text>'; }
+  var svg='<svg width="'+W+'" height="'+H+'" style="max-width:100%;background:#fff;border:1px solid #ddd;border-radius:6px;">'+ticks
+    +'<path d="'+area+'" fill="rgba(138,90,43,0.12)" stroke="none"/><path d="'+line+'" fill="none" stroke="#8a5a2b" stroke-width="1.6"/>'
+    +'<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="10" text-anchor="middle" fill="#444">Distance '+totalD.toFixed(1)+' m · dénivelé '+(zmax-zmin).toFixed(2)+' m</text></svg>';
+  document.getElementById('brn-coupe-out').innerHTML='<div style="font-size:12px;margin-bottom:4px;">Coupe '+(A.nom||ia)+' → '+(B.nom||ib)+'</div>'+svg;
+}
+function brnImportCSV(input){
+  var fl=input.files&&input.files[0]; if(!fl)return;
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    var txt=ev.target.result; var lines=txt.split(/\r?\n/).filter(function(l){return l.trim();});
+    if(!lines.length){ toast('Fichier vide.','error'); input.value=''; return; }
+    var sep=(txt.indexOf(';')>-1)?';':(txt.indexOf('\t')>-1?'\t':',');
+    var first=lines[0].split(sep);
+    var isHeader=first.some(function(c){ return /[a-zA-Z]/.test(c) && isNaN(parseFloat(c)); });
+    var col={x:-1,y:-1,z:-1,nom:-1};
+    if(isHeader){
+      first.forEach(function(h,idx){ var hh=h.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if(['x','coordx','easting','est','abscisse'].indexOf(hh)>=0)col.x=idx;
+        else if(['y','coordy','northing','nord','ordonnee'].indexOf(hh)>=0)col.y=idx;
+        else if(['z','alt','altitude','cote','elevation'].indexOf(hh)>=0)col.z=idx;
+        else if(['nom','name','point','borne','id','label'].indexOf(hh)>=0)col.nom=idx;
+      });
+    }
+    if(col.x<0||col.y<0){ var fl0=(lines[isHeader?1:0]||'').split(sep); var base=isNaN(parseFloat(fl0[0]))?1:0; if(base===1)col.nom=0; col.x=base; col.y=base+1; col.z=base+2; }
+    var start=isHeader?1:0; var pts=[];
+    for(var r=start;r<lines.length;r++){
+      var c=lines[r].split(sep); if(c.length<=Math.max(col.x,col.y))continue;
+      var x=parseFloat((c[col.x]||'').replace(',','.')), y=parseFloat((c[col.y]||'').replace(',','.'));
+      if(isNaN(x)||isNaN(y))continue;
+      var z=col.z>=0?parseFloat((c[col.z]||'').replace(',','.')):0; if(isNaN(z))z=0;
+      var nom=col.nom>=0?(c[col.nom]||'').trim():('P'+(r-start+1));
+      pts.push({x:x,y:y,z:z,nom:nom});
+    }
+    if(!pts.length){ toast('Aucun point lisible (séparateur "'+sep+'").','error'); input.value=''; return; }
+    _topoPoints=pts;
+    _brnList.forEach(function(b){ var m=pts.find(function(p){return p.nom&&p.nom===b.nom;}); if(m)b.z=m.z; });
+    var withZ=pts.filter(function(p){return p.z!==0;}).length;
+    _brnShowContours=true; var btn=document.getElementById('brn-ct-btn'); if(btn){btn.classList.add('btn-primary');btn.classList.remove('btn-secondary');}
+    brnRender();
+    var q=brnQualityRMSE();
+    toast(pts.length+' points importés'+(withZ?(' · '+withZ+' cotés'):'')+(q!=null?(' · RMSE '+q.toFixed(2)+' m'):''),'success');
+    input.value='';
+  };
+  rd.readAsText(fl);
+}
+/* Qualité du levé : RMSE par validation croisée leave-one-out de l'IDW */
+function brnQualityRMSE(){
+  var s=brnSamplePoints(); if(s.length<4)return null;
+  var se=0,n=0;
+  for(var i=0;i<s.length;i++){ var others=s.slice(0,i).concat(s.slice(i+1)); var zi=_idwZ(s[i].x,s[i].y,others,2); var e=zi-s[i].z; se+=e*e; n++; }
+  return n?Math.sqrt(se/n):null;
+}
+function brnShowQuality(){
+  var q=brnQualityRMSE();
+  if(q==null){ toast('Besoin d\'au moins 4 points cotés (bornes Z ou levé CSV).','error'); return; }
+  var s=brnSamplePoints(); var zs=s.map(function(p){return p.z;});
+  toast('Qualité levé : RMSE '+q.toFixed(2)+' m (validation croisée) · '+s.length+' pts · Z '+Math.min.apply(null,zs).toFixed(1)+'→'+Math.max.apply(null,zs).toFixed(1)+' m','success');
+}
+/* Export CSV des bornes + points de levé (état éditeur) */
+function topoExportCSV(){
+  var ref=((document.getElementById('parc-ref')||{}).value||'parcelle').replace(/[^A-Za-z0-9_-]/g,'_');
+  var rows=[['Type','Nom','X','Y','Z','Angle','Distance']];
+  (_brnList||[]).forEach(function(b){ rows.push(['Borne',b.nom||'',b.x||0,b.y||0,b.z||0,b.angle||0,b.distance||0]); });
+  (_topoPoints||[]).forEach(function(pt){ rows.push(['Point',pt.nom||'',pt.x||0,pt.y||0,pt.z||0,'','']); });
+  if(rows.length<2){ toast('Rien à exporter.','error'); return; }
+  var csv=rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(';'); }).join('\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='topo_'+ref+'_'+today()+'.csv'; a.click();
+  toast('Export CSV topographique téléchargé.','success');
+}
+/* Rapport topographique imprimable */
+function topoGenererRapport(){
+  var bornes=_brnList||[], pts=_topoPoints||[];
+  var poly=bornes.filter(function(b){return (b.x||b.y);});
+  if(poly.length<3){ toast('Au moins 3 bornes requises pour le rapport.','error'); return; }
+  var ref=(document.getElementById('parc-ref')||{}).value||'';
+  var loc=(document.getElementById('parc-localisation')||{}).value||'';
+  var tf=(document.getElementById('parc-tf-num')||{}).value||'';
+  var geo=(document.getElementById('parc-geometre')||{}).value||'';
+  var zone=((document.getElementById('parc-utm-zone')||{}).value||'30')+'N';
+  var soc=(DATA.params&&DATA.params.societe)||'Menko Immo';
+  var surface=brnArea(poly);
+  var nivEl=document.getElementById('terr-niv'); var niv=(nivEl&&nivEl.value!=='')?parseFloat(nivEl.value):null;
+  var kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1;
+  var vol=(niv!=null&&!isNaN(niv))?terrVolumes(niv,kc):null;
+  var q=brnQualityRMSE();
+  function n3(v){return (parseFloat(v)||0).toFixed(3);} function n2(v){return (parseFloat(v)||0).toFixed(2);}
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport topographique — '+ref+'</title><style>'
+    +'body{font-family:"Times New Roman",Georgia,serif;padding:40px;font-size:12px;color:#111;line-height:1.5;}'
+    +'h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:6px;font-size:19px;}h2{color:#1A6B3A;margin-top:22px;font-size:14px;}'
+    +'table{width:100%;border-collapse:collapse;margin:10px 0;}td,th{border:1px solid #ccc;padding:5px 8px;}th{background:#E8F4EE;text-align:left;}.num{text-align:right;}'
+    +'.sig{display:flex;justify-content:space-between;margin-top:48px;}.sig div{width:45%;border-top:1px solid #999;padding-top:8px;text-align:center;font-size:11px;color:#555;}'
+    +'</style></head><body>'
+    +'<h1>RAPPORT TOPOGRAPHIQUE</h1>'
+    +'<p><strong>'+soc+'</strong><br>Parcelle : '+(ref||loc||'—')+(tf?(' · TF '+tf):'')+(loc?(' · '+loc):'')+'<br>Zone UTM : '+zone+' · Date : '+today()+(geo?(' · Géomètre : '+geo):'')+'</p>'
+    +'<h2>1. Tableau des bornes</h2>'
+    +'<table><thead><tr><th>Borne</th><th class="num">X</th><th class="num">Y</th><th class="num">Z</th><th class="num">Angle</th><th class="num">Distance</th></tr></thead><tbody>'
+    +bornes.map(function(b){return '<tr><td>'+(b.nom||'')+'</td><td class="num">'+n3(b.x)+'</td><td class="num">'+n3(b.y)+'</td><td class="num">'+n3(b.z)+'</td><td class="num">'+n2(b.angle)+'</td><td class="num">'+n2(b.distance)+'</td></tr>';}).join('')
+    +'</tbody></table>'
+    +'<h2>2. Points de levé altimétriques</h2>'
+    +(pts.length?'<table><thead><tr><th>Nom</th><th class="num">X</th><th class="num">Y</th><th class="num">Z</th></tr></thead><tbody>'+pts.map(function(pt){return '<tr><td>'+(pt.nom||'')+'</td><td class="num">'+n3(pt.x)+'</td><td class="num">'+n3(pt.y)+'</td><td class="num">'+n3(pt.z)+'</td></tr>';}).join('')+'</tbody></table>':'<p>Aucun point de levé dense enregistré.</p>')
+    +'<h2>3. Superficie</h2><p>Surface calculée (formule de Gauss) : <strong>'+fmtF(Math.round(surface))+' m²</strong></p>'
+    +(q!=null?('<p>Précision du levé (RMSE validation croisée IDW) : <strong>'+q.toFixed(2)+' m</strong></p>'):'')
+    +(vol?('<h2>4. Terrassement</h2><p>Niveau de plateforme : <strong>'+niv.toFixed(2)+' m</strong>'+(kc!==1?(' · coef. compactage '+kc):'')+'</p>'
+      +'<p>Déblai : <strong>'+fmtF(Math.round(vol.cut))+' m³</strong> &nbsp;|&nbsp; Remblai : <strong>'+fmtF(Math.round(vol.fill))+' m³</strong>'+(kc!==1?(' (compacté '+fmtF(Math.round(vol.fill*kc))+' m³)'):'')+'</p>'
+      +'<p>Solde : '+((vol.cut-vol.fill*kc)>=0?'Excédent à évacuer':'Déficit à apporter')+' <strong>'+fmtF(Math.round(Math.abs(vol.cut-vol.fill*kc)))+' m³</strong></p>'):'<h2>4. Terrassement</h2><p>Saisir un niveau de plateforme dans le panneau topographie pour calculer les volumes.</p>')
+    +'<div class="sig"><div>Le Géomètre-Expert<br><br><br>Signature & cachet</div><div>Le Promoteur<br><br><br>Signature & cachet</div></div>'
+    +'</body></html>';
+  var w=window.open('','','width=860,height=800'); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){w.print();},400);
+}
+
+
+/* ── Terrassement : déblai / remblai + équilibrage ── */
+function _terrPoly(){ return (_brnList||[]).filter(function(b){ return (b.x||b.y); }); }
+function _terrInPoly(x,y,poly){ var inside=false; for(var i=0,j=poly.length-1;i<poly.length;j=i++){ var xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y; var inter=((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/((yj-yi)||1e-9)+xi); if(inter)inside=!inside; } return inside; }
+function terrVolumes(P,Kc){
+  var poly=_terrPoly(); var samples=brnSamplePoints();
+  if(poly.length<3||samples.length<3) return null;
+  var xs=poly.map(function(p){return p.x;}), ys=poly.map(function(p){return p.y;});
+  var minX=Math.min.apply(null,xs),maxX=Math.max.apply(null,xs),minY=Math.min.apply(null,ys),maxY=Math.max.apply(null,ys);
+  var N=64, dx=(maxX-minX)||1, dy=(maxY-minY)||1, cw=dx/N, ch=dy/N, ca=cw*ch;
+  var cut=0,fill=0,area=0,cells=[];
+  for(var j=0;j<N;j++){ for(var i=0;i<N;i++){ var xc=minX+(i+0.5)*cw, yc=minY+(j+0.5)*ch; if(!_terrInPoly(xc,yc,poly))continue; var z=_idwZ(xc,yc,samples,2); var d=z-P; if(d>0)cut+=d*ca; else fill+=(-d)*ca; area+=ca; cells.push({xc:xc,yc:yc,cw:cw,ch:ch,d:d}); } }
+  return {cut:cut,fill:fill,area:area,cells:cells,minX:minX,maxX:maxX,minY:minY,maxY:maxY};
+}
+function terrOptimalLevel(Kc){
+  var samples=brnSamplePoints(); if(samples.length<3)return null;
+  var zs=samples.map(function(s){return s.z;}); var lo=Math.min.apply(null,zs),hi=Math.max.apply(null,zs);
+  for(var it=0;it<34;it++){ var mid=(lo+hi)/2; var v=terrVolumes(mid,Kc); if(!v)return null; if((v.cut-Kc*v.fill)>0)lo=mid; else hi=mid; }
+  return (lo+hi)/2;
+}
+/* ─── cache partagé terrCalc → terrDevis ─── */
+var _terrLastVolumes = null;
+
+function terrCalc(){
+  var Kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1;
+  var P=parseFloat((document.getElementById('terr-niv')||{}).value);
+  if(isNaN(P)){ toast('Saisissez un niveau de plateforme (ou ⚖️ optimal).','error'); return; }
+  var v=terrVolumes(P,Kc);
+  if(!v){ toast('Besoin d\'au moins 3 bornes et 3 points avec Z.','error'); return; }
+  var fillC=v.fill*Kc; var solde=v.cut-fillC;
+  /* ── cache pour terrDevis ── */
+  _terrLastVolumes = { cut: v.cut, fill: v.fill, fillC: fillC, solde: solde, area: v.area, P: P, Kc: Kc };
+  var btn=document.getElementById('btn-terr-devis'); if(btn) btn.style.display='inline-flex';
+  document.getElementById('terr-devis-out').innerHTML='';
+  var msg=solde>=0?('🚚 Excédent à évacuer : <strong>'+fmtF(Math.round(solde))+' m³</strong>'):('🚚 Déficit à apporter : <strong>'+fmtF(Math.round(-solde))+' m³</strong>');
+  var maxCut=0,maxFill=0; v.cells.forEach(function(c){ if(c.d>0)maxCut=Math.max(maxCut,c.d); else maxFill=Math.max(maxFill,-c.d); });
+  var W=420,H=320,pad=20, dx=(v.maxX-v.minX)||1, dy=(v.maxY-v.minY)||1, sc=Math.min((W-2*pad)/dx,(H-2*pad)/dy);
+  function px(x){return pad+(x-v.minX)*sc;} function py(y){return H-(pad+(y-v.minY)*sc);}
+  var rects=v.cells.map(function(c){ var col,al; if(c.d>0){ col='220,38,38'; al=maxCut?(0.12+0.78*c.d/maxCut):0.4; } else if(c.d<0){ col='37,99,235'; al=maxFill?(0.12+0.78*(-c.d)/maxFill):0.4; } else { col='180,180,180'; al=0.25; } var x=px(c.xc-c.cw/2), y=py(c.yc+c.ch/2), w=c.cw*sc, hh=c.ch*sc; return '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(w+0.7).toFixed(1)+'" height="'+(hh+0.7).toFixed(1)+'" fill="rgba('+col+','+al.toFixed(2)+')"/>'; }).join('');
+  var poly=_terrPoly().map(function(p){return px(p.x).toFixed(1)+','+py(p.y).toFixed(1);}).join(' ');
+  var svg='<svg width="'+W+'" height="'+H+'" style="max-width:100%;background:#fff;border:1px solid #ddd;border-radius:6px;">'+rects+'<polygon points="'+poly+'" fill="none" stroke="#1A6B3A" stroke-width="1.5"/></svg>';
+  document.getElementById('terr-out').innerHTML=
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin:6px 0;">'
+    +'<span>🟥 Déblai : <strong>'+fmtF(Math.round(v.cut))+' m³</strong></span>'
+    +'<span>🟦 Remblai : <strong>'+fmtF(Math.round(v.fill))+' m³</strong>'+((Kc&&Kc!==1)?(' · compacté ×'+Kc+' = '+fmtF(Math.round(fillC))+' m³'):'')+'</span>'
+    +'<span>'+msg+'</span>'
+    +'<span style="color:var(--blanc-dim);">Plateforme '+P.toFixed(2)+' m · emprise '+fmtF(Math.round(v.area))+' m²</span>'
+    +'</div>'+svg
+    +'<div style="font-size:11px;color:var(--blanc-dim);margin-top:4px;">🟥 déblai (terrain au-dessus du niveau) · 🟦 remblai (terrain en-dessous). Intensité ∝ hauteur.</div>';
+}
+function terrAuto(){ var Kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1; var P=terrOptimalLevel(Kc); if(P==null){ toast('Besoin d\'au moins 3 bornes et 3 points Z.','error'); return; } document.getElementById('terr-niv').value=P.toFixed(2); terrCalc(); toast('Niveau d\'équilibre déblai/remblai : '+P.toFixed(2)+' m','success'); }
+
+/* ══════════════════════════════════════════════════════════════════
+   terrDevis() — Budget prévisionnel d'aménagement en FCFA
+   Tarifs unitaires Côte d'Ivoire / marché Abidjan (2024-2025)
+   ══════════════════════════════════════════════════════════════════ */
+function terrDevis(){
+  if(!_terrLastVolumes){ toast('Lancez d\'abord le calcul Terrassement.','error'); return; }
+  var d = _terrLastVolumes;
+  var cutM3  = Math.round(d.cut);
+  var fillM3 = Math.round(d.fill);
+  var fillCM3= Math.round(d.fillC);
+  var soldeM3= Math.round(d.solde);
+
+  /* Tarifs unitaires FCFA — bordereau BTP MCLAU-CI + marchés Abidjan 2024-2025 */
+  var T = {
+    decapage      : 1200,
+    deblai_manu   : 4500,
+    deblai_engin  : 2800,
+    charg_camion  : 1500,
+    evacuation    : 3500,
+    remblai_propre: 6000,
+    remblai_reutil: 2500,
+    compactage    : 1800,
+    plateforme_niv: 1400,
+    imprevu       : 0.10
+  };
+
+  var aireM2 = Math.round(d.area);
+  var useEngins = (cutM3 > 200);
+  var prixDeblaiU = useEngins ? T.deblai_engin : T.deblai_manu;
+  var cDeblai     = cutM3 * prixDeblaiU;
+  var cCharg      = (cutM3 > 50) ? cutM3 * T.charg_camion : 0;
+  var cEvac       = soldeM3 > 0 ? soldeM3 * T.evacuation : 0;
+  var remblaiApport = Math.max(0, -soldeM3);
+  var remblaiReutil = Math.min(fillCM3, cutM3);
+  var cRemblaiApport = remblaiApport * T.remblai_propre;
+  var cRemblaiReutil = remblaiReutil * T.remblai_reutil;
+  var cCompact = fillCM3 * T.compactage;
+  var cDecap   = aireM2 * T.decapage;
+  var cPlatef  = aireM2 * T.plateforme_niv;
+
+  var sousTotal = cDeblai + cCharg + cEvac + cRemblaiApport + cRemblaiReutil + cCompact + cDecap + cPlatef;
+  var cImprevu  = Math.round(sousTotal * T.imprevu);
+  var totalHT   = sousTotal + cImprevu;
+  var tva18     = Math.round(totalHT * 0.18);
+  var totalTTC  = totalHT + tva18;
+
+  function row(emoji, lib, qte, unite, pu, total, color){
+    return '<tr>'
+      +'<td style="padding:6px 8px;font-size:12px;">'+emoji+' '+lib+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-size:12px;">'+fmtF(qte)+'</td>'
+      +'<td style="padding:6px 8px;font-size:12px;color:var(--dim);">'+unite+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-size:12px;">'+fmtF(pu)+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-weight:700;color:'+(color||'var(--blanc)')+';">'+fmtF(Math.round(total))+'</td>'
+      +'</tr>';
+  }
+  function rowSep(label){
+    return '<tr><td colspan="5" style="padding:4px 8px 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);background:var(--card2);">'+label+'</td></tr>';
+  }
+  function rowTotal(label, val, color, big){
+    var fs = big ? '14px' : '12px';
+    return '<tr style="background:var(--card2);">'
+      +'<td colspan="4" style="padding:7px 8px;font-weight:700;font-size:'+fs+';">'+label+'</td>'
+      +'<td style="padding:7px 8px;text-align:right;font-weight:700;font-size:'+fs+';color:'+(color||'var(--or)')+';">'+fmtF(Math.round(val))+' FCFA</td>'
+      +'</tr>';
+  }
+
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  var parcelleNom = (function(){ var el=document.getElementById('brn-parcelle-sel'); return (el&&el.options&&el.selectedIndex>=0)?el.options[el.selectedIndex].text:'Parcelle'; })();
+
+  var html =
+    '<div style="border:1px solid var(--bord);border-radius:12px;overflow:hidden;margin-top:4px;background:var(--card);">'
+    +'<div style="background:linear-gradient(135deg,#1C1C2E 0%,#2D2D44 100%);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div>'
+    +'<div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:#D4956A;letter-spacing:0.3px;">📋 Budget Prévisionnel — Terrassement</div>'
+    +'<div style="font-size:11px;color:#93C5FD;margin-top:2px;">'+parcelleNom+' &nbsp;·&nbsp; Plateforme '+d.P.toFixed(2)+' m &nbsp;·&nbsp; Emprise '+fmtF(aireM2)+' m²</div>'
+    +'</div>'
+    +'<div style="text-align:right;font-size:10px;color:rgba(255,255,255,.5);">Édité le '+dateStr+'<br><em>Estimation — non contractuel</em></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--bord);">'
+    +[['🟥 Déblai',fmtF(cutM3)+' m³','#dc2626'],['🟦 Remblai',fmtF(fillCM3)+' m³','#2563eb'],['⚖️ Solde',(soldeM3>=0?'+':'')+fmtF(soldeM3)+' m³',(soldeM3>=0?'#dc2626':'#4AC47A')],['📐 Emprise',fmtF(aireM2)+' m²','var(--or)']].map(function(p){
+        return '<div style="padding:10px 12px;border-right:1px solid var(--bord);">'
+          +'<div style="font-size:10px;color:var(--dim);">'+p[0]+'</div>'
+          +'<div style="font-size:15px;font-weight:700;color:'+p[2]+';">'+p[1]+'</div>'
+          +'</div>';
+      }).join('')
+    +'</div>'
+    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'
+    +'<thead><tr style="background:var(--card2);">'
+    +'<th style="padding:8px;text-align:left;font-size:10px;color:var(--dim);">DÉSIGNATION</th>'
+    +'<th style="padding:8px;text-align:right;font-size:10px;color:var(--dim);">QTÉ</th>'
+    +'<th style="padding:8px;font-size:10px;color:var(--dim);">U.</th>'
+    +'<th style="padding:8px;text-align:right;font-size:10px;color:var(--dim);">P.U. FCFA</th>'
+    +'<th style="padding:8px;text-align:right;font-size:10px;color:var(--dim);">TOTAL FCFA</th>'
+    +'</tr></thead><tbody>'
+    +rowSep('Préparation de site')
+    +row('🌿','Décapage végétale + terrassement superficiel',aireM2,'m²',T.decapage,cDecap)
+    +rowSep(useEngins ? 'Déblai mécanisé (engins)' : 'Déblai manuel')
+    +row('🚜','Déblai terrain ordinaire',cutM3,'m³',prixDeblaiU,cDeblai,'#dc2626')
+    +(cCharg>0 ? row('🔃','Chargement & mise en stock sur site',cutM3,'m³',T.charg_camion,cCharg) : '')
+    +(cEvac>0  ? row('🚚','Évacuation excédent (≈15 km)',soldeM3,'m³',T.evacuation,cEvac,'#E05252') : '')
+    +rowSep('Remblai & compactage')
+    +(remblaiReutil>0 ? row('♻️','Réutilisation déblais en remblai',remblaiReutil,'m³',T.remblai_reutil,cRemblaiReutil,'#4AC47A') : '')
+    +(remblaiApport>0 ? row('🪨','Apport matériaux d\'emprunt compactés',remblaiApport,'m³',T.remblai_propre,cRemblaiApport,'#E05252') : '')
+    +row('🔨','Compactage mécanique par couches 20 cm',fillCM3,'m³',T.compactage,cCompact)
+    +rowSep('Finition plateforme')
+    +row('📏','Nivellement fin de plateforme',aireM2,'m²',T.plateforme_niv,cPlatef)
+    +rowSep('')
+    +rowTotal('Sous-total HT',sousTotal)
+    +rowTotal('Aléas & imprévus (10 %)',cImprevu,'var(--dim)')
+    +rowTotal('TOTAL HT',totalHT,'var(--or)')
+    +rowTotal('TVA 18 %',tva18,'var(--dim)')
+    +rowTotal('★ TOTAL TTC',totalTTC,'#4AC47A',true)
+    +'</tbody></table></div>'
+    +'<div style="padding:10px 14px;font-size:10px;color:var(--dim);border-top:1px solid var(--bord);line-height:1.6;">'
+    +'<strong>Hypothèses :</strong> '
+    +(useEngins?'Déblai mécanisé retenu (volume > 200 m³). ':'Déblai manuel retenu (volume ≤ 200 m³). ')
+    +'Kc = '+d.Kc+'. Remblai : réutilisation max des déblais avant apport emprunt. '
+    +'Tarifs unitaires : bordereau BTP MCLAU-CI + marchés publics Abidjan 2024-2025. '
+    +'Estimation non contractuelle — à affiner par consultation d\'entreprises.'
+    +'</div>'
+    +'<div style="padding:10px 14px;border-top:1px solid var(--bord);display:flex;gap:8px;flex-wrap:wrap;">'
+    +'<button class="btn btn-primary btn-sm" onclick="terrDevisImprimer()">🖨️ Imprimer / PDF</button>'
+    +'</div>'
+    +'</div>';
+
+  document.getElementById('terr-devis-out').innerHTML = html;
+  setTimeout(function(){ var el=document.getElementById('terr-devis-out'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 100);
+  toast('Budget généré — '+fmtF(totalTTC)+' FCFA TTC','success');
+}
+
+/* Impression devis terrassement */
+function terrDevisImprimer(){
+  var el=document.getElementById('terr-devis-out'); if(!el||!el.innerHTML){ toast('Générez d\'abord le budget.','error'); return; }
+  var soc=(window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Budget Terrassement — '+soc+'</title>'
+    +'<style>body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a2e;margin:24px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:6px 8px;}th{background:#f4f6f9;}</style>'
+    +'</head><body>'+el.innerHTML+'</body></html>';
+  html = menkoStamp(html, 'BUD-TERR');
+  var w=window.open('','','width=860,height=800'); w.document.write(html); w.document.close(); w.focus(); setTimeout(function(){w.print();},400);
 }
 
 function brnAdd() {
@@ -44464,20 +44886,21 @@ function brnRemove(i) { _brnList.splice(i,1); brnRender(); }
 function brnRender() {
   var tb = document.getElementById('tbody-bornes');
   if (!tb) return;
-  if (!_brnList.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim,#888);padding:12px;">Aucune borne — cliquez sur + Borne ou importez un CSV.</td></tr>'; }
+  if (!_brnList.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim,#888);padding:12px;">Aucune borne — cliquez sur + Borne.</td></tr>'; }
   else {
     tb.innerHTML = _brnList.map(function(b,i){
       return '<tr>'
         + '<td><input class="form-control" style="width:70px" value="'+(b.nom||'').replace(/"/g,'&quot;')+'" oninput="_brnList['+i+'].nom=this.value"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right" value="'+(b.x||0)+'" oninput="_brnList['+i+'].x=parseFloat(this.value)||0;brnRenderPlan()"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right" value="'+(b.y||0)+'" oninput="_brnList['+i+'].y=parseFloat(this.value)||0;brnRenderPlan()"></td>'
-        + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:90px;background:var(--or-glow,rgba(184,115,51,.08))" value="'+(b.z||0)+'" oninput="_brnList['+i+'].z=parseFloat(this.value)||0;brnRenderPlan()" placeholder="alt."></td>'
+        + '<td><input type="number" step="0.01" class="form-control" style="text-align:right;width:80px" value="'+(b.z||0)+'" oninput="_brnList['+i+'].z=parseFloat(this.value)||0;if(_brnShowContours)brnRenderPlan()"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:90px" value="'+(b.angle||0)+'" oninput="_brnList['+i+'].angle=parseFloat(this.value)||0"></td>'
         + '<td><input type="number" step="0.001" class="form-control" style="text-align:right;width:100px" value="'+(b.distance||0)+'" oninput="_brnList['+i+'].distance=parseFloat(this.value)||0"></td>'
         + '<td><button class="btn btn-secondary btn-sm" onclick="brnRemove('+i+')">✕</button></td>'
         + '</tr>';
     }).join('');
   }
+  brnFillCoupeSelects();
   brnRenderPlan();
 }
 
@@ -44502,7 +44925,21 @@ function brnApplyArea() {
   toast('Superficie calculée : ' + fmtF(Math.round(a)) + ' m²', 'success');
 }
 
-/* Plan SVG auto-échelle + annotations altimétriques + courbes de niveau */
+/* Plan SVG auto-échelle */
+/* Flèche Nord + barre d'échelle pour le plan SVG */
+function _brnNorthScale(W,H,sc){
+  var nx=28,ny=36;
+  var north='<g><polygon points="'+nx+','+(ny-20)+' '+(nx-6)+','+(ny+8)+' '+nx+','+(ny+2)+' '+(nx+6)+','+(ny+8)+'" fill="#111"/>'
+    +'<text x="'+nx+'" y="'+(ny+20)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">N</text></g>';
+  if(!sc||!isFinite(sc)||sc<=0) return north;
+  var meters=80/sc; var pow=Math.pow(10,Math.floor(Math.log10(meters||1)));
+  var nice=[1,2,5,10].map(function(m){return m*pow;}).reduce(function(best,m){return Math.abs(m-meters)<Math.abs(best-meters)?m:best;}, pow);
+  var barPx=nice*sc, bx=18, by=H-22;
+  var bar='<g><rect x="'+bx+'" y="'+by+'" width="'+barPx.toFixed(1)+'" height="5" fill="#111"/>'
+    +'<rect x="'+bx+'" y="'+by+'" width="'+(barPx/2).toFixed(1)+'" height="5" fill="#fff" stroke="#111" stroke-width="0.5"/>'
+    +'<text x="'+(bx+barPx/2).toFixed(1)+'" y="'+(by-4)+'" text-anchor="middle" font-size="9" fill="#111">'+nice+' m</text></g>';
+  return north+bar;
+}
 function brnRenderPlan() {
   var box = document.getElementById('brn-plan');
   if (!box) return;
@@ -44510,55 +44947,25 @@ function brnRenderPlan() {
   if (pts.length < 2) { box.innerHTML = '<span style="color:var(--blanc-dim,#888);font-size:12px;">Plan : saisissez au moins 2 bornes.</span>'; return; }
   var xs = pts.map(function(p){return p.x;}), ys = pts.map(function(p){return p.y;});
   var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
-  var W=460, H=340, pad=36;
+  var W=420, H=320, pad=30;
   var dx=(maxX-minX)||1, dy=(maxY-minY)||1;
   var sc=Math.min((W-2*pad)/dx, (H-2*pad)/dy);
   function px(x){ return pad + (x-minX)*sc; }
   function py(y){ return H - (pad + (y-minY)*sc); }   // Y vers le haut
-
-  /* Détection altimétrie */
-  var hasZ = pts.some(function(b){ return (b.z||0) !== 0; });
-  var zVals = pts.map(function(b){ return b.z||0; });
-  var minZ = hasZ ? Math.min.apply(null,zVals) : 0;
-  var maxZ = hasZ ? Math.max.apply(null,zVals) : 0;
-
-  /* Couleur borne selon altitude (gradient bleu → vert → rouge) */
-  function zColor(z) {
-    if (!hasZ || maxZ===minZ) return '#1A6B3A';
-    var t = (z - minZ) / (maxZ - minZ); // 0→1
-    var r = Math.round(52 + t * 180);
-    var g = Math.round(107 - t * 30);
-    var b = Math.round(58 + (1-t) * 120);
-    return 'rgb('+r+','+g+','+b+')';
-  }
-
-  /* Courbes de niveau (si >= 4 bornes avec Z distincts) */
-  var contourSVG = '';
-  if (hasZ && pts.length >= 4 && maxZ > minZ) {
-    contourSVG = brnContourLines(pts, px, py, minZ, maxZ);
-  }
-
-  var poly = pts.map(function(p){ return px(p.x).toFixed(1)+','+py(p.y).toFixed(1); }).join(' ');
+  var poly = pts.map(function(p){ return px(p.x)+','+py(p.y); }).join(' ');
+  var contourSvg = (typeof _brnShowContours!=='undefined' && _brnShowContours) ? _brnContourSvg(px,py,minX,maxX,minY,maxY) : '';
   var marks = pts.map(function(p){
-    var cx=px(p.x).toFixed(1), cy=py(p.y).toFixed(1);
-    var col = zColor(p.z||0);
-    var zLabel = hasZ ? (' z='+((p.z||0).toFixed(1))+'m') : '';
-    return '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="'+col+'" stroke="#fff" stroke-width="1"/>'
-      + '<text x="'+(parseFloat(cx)+6).toFixed(1)+'" y="'+(parseFloat(cy)-6).toFixed(1)+'" font-size="9" fill="#333">'+(p.nom||'')+zLabel+'</text>';
+    return '<circle cx="'+px(p.x).toFixed(1)+'" cy="'+py(p.y).toFixed(1)+'" r="3" fill="#1A6B3A"/>'
+      + '<text x="'+(px(p.x)+5).toFixed(1)+'" y="'+(py(p.y)-4).toFixed(1)+'" font-size="9" fill="#333">'+(p.nom||'')+'</text>';
   }).join('');
-
   var a = brnArea();
-  var legend = hasZ
-    ? '<div style="font-size:11px;color:var(--dim,#888);margin-top:4px;">⛰️ Alt. min : <b>'+minZ.toFixed(1)+'m</b> · max : <b>'+maxZ.toFixed(1)+'m</b> · déniv. : <b>'+(maxZ-minZ).toFixed(1)+'m</b>'+(contourSVG?'  · courbes de niveau activées':'')+'</div>'
-    : '<div style="font-size:11px;color:var(--dim,#888);margin-top:4px;">💡 Renseignez la colonne Z (altitude) pour activer les courbes de niveau et le profil terrain.</div>';
-
   box.innerHTML = '<svg width="'+W+'" height="'+H+'" style="max-width:100%;background:#fff;border:1px solid #ddd;border-radius:6px;">'
     + '<polygon points="'+poly+'" fill="rgba(26,107,58,0.10)" stroke="#1A6B3A" stroke-width="1.5"/>'
-    + contourSVG
+    + contourSvg
     + marks
+    + _brnNorthScale(W,H,sc)
     + '</svg>'
-    + '<div style="font-size:12px;margin-top:6px;">Surface calculée (Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong> · '+pts.length+' bornes</div>'
-    + legend;
+    + '<div style="font-size:12px;margin-top:6px;">Surface calculée (Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong> · '+pts.length+' bornes</div>';
 }
 
 /* Impression du plan de bornage + tableau des coordonnées */
@@ -44569,445 +44976,36 @@ function brnPrintPlan() {
   var cont = (document.getElementById('parc-contenance')||{}).value || '';
   var geo = (document.getElementById('parc-geometre')||{}).value || '';
   var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
-  var hasZ = _brnList.some(function(b){ return (b.z||0) !== 0; });
   var rows = _brnList.map(function(b){
-    return '<tr><td>'+(b.nom||'')+'</td>'
-      +'<td style="text-align:right;">'+(b.x||0)+'</td>'
-      +'<td style="text-align:right;">'+(b.y||0)+'</td>'
-      +(hasZ ? '<td style="text-align:right;">'+(b.z||0)+'</td>' : '')
-      +'<td style="text-align:right;">'+(b.angle||0)+'</td>'
-      +'<td style="text-align:right;">'+(b.distance||0)+'</td></tr>';
+    return '<tr><td>'+(b.nom||'')+'</td><td style="text-align:right;">'+(b.x||0)+'</td><td style="text-align:right;">'+(b.y||0)+'</td><td style="text-align:right;">'+(b.z||0)+'</td><td style="text-align:right;">'+(b.angle||0)+'</td><td style="text-align:right;">'+(b.distance||0)+'</td></tr>';
   }).join('');
   var a = brnArea();
-  var zHead = hasZ ? '<th style="text-align:right;">Z (alt. m)</th>' : '';
-  var zStats = '';
-  if (hasZ) {
-    var zVals = _brnList.map(function(b){return b.z||0;});
-    var zMin = Math.min.apply(null,zVals), zMax = Math.max.apply(null,zVals);
-    zStats = '<p>Altimétrie : min <strong>'+zMin.toFixed(2)+' m</strong> · max <strong>'+zMax.toFixed(2)+' m</strong> · dénivelé <strong>'+(zMax-zMin).toFixed(2)+' m</strong> (NGI — système NGM-CI)</p>';
-  }
-  var w = window.open('','','width=860,height=900');
+  var w = window.open('','','width=800,height=850');
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Plan de bornage</title><style>body{font-family:Georgia,serif;padding:32px;font-size:12px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;font-size:18px;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:5px 9px;}th{background:#E8F4EE;}</style></head><body>'
     + '<h1>TABLEAU DES COORDONNÉES — PLAN DE BORNAGE</h1>'
     + '<p><strong>'+soc+'</strong><br>Parcelle : '+ref+' · TF : '+tf+' · '+loc+'<br>Contenance : '+cont+(geo?(' · Géomètre : '+geo):'')+'</p>'
-    + '<table><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th>'+zHead+'<th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th></tr>'+rows+'</table>'
+    + '<table><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Z</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th></tr>'+rows+'</table>'
     + '<p>Surface calculée (formule de Gauss) : <strong>'+fmtF(Math.round(a))+' m²</strong></p>'
-    + zStats
     + '</body></html>');
   w.document.close(); w.print();
 }
 
-/* ══════════════════════════════════════════════════════════
-   MODULE TOPOGRAPHIQUE — Levés altimétriques
-   Import CSV (X,Y,Z,Nom) · Profil de terrain · Courbes de niveau
-   SANIX Africa / ImmoSuite ERP — Extension v21.1
-══════════════════════════════════════════════════════════ */
-
-/* ── 1. Import CSV  ───────────────────────────────────────
-   Format attendu (séparateur , ou ; ou tab) :
-     Nom,X,Y,Z     ou    X,Y,Z     ou    X;Y;Z;Nom
-   La première ligne est ignorée si elle contient des lettres.
-*/
-function brnImportCSV() {
-  var inp = document.getElementById('brn-csv-input');
-  if (inp) { inp.value=''; inp.click(); }
-}
-
-function brnCSVLoaded(input) {
-  var f = input.files && input.files[0];
-  if (!f) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var text = e.target.result || '';
-    var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
-    if (!lines.length) { toast('Fichier CSV vide', 'error'); return; }
-
-    /* Détecter le séparateur */
-    var sep = ',';
-    if (lines[0].indexOf(';') > -1) sep = ';';
-    else if (lines[0].indexOf('\t') > -1) sep = '\t';
-
-    /* Ignorer l'en-tête si la première cellule n'est pas numérique */
-    var start = 0;
-    var first = lines[0].split(sep)[0].trim();
-    if (isNaN(parseFloat(first))) start = 1;
-
-    var added = 0, errors = 0;
-    var newBornes = [];
-    for (var i = start; i < lines.length; i++) {
-      var cols = lines[i].split(sep).map(function(c){ return c.trim().replace(/^["']|["']$/g,''); });
-      /* Tentative de détection de l'ordre des colonnes */
-      /* Si 4+ colonnes et première NON numérique → Nom,X,Y,Z */
-      var nom='', x=0, y=0, z=0, ok=false;
-      if (cols.length >= 4 && isNaN(parseFloat(cols[0]))) {
-        nom = cols[0]; x = parseFloat(cols[1]); y = parseFloat(cols[2]); z = parseFloat(cols[3]); ok=true;
-      } else if (cols.length >= 3) {
-        x = parseFloat(cols[0]); y = parseFloat(cols[1]); z = parseFloat(cols[2]);
-        nom = cols[3] || ('B'+(newBornes.length+1)); ok=true;
-      }
-      if (ok && !isNaN(x) && !isNaN(y)) {
-        if (!nom) nom = 'B'+(newBornes.length+1);
-        newBornes.push({ nom:nom, x:x, y:y, z:isNaN(z)?0:z, angle:0, distance:0 });
-        added++;
-      } else { errors++; }
-    }
-    if (!added) { toast('Aucun point valide dans le CSV (colonnes attendues : X,Y,Z ou Nom,X,Y,Z)', 'error'); return; }
-    /* Fusionner ou remplacer */
-    if (_brnList.length && confirm('Ajouter les ' + added + ' points importés aux bornes existantes ?\n[Annuler] = Remplacer toutes les bornes')) {
-      _brnList = _brnList.concat(newBornes);
-    } else {
-      _brnList = newBornes;
-    }
-    brnRender();
-    toast('✅ ' + added + ' borne(s) importée(s)' + (errors?' · '+errors+' ligne(s) ignorée(s)':''), 'success');
-  };
-  reader.readAsText(f);
-}
-
-/* ── 4. Jeux de données démo (bornage + cadastre) ────────
-   Injecte bornes X/Y/Z + champs cadastraux dans le modal ouvert.
-   4 parcelles types : Songon · Bounoua · Divo · Assinie
-*/
-var BRN_DEMO_DATA = {
-
-  /* ─────────────────────────────────────────────────────
-     SONGON — Parcelle résidentielle périurbaine Abidjan
-     Zone : Songon Agban · Commune d'Abidjan (Yopougon)
-     Titre : ACD (Attestation Coutumière de Droits)
-     Superficie : ≈ 2 500 m² · Relief légèrement vallonné (6-14 m)
-  ───────────────────────────────────────────────────── */
-  songon: {
-    cadastre: {
-      'parc-tf-num':       'ACD 1182/YOP',
-      'parc-morcellement': 'SONGON-AGBAN',
-      'parc-livre-foncier':'Abidjan',
-      'parc-cedant':       'Communauté villageoise de Songon',
-      'parc-demandeur':    'SANIX Africa SARL',
-      'parc-contenance':   '25 a 12 ca',
-      'parc-geometre':     'COULIBALY MOUSSA (Géomètre Assermenté)',
-      'parc-date-plan':    '2024-03-15',
-      'parc-echelle':      '1/500'
-    },
-    bornes: [
-      { nom:'B1',  x:263480.220, y:585312.440, z: 8.32, angle:  0.000, distance:   0.000 },
-      { nom:'B2',  x:263530.875, y:585312.440, z: 8.95, angle: 90.000, distance:  50.655 },
-      { nom:'B3',  x:263530.875, y:585361.880, z:11.20, angle:  0.000, distance:  49.440 },
-      { nom:'B4',  x:263560.110, y:585361.880, z:12.85, angle: 90.000, distance:  29.235 },
-      { nom:'B5',  x:263560.110, y:585412.920, z:13.74, angle:  0.000, distance:  51.040 },
-      { nom:'B6',  x:263480.220, y:585412.920, z:10.60, angle:270.000, distance:  79.890 },
-      { nom:'B7',  x:263455.680, y:585390.530, z: 9.18, angle:200.000, distance:  32.145 },
-      { nom:'B8',  x:263455.680, y:585312.440, z: 7.45, angle:270.000, distance:  78.090 }
-    ]
-  },
-
-  /* ─────────────────────────────────────────────────────
-     BOUNOUA — Parcelle agricole (morcellement TF 4726)
-     Zone : YAOU · Sous-préfecture de Bonoua · Grand-Bassam
-     Titre : TF 21289 · Plan certifié 09/06/2022
-     Superficie : 14 ha 39 a 25 ca · Relief 12-19 m NGI
-  ───────────────────────────────────────────────────── */
-  bounoua: {
-    cadastre: {
-      'parc-tf-num':       'TF 21289',
-      'parc-morcellement': '4726',
-      'parc-livre-foncier':'Bassam',
-      'parc-cedant':       'ÉTAT-CI',
-      'parc-demandeur':    'LGI-BTP',
-      'parc-contenance':   '14 ha 39 a 25 ca',
-      'parc-geometre':     'SORO NANGA DIDIER (Géomètre-Expert Assermenté)',
-      'parc-date-plan':    '2022-06-09',
-      'parc-echelle':      '1/7000'
-    },
-    bornes: [
-      { nom:'B1',  x:430434.395, y:576815.718, z:18.4, angle: 62.453, distance:657.828 },
-      { nom:'B2',  x:430434.395, y:576157.890, z:16.2, angle:126.372, distance: 21.528 },
-      { nom:'B3',  x:430414.688, y:576149.225, z:15.9, angle:127.171, distance:549.522 },
-      { nom:'B4',  x:430005.105, y:576515.581, z:12.1, angle: 87.488, distance: 10.511 },
-      { nom:'B5',  x:430013.508, y:576521.896, z:12.5, angle:155.989, distance: 26.125 },
-      { nom:'B6',  x:430039.604, y:576520.674, z:13.0, angle:217.844, distance: 57.839 },
-      { nom:'B7',  x:430095.873, y:576534.056, z:14.3, angle:209.579, distance:  9.288 },
-      { nom:'B8',  x:430104.485, y:576537.535, z:14.8, angle:221.816, distance: 29.593 },
-      { nom:'B9',  x:430126.604, y:576557.195, z:15.6, angle:299.125, distance: 22.427 },
-      { nom:'B10', x:430111.936, y:576574.161, z:16.9, angle:102.797, distance:128.725 },
-      { nom:'B11', x:430205.521, y:576662.546, z:19.2, angle:189.366, distance:275.399 }
-    ]
-  },
-
-  /* ─────────────────────────────────────────────────────
-     DIVO — Parcelle industrielle (zone MI)
-     Zone : Quartier Industriel Divo · Département de Divo
-     Titre : TF 3841 · Lotissement SODEFOR-CI
-     Superficie : ≈ 5 000 m² · Relief marqué 185-212 m (plateaux)
-  ───────────────────────────────────────────────────── */
-  divo: {
-    cadastre: {
-      'parc-tf-num':       'TF 3841/DIVO',
-      'parc-morcellement': 'ZI-DIVO-B2',
-      'parc-livre-foncier':'Divo',
-      'parc-cedant':       'SODEFOR-CI / État-CI',
-      'parc-demandeur':    'SANIX Factory SARL',
-      'parc-contenance':   '50 a 20 ca',
-      'parc-geometre':     'BROU JEAN-CLAUDE (Géomètre Agréé DAT)',
-      'parc-date-plan':    '2023-11-08',
-      'parc-echelle':      '1/1000'
-    },
-    bornes: [
-      { nom:'B1', x:199320.500, y:544180.200, z:185.20, angle:  0.000, distance:  0.000 },
-      { nom:'B2', x:199420.800, y:544180.200, z:188.75, angle: 90.000, distance:100.300 },
-      { nom:'B3', x:199420.800, y:544280.450, z:197.40, angle:  0.000, distance:100.250 },
-      { nom:'B4', x:199395.600, y:544310.880, z:205.60, angle: 45.000, distance: 39.520 },
-      { nom:'B5', x:199355.200, y:544310.880, z:211.80, angle:270.000, distance: 40.400 },
-      { nom:'B6', x:199320.500, y:544280.450, z:206.35, angle:210.000, distance: 44.070 },
-      { nom:'B7', x:199300.400, y:544230.320, z:194.50, angle:230.000, distance: 55.680 }
-    ]
-  },
-
-  /* ─────────────────────────────────────────────────────
-     ASSINIE-MAFIA — Parcelle balnéaire/résidentielle
-     Zone : Assinie-Mafia · Sous-préfecture d'Assinie
-     Titre : TF 1056/AM · Bord de lagune
-     Superficie : ≈ 1 200 m² · Terrain quasi-plat (2-5 m NGI)
-  ───────────────────────────────────────────────────── */
-  assinie: {
-    cadastre: {
-      'parc-tf-num':       'TF 1056/AM',
-      'parc-morcellement': 'ASSINIE-LAC-B',
-      'parc-livre-foncier':'Aboisso',
-      'parc-cedant':       'Héritiers KONAN YAPI',
-      'parc-demandeur':    'RÉSIDENCE LAGUNE BLEUE SARL',
-      'parc-contenance':   '12 a 05 ca',
-      'parc-geometre':     'DOSSO ABOUBACAR (Expert Foncier DAT)',
-      'parc-date-plan':    '2025-01-22',
-      'parc-echelle':      '1/250'
-    },
-    bornes: [
-      { nom:'B1', x:401780.340, y:551240.120, z:2.15, angle:  0.000, distance:  0.000 },
-      { nom:'B2', x:401840.680, y:551240.120, z:2.45, angle: 90.000, distance: 60.340 },
-      { nom:'B3', x:401840.680, y:551320.550, z:3.80, angle:  0.000, distance: 80.430 },
-      { nom:'B4', x:401800.120, y:551340.770, z:4.95, angle:150.000, distance: 45.210 },
-      { nom:'B5', x:401780.340, y:551320.550, z:3.10, angle:225.000, distance: 27.850 }
-    ]
-  }
-};
-
-function brnLoadDemo() {
-  var sel = document.getElementById('brn-demo-select');
-  var key = sel ? sel.value : 'songon';
-  var demo = BRN_DEMO_DATA[key];
-  if (!demo) { toast('Jeu de démo introuvable', 'error'); return; }
-
-  /* Peupler les champs cadastraux */
-  Object.keys(demo.cadastre).forEach(function(fid) {
-    var el = document.getElementById(fid);
-    if (el) el.value = demo.cadastre[fid];
-  });
-
-  /* Peupler les bornes */
-  _brnList = JSON.parse(JSON.stringify(demo.bornes));
-  brnRender();
-
-  /* Calculer et afficher la superficie */
-  var a = brnArea();
-  var sfEl = document.getElementById('parc-sf-totale');
-  if (sfEl && a) sfEl.value = Math.round(a);
-
-  var labels = { songon:'Songon Agban', bounoua:'Bounoua TF 4726', divo:'Divo Zone Industrielle', assinie:'Assinie-Mafia' };
-  toast('✅ Démo « '+labels[key]+' » injectée — '+demo.bornes.length+' bornes · superficie '+fmtF(Math.round(a))+' m²', 'success');
-}
-/* ── 2. Profil de terrain (coupe SVG) ───────────────────
-   Génère un profil altimétrique en suivant le périmètre des bornes.
-   Affiche un popup avec :
-     - courbe d'élévation (SVG)
-     - dénivelé cumulé, pente max, distance totale
-*/
-function brnProfilTerrain() {
-  var pts = _brnList.filter(function(b){ return (b.x||b.y); });
-  if (pts.length < 2) { toast('Au moins 2 bornes requises pour le profil terrain', 'error'); return; }
-  var hasZ = pts.some(function(b){ return (b.z||0) !== 0; });
-  if (!hasZ) { toast('Renseignez la colonne Z (altitude) pour générer un profil terrain', 'info'); return; }
-
-  /* Calculer distances cumulées */
-  var profil = [];
-  var cumDist = 0;
-  profil.push({ nom: pts[0].nom, dist: 0, z: pts[0].z||0 });
-  for (var i=1; i<pts.length; i++) {
-    var a=pts[i-1], b=pts[i];
-    var d = Math.sqrt(Math.pow(b.x-a.x,2)+Math.pow(b.y-a.y,2));
-    cumDist += d;
-    profil.push({ nom:b.nom, dist:cumDist, z:b.z||0 });
-  }
-  /* Fermer le polygone vers B1 */
-  var last=pts[pts.length-1], first=pts[0];
-  var dClose=Math.sqrt(Math.pow(first.x-last.x,2)+Math.pow(first.y-last.y,2));
-  cumDist+=dClose;
-  profil.push({ nom:first.nom+' (ret.)', dist:cumDist, z:first.z||0 });
-
-  var dTot = cumDist;
-  var zVals = profil.map(function(p){ return p.z; });
-  var zMin = Math.min.apply(null,zVals), zMax = Math.max.apply(null,zVals);
-  var deniv = zMax-zMin;
-  var pMax = 0;
-  for (var j=1; j<profil.length; j++) {
-    var dz=Math.abs(profil[j].z-profil[j-1].z);
-    var dd=profil[j].dist-profil[j-1].dist;
-    if (dd>0) pMax = Math.max(pMax, dz/dd*100);
-  }
-
-  /* SVG du profil */
-  var W=600, H=220, padL=48, padR=20, padT=20, padB=40;
-  var fw=W-padL-padR, fh=H-padT-padB;
-  function fx(d){ return padL + (dTot>0?(d/dTot*fw):0); }
-  function fy(z){ return padT + (deniv>0?((zMax-z)/deniv*fh):fh/2); }
-
-  var polyline = profil.map(function(p){ return fx(p.dist).toFixed(1)+','+fy(p.z).toFixed(1); }).join(' ');
-  var area = profil.map(function(p){ return fx(p.dist).toFixed(1)+','+fy(p.z).toFixed(1); }).join(' ')
-    + ' '+fx(dTot).toFixed(1)+','+(padT+fh)+' '+padL+','+(padT+fh);
-  var ticks = profil.map(function(p,i){
-    var x=fx(p.dist), y=fy(p.z);
-    if (i===0||i===profil.length-1||(profil.length<=10)||(i%Math.ceil(profil.length/8)===0)) {
-      return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="#B87333"/>'
-        + '<text x="'+x.toFixed(1)+'" y="'+(y-7).toFixed(1)+'" font-size="8" text-anchor="middle" fill="#333">'+p.nom+'</text>'
-        + '<text x="'+x.toFixed(1)+'" y="'+(y+14).toFixed(1)+'" font-size="7" text-anchor="middle" fill="#888">'+p.z.toFixed(1)+'m</text>';
-    }
-    return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2" fill="#B87333"/>';
-  }).join('');
-  /* Grille horizontale */
-  var yTicks='', nTicks=4;
-  for (var k=0; k<=nTicks; k++) {
-    var zv = zMin + (deniv*k/nTicks);
-    var yv = fy(zv);
-    yTicks += '<line x1="'+padL+'" y1="'+yv.toFixed(1)+'" x2="'+(padL+fw)+'" y2="'+yv.toFixed(1)+'" stroke="#ddd" stroke-width="0.5"/>'
-      + '<text x="'+(padL-4)+'" y="'+(yv+3).toFixed(1)+'" font-size="8" text-anchor="end" fill="#666">'+zv.toFixed(1)+'</text>';
-  }
-  /* Axe X — distances */
-  var xLbl = '<text x="'+(padL+fw/2)+'" y="'+(H-4)+'" font-size="9" text-anchor="middle" fill="#555">Distance cumulée (m)</text>';
-  var yLbl = '<text x="10" y="'+(padT+fh/2)+'" font-size="9" text-anchor="middle" fill="#555" transform="rotate(-90,10,'+(padT+fh/2)+')">Altitude (m)</text>';
-
-  var svgStr = '<svg width="'+W+'" height="'+H+'" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;background:#fff;">'
-    + yTicks
-    + '<polygon points="'+area+'" fill="rgba(26,107,58,0.12)"/>'
-    + '<polyline points="'+polyline+'" fill="none" stroke="#1A6B3A" stroke-width="2" stroke-linejoin="round"/>'
-    + ticks + xLbl + yLbl
-    + '</svg>';
-
-  var stats = '<div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;margin-top:10px;">'
-    + '<div><strong>Distance totale :</strong> '+dTot.toFixed(1)+' m</div>'
-    + '<div><strong>Dénivelé :</strong> '+deniv.toFixed(2)+' m</div>'
-    + '<div><strong>Alt. min / max :</strong> '+zMin.toFixed(2)+' / '+zMax.toFixed(2)+' m</div>'
-    + '<div><strong>Pente max :</strong> '+pMax.toFixed(1)+' %</div>'
-    + '</div>';
-
-  var ref = (document.getElementById('parc-ref')||{}).value || 'Parcelle';
-  var soc = (DATA.params && DATA.params.societe) || 'ImmoSuite ERP';
-  var w = window.open('','','width=700,height=500');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Profil de terrain</title>'
-    + '<style>body{font-family:Georgia,serif;padding:24px;font-size:12px;}h2{color:#1A6B3A;margin-bottom:6px;}p{color:#555;margin-bottom:14px;}</style>'
-    + '</head><body>'
-    + '<h2>⛰️ PROFIL DE TERRAIN — '+ref+'</h2>'
-    + '<p>'+soc+' — Levé topographique · Altitude en m (NGI / NGM-CI)</p>'
-    + svgStr + stats
-    + '<br><button onclick="window.print()" style="padding:8px 18px;background:#1A6B3A;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;">🖨 Imprimer</button>'
-    + '</body></html>');
-  w.document.close();
-}
-
-/* ── 3. Courbes de niveau (marching squares simplifié) ──
-   Génère des isolignes SVG à partir des bornes (triangulation IDW).
-   Retourne un fragment SVG à insérer dans le plan.
-*/
-function brnContourLines(pts, px, py, minZ, maxZ) {
-  if (pts.length < 4 || maxZ === minZ) return '';
-  var deniv = maxZ - minZ;
-  /* Intervalles de courbes : 5 niveaux */
-  var nLevels = 5;
-  var step = deniv / (nLevels + 1);
-  var levels = [];
-  for (var l=1; l<=nLevels; l++) levels.push(minZ + l*step);
-
-  /* Interpolation bilinéaire sur une grille régulière */
-  var G = 20; // résolution grille
-  var xs = pts.map(function(b){return b.x;}), ys = pts.map(function(b){return b.y;});
-  var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
-  var dx=(maxX-minX)||1, dy=(maxY-minY)||1;
-
-  /* IDW (Inverse Distance Weighting) pour chaque cellule */
-  function idwZ(gx, gy) {
-    var wx=minX+gx/G*dx, wy=minY+gy/G*dy;
-    var num=0, den=0;
-    for (var i=0; i<pts.length; i++) {
-      var d2=Math.pow(pts[i].x-wx,2)+Math.pow(pts[i].y-wy,2);
-      if (d2<0.0001) return pts[i].z||0;
-      var w=1/d2;
-      num+=w*(pts[i].z||0); den+=w;
-    }
-    return den>0?num/den:0;
-  }
-
-  /* Construire la grille */
-  var grid = [];
-  for (var gy=0; gy<=G; gy++) {
-    grid[gy]=[];
-    for (var gx=0; gx<=G; gx++) grid[gy][gx]=idwZ(gx,gy);
-  }
-
-  /* Marching squares simplifié : extraire les isolignes */
-  var svgLines = '';
-  var colors = ['#4A94E0','#4AC47A','#B87333','#E05252','#8A52E0'];
-  for (var li=0; li<levels.length; li++) {
-    var iso = levels[li];
-    var col = colors[li % colors.length];
-    var segs = '';
-    for (var cy=0; cy<G; cy++) {
-      for (var cx=0; cx<G; cx++) {
-        var v00=grid[cy][cx], v10=grid[cy][cx+1], v01=grid[cy+1][cx], v11=grid[cy+1][cx+1];
-        /* Pour chaque arête de la cellule, interpoler le point de croisement */
-        var edges = [];
-        function interp(va, vb, ca, cb) {
-          if ((va<iso&&vb>=iso)||(va>=iso&&vb<iso)) {
-            var t=(iso-va)/(vb-va);
-            return [ca[0]+t*(cb[0]-ca[0]), ca[1]+t*(cb[1]-ca[1])];
-          }
-          return null;
-        }
-        var wxf=function(gx){ return minX+gx/G*dx; };
-        var wyf=function(gy){ return minY+gy/G*dy; };
-        /* 4 coins en coordonnées monde */
-        var p00=[wxf(cx),wyf(cy)], p10=[wxf(cx+1),wyf(cy)], p01=[wxf(cx),wyf(cy+1)], p11=[wxf(cx+1),wyf(cy+1)];
-        var pts_edge = [
-          interp(v00,v10,p00,p10), // top
-          interp(v10,v11,p10,p11), // right
-          interp(v01,v11,p01,p11), // bottom
-          interp(v00,v01,p00,p01)  // left
-        ].filter(Boolean);
-        if (pts_edge.length >= 2) {
-          var x1=px(pts_edge[0][0]).toFixed(1), y1=py(pts_edge[0][1]).toFixed(1);
-          var x2=px(pts_edge[1][0]).toFixed(1), y2=py(pts_edge[1][1]).toFixed(1);
-          segs += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="0.8" opacity="0.6"/>';
-        }
-      }
-    }
-    /* Étiquette niveau */
-    var lx=px(minX+dx*0.05).toFixed(1), ly=py(minY+dy*(0.15+li*0.15)).toFixed(1);
-    segs += '<text x="'+lx+'" y="'+ly+'" font-size="8" fill="'+col+'" font-weight="bold">'+iso.toFixed(1)+'m</text>';
-    svgLines += '<g id="contour-'+li+'">'+segs+'</g>';
-  }
-  return svgLines;
-}
+/* ── Seed : parcelle YAOU (Bounoua) — morcellement TF 4726 ── */
 async function fonSeedYaou() {
   var exists = (DATA.parcelles||[]).some(function(p){ return p.ref === 'YAOU-4726' || p.morcellement === '4726'; });
   if (exists) return;
   var bornes = [
-    { nom:'B1',  x:430434.395, y:576815.718, z:18.4, angle:62.453,  distance:657.828 },
-    { nom:'B2',  x:430434.395, y:576157.890, z:16.2, angle:126.372, distance:21.528 },
-    { nom:'B3',  x:430414.688, y:576149.225, z:15.9, angle:127.171, distance:549.522 },
-    { nom:'B4',  x:430005.105, y:576515.581, z:12.1, angle:87.488,  distance:10.511 },
-    { nom:'B5',  x:430013.508, y:576521.896, z:12.5, angle:155.989, distance:26.125 },
-    { nom:'B6',  x:430039.604, y:576520.674, z:13.0, angle:217.844, distance:57.839 },
-    { nom:'B7',  x:430095.873, y:576534.056, z:14.3, angle:209.579, distance:9.288 },
-    { nom:'B8',  x:430104.485, y:576537.535, z:14.8, angle:221.816, distance:29.593 },
-    { nom:'B9',  x:430126.604, y:576557.195, z:15.6, angle:299.125, distance:22.427 },
-    { nom:'B10', x:430111.936, y:576574.161, z:16.9, angle:102.797, distance:128.725 },
-    { nom:'B11', x:430205.521, y:576662.546, z:19.2, angle:189.366, distance:275.399 }
+    { nom:'B1',  x:430434.395, y:576815.718, angle:62.453,  distance:657.828 },
+    { nom:'B2',  x:430434.395, y:576157.890, angle:126.372, distance:21.528 },
+    { nom:'B3',  x:430414.688, y:576149.225, angle:127.171, distance:549.522 },
+    { nom:'B4',  x:430005.105, y:576515.581, angle:87.488,  distance:10.511 },
+    { nom:'B5',  x:430013.508, y:576521.896, angle:155.989, distance:26.125 },
+    { nom:'B6',  x:430039.604, y:576520.674, angle:217.844, distance:57.839 },
+    { nom:'B7',  x:430095.873, y:576534.056, angle:209.579, distance:9.288 },
+    { nom:'B8',  x:430104.485, y:576537.535, angle:221.816, distance:29.593 },
+    { nom:'B9',  x:430126.604, y:576557.195, angle:299.125, distance:22.427 },
+    { nom:'B10', x:430111.936, y:576574.161, angle:102.797, distance:128.725 },
+    { nom:'B11', x:430205.521, y:576662.546, angle:189.366, distance:275.399 }
   ];
   var p = {
     id: 'parc_yaou_4726',
@@ -45069,10 +45067,11 @@ async function fonEnter() {
 
 /* Inverse Transverse Mercator — UTM 30N, ellipsoïde WGS84.
    Vérifié contre pyproj (écart < 1 mm). Renvoie [lat, lng] en degrés. */
-function utm30ToLatLng(E, N) {
+function utm30ToLatLng(E, N, zone) {
+  zone = zone || 30;
   var a = 6378137.0, f = 1 / 298.257223563, k0 = 0.9996, e2 = f * (2 - f);
   var e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
-  var lon0 = -3 * Math.PI / 180;            /* méridien central zone 30 */
+  var lon0 = (zone*6 - 183) * Math.PI / 180;  /* méridien central zone UTM */
   var x = E - 500000, M = N / k0;
   var mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256));
   var phi1 = mu
@@ -45101,7 +45100,7 @@ function parcelleLatLngs(p) {
   var path = [];
   p.bornes.forEach(function(b) {
     if (!(b.x || b.y)) return;
-    path.push(utm30ToLatLng(b.x, b.y));
+    path.push(utm30ToLatLng(b.x, b.y, p.utm_zone||30));
   });
   return path.length >= 3 ? path : null;
 }
@@ -45136,6 +45135,93 @@ function renderParcellesCarte() {
     L.marker(c, { icon: L.divIcon({ className: '', html: '<div style="font-size:11px;font-weight:700;color:#0f4023;background:rgba(255,255,255,.7);padding:1px 4px;border-radius:4px;white-space:nowrap;">' + (p.ref || '') + '</div>', iconSize: [60, 16] }) }).addTo(_geoLayerParcelles);
   });
   if (all.length) _parcelleBounds = L.latLngBounds(all);
+}
+
+/* ── Topographie sur carte : courbes de niveau + déblai/remblai ── */
+function _gchk(id){ var e=document.getElementById(id); return e?e.checked:false; }
+function parcelleSamples(p){
+  var arr=[];
+  (p.points_altimetriques||[]).forEach(function(pt){ if(typeof pt.z==='number'&&!isNaN(pt.z)) arr.push({x:pt.x,y:pt.y,z:pt.z}); });
+  (p.bornes||[]).forEach(function(b){ if(typeof b.z==='number'&&!isNaN(b.z)&&b.z!==0&&(b.x||b.y)) arr.push({x:b.x,y:b.y,z:b.z}); });
+  return arr;
+}
+function _gridCellsP(poly,N){
+  var xs=poly.map(function(p){return p.x;}), ys=poly.map(function(p){return p.y;});
+  var minX=Math.min.apply(null,xs),maxX=Math.max.apply(null,xs),minY=Math.min.apply(null,ys),maxY=Math.max.apply(null,ys);
+  var dx=(maxX-minX)||1,dy=(maxY-minY)||1,cw=dx/N,ch=dy/N,ca=cw*ch,cells=[];
+  for(var j=0;j<N;j++){ for(var i=0;i<N;i++){ var xc=minX+(i+0.5)*cw,yc=minY+(j+0.5)*ch; if(_terrInPoly(xc,yc,poly))cells.push({xc:xc,yc:yc,cw:cw,ch:ch}); } }
+  return {cells:cells,ca:ca,minX:minX,maxX:maxX,minY:minY,maxY:maxY,dx:dx,dy:dy};
+}
+function _volAtP(g,samples,P){ var cut=0,fill=0; g.cells.forEach(function(c){ var z=_idwZ(c.xc,c.yc,samples,2); var d=z-P; if(d>0)cut+=d*g.ca; else fill+=(-d)*g.ca; }); return {cut:cut,fill:fill}; }
+function _optLevelP(g,samples,Kc){ var zs=samples.map(function(s){return s.z;}); var lo=Math.min.apply(null,zs),hi=Math.max.apply(null,zs); for(var it=0;it<30;it++){ var m=(lo+hi)/2; var v=_volAtP(g,samples,m); if((v.cut-Kc*v.fill)>0)lo=m; else hi=m; } return (lo+hi)/2; }
+function renderTopoCarte(){
+  if (typeof L === 'undefined') return;
+  if (_geoLayerCourbes) _geoLayerCourbes.clearLayers();
+  if (_geoLayerTerrass) _geoLayerTerrass.clearLayers();
+  var showC=_gchk('geo-show-courbes'), showT=_gchk('geo-show-terrass');
+  var coted=(DATA.parcelles||[]).filter(function(p){
+    var poly=(p.bornes||[]).filter(function(b){return (b.x||b.y);}); if(poly.length<3)return false;
+    var sp=parcelleSamples(p); if(sp.length<3)return false;
+    var zs=sp.map(function(x){return x.z;}); return (Math.max.apply(null,zs)-Math.min.apply(null,zs))>1e-6;
+  });
+  var sel=document.getElementById('geo-terr-parcelle');
+  if(sel){ var cur=sel.value; sel.innerHTML=coted.length?coted.map(function(p){return '<option value="'+p.id+'">'+(p.ref||p.id)+'</option>';}).join(''):'<option value="">— aucune parcelle cotée —</option>'; if(cur&&coted.some(function(p){return p.id===cur;}))sel.value=cur; }
+  var terrId=(sel&&sel.value)||(coted[0]&&coted[0].id);
+  _topoLegend(showC||showT, coted);
+  if(!showC&&!showT) return;
+  var gz=[]; coted.forEach(function(p){ parcelleSamples(p).forEach(function(s){gz.push(s.z);}); });
+  var gZmin=gz.length?Math.min.apply(null,gz):0, gZmax=gz.length?Math.max.apply(null,gz):1; var gRange=(gZmax-gZmin)||1;
+  coted.forEach(function(p){
+    var Z=p.utm_zone||30;
+    var poly=(p.bornes||[]).filter(function(b){return (b.x||b.y);});
+    var samples=parcelleSamples(p);
+    var zs=samples.map(function(s){return s.z;}); var zmin=Math.min.apply(null,zs),zmax=Math.max.apply(null,zs);
+    var doTerr=(showT && p.id===terrId);
+    var g=_gridCellsP(poly, doTerr?42:2);
+    if(showC){
+      var nx=50,ny=50,dx=g.dx,dy=g.dy,gr=new Array(nx*ny);
+      for(var j=0;j<ny;j++){ for(var i=0;i<nx;i++){ var X=g.minX+(i/(nx-1))*dx,Y=g.minY+(j/(ny-1))*dy; gr[j*nx+i]=_idwZ(X,Y,samples,2); } }
+      var interval=(zmax-zmin)/8; var mag=Math.pow(10,Math.floor(Math.log10(interval||1))); interval=Math.max(mag,Math.round(interval/mag)*mag)||interval;
+      var lc=0;
+      for(var Lv=Math.ceil(zmin/interval)*interval; Lv<zmax; Lv+=interval){ if(lc++>42)break;
+        var col=_elevColor((Lv-gZmin)/gRange); var major=((lc-1)%5===0);
+        var segs=_marchingSquares(gr,nx,ny,Lv);
+        segs.forEach(function(sg){
+          var a=utm30ToLatLng(g.minX+(sg[0]/(nx-1))*dx, g.minY+(sg[1]/(ny-1))*dy, Z);
+          var b=utm30ToLatLng(g.minX+(sg[2]/(nx-1))*dx, g.minY+(sg[3]/(ny-1))*dy, Z);
+          L.polyline([a,b],{color:col,weight:major?2:1,opacity:major?0.95:0.6}).addTo(_geoLayerCourbes);
+        });
+      }
+    }
+    if(doTerr){
+      var P=_optLevelP(g,samples,1), maxCut=0,maxFill=0;
+      g.cells.forEach(function(c){ var z=_idwZ(c.xc,c.yc,samples,2); c._d=z-P; if(c._d>0)maxCut=Math.max(maxCut,c._d); else maxFill=Math.max(maxFill,-c._d); });
+      g.cells.forEach(function(c){ var d=c._d,col,al;
+        if(d>0){ col='#dc2626'; al=maxCut?(0.12+0.6*d/maxCut):0.4; } else if(d<0){ col='#2563eb'; al=maxFill?(0.12+0.6*(-d)/maxFill):0.4; } else return;
+        var c1=utm30ToLatLng(c.xc-c.cw/2,c.yc-c.ch/2,Z),c2=utm30ToLatLng(c.xc+c.cw/2,c.yc-c.ch/2,Z),c3=utm30ToLatLng(c.xc+c.cw/2,c.yc+c.ch/2,Z),c4=utm30ToLatLng(c.xc-c.cw/2,c.yc+c.ch/2,Z);
+        L.polygon([c1,c2,c3,c4],{stroke:false,fillColor:col,fillOpacity:al}).addTo(_geoLayerTerrass);
+      });
+      var v=_volAtP(g,samples,P); var path=parcelleLatLngs(p);
+      if(path){ var cen=L.latLngBounds(path).getCenter();
+        L.marker(cen,{icon:L.divIcon({className:'',html:'<div style="font-size:10px;font-weight:600;color:#111;background:rgba(255,255,255,.9);padding:2px 6px;border-radius:5px;white-space:nowrap;border:1px solid #ccc;">🚜 '+(p.ref||'')+' · plateforme '+P.toFixed(1)+' m<br>déblai '+fmtF(Math.round(v.cut))+' / remblai '+fmtF(Math.round(v.fill))+' m³</div>',iconSize:[150,30]})}).addTo(_geoLayerTerrass);
+      }
+    }
+  });
+}
+function _elevColor(t){ t=Math.max(0,Math.min(1,t)); var st=[[26,152,80],[166,217,106],[254,224,139],[217,95,30],[140,81,10]]; var x=t*(st.length-1),i=Math.floor(x),fr=x-i,a=st[i],b=st[Math.min(i+1,st.length-1)]; return 'rgb('+Math.round(a[0]+(b[0]-a[0])*fr)+','+Math.round(a[1]+(b[1]-a[1])*fr)+','+Math.round(a[2]+(b[2]-a[2])*fr)+')'; }
+function _topoLegend(show,coted){
+  var map=document.getElementById('geo-map-leaflet'); if(!map)return;
+  var leg=document.getElementById('geo-topo-legend');
+  if(!show){ if(leg)leg.style.display='none'; return; }
+  if(!leg){ leg=document.createElement('div'); leg.id='geo-topo-legend'; leg.style.cssText='position:absolute;right:10px;bottom:24px;z-index:1000;background:rgba(255,255,255,.93);border:1px solid #ccc;border-radius:8px;padding:8px 10px;font-size:11px;color:#222;box-shadow:0 1px 5px rgba(0,0,0,.25);pointer-events:none;max-width:190px;'; map.appendChild(leg); }
+  leg.style.display='block';
+  var gz=[]; (coted||[]).forEach(function(p){ parcelleSamples(p).forEach(function(s){gz.push(s.z);}); });
+  var zmin=gz.length?Math.min.apply(null,gz):0, zmax=gz.length?Math.max.apply(null,gz):0;
+  var grad='linear-gradient(to right,rgb(26,152,80),rgb(166,217,106),rgb(254,224,139),rgb(217,95,30),rgb(140,81,10))';
+  leg.innerHTML='<div style="font-weight:700;margin-bottom:4px;">Altimétrie (courbes)</div>'
+    +'<div style="height:10px;border-radius:3px;background:'+grad+';"></div>'
+    +'<div style="display:flex;justify-content:space-between;"><span>'+zmin.toFixed(1)+' m</span><span>'+zmax.toFixed(1)+' m</span></div>'
+    +'<div style="margin-top:6px;border-top:1px solid #eee;padding-top:5px;"><span style="display:inline-block;width:11px;height:11px;background:#dc2626;border-radius:2px;vertical-align:-1px;"></span> Déblai &nbsp;<span style="display:inline-block;width:11px;height:11px;background:#2563eb;border-radius:2px;vertical-align:-1px;"></span> Remblai</div>';
 }
 
 /* Recentre la carte sur les parcelles */
