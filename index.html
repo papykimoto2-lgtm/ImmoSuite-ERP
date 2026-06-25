@@ -14632,7 +14632,99 @@ function _ts(x) {
    Suppression unifiée : RAM + IndexedDB + Supabase (via SUPA_STORE_MAP)
    Remplace partout le duo dbDelete() + deleteFromSupabase().
    ─────────────────────────────────────────────────────────────── */
-async function deleteRecord(store, id) {
+/* ─────────────────────────────────────────────────────────────
+   Contrôle d'intégrité référentielle — appliqué à toute suppression.
+   Ne s'active QUE pour les stores ayant des dépendants déclarés ci-dessous
+   (donc « logique » uniquement). dur = bloque ; souple = détache puis supprime.
+   Un nom de champ erroné ne bloque jamais à tort (il ne trouve simplement rien).
+   ───────────────────────────────────────────────────────────── */
+var DEP_MAP = {
+  clients: [
+    {store:'versements',        field:'client_id',      hard:true,  label:'versement(s)'},
+    {store:'conventions',       field:'client_id',      hard:true,  label:'convention(s)'},
+    {store:'lots',              field:'client_id',      hard:false, label:'lot(s) réservé(s)'}
+  ],
+  programmes: [
+    {store:'lots',              field:'programme_id',   hard:true,  label:'lot(s)'},
+    {store:'conventions',       field:'programme_id',   hard:true,  label:'convention(s)'},
+    {store:'versements',        field:'programme_id',   hard:true,  label:'versement(s)'},
+    {store:'clients',           field:'programme_id',   hard:false, label:'client(s) rattaché(s)'}
+  ],
+  lots: [
+    {store:'versements',        field:'lot_id',         hard:true,  label:'versement(s)'},
+    {store:'cessions_foncieres',field:'lot_id',         hard:true,  label:'cession(s)'},
+    {store:'lot_unites',        field:'lot_id',         hard:false, label:'unité(s)/appartement(s)'}
+  ],
+  conventions: [
+    {store:'versements',        field:'convention_id',  hard:true,  label:'versement(s)'},
+    {store:'situations',        field:'convention_id',  hard:true,  label:'situation(s) de travaux'},
+    {store:'avenants',          field:'convention_id',  hard:false, label:'avenant(s)'}
+  ],
+  constructeurs: [
+    {store:'conventions',       field:'constructeur_id',hard:false, label:'convention(s) (lien détaché)'},
+    {store:'situations',        field:'constructeur_id',hard:false, label:'situation(s)'}
+  ],
+  fournisseurs: [
+    {store:'bons_commande',       field:'fournisseur_id',hard:true,  label:'bon(s) de commande'},
+    {store:'factures_fournisseur',field:'fournisseur_id',hard:true,  label:'facture(s) fournisseur'},
+    {store:'stock_mouvements',    field:'fournisseur_id',hard:false, label:'mouvement(s) de stock'}
+  ],
+  bons_commande: [
+    {store:'receptions',          field:'bc_id',        hard:true,  label:'réception(s)'},
+    {store:'factures_fournisseur',field:'bc_id',        hard:true,  label:'facture(s)'}
+  ],
+  parcelles: [
+    {store:'cessions_foncieres', hard:true,  label:'cession(s)',            match:function(c,id){return c.source_type==='parcelle'&&c.source_id===id;}},
+    {store:'mutations',         field:'parcelle_id',    hard:true,  label:'mutation(s)'},
+    {store:'lots',              field:'parcelle_id',    hard:false, label:'lot(s)'},
+    {store:'af_operations',     field:'parcelle_id',    hard:false, label:'opération(s) foncière(s)'}
+  ],
+  af_operations: [
+    {store:'cessions_foncieres', hard:true,  label:'cession(s)',            match:function(c,id){return c.source_type==='operation'&&c.source_id===id;}},
+    {store:'lots',              field:'operation_id',   hard:false, label:'lot(s)'},
+    {store:'parcelles',         field:'operation_id',   hard:false, label:'parcelle(s) liée(s)'}
+  ]
+};
+function recordDependances(store, id){
+  var defs=DEP_MAP[store], hard=[], soft=[];
+  if(!defs) return {hard:hard, soft:soft};
+  defs.forEach(function(d){
+    var arr=DATA[d.store]||[];
+    var m=arr.filter(function(r){ return d.match ? d.match(r,id) : (r[d.field]===id); });
+    if(m.length){ var it={store:d.store, field:d.field||null, count:m.length, label:m.length+' '+d.label}; (d.hard?hard:soft).push(it); }
+  });
+  return {hard:hard, soft:soft};
+}
+async function _depDetachSoft(store, id, softItems){
+  for(var s=0;s<softItems.length;s++){
+    var it=softItems[s]; if(!it.field) continue;
+    var arr=DATA[it.store]||[];
+    for(var i=0;i<arr.length;i++){
+      if(arr[i][it.field]===id){
+        arr[i][it.field]='';
+        try{ await dbPut(it.store, arr[i]); }catch(e){}
+        try{ if(typeof syncToSupabase==='function'){ var e2=SUPA_STORE_MAP.find(function(x){return x[1]===it.store;}); if(e2) syncToSupabase(e2[0], arr[i]); } }catch(e){}
+      }
+    }
+  }
+}
+
+async function deleteRecord(store, id, opts) {
+  opts = opts || {};
+  if (!opts.skipIntegrity && typeof recordDependances === 'function') {
+    var dep = recordDependances(store, id);
+    if (dep.hard.length) {
+      var lst = dep.hard.map(function(d){ return '• ' + d.label; }).join('\n');
+      try { if (typeof toast === 'function') toast('Suppression bloquée : élément référencé ailleurs.', 'error'); } catch(e){}
+      try { alert('Suppression impossible — cet élément est référencé par :\n\n' + lst + '\n\nSupprimez, annulez ou détachez ces éléments d\'abord.'); } catch(e){}
+      return false;
+    }
+    if (dep.soft.length) {
+      await _depDetachSoft(store, id, dep.soft);
+      var nb = dep.soft.reduce(function(a,d){ return a + d.count; }, 0);
+      try { if (typeof toast === 'function') toast(nb + ' lien(s) détaché(s) automatiquement.', 'info'); } catch(e){}
+    }
+  }
   try { if (typeof tombAdd === 'function') tombAdd(store, id); } catch(e){}
   /* 1. Retrait de la RAM */
   if (Array.isArray(DATA[store])) {
@@ -32563,7 +32655,8 @@ async function saveParcelle() {
 
 async function deleteParcelle(id) {
   if (!confirm('Supprimer cette parcelle ?')) return;
-  await deleteRecord('parcelles', id);   /* RAM + IndexedDB + Supabase + tombstone */
+  var ok = await deleteRecord('parcelles', id);   /* RAM + IndexedDB + Supabase + tombstone + intégrité */
+  if (ok === false) return;
   renderParcelles(); updateFoncierKPIs();
   toast('Parcelle supprimée.', 'info');
 }
@@ -32724,8 +32817,7 @@ async function saveMutation() {
 
 async function deleteMutation(id) {
   if (!confirm('Supprimer cette mutation ?')) return;
-  DATA.mutations = (DATA.mutations||[]).filter(function(m){return m.id!==id;});
-  await dbDelete('mutations', id);
+  var ok=await deleteRecord('mutations', id); if(ok===false)return;
   renderMutations();
   toast('Mutation supprimée.', 'info');
 }
@@ -33699,8 +33791,8 @@ async function saveConstructeur() {
 
 async function deleteConstructeur(id) {
   if (!confirm('Supprimer ce constructeur ? Les conventions associées resteront.')) return;
-  DATA.constructeurs=DATA.constructeurs.filter(function(c){return c.id!==id;});
-  await dbDelete('constructeurs', id); renderConstructeurs(); updateConstructeursKPIs();
+  var ok=await deleteRecord('constructeurs', id); if(ok===false)return;
+  renderConstructeurs(); updateConstructeursKPIs();
   toast('Constructeur supprimé.', 'info');
 }
 
@@ -33878,8 +33970,8 @@ async function saveConvention(mode) {
 
 async function deleteConvention(id) {
   if (!confirm('Supprimer cette convention ?')) return;
-  DATA.conventions=DATA.conventions.filter(function(c){return c.id!==id;});
-  await dbDelete('conventions', id); renderConventions(); updateConstructeursKPIs();
+  var ok=await deleteRecord('conventions', id); if(ok===false)return;
+  renderConventions(); updateConstructeursKPIs();
   toast('Convention supprimée.', 'info');
 }
 
@@ -46623,8 +46715,8 @@ async function deleteBC(id){
   var b=DATA.bons_commande.find(function(x){return x.id===id;});
   if(b && (DATA.receptions||[]).some(function(r){return r.bc_id===id;})){ toast('Des réceptions existent : suppression impossible.','error'); return; }
   if(!confirm('Supprimer ce bon de commande ?'))return;
-  DATA.bons_commande=DATA.bons_commande.filter(function(x){return x.id!==id;});
-  await dbDelete('bons_commande',id); renderAchats(); toast('Supprimé.','info');
+  var ok=await deleteRecord('bons_commande',id); if(ok===false)return;
+  renderAchats(); toast('Supprimé.','info');
 }
 function printBC(id){
   var b=DATA.bons_commande.find(function(x){return x.id===id;}); if(!b)return;
@@ -47304,8 +47396,9 @@ async function saveFournisseur(){
   toast('Fournisseur ajouté.','success');
 }
 async function deleteFournisseur(id){
-  DATA.fournisseurs=(DATA.fournisseurs||[]).filter(function(f){return f.id!==id;});
-  await dbDelete('fournisseurs',id); renderFournisseursListe();
+  if(!confirm('Supprimer ce fournisseur ?')) return;
+  var ok=await deleteRecord('fournisseurs',id); if(ok===false)return;
+  renderFournisseursListe();
   var selF=document.getElementById('se-fournisseur'); if(selF) selF.innerHTML=fournisseurOptions('');
   toast('Fournisseur supprimé.','info');
 }
@@ -47448,13 +47541,13 @@ async function deleteDepot(id){
   var comp=stockCompute(); var hasStock=Object.keys(comp.cells).some(function(ck){return comp.cells[ck].depot_id===id && comp.cells[ck].qte>0.0001;});
   if(hasStock){ toast('Dépôt non vide — transférez le stock avant suppression.','error'); return; }
   if(!confirm('Supprimer ce dépôt ?')) return;
-  DATA.depots=DATA.depots.filter(function(d){return d.id!==id;});
-  await dbDelete('depots',id); renderDepotsListe(); renderStock(); toast('Dépôt supprimé.','info');
+  var ok=await deleteRecord('depots',id); if(ok===false)return;
+  renderDepotsListe(); renderStock(); toast('Dépôt supprimé.','info');
 }
 async function deleteStockMvt(id){
   if(!confirm('Supprimer ce mouvement de stock ?')) return;
-  DATA.stock_mouvements=DATA.stock_mouvements.filter(function(m){return m.id!==id;});
-  await dbDelete('stock_mouvements',id); renderStock(); toast('Mouvement supprimé.','info');
+  var ok=await deleteRecord('stock_mouvements',id); if(ok===false)return;
+  renderStock(); toast('Mouvement supprimé.','info');
 }
 
 /* ── Marge par chantier interne ── */
