@@ -14954,9 +14954,11 @@ async function renderSyncStatus() {
     +   '<button class="btn btn-secondary btn-sm" onclick="syncFromSupabase()" '+(online?'':'disabled')+'>⬇️ Tout récupérer</button>'
     +   '<button class="btn btn-secondary btn-sm" onclick="(async function(){try{await flushSyncOutbox();}catch(e){}; renderSyncStatus();})()" '+(online&&outbox?'':'disabled')+'>🔁 Réessayer la file ('+outbox+')</button>'
     +   '<button class="btn btn-secondary btn-sm" onclick="renderSyncStatus()">🔄 Rafraîchir</button>'
+    +   '<button class="btn btn-secondary btn-sm" onclick="analyserDivergence()" '+(online?'':'disabled')+'>🔬 Analyse fine (contenu)</button>'
+    +   '<button class="btn btn-secondary btn-sm" onclick="renderSyncQueue()">📋 File d\'attente ('+(outbox+dirty)+')</button>'
     + '</div>';
 
-  if (!online) { el.innerHTML = head + '<div style="font-size:12px;color:var(--or);">📴 Hors ligne — l\'état détaillé du cloud sera disponible au retour de la connexion. Les modifications sont mises en file d\'attente ('+(outbox+dirty)+').</div>'; return; }
+  if (!online) { el.innerHTML = head + '<div style="font-size:12px;color:var(--or);">📴 Hors ligne — l\'état détaillé du cloud sera disponible au retour de la connexion. Les modifications sont mises en file d\'attente ('+(outbox+dirty)+').</div>' + '<div id="sync-extra-panel" style="margin-top:14px;"></div>'; return; }
 
   el.innerHTML = head + '<div style="font-size:12px;color:var(--blanc-dim)">⏳ Comparaison local ↔ cloud en cours…</div>';
 
@@ -15027,7 +15029,7 @@ async function renderSyncStatus() {
   rows += '</tbody></table>'
     + '<div style="margin-top:8px;font-size:11px;color:var(--blanc-dim);">Comparaison effectuée le ' + new Date().toLocaleString('fr-FR') + ' · « Local » = ce poste, « Cloud » = Supabase. Le sens de transfert indique ce qui manque de chaque côté.</div>';
 
-  el.innerHTML = head + resume + rows;
+  el.innerHTML = head + resume + rows + '<div id="sync-extra-panel" style="margin-top:14px;"></div>';
 }
 
 /* Push ciblé : envoie tous les enregistrements d'un module vers le cloud */
@@ -15064,6 +15066,150 @@ async function syncPullStore(store){
   try { majDerniereSync('Récupération cloud'); } catch(_){}
   toast('⬇️ ' + _libelleStore(store) + ' : ' + n + ' récupéré(s)', 'success');
   renderSyncStatus();
+}
+
+/* ── Analyse fine : divergence de CONTENU (au-delà du simple comptage) ──────
+   Compare, pour chaque module, l'horodatage _modifie de chaque enregistrement
+   local et cloud → détecte les fiches modifiées même à nombre égal. ───────── */
+async function analyserDivergence(){
+  var host = document.getElementById('sync-extra-panel') || document.getElementById('sync-status-panel');
+  if (!host) return;
+  getSBConfig();
+  if (!SB.url || !SB.key) { toast('Supabase non configuré.', 'error'); return; }
+  if (!navigator.onLine) { toast('Connexion requise pour l\'analyse.', 'error'); return; }
+  host.innerHTML = '<div style="font-size:12px;color:var(--blanc-dim)">🔬 Analyse fine du contenu en cours… (comparaison enregistrement par enregistrement)</div>';
+  var EPS = 1500; /* tolérance 1,5 s pour éviter le bruit d'horodatage */
+
+  var res = await Promise.all(SUPA_STORE_MAP.map(async function(p){
+    var table = p[0], store = p[1], isU = (table === 'pi_users');
+    var local = DATA[store] || [];
+    var lmap = {}; local.forEach(function(x){ if (x && x.id!=null) lmap[x.id] = _ts(x); });
+    var cmap = {}, err = false;
+    try {
+      var sel = isU ? '?select=id,updated_at' : '?select=id,m:data->>_modifie,u:data->>updated_at';
+      var rows = await sbFetch(table + sel, 'GET');
+      if (rows === null) { err = true; }
+      else if (!isU && rows.length && rows[0].m === undefined && rows[0].u === undefined) {
+        /* Sélecteur JSON non supporté → repli sur data complet */
+        var rows2 = await sbFetch(table + '?select=id,data', 'GET') || [];
+        rows2.forEach(function(r){ var o = _supaUnwrap(table, r); cmap[r.id] = _ts(o); });
+      } else {
+        rows.forEach(function(r){
+          var ts = isU ? (r.updated_at ? Date.parse(r.updated_at) : 0) : (Date.parse(r.m || r.u || '') || 0);
+          cmap[r.id] = isNaN(ts) ? 0 : ts;
+        });
+      }
+    } catch(e) { err = true; }
+    if (err) return { store: store, err: true };
+
+    var pushN=0, pullN=0, pushM=0, pullM=0;
+    Object.keys(lmap).forEach(function(id){
+      if (!(id in cmap)) pushN++;
+      else if (!isU && lmap[id] > cmap[id] + EPS) pushM++;
+    });
+    Object.keys(cmap).forEach(function(id){
+      if (!(id in lmap)) pullN++;
+      else if (!isU && cmap[id] > lmap[id] + EPS) pullM++;
+    });
+    return { store: store, pushN:pushN, pullN:pullN, pushM:pushM, pullM:pullM };
+  }));
+
+  var diverg = res.filter(function(d){ return d.err || d.pushN||d.pullN||d.pushM||d.pullM; });
+  var tEnvN=0,tEnvM=0,tRecN=0,tRecM=0,tErr=0;
+  res.forEach(function(d){ if(d.err){tErr++;return;} tEnvN+=d.pushN; tEnvM+=d.pushM; tRecN+=d.pullN; tRecM+=d.pullM; });
+
+  if (!diverg.length) {
+    host.innerHTML = '<div style="padding:10px;border:1px solid var(--vert);border-radius:8px;color:var(--vert);font-size:13px;">✅ Contenu parfaitement synchronisé — aucune fiche divergente détectée (nouveaux et modifiés inclus).</div>';
+    return;
+  }
+
+  var html = ''
+    + '<div style="margin:4px 0 10px;font-size:12px;display:flex;flex-wrap:wrap;gap:14px;">'
+    +   '<strong>🔬 Divergences de contenu</strong>'
+    +   '<span style="color:var(--or)">⬆️ à envoyer : ' + tEnvN + ' nouveau(x) · ' + tEnvM + ' modifié(s)</span>'
+    +   '<span style="color:#0EA5E9">⬇️ à récupérer : ' + tRecN + ' nouveau(x) · ' + tRecM + ' modifié(s)</span>'
+    +   (tErr ? '<span style="color:var(--rouge)">⚠️ ' + tErr + ' table(s) en erreur</span>' : '')
+    + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px;">'
+    + '<thead><tr style="text-align:left;border-bottom:1px solid var(--bord);">'
+    +   '<th style="padding:6px 8px;">Élément</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">⬆️ Nouveaux</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">⬆️ Modifiés</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">⬇️ Nouveaux</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">⬇️ Modifiés</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">Action</th>'
+    + '</tr></thead><tbody>';
+  diverg.forEach(function(d){
+    if (d.err) {
+      html += '<tr style="border-bottom:1px solid var(--bord);"><td style="padding:6px 8px;">' + _libelleStore(d.store) + '</td>'
+        + '<td colspan="4" style="padding:6px 8px;color:var(--rouge);text-align:center;">⚠️ Erreur de lecture cloud</td><td></td></tr>';
+      return;
+    }
+    var act = '';
+    if ((d.pushN+d.pushM) > 0) act += '<button class="btn btn-primary btn-sm" style="padding:2px 8px;font-size:11px;margin:1px;" onclick="syncPushStore(\'' + d.store + '\')">⬆️ Envoyer</button>';
+    if ((d.pullN+d.pullM) > 0) act += '<button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;margin:1px;" onclick="syncPullStore(\'' + d.store + '\')">⬇️ Récupérer</button>';
+    function c(n,col){ return n ? '<span style="color:'+col+';font-weight:600;">'+n+'</span>' : '<span style="color:var(--blanc-dim);">—</span>'; }
+    html += '<tr style="border-bottom:1px solid var(--bord);">'
+      + '<td style="padding:6px 8px;">' + _libelleStore(d.store) + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + c(d.pushN,'var(--or)') + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + c(d.pushM,'var(--or)') + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + c(d.pullN,'#0EA5E9') + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + c(d.pullM,'#0EA5E9') + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;white-space:nowrap;">' + (act||'—') + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>'
+    + '<div style="margin-top:8px;font-size:11px;color:var(--blanc-dim);">« Modifiés » = même fiche présente des deux côtés mais éditée plus récemment d\'un côté (comparaison de l\'horodatage de modification). Tolérance ' + (EPS/1000) + ' s.</div>';
+  host.innerHTML = html;
+}
+
+/* ── Détail de la file d'attente (opérations en attente d'envoi) ─────────── */
+function renderSyncQueue(){
+  var host = document.getElementById('sync-extra-panel') || document.getElementById('sync-status-panel');
+  if (!host) return;
+  var ob = (typeof _outboxRead === 'function') ? (_outboxRead() || []) : [];
+  var dirty = Object.keys(_dirtySync || {});
+  var storeOf = function(table){ var e = SUPA_STORE_MAP.find(function(x){ return x[0]===table; }); return e ? e[1] : table; };
+
+  if (!ob.length && !dirty.length) {
+    host.innerHTML = '<div style="padding:10px;border:1px solid var(--vert);border-radius:8px;color:var(--vert);font-size:13px;">✅ File d\'attente vide — toutes les modifications ont été transmises au cloud.</div>';
+    return;
+  }
+
+  var html = ''
+    + '<div style="margin:4px 0 10px;font-size:12px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;">'
+    +   '<strong>📋 File d\'attente</strong>'
+    +   '<span style="color:var(--blanc-dim)">📤 ' + ob.length + ' opération(s) hors-ligne · 📝 ' + dirty.length + ' modif. en attente</span>'
+    +   '<button class="btn btn-secondary btn-sm" onclick="(async function(){try{await flushSyncOutbox();}catch(e){}; renderSyncQueue();})()" ' + (navigator.onLine && ob.length ? '' : 'disabled') + '>🔁 Réessayer maintenant</button>'
+    +   '<button class="btn btn-danger btn-sm" onclick="if(confirm(\'Vider la file d\\\'attente ? Les opérations non transmises seront abandonnées.\')){try{localStorage.setItem(\'pici_sync_outbox\',\'[]\');}catch(e){} renderSyncQueue();}">🗑️ Vider la file</button>'
+    + '</div>';
+
+  if (ob.length) {
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px;">'
+      + '<thead><tr style="text-align:left;border-bottom:1px solid var(--bord);">'
+      +   '<th style="padding:6px 8px;">Opération</th><th style="padding:6px 8px;">Module</th>'
+      +   '<th style="padding:6px 8px;">ID</th><th style="padding:6px 8px;">Mise en file</th>'
+      + '</tr></thead><tbody>';
+    ob.slice().reverse().forEach(function(e){
+      var opLbl = e.op === 'delete' ? '<span style="color:var(--rouge)">🗑️ Suppression</span>' : '<span style="color:var(--or)">⬆️ Envoi</span>';
+      var when = e.ts ? new Date(e.ts).toLocaleString('fr-FR') : '—';
+      html += '<tr style="border-bottom:1px solid var(--bord);">'
+        + '<td style="padding:6px 8px;">' + opLbl + '</td>'
+        + '<td style="padding:6px 8px;">' + _libelleStore(storeOf(e.table)) + '</td>'
+        + '<td style="padding:6px 8px;font-family:monospace;font-size:11px;">' + String(e.id||'').slice(0,18) + '</td>'
+        + '<td style="padding:6px 8px;color:var(--blanc-dim);">' + when + '</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  if (dirty.length) {
+    html += '<div style="margin-top:10px;font-size:12px;color:var(--blanc-dim);"><strong>📝 Modifications locales en attente d\'envoi (' + dirty.length + ') :</strong> '
+      + dirty.slice(0,40).map(function(k){ var s2=k.split('|')[0]; return _libelleStore(s2); })
+        .filter(function(v,i,a){ return a.indexOf(v)===i; }).join(', ')
+      + (dirty.length>40 ? '…' : '') + '</div>';
+  }
+  host.innerHTML = html;
 }
 
 /* Démarre la synchro automatique : envoi des changements toutes les 30 s + reprise de la file. */
