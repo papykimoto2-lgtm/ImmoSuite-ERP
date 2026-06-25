@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>ImmoSuite ERP v21 — Logiciel de Gestion Immobilière</title>
+<title>ERP — Logiciel de Gestion Immobilière</title>
 <script>
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
@@ -1985,7 +1985,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 </head>
 <body>
 
-<a href="index.html" title="Retour Menko Holding" style="position:fixed;top:8px;left:8px;z-index:99999;background:#1A1A2E;color:#D4AF37;font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.3);font-family:Arial,sans-serif;">⌂ Menko Holding</a>
+<a href="index.html" id="brandBackLink" title="Retour au portail" style="position:fixed;top:8px;left:8px;z-index:99999;background:#1A1A2E;color:#D4AF37;font-size:11px;font-weight:700;padding:5px 10px;border-radius:6px;text-decoration:none;box-shadow:0 2px 6px rgba(0,0,0,.3);font-family:Arial,sans-serif;">⌂ Portail</a>
 
 <!-- ═══════════════════════════════════════════════════
      CONFIG SUPABASE (premier lancement)
@@ -4645,7 +4645,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                   <input type="text" id="param-emailjs-key" class="form-control" placeholder="xxxxxxxxxxxxxxx">
                 </div>
                 <div class="form-group span-2"><label>🔗 Lien de l'application (envoyé dans les invitations)</label>
-                  <input type="text" id="param-app-url" class="form-control" placeholder="https://immosuite.partnerimmo.ci">
+                  <input type="text" id="param-app-url" class="form-control" placeholder="https://votre-domaine.ci">
                 </div>
               </div>
               <div style="display:flex;gap:8px;margin-top:10px;">
@@ -4905,9 +4905,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Numéro de compte</label>
                   <input type="tel" class="form-control" id="param-om-numero" placeholder="+225 07 XX XX XX XX"></div>
                 <div class="form-group"><label>Nom du titulaire</label>
-                  <input type="text" class="form-control" id="param-om-nom" placeholder="PARTNER IMMO CI"></div>
+                  <input type="text" class="form-control" id="param-om-nom" placeholder="Nom du bénéficiaire"></div>
                 <div class="form-group span-2"><label>Nom affiché côté payeur</label>
-                  <input type="text" class="form-control" id="param-om-libelle" placeholder="Ex : Paiement souscription EDEN"></div>
+                  <input type="text" class="form-control" id="param-om-libelle" placeholder="Ex : Paiement souscription"></div>
                 <div class="form-group"><label>Actif</label>
                   <select class="form-control" id="param-om-actif">
                     <option value="oui">✅ Oui</option><option value="non">❌ Non</option>
@@ -4921,7 +4921,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Numéro de compte</label>
                   <input type="tel" class="form-control" id="param-wave-numero" placeholder="+225 07 XX XX XX XX"></div>
                 <div class="form-group"><label>Nom du titulaire</label>
-                  <input type="text" class="form-control" id="param-wave-nom" placeholder="PARTNER IMMO CI"></div>
+                  <input type="text" class="form-control" id="param-wave-nom" placeholder="Nom du bénéficiaire"></div>
                 <div class="form-group span-2"><label>Lien Wave (optionnel)</label>
                   <input type="url" class="form-control" id="param-wave-lien" placeholder="https://pay.wave.com/m/..."></div>
                 <div class="form-group"><label>Actif</label>
@@ -4937,7 +4937,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Numéro de compte</label>
                   <input type="tel" class="form-control" id="param-mtn-numero" placeholder="+225 05 XX XX XX XX"></div>
                 <div class="form-group"><label>Nom du titulaire</label>
-                  <input type="text" class="form-control" id="param-mtn-nom" placeholder="PARTNER IMMO CI"></div>
+                  <input type="text" class="form-control" id="param-mtn-nom" placeholder="Nom du bénéficiaire"></div>
                 <div class="form-group span-2"><label>Nom affiché côté payeur</label>
                   <input type="text" class="form-control" id="param-mtn-libelle"></div>
                 <div class="form-group"><label>Actif</label>
@@ -4957,7 +4957,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Code BIC/SWIFT</label>
                   <input type="text" class="form-control" id="param-bank-bic" placeholder="SGCIABAB"></div>
                 <div class="form-group"><label>Intitulé du compte</label>
-                  <input type="text" class="form-control" id="param-bank-intitule" placeholder="PARTNER IMMO CI"></div>
+                  <input type="text" class="form-control" id="param-bank-intitule" placeholder="Nom du bénéficiaire"></div>
               </div>
             </div>
           </div>
@@ -5188,7 +5188,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 </div>
                 <div class="form-group span-2">
                   <label>Pied de page des documents officiels</label>
-                  <textarea class="form-control" id="param-footer-doc" rows="2" placeholder="PARTNER IMMO CI — RCCM CI-ABJ-2022-B13-09764 — Tél : 07 78 77 25 29"></textarea>
+                  <textarea class="form-control" id="param-footer-doc" rows="2" placeholder="Votre société — RCCM CI-ABJ-… — Tél : +225 …"></textarea>
                 </div>
               </div>
             </div>
@@ -7220,10 +7220,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               </div>
               <div class="form-group"><label>Type de logement ciblé</label>
                 <select class="form-control" id="seg-type-logement">
-                  <option value="f2">F2 — HARMONIE</option>
-                  <option value="f3">F3 — BEVERLY / MEYERS</option>
-                  <option value="f4">F4 — EXCELLIUM</option>
-                  <option value="villa">Villa — SOMOLI Prestige</option>
+                  <option value="f2">F2</option>
+                  <option value="f3">F3</option>
+                  <option value="f4">F4</option>
+                  <option value="villa">Villa</option>
                 </select>
               </div>
               <div class="form-group"><label>Canal privilégié</label>
@@ -7312,10 +7312,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Type de logement ciblé</label>
                   <select class="form-control" id="camp-type-logement">
                     <option value="">Tous types</option>
-                    <option value="f2">F2 — HARMONIE</option>
-                    <option value="f3">F3 — BEVERLY / MEYERS</option>
-                    <option value="f4">F4 — EXCELLIUM</option>
-                    <option value="villa">Villa — SOMOLI Prestige</option>
+                    <option value="f2">F2</option>
+                    <option value="f3">F3</option>
+                    <option value="f4">F4</option>
+                    <option value="villa">Villa</option>
                   </select>
                 </div>
                 <div class="form-group"><label>Date de début</label>
@@ -8810,10 +8810,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane active" id="tab-dqe-nomenclature">
           <div class="filters-bar" style="margin-bottom:12px;">
             <select class="filter-select" id="dqe-type-logement" onchange="chargerNomenclature()">
-              <option value="F2">F2 — HARMONIE (80 m²)</option>
-              <option value="F3">F3 — BEVERLY / MEYERS (180 m²)</option>
-              <option value="F4">F4 — EXCELLIUM (250 m²)</option>
-              <option value="VILLA">Villa — SOMOLI Prestige (200 m²)</option>
+              <option value="F2">F2</option>
+              <option value="F3">F3</option>
+              <option value="F4">F4</option>
+              <option value="VILLA">Villa</option>
             </select>
             <button class="btn btn-secondary btn-sm" onclick="ajouterPosteNomenclature()">+ Ajouter poste</button>
             <button class="btn btn-secondary btn-sm" onclick="exporterNomenclatureCSV()">⬇ CSV</button>
@@ -12151,7 +12151,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </select>
           </div>
           <div class="form-group"><label>Délai de paiement (jours)</label><input type="number" class="form-control" id="con-delai-paiement" value="30"></div>
-          <div class="form-group span-2"><label style="font-weight:normal;font-size:13px;cursor:pointer;"><input type="checkbox" id="con-interne" style="margin-right:8px;"> 🏗️ Département de construction <strong>interne</strong> (Menko Immo agit comme constructeur)</label></div>
+          <div class="form-group span-2"><label style="font-weight:normal;font-size:13px;cursor:pointer;"><input type="checkbox" id="con-interne" style="margin-right:8px;"> 🏗️ Département de construction <strong>interne</strong> (la société agit comme constructeur interne)</label></div>
         </div>
       </div>
     </div>
@@ -13645,13 +13645,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
       <div class="form-group" style="margin-bottom:16px;">
         <label>Code d'accès (6 chiffres)</label>
-        <input type="password" id="ap-login-code" class="form-control" placeholder="Code reçu de l'équipe Partner Immo"
+        <input type="password" id="ap-login-code" class="form-control" placeholder="Code reçu de l'équipe"
           onkeydown="if(event.key==='Enter')authentifierApporteur()">
       </div>
       <div id="ap-login-error" style="color:#dc2626;font-size:12px;display:none;margin-bottom:10px;padding:10px 12px;background:#FEE2E2;border-radius:8px;border-left:4px solid #dc2626;"></div>
       <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;background:#1a6b2a;" onclick="authentifierApporteur()">Se connecter →</button>
       <div style="margin-top:16px;text-align:center;font-size:11px;color:#888;">
-        🔒 Espace réservé aux apporteurs partenaires de Partner Immo CI
+        🔒 Espace réservé aux apporteurs partenaires
       </div>
     </div>
   </div>
@@ -14214,6 +14214,7 @@ var DATA = {
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
 var DB_VERSION = 127; /* v127: relances d'inactivité foncier (af_relances) */
+var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -14469,7 +14470,7 @@ function getSBConfig() {
      (ex. la clé collée par erreur dans le champ URL), on ignore les valeurs
      sauvegardées. */
   if (!/^https?:\/\/[^ ]+\.supabase\.co\/?$/i.test(u)) { u = ''; k = ''; }
-  /* Aucun repli automatique : tant qu'aucune config Menko valide n'est saisie
+  /* Aucun repli automatique : tant qu'aucune config société valide n'est saisie
      dans Paramètres ⚙️, l'app reste en mode local (IndexedDB uniquement). */
   SB.url = u.replace(/\/+$/, '');
   SB.key = k;
@@ -15232,7 +15233,7 @@ async function hashPassword(password, salt) {
 /** Politique de mot de passe fort : 8 car., 1 maj, 1 chiffre, 1 spécial */
 /** Réinitialise les mots de passe de TOUS les utilisateurs (SHA-256 + sel). */
 async function reinitialiserTousMotsDePasse(nouveauMdp) {
-  nouveauMdp = nouveauMdp || 'Sanix2026!';
+  nouveauMdp = nouveauMdp || '';
   if (!DATA.users || !DATA.users.length) {
     if (typeof toast === 'function') toast('Aucun utilisateur à réinitialiser.', 'error');
     return 0;
@@ -15259,7 +15260,7 @@ async function confirmReinitMotsDePasse() {
   if (typeof currentUser !== 'undefined' && currentUser && currentUser.role && currentUser.role !== 'admin') {
     toast('Action réservée à l\'administrateur.', 'error'); return;
   }
-  var mdp = prompt('Nouveau mot de passe commun pour TOUS les utilisateurs\n(min. 8 car., 1 majuscule, 1 chiffre, 1 spécial) :', 'Sanix2026!');
+  var mdp = prompt('Nouveau mot de passe commun pour TOUS les utilisateurs\n(min. 8 car., 1 majuscule, 1 chiffre, 1 spécial) :', '');
   if (mdp === null) return;
   var err = validatePasswordPolicy(mdp);
   if (err) { toast(err, 'error'); return; }
@@ -19941,7 +19942,7 @@ function printContrat(clientId) {
     + '<div class="sig-box">Pour ' + (params.societe || 'ImmoSuite ERP') + '<br><br><br></div></div>'
     + '</body></html>';
   win.document.write(html);
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 function printEcheancier(clientId) {
@@ -19966,7 +19967,7 @@ function printEcheancier(clientId) {
     + '<table><thead><tr><th>Échéance</th><th>Mois</th><th>Mensualité (FCFA)</th><th>Cumul (FCFA)</th><th>Signature</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '</body></html>';
   win.document.write(html);
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 /* ──────────────────────────────────────────────────────
@@ -20349,7 +20350,7 @@ function renderParamsReporting() {
     +'<select class="form-control" id="rpt-rh-freq"><option value="desactive">Désactivé</option>'
     +'<option value="mensuel">Mensuel</option></select></div>'
     +'<div class="form-group span-2"><label>Email(s) destinataires (séparés par ;)</label>'
-    +'<input type="text" class="form-control" id="rpt-emails" value="'+(escHtml(p.rpt_emails||''))+'" placeholder="direction@partnerimmo.ci;admin@..."></div>'
+    +'<input type="text" class="form-control" id="rpt-emails" value="'+(escHtml(p.rpt_emails||''))+'" placeholder="email1@exemple.ci;email2@exemple.ci"></div>'
     +'<div class="form-group span-2"><label>Objet des rapports automatiques</label>'
     +'<input type="text" class="form-control" id="rpt-objet" value="'+(escHtml(p.rpt_objet||'Rapport automatique ImmoSuite'))+'"></div>'
     +'</div>'
@@ -20473,7 +20474,7 @@ function publierParamsPortail(){
     id: 'portail',
     bandeau_couleur: p.bandeau_couleur || '#003366',
     bandeau_texte:   p.bandeau_texte || '',
-    societe:         p.societe || 'Partner Immo CI',
+    societe:         p.societe || '',
     slogan_principal:p.slogan_principal || '',
     hero_texte:      p.hero_texte || '',
     frais_souscription: p.frais_souscription || 0
@@ -20642,8 +20643,8 @@ var RESET_CATEGORIES = [
     stores:['versements','ecritures','releves_bank','rapprochements','biens_amort'],
     description:'Versements, écritures comptables, rapprochements' },
   { id:'immobilier', label:'Programmes & Foncier', icon:'🏗️', color:'#0284C7',
-    stores:['programmes','lots','terrains','parcelles','parcelles_morcellement'],
-    description:'Programmes, lots, terrains, parcelles' },
+    stores:['programmes','lots','terrains','parcelles','parcelles_morcellement','cessions_foncieres','mutations','af_operations','af_agents','af_relances'],
+    description:'Programmes, lots, terrains, parcelles, cessions, opérations foncières' },
   { id:'chantiers', label:'Chantiers & Conception', icon:'🔨', color:'#7C3AED',
     stores:['constructeurs','conventions','situations','avenants','conceptions','plans_arch',
             'rapports_chantier','permis','nomenclatures','prix_unitaire','devis_fournisseurs'],
@@ -20809,19 +20810,7 @@ async function executerReset() {
   /* Dédoublonner */
   storesToClear = storesToClear.filter(function(s,i,a){ return a.indexOf(s)===i; });
 
-  var SUPA_MAP_LOCAL = {
-    clients:'pi_clients', versements:'pi_versements', programmes:'pi_programmes',
-    lots:'pi_lots', terrains:'pi_terrains', ecritures:'pi_ecritures', relances:'pi_relances',
-    employes:'pi_employes', bulletins:'pi_bulletins', declarations:'pi_declarations',
-    pointages:'pi_pointages', leads:'pi_leads', apporteurs:'pi_apporteurs',
-    commissions:'pi_commissions', constructeurs:'pi_constructeurs', conventions:'pi_conventions',
-    dossiersJuridiques:'pi_dossiers_juridiques', docs_juridiques:'pi_docs_juridiques',
-    portail_messages:'pi_portail_messages', portail_medias:'pi_portail_medias',
-    visites_rdv:'pi_visites_rdv', visites_log:'pi_visites_log',
-    logs_connexion:'pi_logs_connexion', custom_roles:'pi_custom_roles',
-    conges_rh:'pi_conges_rh', postes_ouverts:'pi_postes_ouverts',
-    candidats_rh:'pi_candidats_rh', formations_rh:'pi_formations_rh',
-  };
+  var _storeTable = {}; (SUPA_STORE_MAP||[]).forEach(function(e){ _storeTable[e[1]] = e[0]; });
 
   var totalStores = storesToClear.length;
   var done=0, totalDeleted=0, results=[];
@@ -20837,11 +20826,12 @@ async function executerReset() {
       var all = await dbGetAll(store).catch(function(){ return []; });
       nb = all.length;
       for (var j=0; j<all.length; j++) {
+        try { if (typeof tombAdd==='function') tombAdd(store, all[j].id); } catch(e){}
         await dbDelete(store, all[j].id).catch(function(){});
-        /* Supabase si activé */
-        if (withCloud && SUPA_MAP_LOCAL[store] && typeof sbFetch==='function') {
-          sbFetch(SUPA_MAP_LOCAL[store]+'?id=eq.'+encodeURIComponent(all[j].id), 'DELETE').catch(function(){});
-        }
+      }
+      /* Supabase : suppression EN MASSE de toute la table (évite la résurrection au pull) */
+      if (withCloud && _storeTable[store] && typeof sbFetch==='function' && SB.url && SB.key) {
+        await sbFetch(_storeTable[store]+'?id=neq.__none__', 'DELETE', null, 'return=minimal').catch(function(){});
       }
       /* Vider DATA en mémoire */
       if (DATA[store]) DATA[store] = [];
@@ -21585,7 +21575,7 @@ async function exportJSON() {
   var data = JSON.stringify({ DATA: DATA, documents: allDocs, signatures: allSigs, version: APP.version, date: today() }, null, 2);
   var blob = new Blob([data], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
-  var a = document.createElement('a'); a.href = url; a.download = 'partnerimmo-backup-' + today() + '.json'; a.click();
+  var a = document.createElement('a'); a.href = url; a.download = 'backup-' + today() + '.json'; a.click();
   URL.revokeObjectURL(url);
   toast('Sauvegarde JSON exportée (inclut documents et signatures).', 'success');
 }
@@ -21753,7 +21743,7 @@ function sortTable(context, key) {
 
 /* ══════════════════════════════════════════════════════════════════════
    MOTEUR PAIE CÔTE D'IVOIRE 2026 — conforme réforme ITS 2024 (ord. 2023-718/719)
-   Validé au franc près sur bulletin réel PARTNER IMMO (avril 2026)
+   Validé au franc près (test interne)
 ══════════════════════════════════════════════════════════════════════ */
 var PAIE_CI = {
   joursMois: 30,                 /* base de proration (jours calendaires) */
@@ -22227,7 +22217,7 @@ function exportEmployes() {
   });
   var blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'employes_partnerimmo_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'employes_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
   toast('Export CSV téléchargé.', 'success');
 }
@@ -23200,7 +23190,7 @@ function printLivrePaie() {
   var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
   var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
   var params = DATA.params || {};
-  var ste = params.raison_sociale || params.nom_entreprise || 'PartnerImmo CI';
+  var ste = params.raison_sociale || params.nom_entreprise || '';
 
   var moisBlocks = LP_MOIS_LABELS.map(function(moisLabel, i) {
     var mm = String(i + 1).padStart(2, '0');
@@ -23292,7 +23282,7 @@ function printFicheIndividuelle() {
   var e = (DATA.employes || []).find(function(x) { return x.id === empId; });
   if (!e) return;
   var params = DATA.params || {};
-  var ste = params.raison_sociale || params.nom_entreprise || 'PartnerImmo CI';
+  var ste = params.raison_sociale || params.nom_entreprise || '';
 
   var lignes = [
     { k: 'categoriel', label: 'Salaire catégoriel' },
@@ -24346,7 +24336,7 @@ function imprimerContratApporteur(id) {
     +'<div class="sign"><div class="sign-box"><p>Pour LA SOCIÉTÉ<br>'+escHtml(params.societe||'')+'</p><p style="margin-top:40px;">Signature et cachet :<br>___________________________</p></div>'
     +'<div class="sign-box"><p>L\'APPORTEUR<br>'+escHtml((ap.prenoms||'')+' '+ap.nom)+'</p><p style="margin-top:40px;">Signature précédée de<br>la mention «Lu et approuvé» :<br>___________________________</p></div></div>'
     +'</body></html>';
-  var win=window.open('','_blank'); win.document.write(menkoStamp(html)); win.document.close(); setTimeout(function(){win.print();},400);
+  var win=window.open('','_blank'); win.document.write(docStamp(html)); win.document.close(); setTimeout(function(){win.print();},400);
 }
 
 // ── Impression contrat de non-contournement ────────────────────────────────────
@@ -24386,7 +24376,7 @@ function imprimerNonContournement(id) {
     +'<div class="sign"><div class="sign-box"><p>Pour LA SOCIÉTÉ<br>'+escHtml(params.societe||'')+'</p><p style="margin-top:44px;">Signature et cachet :<br>___________________________</p></div>'
     +'<div class="sign-box"><p>L\'APPORTEUR<br>'+escHtml((ap.prenoms||'')+' '+ap.nom)+'</p><p style="margin-top:44px;">Signature précédée de<br>«Lu et approuvé — Non-contournement» :<br>___________________________</p></div></div>'
     +'</body></html>';
-  var win=window.open('','_blank'); win.document.write(menkoStamp(html)); win.document.close(); setTimeout(function(){win.print();},400);
+  var win=window.open('','_blank'); win.document.write(docStamp(html)); win.document.close(); setTimeout(function(){win.print();},400);
 }
 
 function exportApporteursCSV() {
@@ -28621,7 +28611,7 @@ function printCampagneObj(c) {
     +'<div class="sig"><div class="sb">LE RESPONSABLE COMMERCIAL<br><br><br>Signature</div>'
     +'<div class="sb" style="text-align:right;">LA DIRECTION GÉNÉRALE<br><br><br>Signature et cachet</div></div>'
     +'</body></html>');
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 function printPAC() {
@@ -28644,7 +28634,7 @@ function printPAC() {
     +actions.sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).map(function(a){return '<tr><td>'+( a.date||'—')+'</td><td>'+a.type+'</td><td>'+a.nom+'</td><td>'+(a.responsable||'—')+'</td><td>'+fmtF(a.budget||0)+'</td><td>'+a.statut+'</td></tr>';}).join('')
     +'</table>'
     +'</body></html>');
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 function exportPAC() {
@@ -28888,8 +28878,8 @@ function renderSegments(){
   var grid=document.getElementById('segments-grid');if(!grid)return;
   // Fusion défaut + personnalisés
   var custom=DATA.segments_marketing||[];
-  var all=SEGMENTS_DEFAUT.concat(custom);
-  var typeLabel={f2:'HARMONIE F2',f3:'BEVERLY F3 / MEYERS',f4:'EXCELLIUM F4',villa:'SOMOLI Prestige'};
+  var all=((typeof DEMO_DATA!=='undefined'&&DEMO_DATA)?SEGMENTS_DEFAUT:[]).concat(custom);
+  var typeLabel={f2:'F2',f3:'F3',f4:'F4',villa:'Villa'};
   var canalIcon={terrain:'🚶',whatsapp:'📱',evenement:'🎪',parrainage:'🤝',social_media:'📲'};
 
   grid.innerHTML=all.map(function(s){
@@ -29157,7 +29147,7 @@ async function saveConception(){
 }
 async function deleteConception(id){if(!confirm('Supprimer ce projet ?'))return;DATA.conceptions=DATA.conceptions.filter(function(c){return c.id!==id;});await dbDelete('conceptions',id);renderConceptionsFull();toast('Supprimé.','info');}
 function exportConceptionCSV(){var rows=['Référence,Programme,Type,Architecte,Surface,Unités,Phase,Statut'];DATA.conceptions.forEach(function(c){var pr=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:''};rows.push([c.ref,pr.nom,c.type_logements,c.architecte,c.surface,c.nb_unites,c.phase,c.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='conceptions.csv';a.click();}
-function printFicheConception(id){var c=DATA.conceptions.find(function(x){return x.id===id;});if(!c)return;var pr=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fiche Conception</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1D4ED8;border-bottom:2px solid #2563EB;padding-bottom:8px;}table{border-collapse:collapse;width:100%;margin:10px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#f5f0e0;}.ph{padding:6px 12px;border-left:4px solid;margin-bottom:6px;}.pf{border-color:#2E8B57;background:#f0f9f0;}.pc{border-color:#2563EB;background:#fdf8ea;}.pa{border-color:#bbb;background:#f8f8f8;}</style></head><body><h1>📐 Fiche Conception — '+c.ref+'</h1><table><tr><th>Programme</th><td>'+pr.nom+'</td><th>Type</th><td>'+c.type_logements+'</td></tr><tr><th>Architecte</th><td>'+(c.architecte||'—')+'</td><th>Phase</th><td>'+c.phase+'</td></tr><tr><th>Surface</th><td>'+(c.surface||'—')+' m²</td><th>Statut</th><td>'+c.statut+'</td></tr></table><h3>Phases</h3>'+(c.phases||[]).map(function(p){var cls=p.statut==='termine'?'pf':p.statut==='en_cours'?'pc':'pa';return'<div class="ph '+cls+'">'+p.nom+' — '+p.pct+'% — '+p.statut+'</div>';}).join('')+'<h3>Description</h3><p>'+(c.description||'—')+'</p></body></html>');try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
+function printFicheConception(id){var c=DATA.conceptions.find(function(x){return x.id===id;});if(!c)return;var pr=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fiche Conception</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1D4ED8;border-bottom:2px solid #2563EB;padding-bottom:8px;}table{border-collapse:collapse;width:100%;margin:10px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#f5f0e0;}.ph{padding:6px 12px;border-left:4px solid;margin-bottom:6px;}.pf{border-color:#2E8B57;background:#f0f9f0;}.pc{border-color:#2563EB;background:#fdf8ea;}.pa{border-color:#bbb;background:#f8f8f8;}</style></head><body><h1>📐 Fiche Conception — '+c.ref+'</h1><table><tr><th>Programme</th><td>'+pr.nom+'</td><th>Type</th><td>'+c.type_logements+'</td></tr><tr><th>Architecte</th><td>'+(c.architecte||'—')+'</td><th>Phase</th><td>'+c.phase+'</td></tr><tr><th>Surface</th><td>'+(c.surface||'—')+' m²</td><th>Statut</th><td>'+c.statut+'</td></tr></table><h3>Phases</h3>'+(c.phases||[]).map(function(p){var cls=p.statut==='termine'?'pf':p.statut==='en_cours'?'pc':'pa';return'<div class="ph '+cls+'">'+p.nom+' — '+p.pct+'% — '+p.statut+'</div>';}).join('')+'<h3>Description</h3><p>'+(c.description||'—')+'</p></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
 
 /* ─── Permis ───────────────────────────────────────── */
 function buildPermisKPIs(){var el=document.getElementById('permis-kpi');if(!el)return;var list=DATA.permis||[];var now=today();var exp=list.filter(function(p){if(!p.date_obtention||!p.validite)return false;var d=new Date(p.date_obtention);d.setMonth(d.getMonth()+parseInt(p.validite));return d.toISOString().slice(0,10)<now&&p.statut==='obtenu';});el.innerHTML=[{l:'Déposés',v:list.filter(function(p){return p.statut==='depose';}).length,i:'📬'},{l:'Obtenus',v:list.filter(function(p){return p.statut==='obtenu';}).length,i:'✅'},{l:'En attente',v:list.filter(function(p){return p.statut==='en_attente';}).length,i:'⏳'},{l:'Expirés/Alerte',v:exp.length,i:'⚠️'}].map(function(k){return'<div class="kpi-card" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div><div class="kpi-value or" style="font-size:20px;">'+k.v+'</div></div>';}).join('');}
@@ -29221,7 +29211,7 @@ async function saveSituationAndCompta(){
     var tvaMt=Math.max(0,(parseFloat(s.montant_ttc)||0)-ht);
     var moLib=(conv&&conv.maitre_ouvrage)?conv.maitre_ouvrage:'Client';
     if(constr.interne){
-      /* Département de construction INTERNE rémunéré → PRODUIT pour Menko */
+      /* Département de construction INTERNE rémunéré → PRODUIT pour la société */
       var ev={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Travaux facturés '+num+' — '+(conv?conv.numero:'')+' — '+moLib,compte:'4111',compte_debit:'4111',compte_credit:'705',montant:ht,type:'produit',mode:s.mode,notes:'Dépt interne · Avancement '+s.avancement+'%',created_at:today()};
       DATA.ecritures.push(ev);await dbPut('ecritures',ev);_sync(ev);
       if(tvaMt>0){var et={id:'ecr_tva_'+s.id,ref:'TVA-'+s.numero,date:s.date,piece:num,libelle:'TVA collectée s/ travaux '+num,compte:'4431',compte_debit:'4111',compte_credit:'4431',montant:tvaMt,type:'produit',mode:s.mode,created_at:today()};DATA.ecritures.push(et);await dbPut('ecritures',et);_sync(et);}
@@ -29238,7 +29228,7 @@ async function saveSituationAndCompta(){
   closeModal('modal-situation');renderSituations();renderConventions();
 }
 async function deleteSituation(id){if(!confirm('Supprimer ?'))return;DATA.situations=DATA.situations.filter(function(s){return s.id!==id;});await dbDelete('situations',id);renderSituations();toast('Supprimé.','info');}
-function printSituation(id){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var conv=DATA.conventions.find(function(c){return c.id===s.convention_id;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Situation '+s.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:8px 12px;}th{background:#E8F4EE;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><h1>SITUATION DE TRAVAUX N° '+s.numero+'</h1><table><tr><td><strong>Maître d\'ouvrage:</strong> '+(DATA.params.societe||'ImmoSuite ERP')+'</td><td><strong>Constructeur:</strong> '+constr.raison_sociale+'</td></tr><tr><td><strong>Convention:</strong> '+conv.numero+'</td><td><strong>Date:</strong> '+s.date+'</td></tr></table><h3>Travaux réalisés</h3><p style="border:1px solid #ddd;padding:12px;">'+(s.travaux||'—')+'</p><table><tr><th>Désignation</th><th style="text-align:right;">Montant (FCFA)</th></tr><tr><td>Montant HT</td><td style="text-align:right;">'+fmtF(s.montant_ht||0)+'</td></tr><tr><td>TVA</td><td style="text-align:right;">'+fmtF((s.montant_ttc||0)-(s.montant_ht||0))+'</td></tr><tr><td><strong>Montant TTC</strong></td><td style="text-align:right;font-weight:700;">'+fmtF(s.montant_ttc||0)+'</td></tr><tr style="color:#c0392b;"><td>Retenue garantie 10%</td><td style="text-align:right;">− '+fmtF(s.retenue||0)+'</td></tr><tr><td><strong>NET À PAYER</strong></td><td style="text-align:right;font-size:17px;font-weight:bold;color:#1A6B3A;">'+fmtF(s.net||0)+' FCFA</td></tr></table><div class="sig"><div class="sb">LE CONSTRUCTEUR<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
+function printSituation(id){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var conv=DATA.conventions.find(function(c){return c.id===s.convention_id;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Situation '+s.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:8px 12px;}th{background:#E8F4EE;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><h1>SITUATION DE TRAVAUX N° '+s.numero+'</h1><table><tr><td><strong>Maître d\'ouvrage:</strong> '+(DATA.params.societe||'ImmoSuite ERP')+'</td><td><strong>Constructeur:</strong> '+constr.raison_sociale+'</td></tr><tr><td><strong>Convention:</strong> '+conv.numero+'</td><td><strong>Date:</strong> '+s.date+'</td></tr></table><h3>Travaux réalisés</h3><p style="border:1px solid #ddd;padding:12px;">'+(s.travaux||'—')+'</p><table><tr><th>Désignation</th><th style="text-align:right;">Montant (FCFA)</th></tr><tr><td>Montant HT</td><td style="text-align:right;">'+fmtF(s.montant_ht||0)+'</td></tr><tr><td>TVA</td><td style="text-align:right;">'+fmtF((s.montant_ttc||0)-(s.montant_ht||0))+'</td></tr><tr><td><strong>Montant TTC</strong></td><td style="text-align:right;font-weight:700;">'+fmtF(s.montant_ttc||0)+'</td></tr><tr style="color:#c0392b;"><td>Retenue garantie 10%</td><td style="text-align:right;">− '+fmtF(s.retenue||0)+'</td></tr><tr><td><strong>NET À PAYER</strong></td><td style="text-align:right;font-size:17px;font-weight:bold;color:#1A6B3A;">'+fmtF(s.net||0)+' FCFA</td></tr></table><div class="sig"><div class="sb">LE CONSTRUCTEUR<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
 
 /* ─── Avenants ─────────────────────────────────────── */
 function renderAvenants(){var tbody=document.getElementById('tbody-avenants');if(!tbody)return;var list=DATA.avenants||[];if(!list.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--blanc-dim);">Aucun avenant.</td></tr>';return;}var sC={projet:'badge-bleu',signe:'badge-vert',rejete:'badge-rouge'};tbody.innerHTML=list.map(function(a){var conv=DATA.conventions.find(function(c){return c.id===a.convention_id;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};return'<tr><td style="font-family:monospace;color:var(--or);">'+a.numero+'</td><td style="font-size:12px;">'+conv.numero+' — '+constr.raison_sociale+'</td><td style="font-size:12px;">'+a.objet+'</td><td style="font-weight:700;color:var(--or);">'+fmtF(a.montant_ttc||0)+' FCFA</td><td>'+a.date+'</td><td><span class="badge '+(sC[a.statut]||'badge-bleu')+'">'+a.statut+'</span></td><td><button class="btn btn-secondary btn-sm btn-icon" onclick="openAvenantEdit(\''+a.id+'\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteAvenant(\''+a.id+'\')">🗑</button></td></tr>';}).join('');}
@@ -29309,7 +29299,7 @@ function updateRapportGauge(){var r=parseInt((document.getElementById('rch-avanc
 async function saveRapportChantier(){var convId=document.getElementById('rch-convention').value;if(!convId){toast('Sélectionnez une convention.','error');return;}var av=parseInt(document.getElementById('rch-avancement').value)||0;var r={id:APP.editingId||uid(),convention_id:convId,numero:document.getElementById('rch-numero').value.trim(),date_debut:document.getElementById('rch-date-debut').value,date_fin:document.getElementById('rch-date-fin').value,avancement:av,avancement_prevu:parseInt(document.getElementById('rch-avancement-prevu').value)||0,nb_ouvriers:parseInt(document.getElementById('rch-ouvriers').value)||0,meteo:document.getElementById('rch-meteo').value,travaux_realises:document.getElementById('rch-travaux-realises').value.trim(),travaux_prevus:document.getElementById('rch-travaux-prevus').value.trim(),difficultes:document.getElementById('rch-difficultes').value.trim(),depenses:parseFloat(document.getElementById('rch-depenses').value)||0,budget_cumul:parseFloat(document.getElementById('rch-budget-cumul').value)||0,observations:document.getElementById('rch-observations').value.trim(),valideur:document.getElementById('rch-valideur').value.trim(),statut:document.getElementById('rch-statut').value,created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.rapports_chantier.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.rapports_chantier[idx]=r;}else DATA.rapports_chantier.push(r);await dbPut('rapports_chantier',r);var conv=DATA.conventions.find(function(c){return c.id===convId;});if(conv&&av>=(conv.avancement||0)){conv.avancement=av;await dbPut('conventions',conv);}closeModal('modal-rapport-chantier');renderChantiersDashboard();renderRapports();renderConventions();toast('Rapport enregistré.','success');}
 function editRapportChantier(id){APP.editingId=id;openRapportChantier();setTimeout(function(){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=v||'';};el('rch-convention',r.convention_id);el('rch-numero',r.numero);el('rch-date-debut',r.date_debut);el('rch-date-fin',r.date_fin);el('rch-avancement',r.avancement);el('rch-avancement-prevu',r.avancement_prevu);el('rch-ouvriers',r.nb_ouvriers);el('rch-meteo',r.meteo);el('rch-travaux-realises',r.travaux_realises);el('rch-travaux-prevus',r.travaux_prevus);el('rch-difficultes',r.difficultes);el('rch-depenses',r.depenses);el('rch-budget-cumul',r.budget_cumul);el('rch-observations',r.observations);el('rch-valideur',r.valideur);el('rch-statut',r.statut);document.getElementById('rch-modal-title').textContent='Modifier rapport';updateRapportGauge();},120);}
 async function deleteRapport(id){if(!confirm('Supprimer ce rapport ?'))return;DATA.rapports_chantier=DATA.rapports_chantier.filter(function(r){return r.id!==id;});await dbDelete('rapports_chantier',id);renderRapports();toast('Supprimé.','info');}
-function printRapportId(id){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var conv=DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:'—',objet:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var societe=DATA.params.societe||'ImmoSuite ERP';var ec=r.avancement-(r.avancement_prevu||r.avancement);/* [AUDIT FIX v17] Photos dans impression */var photosHtml='';if(r.photos&&r.photos.length){photosHtml='<h3>\u{1F4F8} Photos de chantier ('+r.photos.length+')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;">'+(r.photos.slice(0,9).map(function(p){return'<div style="text-align:center;"><img src="'+p.data+'" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"><div style="font-size:10px;color:#666;margin-top:2px;">'+p.legende+'</div></div>';}).join(''))+'</div>';}var win=window.open('','','width=850,height=750');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:16px 0 8px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #ddd;border-radius:8px;padding:10px 18px;margin:4px;text-align:center;min-width:90px;}.kv{font-size:18px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#888;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div><h1>📋 Rapport Hebdomadaire — Semaine du '+r.date_debut+(r.date_fin?' au '+r.date_fin:'')+'</h1><table><tr><td><strong>Convention :</strong> '+conv.numero+'</td><td><strong>Constructeur :</strong> '+constr.raison_sociale+'</td></tr></table><div><span class="kpi"><div class="kv">'+r.avancement+'%</div><div class="kl">Réalisé</div></span><span class="kpi"><div class="kv">'+(r.avancement_prevu||r.avancement)+'%</div><div class="kl">Prévu</div></span><span class="kpi"><div class="kv" style="color:'+(ec>=0?'#1A6B3A':'#C93535')+'">'+(ec>=0?'+':'')+ec+'%</div><div class="kl">Écart</div></span><span class="kpi"><div class="kv">'+r.nb_ouvriers+'</div><div class="kl">Ouvriers</div></span></div><h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'+(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')+photosHtml+'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
+function printRapportId(id){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var conv=DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:'—',objet:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var societe=DATA.params.societe||'ImmoSuite ERP';var ec=r.avancement-(r.avancement_prevu||r.avancement);/* [AUDIT FIX v17] Photos dans impression */var photosHtml='';if(r.photos&&r.photos.length){photosHtml='<h3>\u{1F4F8} Photos de chantier ('+r.photos.length+')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;">'+(r.photos.slice(0,9).map(function(p){return'<div style="text-align:center;"><img src="'+p.data+'" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"><div style="font-size:10px;color:#666;margin-top:2px;">'+p.legende+'</div></div>';}).join(''))+'</div>';}var win=window.open('','','width=850,height=750');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:16px 0 8px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #ddd;border-radius:8px;padding:10px 18px;margin:4px;text-align:center;min-width:90px;}.kv{font-size:18px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#888;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div><h1>📋 Rapport Hebdomadaire — Semaine du '+r.date_debut+(r.date_fin?' au '+r.date_fin:'')+'</h1><table><tr><td><strong>Convention :</strong> '+conv.numero+'</td><td><strong>Constructeur :</strong> '+constr.raison_sociale+'</td></tr></table><div><span class="kpi"><div class="kv">'+r.avancement+'%</div><div class="kl">Réalisé</div></span><span class="kpi"><div class="kv">'+(r.avancement_prevu||r.avancement)+'%</div><div class="kl">Prévu</div></span><span class="kpi"><div class="kv" style="color:'+(ec>=0?'#1A6B3A':'#C93535')+'">'+(ec>=0?'+':'')+ec+'%</div><div class="kl">Écart</div></span><span class="kpi"><div class="kv">'+r.nb_ouvriers+'</div><div class="kl">Ouvriers</div></span></div><h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'+(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')+photosHtml+'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
 function exportRapportsChantier(){var rows=['Rapport,Convention,Date début,Avancement,Prévu,Ouvriers,Statut'];DATA.rapports_chantier.forEach(function(r){rows.push([r.numero,(DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:''}).numero,r.date_debut,r.avancement+'%',(r.avancement_prevu||r.avancement)+'%',r.nb_ouvriers,r.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rapports_chantier.csv';a.click();toast('Export rapports chantier.','success');}
 function printRapportChantier(){var id=APP.editingId;if(id)printRapportId(id);else toast('Enregistrez d\'abord le rapport.','info');}
 
@@ -30110,7 +30100,7 @@ async function saveRDV() {
 
   /* WhatsApp si demandé */
   if (rdv.whatsapp_confirm && rdv.visiteur_tel) {
-    var msg = 'Bonjour ' + rdv.visiteur_nom + ',\nVotre rendez-vous chez Partner Immo CI est confirm\u00e9 le '
+    var msg = 'Bonjour ' + rdv.visiteur_nom + ',\nVotre rendez-vous chez ' + ((DATA.params&&DATA.params.societe)||'nous') + ' est confirm\u00e9 le '
       + _dateShort(rdv.date) + ' \u00e0 ' + rdv.heure_debut + '.\nObjet : ' + rdv.objet
       + '\n\u00c0 bient\u00f4t !';
     var tel = rdv.visiteur_tel.replace(/[^0-9+]/g, '');
@@ -30678,7 +30668,7 @@ function telechargerAttestationVersement() {
       +'<div class="sb" style="text-align:right;">LA DIRECTION<br>'+societe+'<br><br><br>Signature et cachet</div>'
     +'</div>'
     +'</body></html>');
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 function telechargerRecu(versementId) {
@@ -30841,7 +30831,7 @@ function testerEmailJS() {
   if (typeof emailjs === 'undefined') { toast('EmailJS SDK non chargé. Vérifiez votre connexion Internet.','error'); return; }
   emailjs.init(key);
   emailjs.send(service, template, {
-    to_email: DATA.params.email || 'test@partnerimmo.ci',
+    to_email: DATA.params.email || '',
     to_name:  DATA.params.societe || 'ImmoSuite ERP',
     message:  'Test EmailJS depuis ImmoSuite ERP ERP — ' + new Date().toLocaleString('fr-FR'),
     subject:  'Test EmailJS'
@@ -32135,11 +32125,11 @@ function exporterICal() {
   evts.forEach(function(e){
     var start=(e.date_debut+(e.heure_debut?'T'+e.heure_debut.replace(':','')+'00':'')).replace(/-/g,'');
     var end=(( e.date_fin||e.date_debut)+(e.heure_fin?'T'+e.heure_fin.replace(':','')+'00':'')).replace(/-/g,'');
-    ical+='BEGIN:VEVENT\nUID:'+e.id+'@partnerimmo.ci\nDTSTART:'+start+'\nDTEND:'+end+'\nSUMMARY:'+e.titre+'\nDESCRIPTION:'+(e.description||'')+'\nLOCATION:'+(e.lieu||'')+'\nEND:VEVENT\n';
+    ical+='BEGIN:VEVENT\nUID:'+e.id+'@exemple.ci\nDTSTART:'+start+'\nDTEND:'+end+'\nSUMMARY:'+e.titre+'\nDESCRIPTION:'+(e.description||'')+'\nLOCATION:'+(e.lieu||'')+'\nEND:VEVENT\n';
   });
   ical+='END:VCALENDAR';
   var b=new Blob([ical],{type:'text/calendar'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='partnerimmo_calendrier_'+today()+'.ics'; a.click();
+  var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='calendrier_'+today()+'.ics'; a.click();
   toast('Calendrier exporté en iCal (.ics) — Importable dans Google Agenda, Outlook.','success');
 }
 
@@ -32667,7 +32657,7 @@ function exportFoncierCSV() {
     rows.push([p.ref,p.localisation,p.commune,p.superficie,p.type_titre,p.num_titre,p.statut,p.cout_total||0].join(','));
   });
   var blob=new Blob([rows.join('\n')],{type:'text/csv'}); var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='foncier_PartnerImmo.csv'; a.click();
+  a.href=URL.createObjectURL(blob); a.download='foncier_export.csv'; a.click();
   toast('Foncier exporté.', 'success');
 }
 
@@ -33983,7 +33973,7 @@ function exportConventions() {
     rows.push([c.numero,(con?con.raison_sociale:''),(prog?prog.nom:''),c.objet,c.montant_ht,c.montant_tva,c.montant_ttc,c.statut,c.avancement+'%'].join(','));
   });
   var blob=new Blob([rows.join('\n')],{type:'text/csv'}); var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='conventions_PartnerImmo.csv'; a.click();
+  a.href=URL.createObjectURL(blob); a.download='conventions_export.csv'; a.click();
   toast('Conventions exportées.', 'success');
 }
 
@@ -34022,7 +34012,7 @@ function printConventionId(id) {
     + '<div class="sig"><div class="sig-box">LE CONSTRUCTEUR<br>' + (constr.raison_sociale||'') + '<br><br><br>Signature et cachet</div>'
     + '<div class="sig-box" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>' + societe + '<br><br><br>Signature et cachet</div></div>'
     + '</body></html>');
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 /* openSituation : stub supprimé — la vraie fonction (modal-situation) est définie plus haut */
@@ -34371,7 +34361,7 @@ function exportLeads() {
     rows.push([l.nom,l.tel,l.email,l.budget,l.programme_id,l.type_logement,l.source,l.stade].join(','));
   });
   var blob=new Blob([rows.join('\n')],{type:'text/csv'}); var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='leads_PartnerImmo.csv'; a.click();
+  a.href=URL.createObjectURL(blob); a.download='leads_export.csv'; a.click();
   toast('Leads exportés.', 'success');
 }
 
@@ -34556,7 +34546,7 @@ function printRapportId(id){
     +(r.travaux_prevus?'<h3>Travaux prévus</h3><div class="travaux">'+r.travaux_prevus+'</div>':'')
     +(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')
     +'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');
-  try{ if(win.document.body && !win.document.querySelector('.menko-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
+  try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
 
 function exportRapportsChantier(){
@@ -34649,81 +34639,7 @@ var PRIX_MATERIAUX_CI = [
 ];
 
 /* ── Nomenclatures types par logement ────────────────── */
-var NOMENCLATURES_PAR_DEFAUT = {
-  /* DQE réel — Immeuble R+4 Appartements 3P, programme MILITARIS (Partner Immo CI) */
-  'Appartement 3P (MILITARIS)': [
-    { poste:'Lot 2 — Gros Œuvre',      materiau:'Gros Œuvre — Bâtiment principal',            unite:'Ens', quantite:1, prix_forfait:228639727 },
-    { poste:'Lot 3 — Étanchéité',      materiau:'Étanchéité (terrasses + salles d\'eau)',     unite:'Ens', quantite:1, prix_forfait:7612568 },
-    { poste:'Lot — Menuiserie Alu',    materiau:'Menuiserie Aluminium / Vitrerie',            unite:'Ens', quantite:1, prix_forfait:21074560 },
-    { poste:'Lot — Menuiserie Bois',   materiau:'Menuiserie Bois',                            unite:'Ens', quantite:1, prix_forfait:1890000 },
-    { poste:'Lot — Faux-Plafonds',     materiau:'Faux-Plafonds',                              unite:'Ens', quantite:1, prix_forfait:0 },
-    { poste:'Lot — Carrelage',         materiau:'Revêtements durs scellés (Carrelage/Faïence)',unite:'Ens', quantite:1, prix_forfait:34590801 },
-    { poste:'Lot — Peinture',          materiau:'Peinture',                                   unite:'Ens', quantite:1, prix_forfait:6026183 },
-    { poste:'Lot — Plomberie',         materiau:'Plomberie / Sanitaires / Assainissement',    unite:'Ens', quantite:1, prix_forfait:28437000 },
-    { poste:'Lot — Électricité',       materiau:'Électricité / Courants forts',               unite:'Ens', quantite:1, prix_forfait:32090000 },
-    { poste:'Lot 20 — Espaces Verts',  materiau:'Espaces Verts',                              unite:'Ens', quantite:1, prix_forfait:343821 },
-  ],
-  F2: [
-    { poste:'Gros oeuvre', materiau:'Ciment (sac 50kg) - LafargeHolcim', unite:'sac',    quantite:85,   prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Parpaing creux 20x20x40',           unite:'unité',  quantite:1200, prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Sable de construction (m³)',         unite:'m³',     quantite:12,   prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Gravier concassé 15/25',             unite:'m³',     prix_forfait:0, quantite:8   },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 8 mm',             unite:'kg',     quantite:450,  prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 12 mm',            unite:'kg',     quantite:800,  prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Tuile fibrociment',                  unite:'unité',  quantite:400,  prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Bois oeuvre (m³)',                   unite:'m³',     quantite:3,    prix_forfait:0 },
-    { poste:'Carrelage',   materiau:'Carrelage 33x33 cm (premier prix)',  unite:'m²',     quantite:70,   prix_forfait:0 },
-    { poste:'Peinture',    materiau:'Peinture satinée (pot 10L)',          unite:'pot',    quantite:12,   prix_forfait:0 },
-    { poste:'Électricité', materiau:'Câblage + tableau électrique F2',    unite:'forfait',quantite:1,    prix_forfait:0 },
-    { poste:'Plomberie',   materiau:'Tuyauterie + sanitaires F2',         unite:'forfait',quantite:1,    prix_forfait:0 },
-    { poste:'Menuiserie',  materiau:'Portes + fenêtres aluminium F2',     unite:'ensemble',quantite:1,   prix_forfait:0 }
-  ],
-  F3: [
-    { poste:'Gros oeuvre', materiau:'Ciment (sac 50kg) - LafargeHolcim', unite:'sac',    quantite:180,  prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Parpaing creux 20x20x40',           unite:'unité',  quantite:2800, prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Sable de construction (m³)',         unite:'m³',     quantite:22,   prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Gravier concassé 15/25',             unite:'m³',     quantite:16,   prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 8 mm',             unite:'kg',     quantite:900,  prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 12 mm',            unite:'kg',     quantite:1600, prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Tuile fibrociment',                  unite:'unité',  quantite:750,  prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Bois oeuvre (m³)',                   unite:'m³',     quantite:6,    prix_forfait:0 },
-    { poste:'Carrelage',   materiau:'Carrelage 33x33 cm (premier prix)',  unite:'m²',     quantite:150,  prix_forfait:0 },
-    { poste:'Peinture',    materiau:'Peinture satinée (pot 10L)',          unite:'pot',    quantite:24,   prix_forfait:0 },
-    { poste:'Électricité', materiau:'Câblage + tableau électrique F2',    unite:'forfait',quantite:1,    prix_forfait:400000 },
-    { poste:'Plomberie',   materiau:'Tuyauterie + sanitaires F2',         unite:'forfait',quantite:1,    prix_forfait:600000 },
-    { poste:'Menuiserie',  materiau:'Portes + fenêtres aluminium F2',     unite:'ensemble',quantite:1,   prix_forfait:1100000 }
-  ],
-  F4: [
-    { poste:'Gros oeuvre', materiau:'Ciment (sac 50kg) - LafargeHolcim', unite:'sac',    quantite:260,  prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Parpaing creux 20x20x40',           unite:'unité',  quantite:4200, prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Sable de construction (m³)',         unite:'m³',     quantite:32,   prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Gravier concassé 15/25',             unite:'m³',     quantite:22,   prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 8 mm',             unite:'kg',     quantite:1400, prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 12 mm',            unite:'kg',     quantite:2400, prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Tuile fibrociment',                  unite:'unité',  quantite:1100, prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Bois oeuvre (m³)',                   unite:'m³',     quantite:9,    prix_forfait:0 },
-    { poste:'Carrelage',   materiau:'Carrelage 33x33 cm (premier prix)',  unite:'m²',     quantite:210,  prix_forfait:0 },
-    { poste:'Peinture',    materiau:'Peinture satinée (pot 10L)',          unite:'pot',    quantite:36,   prix_forfait:0 },
-    { poste:'Électricité', materiau:'Câblage + tableau électrique F2',    unite:'forfait',quantite:1,    prix_forfait:600000 },
-    { poste:'Plomberie',   materiau:'Tuyauterie + sanitaires F2',         unite:'forfait',quantite:1,    prix_forfait:850000 },
-    { poste:'Menuiserie',  materiau:'Portes + fenêtres aluminium F2',     unite:'ensemble',quantite:1,   prix_forfait:1600000 }
-  ],
-  VILLA: [
-    { poste:'Gros oeuvre', materiau:'Ciment (sac 50kg) - LafargeHolcim', unite:'sac',    quantite:220,  prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Parpaing creux 20x20x40',           unite:'unité',  quantite:3500, prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Sable de construction (m³)',         unite:'m³',     quantite:28,   prix_forfait:0 },
-    { poste:'Gros oeuvre', materiau:'Gravier concassé 15/25',             unite:'m³',     quantite:18,   prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 8 mm',             unite:'kg',     quantite:1200, prix_forfait:0 },
-    { poste:'Ferraillage', materiau:'Fer à béton diam. 12 mm',            unite:'kg',     quantite:2000, prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Tuile fibrociment',                  unite:'unité',  quantite:900,  prix_forfait:0 },
-    { poste:'Couverture',  materiau:'Bois oeuvre (m³)',                   unite:'m³',     quantite:8,    prix_forfait:0 },
-    { poste:'Carrelage',   materiau:'Carrelage 33x33 cm (premier prix)',  unite:'m²',     quantite:175,  prix_forfait:0 },
-    { poste:'Peinture',    materiau:'Peinture satinée (pot 10L)',          unite:'pot',    quantite:30,   prix_forfait:0 },
-    { poste:'Électricité', materiau:'Câblage + tableau électrique F2',    unite:'forfait',quantite:1,    prix_forfait:500000 },
-    { poste:'Plomberie',   materiau:'Tuyauterie + sanitaires F2',         unite:'forfait',quantite:1,    prix_forfait:750000 },
-    { poste:'Menuiserie',  materiau:'Portes + fenêtres aluminium F2',     unite:'ensemble',quantite:1,   prix_forfait:1400000 }
-  ]
-};
+var NOMENCLATURES_PAR_DEFAUT = {}; /* prod : aucun gabarit DQE prérempli — à construire par l'utilisateur */
 
 /* ── Initialisation des données DQE dans DATA ─────────── */
 if (!DATA.nomenclatures)     DATA.nomenclatures     = [];
@@ -34834,7 +34750,7 @@ function chargerNomenclature() {
   /* Récap */
   var resume = document.getElementById('resume-dqe');
   if (resume) {
-    var typeLabels = { F2:'F2 — HARMONIE (80 m²)', F3:'F3 — BEVERLY (180 m²)', F4:'F4 — EXCELLIUM (250 m²)', VILLA:'Villa SOMOLI (200 m²)', 'Appartement 3P (MILITARIS)':'Appartement 3P — Immeuble R+4 (MILITARIS)' };
+    var typeLabels = { F2:'F2', F3:'F3', F4:'F4', VILLA:'Villa', 'Appartement 3P (MILITARIS)':'Appartement 3P' };
     var _co = (typeof dqeCoef==='function') ? dqeCoef() : {fg:10,marge:20,tva:18};
     var debourse = total;
     var fg = debourse * _co.fg/100;
@@ -36380,7 +36296,7 @@ function genererEtatPDF(opts) {
 
   var win = window.open('', '_blank');
   if (!win) { toast('Pop-up bloqué : autorisez les fenêtres pour générer le PDF.', 'error'); return null; }
-  win.document.open(); win.document.write(menkoStamp(html)); win.document.close();
+  win.document.open(); win.document.write(docStamp(html)); win.document.close();
   return win;
 }
 
@@ -44762,7 +44678,7 @@ function topoGenererRapport(){
   var tf=(document.getElementById('parc-tf-num')||{}).value||'';
   var geo=(document.getElementById('parc-geometre')||{}).value||'';
   var zone=((document.getElementById('parc-utm-zone')||{}).value||'30')+'N';
-  var soc=(DATA.params&&DATA.params.societe)||'Menko Immo';
+  var soc=(DATA.params&&DATA.params.societe)||'';
   var surface=brnArea(poly);
   var nivEl=document.getElementById('terr-niv'); var niv=(nivEl&&nivEl.value!=='')?parseFloat(nivEl.value):null;
   var kc=parseFloat((document.getElementById('terr-kc')||{}).value)||1;
@@ -44914,7 +44830,7 @@ function terrBudgetPrint(){
   var st=_terrBudgetState; if(!st){ toast('Calculez d\'abord le budget.','error'); return; }
   terrBudgetRecalc(); var t=st._tot;
   var ref=(document.getElementById('parc-ref')||{}).value||'', loc=(document.getElementById('parc-localisation')||{}).value||'';
-  var soc=(DATA.params&&DATA.params.societe)||'Menko Immo';
+  var soc=(DATA.params&&DATA.params.societe)||'';
   var n=0; var rows=st.lignes.filter(function(l){return l.q>0;}).map(function(l){ n++; return '<tr><td>'+n+'</td><td>'+l.d+'</td><td style="text-align:center;">'+l.u+'</td><td class="num">'+fmtF(l.q)+'</td><td class="num">'+fmtF(l.pu)+'</td><td class="num">'+fmtF(Math.round(l.pu*l.q))+'</td></tr>'; }).join('');
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Devis terrassement '+ref+'</title><style>'
     +'body{font-family:Arial,sans-serif;padding:36px;font-size:12px;color:#111;}h1{color:#1A6B3A;font-size:18px;border-bottom:2px solid #1A6B3A;padding-bottom:6px;}'
@@ -45050,6 +44966,7 @@ function brnPrintPlan() {
 
 /* ── Seed : parcelle YAOU (Bounoua) — morcellement TF 4726 ── */
 async function fonSeedYaou() {
+  if (typeof DEMO_DATA==='undefined' || !DEMO_DATA) return; /* prod : pas de parcelle de démo */
   var exists = (DATA.parcelles||[]).some(function(p){ return p.ref === 'YAOU-4726' || p.morcellement === '4726'; });
   if (exists) return;
   if (typeof tombHas === 'function' && tombHas('parcelles', 'parc_yaou_4726')) return; /* supprimée → ne pas recréer */
@@ -46721,7 +46638,7 @@ async function deleteBC(id){
 function printBC(id){
   var b=DATA.bons_commande.find(function(x){return x.id===id;}); if(!b)return;
   var f=(DATA.fournisseurs||[]).find(function(x){return x.id===b.fournisseur_id;})||{nom:'—'};
-  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   var rows=(b.lignes||[]).map(function(l,i){ var t=(l.qte||0)*(l.pu||0); return '<tr><td>'+(i+1)+'</td><td>'+bcLineLabel(l)+'</td><td style="text-align:right;">'+fmtF(l.qte)+' '+(l.unite||'')+'</td><td style="text-align:right;">'+fmtF(l.pu)+'</td><td style="text-align:right;">'+fmtF(Math.round(t))+'</td></tr>'; }).join('');
   var tot=bcTotalHT(b);
   var win=window.open('','','width=800,height=700');
@@ -46874,7 +46791,7 @@ async function saveFactureFournisseur(){
 function printFacture(id){
   var fc=(DATA.factures_fournisseur||[]).find(function(x){return x.id===id;}); if(!fc)return;
   var r=(DATA.receptions||[]).find(function(x){return x.id===fc.reception_id;})||{numero:'—',lignes:[]};
-  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   var rows=(r.lignes||[]).map(function(l,i){ var t=(l.qte||0)*(l.pu||0); return '<tr><td>'+(i+1)+'</td><td>'+bcLineLabel(l)+'</td><td style="text-align:right;">'+fmtF(l.qte)+' '+(l.unite||'')+'</td><td style="text-align:right;">'+fmtF(l.pu)+'</td><td style="text-align:right;">'+fmtF(Math.round(t))+'</td></tr>'; }).join('');
   var win=window.open('','','width=800,height=700');
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture '+fc.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1A3A6B;border-bottom:2px solid #1A3A6B;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.r{text-align:right;}.muted{color:#666;font-size:12px;}</style></head><body>'
@@ -47094,7 +47011,7 @@ async function demanderLiberationGarantie(id){
 async function deleteRect(id){ if(!confirm('Supprimer cette réception ?'))return; DATA.receptions_travaux=DATA.receptions_travaux.filter(function(x){return x.id!==id;}); await dbDelete('receptions_travaux',id); renderRecliv(); toast('Supprimé.','info'); }
 function printRect(id){
   var r=DATA.receptions_travaux.find(function(x){return x.id===id;}); if(!r)return;
-  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   var res=(r.reserves||[]).map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+x.libelle+'</td><td style="text-align:center;">'+(x.leve?'Levée':'En cours')+'</td></tr>';}).join('')||'<tr><td colspan="3" style="text-align:center;">Aucune réserve</td></tr>';
   var win=window.open('','','width=820,height=720');
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PV réception '+r.numero+'</title><style>body{font-family:Georgia,serif;padding:40px;font-size:13px;color:#1a1a1a;}h1{color:#1A3A6B;text-align:center;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.muted{color:#666;font-size:12px;}.sign{margin-top:50px;display:flex;justify-content:space-between;}</style></head><body>'
@@ -47164,7 +47081,7 @@ async function toggleLivPortail(id){ var l=DATA.livraisons.find(function(x){retu
 async function deleteLiv(id){ if(!confirm('Supprimer cette livraison ?'))return; DATA.livraisons=DATA.livraisons.filter(function(x){return x.id!==id;}); await dbDelete('livraisons',id); renderRecliv(); toast('Supprimé.','info'); }
 function printLiv(id){
   var l=DATA.livraisons.find(function(x){return x.id===id;}); if(!l)return;
-  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   var res=(l.reserves||[]).map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+x.libelle+'</td><td style="text-align:center;">'+(x.leve?'Levée':'En cours')+'</td></tr>';}).join('')||'<tr><td colspan="3" style="text-align:center;">Aucune réserve</td></tr>';
   var win=window.open('','','width=820,height=720');
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PV livraison '+l.numero+'</title><style>body{font-family:Georgia,serif;padding:40px;font-size:13px;}h1{color:#1A3A6B;text-align:center;}table{width:100%;border-collapse:collapse;margin:12px 0;}td,th{border:1px solid #ccc;padding:7px 10px;}th{background:#EEF2F9;}.muted{color:#666;font-size:12px;}.sign{margin-top:50px;display:flex;justify-content:space-between;}</style></head><body>'
@@ -47338,7 +47255,7 @@ async function dosTogglePortail(v){ dosCurrent.publie_portail=v; await dosPersis
 
 /* PV */
 function dosPrintPV(kind){
-  var d=dosCurrent; var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var d=dosCurrent; var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   var titres={pre:'PROCÈS-VERBAL DE PRÉ-RÉCEPTION',provisoire:'PROCÈS-VERBAL DE RÉCEPTION PROVISOIRE',definitif:'PROCÈS-VERBAL DE RÉCEPTION DÉFINITIVE'};
   var res=(d.reserves||[]).map(function(r,i){return '<tr><td>'+(i+1)+'</td><td>'+r.libelle+'</td><td>'+(r.localisation||'')+'</td><td>'+(r.gravite||'')+'</td><td>'+(r.delai||'')+'</td><td>'+(dosResLevee(r)?'Levée':(r.statut||'ouverte'))+'</td></tr>';}).join('')||'<tr><td colspan="6" style="text-align:center;">Aucune réserve</td></tr>';
   var extra='';
@@ -48747,6 +48664,7 @@ function dqeImmeubleInfo(type){
 }
 /* Crée le projet de conception de l'appartement 3P (unité commercialisée) — idempotent */
 async function seedConceptionMilitaris(){
+  if (typeof DEMO_DATA==='undefined' || !DEMO_DATA) return false; /* prod : pas de conception de démo */
   if(!DATA.conceptions) DATA.conceptions=[];
   if(DATA.conceptions.some(function(c){return c.ref==='CONC-MIL-APT3P';})) return false;
   var prog=(DATA.programmes||[]).find(function(p){ return /militaris|eden|yaou/i.test(((p.nom||'')+' '+(p.localisation||''))); });
@@ -48878,8 +48796,8 @@ function printPreviewDQE() {
   var pvTTC     = pvHT       * (1 + co.tva / 100);
   /* ─ Labels ─ */
   var typeLabels = {
-    F2: 'F2 — HARMONIE (80 m²)', F3: 'F3 — BEVERLY (180 m²)',
-    F4: 'F4 — EXCELLIUM (250 m²)', VILLA: 'Villa SOMOLI (200 m²)'
+    F2: 'F2', F3: 'F3 — BEVERLY (180 m²)',
+    F4: 'F4', VILLA: 'Villa SOMOLI (200 m²)'
   };
   var typeLabel = typeLabels[type] || type;
   var selProg = document.getElementById('dqe-filter-programme');
@@ -49822,7 +49740,7 @@ function finImprimerAttestation(fid) {
   var op = ops.find(function(o){return o.id===f.operation_id;});
   var verse = finMontantVerse(f.id);
   var params = DATA.params||{};
-  var societe = params.societe||params.nom_societe||'MENKO';
+  var societe = params.societe||params.nom_societe||'';
   var logoHtml = params.logo ? '<img src="'+params.logo+'" style="height:60px;object-fit:contain;" alt="Logo">' : '<div style="font-size:22px;font-weight:900;color:#1a3a6b;">'+societe+'</div>';
   var versementsListe = finVersements(fid).sort(function(a,b){return a.date>b.date?1:-1;});
   var lignesVers = versementsListe.map(function(v){
@@ -50053,7 +49971,7 @@ function _finDocHeader(params, societe) {
 function _finPrintWin(html) {
   var win = window.open('','_blank','width=900,height=700');
   if (!win) { toast('Autorisez les pop-ups pour imprimer.','error'); return; }
-  win.document.write(menkoStamp(html)); win.document.close();
+  win.document.write(docStamp(html)); win.document.close();
   setTimeout(function(){ win.print(); }, 600);
 }
 function _finCtx(fid) {
@@ -50062,7 +49980,7 @@ function _finCtx(fid) {
   var op = (DATA['af_operations']||[]).find(function(o){ return o.id===f.operation_id; });
   var params = DATA.params||{};
   return { f:f, op:op, params:params,
-    societe: params.societe||params.nom_societe||'MENKO',
+    societe: params.societe||params.nom_societe||'',
     verse: finMontantVerse(f.id) };
 }
 
@@ -52431,7 +52349,7 @@ var qrcode = function() {
 }));
 
 
-/* ── QR & authentification documents (Menko) ── */
+/* ── QR & authentification documents ── */
 function qrSvgTag(text){
   try{ var qr=qrcode(0,'M'); qr.addData(String(text)); qr.make(); return qr.createSvgTag({cellSize:3,margin:2}); }
   catch(e){ try{ var q2=qrcode(10,'L'); q2.addData(String(text)); q2.make(); return q2.createSvgTag({cellSize:3,margin:2}); }catch(e2){ return ''; } }
@@ -52440,7 +52358,7 @@ function qrSvgTag(text){
 
 /* ══════════════════════════════════════════════════════════════════
    ÉDITEUR DE PLANS ARCHITECTURAUX — Plan de masse & Plan intérieur
-   Semi-technique · Coté · Export PDF · v1.0 · ImmoSuite · Menko
+   Semi-technique · Coté · Export PDF · v1.0 · ImmoSuite
 ══════════════════════════════════════════════════════════════════ */
 
 (function() {
@@ -53374,7 +53292,7 @@ function qrSvgTag(text){
     var titre = ED.mode === 'masse' ? 'Plan de masse' : 'Plan intérieur';
     var L = document.getElementById(ED.mode === 'masse' ? 'archi-terrain-l' : 'archi-lgt-l').value;
     var W = document.getElementById(ED.mode === 'masse' ? 'archi-terrain-w' : 'archi-lgt-w').value;
-    var soc = (window.DATA && DATA.params && (DATA.params.societe || DATA.params.nom_societe)) || 'Menko Holding';
+    var soc = (window.DATA && DATA.params && (DATA.params.societe || DATA.params.nom_societe)) || '';
     var date = new Date().toLocaleDateString('fr-FR');
 
     /* Tableau des surfaces si intérieur */
@@ -53430,7 +53348,7 @@ function qrSvgTag(text){
 })(); /* fin IIFE éditeur architectural */
 
 
-/* Version 1.0 · ImmoSuite · Menko Holding
+/* Version 1.0 · ImmoSuite
 ══════════════════════════════════════════════════════════════════ */
 
 (function() {
@@ -53839,12 +53757,12 @@ function qrSvgTag(text){
 })(); /* fin IIFE simulateur */
 
 function printQrFooter(ref){
-  var soc=(window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'Menko Holding';
+  var soc=(window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   ref=(ref||'DOC').toString().replace(/[<>&]/g,'').slice(0,40);
-  var stamp='MENKO|'+ref+'|'+new Date().toISOString().slice(0,10);
+  var stamp=(((window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'DOC').toUpperCase().replace(/[^A-Z0-9]+/g,'-').slice(0,16))+'|'+ref+'|'+new Date().toISOString().slice(0,10);
   var code=_cyrb53(stamp+'|'+soc).slice(0,10).toUpperCase();
   var svg=qrSvgTag(stamp+'|'+code);
-  return '<div class="menko-qr" style="margin-top:20px;border-top:1px solid #ddd;padding-top:8px;display:flex;align-items:center;gap:12px;page-break-inside:avoid;">'
+  return '<div class="doc-qr" style="margin-top:20px;border-top:1px solid #ddd;padding-top:8px;display:flex;align-items:center;gap:12px;page-break-inside:avoid;">'
     +'<div style="flex:0 0 auto;background:#fff;padding:4px;border:1px solid #eee;">'+svg+'</div>'
     +'<div style="font-size:8pt;color:#555;line-height:1.45;font-family:Arial,sans-serif;">'
     +'<strong>Document authentifiable — '+soc+'</strong><br>'
@@ -53852,8 +53770,8 @@ function printQrFooter(ref){
     +'Scannez le QR pour vérifier l\'origine et l\'intégrité du document.'
     +'</div></div>';
 }
-function menkoRefFromHtml(html){ var m=html&&html.match(/R[ée]f\.?\s*:?\s*([A-Za-z0-9\-\/_]+)/); if(m)return m[1]; var t=html&&html.match(/<title>([^<]{1,40})<\/title>/); return t?t[1].trim():'DOC'; }
-function menkoStamp(html,ref){ try{ if(/menko-qr/.test(html))return html; var f=printQrFooter(ref||menkoRefFromHtml(html)); if(/<\/body>/i.test(html))return html.replace(/<\/body>/i,f+'</body>'); return html+f; }catch(e){ return html; } }
+function docRefFromHtml(html){ var m=html&&html.match(/R[ée]f\.?\s*:?\s*([A-Za-z0-9\-\/_]+)/); if(m)return m[1]; var t=html&&html.match(/<title>([^<]{1,40})<\/title>/); return t?t[1].trim():'DOC'; }
+function docStamp(html,ref){ try{ if(/doc-qr/.test(html))return html; var f=printQrFooter(ref||docRefFromHtml(html)); if(/<\/body>/i.test(html))return html.replace(/<\/body>/i,f+'</body>'); return html+f; }catch(e){ return html; } }
 
 </script>
 </body>
