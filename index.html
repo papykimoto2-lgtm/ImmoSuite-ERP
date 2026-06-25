@@ -14884,7 +14884,14 @@ async function flushDirtySync() {
 }
 
 /* Met à jour l'indicateur visible « dernière synchro auto » */
+function _syncStampSet(kind){ try{ localStorage.setItem('pici_last_'+kind, new Date().toISOString()); }catch(e){} }
+function _syncStampGet(kind){ try{ return localStorage.getItem('pici_last_'+kind)||''; }catch(e){ return ''; } }
+function _fmtStamp(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString('fr-FR'); }catch(e){ return '—'; } }
+
 function majDerniereSync(label) {
+  var L = (label||'').toLowerCase();
+  if (L.indexOf('récup')>=0 || L.indexOf('recup')>=0 || L.indexOf('réception')>=0 || L.indexOf('reception')>=0 || L.indexOf('cloud→')>=0 || L.indexOf('pull')>=0) { _syncStampSet('pull'); }
+  else { _syncStampSet('push'); }
   var el = document.getElementById('last-auto-sync');
   if (!el) return;
   var h = new Date().toLocaleTimeString('fr-FR');
@@ -14898,9 +14905,24 @@ function _libelleStore(store) {
     modeles_logement:'Modèles de logement', clients:'Souscripteurs', versements:'Versements',
     commissions:'Commissions', leads:'Leads (pipeline)', ecritures:'Écritures comptables',
     employes:'Employés (RH)', pointages:'Pointages', bulletins:'Bulletins de paie',
-    declarations:'Déclarations sociales', evenements_calendrier:'Calendrier',
+    declarations:'Déclarations fiscales/sociales', evenements_calendrier:'Calendrier',
     reunions_direction:'Réunions direction', actions_reunion:'Actions de réunion',
-    messages:'Messages', conversations:'Conversations', apporteurs:"Apporteurs d'affaires"
+    messages:'Messages', conversations:'Conversations', apporteurs:"Apporteurs d'affaires",
+    conges_rh:'Congés', candidats_rh:'Candidats', postes_ouverts:'Postes ouverts', formations_rh:'Formations',
+    constructeurs:'Constructeurs', conventions:'Conventions', situations:'Situations de travaux',
+    avenants:'Avenants', fournisseurs:'Fournisseurs', depots:'Dépôts', stock_mouvements:'Mouvements de stock',
+    bons_commande:'Bons de commande', factures_fournisseur:'Factures fournisseurs',
+    receptions:'Réceptions', receptions_travaux:'Réceptions travaux', livraisons:'Livraisons', receptions_dossiers:'Dossiers de réception',
+    parcelles:'Parcelles (foncier)', parcelles_morcellement:'Morcellements', mutations:'Mutations foncières',
+    cessions_foncieres:'Cessions foncières', af_operations:'Opérations foncières', af_agents:'Agents fonciers', af_relances:'Relances foncier',
+    conceptions:'Conceptions/Études', plans_arch:'Plans architecturaux', nomenclatures:'Nomenclatures DQE',
+    prix_unitaire:'Prix unitaires', devis_fournisseurs:'Devis fournisseurs', biens_amort:'Immobilisations',
+    releves_bank:'Relevés bancaires', rapprochements:'Rapprochements', dossiersJuridiques:'Dossiers juridiques', docs_juridiques:'Documents juridiques',
+    custom_roles:'Rôles personnalisés', portail_messages:'Messages portail', portail_medias:'Médias portail',
+    visites_rdv:'Rendez-vous/Visites', visites_log:'Registre des visites', visites_blacklist:'Liste noire visites',
+    logs_connexion:'Journaux de connexion', historique_actions:'Historique des actions',
+    relances:'Relances CRM', itineraires:'Itinéraires', etapes_itineraire:'Étapes itinéraire', cr_visites:'Comptes-rendus visites',
+    params:'Paramètres'
   };
   return map[store] || store.replace(/_/g,' ');
 }
@@ -14910,12 +14932,33 @@ async function renderSyncStatus() {
   var el = document.getElementById('sync-status-panel');
   if (!el) return;
   getSBConfig();
-  if (!SB.url || !SB.key) { el.innerHTML = '<span style="color:var(--rouge)">⚠️ Supabase non configuré.</span>'; return; }
-  if (!navigator.onLine) { el.innerHTML = '<span style="color:var(--or)">📴 Hors ligne — l\'état du cloud n\'est pas disponible.</span>'; return; }
-  el.innerHTML = '<span style="color:var(--blanc-dim)">⏳ Vérification en cours…</span>';
+  if (!SB.url || !SB.key) { el.innerHTML = '<span style="color:var(--rouge)">⚠️ Supabase non configuré — renseignez l\'URL et la clé ci-dessus.</span>'; return; }
 
-  var dirty = Object.keys(_dirtySync || {}).length;
+  var online = navigator.onLine;
+  var breaker = (typeof SB!=='undefined' && SB._breakerOpen);
+  var conn = !online ? ['📴 Hors ligne', 'var(--or)'] : (breaker ? ['🟠 Reconnexion en cours…', 'var(--rouge)'] : ['🟢 Connecté au cloud', 'var(--vert)']);
+  var dirty  = Object.keys(_dirtySync || {}).length;
   var outbox = (typeof _outboxRead === 'function') ? (_outboxRead() || []).length : 0;
+  var lastPush = _fmtStamp(_syncStampGet('push'));
+  var lastPull = _fmtStamp(_syncStampGet('pull'));
+
+  /* En-tête : état + horodatages + actions (toujours visibles, même hors ligne) */
+  var head = ''
+    + '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px;">'
+    +   '<span style="padding:4px 10px;border-radius:20px;background:var(--card2);color:'+conn[1]+';font-weight:600;">'+conn[0]+'</span>'
+    +   '<span style="font-size:12px;color:var(--blanc-dim);">⬆️ Dernier envoi : <strong style="color:var(--blanc)">'+lastPush+'</strong></span>'
+    +   '<span style="font-size:12px;color:var(--blanc-dim);">⬇️ Dernière réception : <strong style="color:var(--blanc)">'+lastPull+'</strong></span>'
+    + '</div>'
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    +   '<button class="btn btn-primary btn-sm" onclick="syncAllToSupabase()" '+(online?'':'disabled')+'>⬆️ Tout envoyer</button>'
+    +   '<button class="btn btn-secondary btn-sm" onclick="syncFromSupabase()" '+(online?'':'disabled')+'>⬇️ Tout récupérer</button>'
+    +   '<button class="btn btn-secondary btn-sm" onclick="(async function(){try{await flushSyncOutbox();}catch(e){}; renderSyncStatus();})()" '+(online&&outbox?'':'disabled')+'>🔁 Réessayer la file ('+outbox+')</button>'
+    +   '<button class="btn btn-secondary btn-sm" onclick="renderSyncStatus()">🔄 Rafraîchir</button>'
+    + '</div>';
+
+  if (!online) { el.innerHTML = head + '<div style="font-size:12px;color:var(--or);">📴 Hors ligne — l\'état détaillé du cloud sera disponible au retour de la connexion. Les modifications sont mises en file d\'attente ('+(outbox+dirty)+').</div>'; return; }
+
+  el.innerHTML = head + '<div style="font-size:12px;color:var(--blanc-dim)">⏳ Comparaison local ↔ cloud en cours…</div>';
 
   var data = await Promise.all(SUPA_STORE_MAP.map(async function(p){
     var table = p[0], store = p[1];
@@ -14926,18 +14969,17 @@ async function renderSyncStatus() {
       if (r && r.length && r[0] && r[0].count !== undefined) cloud = Number(r[0].count);
       else { var r2 = await sbFetch(table + '?select=id', 'GET'); cloud = (r2 && r2.length) ? r2.length : 0; }
     } catch(e) { cloud = null; }
-    return { store: store, local: local, cloud: cloud };
+    return { store: store, table: table, local: local, cloud: cloud };
   }));
 
   function etat(d) {
     if (d.cloud === null) return ['⚠️ Erreur', 'var(--rouge)'];
     if (d.local === 0 && d.cloud === 0) return ['— vide', 'var(--blanc-dim)'];
-    if (d.local === d.cloud) return ['✅ Synchronisé', 'var(--vert)'];
+    if (d.local === d.cloud) return ['✅ À jour', 'var(--vert)'];
     if (d.cloud < d.local) return ['⬆️ À envoyer (' + (d.local - d.cloud) + ')', 'var(--or)'];
     return ['⬇️ À récupérer (' + (d.cloud - d.local) + ')', '#0EA5E9'];
   }
 
-  // tri : non synchronisés d'abord, puis par nom
   data.sort(function(a,b){
     var sa = (a.local===a.cloud)?1:0, sb_=(b.local===b.cloud)?1:0;
     if (sa!==sb_) return sa-sb_;
@@ -14946,34 +14988,82 @@ async function renderSyncStatus() {
 
   var nbSync = data.filter(function(d){ return d.cloud!==null && d.local===d.cloud; }).length;
   var nbErr  = data.filter(function(d){ return d.cloud===null; }).length;
+  var aEnvoyer = data.reduce(function(t,d){ return t + (d.cloud!==null && d.local>d.cloud ? (d.local-d.cloud) : 0); }, 0);
+  var aRecevoir= data.reduce(function(t,d){ return t + (d.cloud!==null && d.cloud>d.local ? (d.cloud-d.local) : 0); }, 0);
 
-  var html = ''
+  var resume = ''
     + '<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:14px;font-size:12px;">'
     +   '<span>📦 <strong>' + data.length + '</strong> éléments</span>'
-    +   '<span style="color:var(--vert)">✅ ' + nbSync + ' synchronisés</span>'
-    +   '<span style="color:var(--or)">⏳ ' + dirty + ' modif. en attente d\'envoi</span>'
-    +   '<span style="color:var(--blanc-dim)">📤 file d\'attente : ' + outbox + '</span>'
+    +   '<span style="color:var(--vert)">✅ ' + nbSync + ' à jour</span>'
+    +   '<span style="color:var(--or)">⬆️ ' + aEnvoyer + ' à envoyer</span>'
+    +   '<span style="color:#0EA5E9">⬇️ ' + aRecevoir + ' à récupérer</span>'
+    +   '<span style="color:var(--blanc-dim)">📝 ' + dirty + ' modif. en file · 📤 ' + outbox + ' en attente</span>'
     +   (nbErr ? '<span style="color:var(--rouge)">⚠️ ' + nbErr + ' en erreur</span>' : '')
-    + '</div>'
-    + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px;">'
+    + '</div>';
+
+  var rows = ''
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px;">'
     + '<thead><tr style="text-align:left;border-bottom:1px solid var(--bord);">'
     +   '<th style="padding:6px 8px;">Élément</th>'
     +   '<th style="padding:6px 8px;text-align:center;">Local (envoi)</th>'
     +   '<th style="padding:6px 8px;text-align:center;">Cloud (réception)</th>'
     +   '<th style="padding:6px 8px;">État du transfert</th>'
+    +   '<th style="padding:6px 8px;text-align:center;">Action</th>'
     + '</tr></thead><tbody>';
   data.forEach(function(d){
     var e = etat(d);
-    html += '<tr style="border-bottom:1px solid var(--bord);">'
+    var act = '';
+    if (d.cloud!==null && d.local>d.cloud) act = '<button class="btn btn-primary btn-xs" style="padding:2px 8px;font-size:11px;" onclick="syncPushStore(\''+d.store+'\')">⬆️ Envoyer</button>';
+    else if (d.cloud!==null && d.cloud>d.local) act = '<button class="btn btn-secondary btn-xs" style="padding:2px 8px;font-size:11px;" onclick="syncPullStore(\''+d.store+'\')">⬇️ Récupérer</button>';
+    else act = '<span style="color:var(--blanc-dim);font-size:11px;">—</span>';
+    rows += '<tr style="border-bottom:1px solid var(--bord);">'
       + '<td style="padding:6px 8px;">' + _libelleStore(d.store) + '</td>'
       + '<td style="padding:6px 8px;text-align:center;">' + d.local + '</td>'
       + '<td style="padding:6px 8px;text-align:center;">' + (d.cloud===null?'—':d.cloud) + '</td>'
       + '<td style="padding:6px 8px;color:' + e[1] + ';font-weight:600;">' + e[0] + '</td>'
+      + '<td style="padding:6px 8px;text-align:center;">' + act + '</td>'
       + '</tr>';
   });
-  html += '</tbody></table>'
-    + '<div style="margin-top:8px;font-size:11px;color:var(--blanc-dim);">Dernière vérification : ' + new Date().toLocaleString('fr-FR') + '</div>';
-  el.innerHTML = html;
+  rows += '</tbody></table>'
+    + '<div style="margin-top:8px;font-size:11px;color:var(--blanc-dim);">Comparaison effectuée le ' + new Date().toLocaleString('fr-FR') + ' · « Local » = ce poste, « Cloud » = Supabase. Le sens de transfert indique ce qui manque de chaque côté.</div>';
+
+  el.innerHTML = head + resume + rows;
+}
+
+/* Push ciblé : envoie tous les enregistrements d'un module vers le cloud */
+async function syncPushStore(store){
+  getSBConfig();
+  if (!SB.url || !SB.key) { toast('Supabase non configuré.', 'error'); return; }
+  if (!navigator.onLine) { toast('Connexion requise pour envoyer.', 'error'); return; }
+  var e = SUPA_STORE_MAP.find(function(x){ return x[1]===store; }); if (!e) return;
+  var table = e[0], rows = DATA[store] || [], ok=0, err=0;
+  for (var i=0;i<rows.length;i++){ var r = await syncToSupabase(table, rows[i]); if (r) ok++; else err++; }
+  try { majDerniereSync('Synchro locale → Cloud'); } catch(_){}
+  toast('⬆️ ' + _libelleStore(store) + ' : ' + ok + ' envoyé(s)' + (err?(' · '+err+' échec(s)'):''), err?'info':'success');
+  renderSyncStatus();
+}
+
+/* Pull ciblé : récupère un module depuis le cloud (le plus récent gagne) */
+async function syncPullStore(store){
+  getSBConfig();
+  if (!SB.url || !SB.key) { toast('Supabase non configuré.', 'error'); return; }
+  if (!navigator.onLine) { toast('Connexion requise pour récupérer.', 'error'); return; }
+  var e = SUPA_STORE_MAP.find(function(x){ return x[1]===store; }); if (!e) return;
+  var table = e[0];
+  var rows = await sbFetch(table + '?select=*', 'GET');
+  if (!rows) { toast('Échec de récupération.', 'error'); return; }
+  if (!DATA[store]) DATA[store] = [];
+  var byId = {}; DATA[store].forEach(function(x){ byId[x.id] = x; });
+  var n=0;
+  for (var i=0;i<rows.length;i++){
+    var r = _supaUnwrap(table, rows[i]); if (!r || !r.id) continue;
+    var ex = byId[r.id];
+    if (!ex || _ts(r) >= _ts(ex)) { byId[r.id]=r; try{ await dbPut(store, r); }catch(_){ } n++; }
+  }
+  DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
+  try { majDerniereSync('Récupération cloud'); } catch(_){}
+  toast('⬇️ ' + _libelleStore(store) + ' : ' + n + ' récupéré(s)', 'success');
+  renderSyncStatus();
 }
 
 /* Démarre la synchro automatique : envoi des changements toutes les 30 s + reprise de la file. */
@@ -15021,7 +15111,9 @@ async function syncAllToSupabase() {
     }
   }
   if (out) out.innerHTML = '<span style="color:' + (erreurs ? 'var(--or)' : 'var(--vert)') + ';">' + (erreurs ? '⚠️ ' : '✅ ') + total + ' enregistrement(s) envoyé(s)' + (erreurs ? ' · ' + erreurs + ' échec(s) — voir la console' : '') + '</span>';
+  try { majDerniereSync('Synchro locale → Cloud'); } catch(e){}
   toast('Synchronisation locale → Cloud : ' + total + ' OK' + (erreurs ? ', ' + erreurs + ' échec(s)' : '') + '.', erreurs ? 'info' : 'success');
+  try { if (document.getElementById('sync-status-panel') && document.getElementById('sync-status-panel').innerHTML.trim()) renderSyncStatus(); } catch(e){}
 }
 
 /* Pull : récupère toutes les données depuis Supabase vers le local */
@@ -15057,7 +15149,9 @@ async function syncFromSupabase() {
   /* Rafraîchir les vues principales */
   ['renderClients','renderLots','renderProgrammes','renderVersements','buildRapportsCommerciaux','refreshDashboard']
     .forEach(function(fn){ if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} } });
+  try { majDerniereSync('Récupération cloud'); } catch(e){}
   toast('Données récupérées depuis le Cloud (' + total + ').', 'success');
+  try { if (document.getElementById('sync-status-panel') && document.getElementById('sync-status-panel').innerHTML.trim()) renderSyncStatus(); } catch(e){}
 }
 
 /* ── Pull silencieux après login ──────────────────────────────────────────
@@ -15610,6 +15704,9 @@ function goTo(page) {
 function switchTab(context, tab) {
   // Hook scan pointage
   if (context==='pointage' && tab==='scan' && typeof ptInitScanTab==='function') { ptInitScanTab(); }
+
+  // Hook : rafraîchir l'état de synchro à l'ouverture de l'onglet Cloud/Synchro
+  if (context==='params' && tab==='cloud') { setTimeout(function(){ try { if (typeof renderSyncStatus==='function') renderSyncStatus(); } catch(e){} }, 250); }
 
   // ── Traitement dédié : Rapports Commerciaux ─────────────────────────────
   // Implémentation ciblée pour éviter toute interférence avec les autres
