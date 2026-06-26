@@ -18058,6 +18058,7 @@ function showRecu(versement) {
 }
 
 function printRecu() {
+  try{var _wqr=document.getElementById('print-qr-area');if(!_wqr){var _qd=document.createElement('div');_qd.id='print-qr-area';_qd.innerHTML=printQrFooter('RECU-VERSEMENT');document.body.appendChild(_qd);}}catch(e){}
   window.print();
 }
 
@@ -22592,8 +22593,7 @@ function renderEmployes() {
 
 async function deleteEmploye(id) {
   if (!confirm('Supprimer cet employé ? Les bulletins associés resteront.')) return;
-  DATA.employes = DATA.employes.filter(function(e) { return e.id !== id; });
-  await dbDelete('employes', id);
+  if (await deleteRecord('employes', id) === false) return;
   renderEmployes();
   updateRHKPIs();
   toast('Employé supprimé.', 'info');
@@ -23058,7 +23058,7 @@ function printBulletinData(d) {
     + '</tbody></table>');
   win.document.write('<div class="sign"><span>Signature Employé</span><span>Signature Employeur</span></div>');
   win.document.write('<div class="foot">Coût total employeur : '+fmtF(r.coutTotal)+' FCFA — Pour vous aider à faire valoir vos droits, conservez ce bulletin sans limitation de durée.</div>');
-  win.document.write('</body></html>');
+  win.document.body.insertAdjacentHTML('beforeend',printQrFooter('BUL-'+(d&&d.nom?d.nom:'BULLETIN'))); win.document.write('</body></html>');
   win.document.close();
   win.focus();
   setTimeout(function(){ win.print(); }, 250);
@@ -23665,6 +23665,7 @@ function printLivrePaie() {
     + moisBlocks
     + '</body></html>');
   win.document.close();
+  try{if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('LIVRE-PAIE'));}}catch(e){}
   setTimeout(function() { win.print(); }, 400);
 }
 
@@ -23748,6 +23749,7 @@ function printFicheIndividuelle() {
     + '<div style="margin-top:12px;font-size:8px;color:#888;">Édité le ' + new Date().toLocaleDateString('fr-CI') + ' · Livre de paie confidentiel — usage interne uniquement</div>'
     + '</body></html>');
   win.document.close();
+  try{if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('FICHE-IND'));}}catch(e){}
   setTimeout(function() { win.print(); }, 350);
 }
 
@@ -24026,8 +24028,7 @@ async function saveDeclaration() {
 
 async function deleteDeclaration(id) {
   if (!confirm('Supprimer cette déclaration ?')) return;
-  DATA.declarations = DATA.declarations.filter(function(d){ return d.id!==id; });
-  await dbDelete('declarations', id);
+  if (await deleteRecord('declarations', id) === false) return;
   loadDeclarations();
   toast('Déclaration supprimée.', 'info');
 }
@@ -24680,8 +24681,7 @@ async function deleteApporteur(id) {
   var ap = DATA.apporteurs.find(function(a){return a.id===id;});
   if (!ap) return;
   if (!confirm('Supprimer l\'apporteur '+ap.prenoms+' '+ap.nom+' ?')) return;
-  DATA.apporteurs = DATA.apporteurs.filter(function(a){return a.id!==id;});
-  await dbDelete('apporteurs', id);
+  if (await deleteRecord('apporteurs', id) === false) return;
   populateApporteursPartout();
   renderApporteurs();
   buildKPIsApporteurs();
@@ -25378,7 +25378,7 @@ function printRapportCommercial() {
     +'</div></body></html>';
 
   var win = window.open('','_blank');
-  win.document.write(html);
+  win.document.write(docStamp(html,'RPT-COMMERCIAL'));
   win.document.close();
   setTimeout(function(){win.print();},400);
 }
@@ -26765,14 +26765,11 @@ async function savePointage() {
 }
 
 async function deletePointage(empId, date) {
-  var idx=DATA.pointages.findIndex(function(p){return p.employe_id===empId&&p.date===date;});
-  if (idx>=0) {
-    var id=DATA.pointages[idx].id;
-    DATA.pointages.splice(idx,1);
-    await dbDelete('pointages',id);
-    renderPointageJour(); buildPointageMensuel(); buildImpactPaie();
-    toast('Pointage supprimé.','info');
-  }
+  var pt=DATA.pointages.find(function(p){return p.employe_id===empId&&p.date===date;});
+  if (!pt) return;
+  if (await deleteRecord('pointages', pt.id) === false) return;
+  renderPointageJour(); buildPointageMensuel(); buildImpactPaie();
+  toast('Pointage supprimé.','info');
 }
 
 async function genererPointageAuto() {
@@ -27601,6 +27598,7 @@ function showReleveTiers(clientId) {
 }
 
 function printReleveTiers() {
+  try{var _qd2=document.createElement('div');_qd2.innerHTML=printQrFooter('RELEVE-TIERS');document.body.appendChild(_qd2);}catch(e){}
   window.print();
 }
 
@@ -28527,8 +28525,7 @@ function renderReleveTable() {
 }
 
 async function deleteReleveLigne(id) {
-  var idx = DATA.releves_bank.findIndex(function(r){ return r.id===id; });
-  if (idx >= 0) { DATA.releves_bank.splice(idx,1); await dbDelete('releves_bank',id); }
+  if (await deleteRecord('releves_bank', id) === false) return;
   renderReleveTable(); buildRapprochKPIs();
   toast('Ligne supprimée.','info');
 }
@@ -28910,8 +28907,7 @@ function buildHistoriqueRapproch() {
 }
 
 async function deleteRapprochement(id) {
-  var idx = DATA.rapprochements.findIndex(function(r){return r.id===id;});
-  if (idx>=0) { DATA.rapprochements.splice(idx,1); await dbDelete('rapprochements',id); }
+  if (await deleteRecord('rapprochements', id) === false) return;
   buildHistoriqueRapproch();
   toast('Rapprochement supprimé.','info');
 }
@@ -29308,8 +29304,7 @@ async function saveCampagne() {
 
 async function deleteCampagne(id) {
   if(!confirm('Supprimer cette campagne ?'))return;
-  DATA.campagnes=DATA.campagnes.filter(function(c){return c.id!==id;});
-  await dbDelete('campagnes',id);
+  if (await deleteRecord('campagnes',id)===false) return;
   renderCampagnes(); buildPACDashboard();
   toast('Campagne supprimée.','info');
 }
@@ -29603,8 +29598,7 @@ async function saveActionMarketing() {
 
 async function deleteActionMarketing(id){
   if(!confirm('Supprimer cette action ?'))return;
-  DATA.actions_marketing=DATA.actions_marketing.filter(function(a){return a.id!==id;});
-  await dbDelete('actions_marketing',id);
+  if (await deleteRecord('actions_marketing',id)===false) return;
   renderCalendrierPAC();
   toast('Action supprimée.','info');
 }
@@ -29675,8 +29669,7 @@ async function saveSegment(){
 
 async function deleteSegment(id){
   if(!confirm('Supprimer ce segment ?'))return;
-  DATA.segments_marketing=DATA.segments_marketing.filter(function(s){return s.id!==id;});
-  await dbDelete('segments_marketing',id);
+  if (await deleteRecord('segments_marketing',id)===false) return;
   renderSegments();
   toast('Segment supprimé.','info');
 }
@@ -29889,7 +29882,7 @@ async function saveConception(){
   await dbPut('conceptions',c);closeModal('modal-conception');renderConceptionsFull();toast('Conception enregistrée.','success');
   }finally{APP._savingConception=false;}
 }
-async function deleteConception(id){if(!confirm('Supprimer ce projet ?'))return;DATA.conceptions=DATA.conceptions.filter(function(c){return c.id!==id;});await dbDelete('conceptions',id);renderConceptionsFull();toast('Supprimé.','info');}
+async function deleteConception(id){if(!confirm('Supprimer ce projet ?'))return;if(await deleteRecord('conceptions',id)===false)return;renderConceptionsFull();toast('Supprimé.','info');}
 function exportConceptionCSV(){var rows=['Référence,Programme,Type,Architecte,Surface,Unités,Phase,Statut'];DATA.conceptions.forEach(function(c){var pr=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:''};rows.push([c.ref,pr.nom,c.type_logements,c.architecte,c.surface,c.nb_unites,c.phase,c.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='conceptions.csv';a.click();}
 function printFicheConception(id){var c=DATA.conceptions.find(function(x){return x.id===id;});if(!c)return;var pr=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fiche Conception</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1D4ED8;border-bottom:2px solid #2563EB;padding-bottom:8px;}table{border-collapse:collapse;width:100%;margin:10px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#f5f0e0;}.ph{padding:6px 12px;border-left:4px solid;margin-bottom:6px;}.pf{border-color:#2E8B57;background:#f0f9f0;}.pc{border-color:#2563EB;background:#fdf8ea;}.pa{border-color:#bbb;background:#f8f8f8;}</style></head><body><h1>📐 Fiche Conception — '+c.ref+'</h1><table><tr><th>Programme</th><td>'+pr.nom+'</td><th>Type</th><td>'+c.type_logements+'</td></tr><tr><th>Architecte</th><td>'+(c.architecte||'—')+'</td><th>Phase</th><td>'+c.phase+'</td></tr><tr><th>Surface</th><td>'+(c.surface||'—')+' m²</td><th>Statut</th><td>'+c.statut+'</td></tr></table><h3>Phases</h3>'+(c.phases||[]).map(function(p){var cls=p.statut==='termine'?'pf':p.statut==='en_cours'?'pc':'pa';return'<div class="ph '+cls+'">'+p.nom+' — '+p.pct+'% — '+p.statut+'</div>';}).join('')+'<h3>Description</h3><p>'+(c.description||'—')+'</p></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
 
@@ -29913,7 +29906,7 @@ function openPermis(id){
   document.getElementById('modal-permis').classList.add('open');
 }
 async function savePermis(){var num=document.getElementById('perm-numero').value.trim();if(!num){toast('N° permis obligatoire.','error');return;}var p={id:APP.editingId||uid(),numero:num,programme_id:document.getElementById('perm-programme').value,type_logement:document.getElementById('perm-type-logement').value.trim(),mairie:document.getElementById('perm-mairie').value.trim(),date_depot:document.getElementById('perm-date-depot').value,date_obtention:document.getElementById('perm-date-obtention').value,validite:parseInt(document.getElementById('perm-validite').value)||24,taxes:parseFloat(document.getElementById('perm-taxes').value)||0,surface:parseFloat(document.getElementById('perm-surface').value)||0,niveaux:parseInt(document.getElementById('perm-niveaux').value)||2,statut:document.getElementById('perm-statut').value,architecte:document.getElementById('perm-architecte').value.trim(),notes:document.getElementById('perm-notes').value.trim(),created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.permis.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.permis[idx]=p;}else DATA.permis.push(p);await dbPut('permis',p);closeModal('modal-permis');renderPermis();toast('Permis enregistré.','success');}
-async function deletePermis(id){if(!confirm('Supprimer ce permis ?'))return;DATA.permis=DATA.permis.filter(function(p){return p.id!==id;});await dbDelete('permis',id);renderPermis();toast('Supprimé.','info');}
+async function deletePermis(id){if(!confirm('Supprimer ce permis ?'))return;if(await deleteRecord('permis',id)===false)return;renderPermis();toast('Supprimé.','info');}
 
 /* ─── Plans architecturaux ─────────────────────────── */
 /* renderPlansFull v1 supprimée — v2 définie ci-dessus */
@@ -29971,7 +29964,7 @@ async function saveSituationAndCompta(){
   } else toast('Situation enregistrée.','success');
   closeModal('modal-situation');renderSituations();renderConventions();
 }
-async function deleteSituation(id){if(!confirm('Supprimer ?'))return;DATA.situations=DATA.situations.filter(function(s){return s.id!==id;});await dbDelete('situations',id);renderSituations();toast('Supprimé.','info');}
+async function deleteSituation(id){if(!confirm('Supprimer ?'))return;if(await deleteRecord('situations',id)===false)return;renderSituations();toast('Supprimé.','info');}
 function printSituation(id){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var conv=DATA.conventions.find(function(c){return c.id===s.convention_id;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Situation '+s.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:8px 12px;}th{background:#E8F4EE;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><h1>SITUATION DE TRAVAUX N° '+s.numero+'</h1><table><tr><td><strong>Maître d\'ouvrage:</strong> '+(DATA.params.societe||'ImmoSuite ERP')+'</td><td><strong>Constructeur:</strong> '+constr.raison_sociale+'</td></tr><tr><td><strong>Convention:</strong> '+conv.numero+'</td><td><strong>Date:</strong> '+s.date+'</td></tr></table><h3>Travaux réalisés</h3><p style="border:1px solid #ddd;padding:12px;">'+(s.travaux||'—')+'</p><table><tr><th>Désignation</th><th style="text-align:right;">Montant (FCFA)</th></tr><tr><td>Montant HT</td><td style="text-align:right;">'+fmtF(s.montant_ht||0)+'</td></tr><tr><td>TVA</td><td style="text-align:right;">'+fmtF((s.montant_ttc||0)-(s.montant_ht||0))+'</td></tr><tr><td><strong>Montant TTC</strong></td><td style="text-align:right;font-weight:700;">'+fmtF(s.montant_ttc||0)+'</td></tr><tr style="color:#c0392b;"><td>Retenue garantie 10%</td><td style="text-align:right;">− '+fmtF(s.retenue||0)+'</td></tr><tr><td><strong>NET À PAYER</strong></td><td style="text-align:right;font-size:17px;font-weight:bold;color:#1A6B3A;">'+fmtF(s.net||0)+' FCFA</td></tr></table><div class="sig"><div class="sb">LE CONSTRUCTEUR<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
 
 /* ─── Avenants ─────────────────────────────────────── */
@@ -29981,7 +29974,7 @@ function openAvenantEdit(id){APP.editingId=id;openAvenantNew();setTimeout(functi
 function calcAvenantTTC(){var ht=parseFloat(document.getElementById('av-montant-ht').value)||0;var tva=parseFloat(document.getElementById('av-tva').value)||18;document.getElementById('av-montant-ttc').value=Math.round(ht*(1+tva/100));}
 function calcAvenantDelai(){var convId=document.getElementById('av-convention').value;var conv=DATA.conventions.find(function(c){return c.id===convId;});var supp=parseInt(document.getElementById('av-delai-supp').value)||0;var base=conv&&conv.date_fin_prev?new Date(conv.date_fin_prev):new Date();base.setMonth(base.getMonth()+supp);document.getElementById('av-nouvelle-date-fin').value=base.toISOString().slice(0,10);}
 async function saveAvenant(){var convId=document.getElementById('av-convention').value;var num=document.getElementById('av-numero').value.trim();if(!convId||!num){toast('Convention et numéro obligatoires.','error');return;}var a={id:APP.editingId||uid(),convention_id:convId,numero:num,date:document.getElementById('av-date').value,objet:document.getElementById('av-objet').value.trim(),montant_ht:parseFloat(document.getElementById('av-montant-ht').value)||0,tva:parseFloat(document.getElementById('av-tva').value)||18,montant_ttc:parseFloat(document.getElementById('av-montant-ttc').value)||0,delai_supp:parseInt(document.getElementById('av-delai-supp').value)||0,nouvelle_date_fin:document.getElementById('av-nouvelle-date-fin').value,motif:document.getElementById('av-motif').value,statut:document.getElementById('av-statut').value,justification:document.getElementById('av-justification').value.trim(),created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.avenants.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.avenants[idx]=a;}else DATA.avenants.push(a);await dbPut('avenants',a);if(a.statut==='signe'){var conv=DATA.conventions.find(function(c){return c.id===convId;});if(conv){conv.montant_ht=(conv.montant_ht||0)+a.montant_ht;conv.montant_ttc=(conv.montant_ttc||0)+a.montant_ttc;if(a.nouvelle_date_fin)conv.date_fin_prev=a.nouvelle_date_fin;await dbPut('conventions',conv);}toast('✅ Convention mise à jour.','success');}else toast('Avenant enregistré.','success');closeModal('modal-avenant');renderAvenants();renderConventions();}
-async function deleteAvenant(id){if(!confirm('Supprimer ?'))return;DATA.avenants=DATA.avenants.filter(function(a){return a.id!==id;});await dbDelete('avenants',id);renderAvenants();toast('Supprimé.','info');}
+async function deleteAvenant(id){if(!confirm('Supprimer ?'))return;if(await deleteRecord('avenants',id)===false)return;renderAvenants();toast('Supprimé.','info');}
 
 /* ─── Retenues de garantie ────────────────────────── */
 function renderGaranties(){var tbody=document.getElementById('tbody-garanties');if(!tbody)return;var retenues=DATA.situations.filter(function(s){return s.retenue&&s.retenue>0&&(s.statut==='validee'||s.statut==='payee');});if(!retenues.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--blanc-dim);">Aucune retenue constituée.</td></tr>';return;}var byConv={};retenues.forEach(function(s){if(!byConv[s.convention_id])byConv[s.convention_id]={total:0};byConv[s.convention_id].total+=s.retenue||0;});tbody.innerHTML=Object.keys(byConv).map(function(convId){var conv=DATA.conventions.find(function(c){return c.id===convId;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var r=byConv[convId];var lib=conv.statut==='reception_definitive';return'<tr style="'+(lib?'background:rgba(74,196,122,0.05);':'')+'"><td style="font-family:monospace;color:var(--or);">'+conv.numero+'</td><td style="font-size:12px;">'+constr.raison_sociale+'</td><td style="font-weight:700;color:var(--rouge);">'+fmtF(r.total)+' FCFA</td><td>'+(conv.date_fin_prev||'—')+'</td><td style="font-size:11px;">Levée des réserves + réception définitive</td><td><span class="badge '+(lib?'badge-vert':'badge-or')+'">'+(lib?'Libérable':'Bloquée')+'</span></td><td>'+(lib?'<button class="btn btn-primary btn-sm" onclick="libererGarantie(\''+convId+'\','+r.total+')">💰 Libérer</button>':'<button class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:.4;">🔒</button>')+'</td></tr>';}).join('');}
@@ -30042,7 +30035,7 @@ function onSelectConventionRapport(){var id=document.getElementById('rch-convent
 function updateRapportGauge(){var r=parseInt((document.getElementById('rch-avancement')||{}).value)||0;var p=parseInt((document.getElementById('rch-avancement-prevu')||{}).value)||0;var box=document.getElementById('rch-gauge-content');if(!box)return;var ec=r-p;box.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;"><div><div style="font-size:11px;color:var(--blanc-dim);margin-bottom:4px;">Avancement réalisé</div><div style="height:10px;background:var(--bord);border-radius:5px;"><div style="width:'+r+'%;height:100%;background:var(--vert);border-radius:5px;"></div></div><div style="font-size:11px;text-align:right;color:var(--vert);margin-top:2px;font-weight:700;">'+r+'%</div></div><div><div style="font-size:11px;color:var(--blanc-dim);margin-bottom:4px;">Avancement prévu</div><div style="height:10px;background:var(--bord);border-radius:5px;"><div style="width:'+p+'%;height:100%;background:var(--bleu);border-radius:5px;"></div></div><div style="font-size:11px;text-align:right;color:var(--bleu);margin-top:2px;font-weight:700;">'+p+'%</div></div></div><div style="text-align:center;padding:8px;background:'+(ec>=0?'rgba(74,196,122,0.1)':'rgba(224,82,82,0.1)')+';border-radius:var(--r);font-weight:700;">Écart : <span style="color:'+(ec>=0?'var(--vert)':'var(--rouge)')+';font-size:16px;">'+(ec>=0?'+':'')+ec+'%</span> '+(ec>=0?'✅ En avance':'⚠️ Retard')+'</div>';}
 async function saveRapportChantier(){var convId=document.getElementById('rch-convention').value;if(!convId){toast('Sélectionnez une convention.','error');return;}var av=parseInt(document.getElementById('rch-avancement').value)||0;var r={id:APP.editingId||uid(),convention_id:convId,numero:document.getElementById('rch-numero').value.trim(),date_debut:document.getElementById('rch-date-debut').value,date_fin:document.getElementById('rch-date-fin').value,avancement:av,avancement_prevu:parseInt(document.getElementById('rch-avancement-prevu').value)||0,nb_ouvriers:parseInt(document.getElementById('rch-ouvriers').value)||0,meteo:document.getElementById('rch-meteo').value,travaux_realises:document.getElementById('rch-travaux-realises').value.trim(),travaux_prevus:document.getElementById('rch-travaux-prevus').value.trim(),difficultes:document.getElementById('rch-difficultes').value.trim(),depenses:parseFloat(document.getElementById('rch-depenses').value)||0,budget_cumul:parseFloat(document.getElementById('rch-budget-cumul').value)||0,observations:document.getElementById('rch-observations').value.trim(),valideur:document.getElementById('rch-valideur').value.trim(),statut:document.getElementById('rch-statut').value,created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.rapports_chantier.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.rapports_chantier[idx]=r;}else DATA.rapports_chantier.push(r);await dbPut('rapports_chantier',r);var conv=DATA.conventions.find(function(c){return c.id===convId;});if(conv&&av>=(conv.avancement||0)){conv.avancement=av;await dbPut('conventions',conv);}closeModal('modal-rapport-chantier');renderChantiersDashboard();renderRapports();renderConventions();toast('Rapport enregistré.','success');}
 function editRapportChantier(id){APP.editingId=id;openRapportChantier();setTimeout(function(){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=v||'';};el('rch-convention',r.convention_id);el('rch-numero',r.numero);el('rch-date-debut',r.date_debut);el('rch-date-fin',r.date_fin);el('rch-avancement',r.avancement);el('rch-avancement-prevu',r.avancement_prevu);el('rch-ouvriers',r.nb_ouvriers);el('rch-meteo',r.meteo);el('rch-travaux-realises',r.travaux_realises);el('rch-travaux-prevus',r.travaux_prevus);el('rch-difficultes',r.difficultes);el('rch-depenses',r.depenses);el('rch-budget-cumul',r.budget_cumul);el('rch-observations',r.observations);el('rch-valideur',r.valideur);el('rch-statut',r.statut);document.getElementById('rch-modal-title').textContent='Modifier rapport';updateRapportGauge();},120);}
-async function deleteRapport(id){if(!confirm('Supprimer ce rapport ?'))return;DATA.rapports_chantier=DATA.rapports_chantier.filter(function(r){return r.id!==id;});await dbDelete('rapports_chantier',id);renderRapports();toast('Supprimé.','info');}
+async function deleteRapport(id){if(!confirm('Supprimer ce rapport ?'))return;if(await deleteRecord('rapports_chantier',id)===false)return;renderRapports();toast('Supprimé.','info');}
 function printRapportId(id){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var conv=DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:'—',objet:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var societe=DATA.params.societe||'ImmoSuite ERP';var ec=r.avancement-(r.avancement_prevu||r.avancement);/* [AUDIT FIX v17] Photos dans impression */var photosHtml='';if(r.photos&&r.photos.length){photosHtml='<h3>\u{1F4F8} Photos de chantier ('+r.photos.length+')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;">'+(r.photos.slice(0,9).map(function(p){return'<div style="text-align:center;"><img src="'+p.data+'" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"><div style="font-size:10px;color:#666;margin-top:2px;">'+p.legende+'</div></div>';}).join(''))+'</div>';}var win=window.open('','','width=850,height=750');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:16px 0 8px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #ddd;border-radius:8px;padding:10px 18px;margin:4px;text-align:center;min-width:90px;}.kv{font-size:18px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#888;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div><h1>📋 Rapport Hebdomadaire — Semaine du '+r.date_debut+(r.date_fin?' au '+r.date_fin:'')+'</h1><table><tr><td><strong>Convention :</strong> '+conv.numero+'</td><td><strong>Constructeur :</strong> '+constr.raison_sociale+'</td></tr></table><div><span class="kpi"><div class="kv">'+r.avancement+'%</div><div class="kl">Réalisé</div></span><span class="kpi"><div class="kv">'+(r.avancement_prevu||r.avancement)+'%</div><div class="kl">Prévu</div></span><span class="kpi"><div class="kv" style="color:'+(ec>=0?'#1A6B3A':'#C93535')+'">'+(ec>=0?'+':'')+ec+'%</div><div class="kl">Écart</div></span><span class="kpi"><div class="kv">'+r.nb_ouvriers+'</div><div class="kl">Ouvriers</div></span></div><h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'+(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')+photosHtml+'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
 function exportRapportsChantier(){var rows=['Rapport,Convention,Date début,Avancement,Prévu,Ouvriers,Statut'];DATA.rapports_chantier.forEach(function(r){rows.push([r.numero,(DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:''}).numero,r.date_debut,r.avancement+'%',(r.avancement_prevu||r.avancement)+'%',r.nb_ouvriers,r.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rapports_chantier.csv';a.click();toast('Export rapports chantier.','success');}
 function printRapportChantier(){var id=APP.editingId;if(id)printRapportId(id);else toast('Enregistrez d\'abord le rapport.','info');}
@@ -31990,11 +31983,11 @@ async function telechargerDocument(docId) {
 }
 
 async function supprimerDocument(docId, entity_type, entity_id) {
-  if (!confirm('Supprimer définitivement ce document ?')) return;
-  await dbDelete('documents', docId);
-  toast('Document supprimé.', 'info');
-  if (entity_type && entity_id) refreshDocumentsForEntity(entity_type, entity_id);
-  else renderDocumentsGlobaux();
+  if(!confirm('Supprimer ce document ?'))return;
+  if(await deleteRecord('documents',docId)===false)return;
+  if(typeof renderDocuments==='function') renderDocuments(entity_type,entity_id);
+  renderDocumentsGlobaux();
+  toast('Document supprimé.','info');
 }
 
 /* ─── Archives globales ────────────────────────────────── */
@@ -32124,11 +32117,11 @@ async function apercuSignature(sigId) {
 }
 
 async function supprimerSignature(sigId) {
-  if (!confirm('Supprimer cette signature ?')) return;
-  await dbDelete('signatures', sigId);
-  toast('Signature supprimée.','info');
+  if(!confirm('Supprimer cette signature ?'))return;
+  if(await deleteRecord('signatures',sigId)===false)return;
+  if(typeof renderSignatures==='function') renderSignatures();
   renderSignaturesGlobaux();
-  buildArchiveKPI();
+  toast('Signature supprimée.','info');
 }
 
 async function exportDocumentsListe() {
@@ -32852,13 +32845,9 @@ async function saveEvenement() {
 }
 
 async function supprimerEvenement(id) {
-  var eid = id||APP.editingId;
-  if(!eid) return;
-  if(!confirm('Supprimer cet événement ?')) return;
-  DATA.evenements_calendrier=(DATA.evenements_calendrier||[]).filter(function(e){return e.id!==eid;});
-  await dbDelete('evenements_calendrier',eid); if (typeof deleteFromSupabase==='function') deleteFromSupabase('pi_evenements_calendrier', eid);
-  closeModal('modal-evenement');
-  renderCalendrier();
+  if(!confirm('Supprimer cet événement ?'))return;
+  if(await deleteRecord('evenements_calendrier',id)===false)return;
+  renderEvenements();
   toast('Événement supprimé.','info');
 }
 
@@ -33837,13 +33826,10 @@ async function saveDossierJuridique() {
 
 async function deleteDossierJur(id) {
   if (!confirm('Supprimer ce dossier et tous ses documents ?')) return;
-  DATA.dossiersJuridiques=DATA.dossiersJuridiques.filter(function(d){return d.id!==id;});
-  await dbDelete('dossiersJuridiques', id);
-  // Supprimer les docs liés
+  if (await deleteRecord('dossiersJuridiques', id) === false) return;
+  // Cascade docs liés
   var docsLies = (DATA.docsJuridiques||[]).filter(function(d){return d.dossier_id===id;});
-  for (var i=0;i<docsLies.length;i++) {
-    await dbDelete('docs_juridiques', docsLies[i].id);
-  }
+  for (var i=0;i<docsLies.length;i++) { await deleteRecord('docs_juridiques', docsLies[i].id, {skipIntegrity:true}); }
   DATA.docsJuridiques = (DATA.docsJuridiques||[]).filter(function(d){return d.dossier_id!==id;});
   renderDossiersJuridiques();
   toast('Dossier supprimé.', 'info');
@@ -33999,8 +33985,7 @@ function jurReadFileAsBase64(file) {
 
 async function deleteJurDoc(docId, dossierId) {
   if (!confirm('Supprimer ce document ?')) return;
-  DATA.docsJuridiques = (DATA.docsJuridiques||[]).filter(function(d){return d.id!==docId;});
-  await dbDelete('docs_juridiques', docId);
+  if (await deleteRecord('docs_juridiques', docId) === false) return;
   renderJurDocs(dossierId);
   renderDossiersJuridiques();
   toast('Document supprimé.', 'info');
@@ -35458,8 +35443,8 @@ function editRapportChantier(id){
 
 async function deleteRapport(id){
   if(!confirm('Supprimer ce rapport ?'))return;
-  DATA.rapports_chantier=DATA.rapports_chantier.filter(function(r){return r.id!==id;});
-  await dbDelete('rapports_chantier',id);renderRapports();toast('Rapport supprimé.','info');
+  if(await deleteRecord('rapports_chantier',id)===false)return;
+  renderRapports();toast('Rapport supprimé.','info');
 }
 
 function printRapportId(id){
@@ -35812,8 +35797,7 @@ async function sauvegarderPosteNomenclature() {
 
 async function supprimerPosteNomenclature(id, type) {
   if (!confirm('Supprimer ce poste ?')) return;
-  DATA.nomenclatures = DATA.nomenclatures.filter(function(n) { return n.id !== id; });
-  await dbDelete('nomenclatures', id);
+  if (await deleteRecord('nomenclatures', id) === false) return;
   chargerNomenclature();
   toast('Poste supprimé.','info');
 }
@@ -35898,8 +35882,7 @@ async function sauvegarderPrix() {
 
 async function supprimerPrix(id) {
   if (!confirm('Supprimer ce prix unitaire ?')) return;
-  DATA.prix_unitaire = DATA.prix_unitaire.filter(function(p) { return p.id !== id; });
-  await dbDelete('prix_unitaire', id);
+  if (await deleteRecord('prix_unitaire', id) === false) return;
   chargerPrix();
   toast('Prix supprimé.','info');
 }
@@ -36000,8 +35983,7 @@ async function sauvegarderDevis() {
 
 async function supprimerDevis(id) {
   if (!confirm('Supprimer ce devis ?')) return;
-  DATA.devis_fournisseurs = DATA.devis_fournisseurs.filter(function(d){ return d.id!==id; });
-  await dbDelete('devis_fournisseurs', id);
+  if (await deleteRecord('devis_fournisseurs', id) === false) return;
   chargerDevis();
   toast('Devis supprimé.','info');
 }
@@ -37108,11 +37090,9 @@ async function saveCRVisite() {
 
 async function deleteEtapeItineraire(id) {
   if (!confirm('Supprimer cette étape et son compte-rendu ?')) return;
-  DATA.etapes_itineraire = (DATA.etapes_itineraire||[]).filter(function(e){ return e.id!==id; });
-  var crs = (DATA.cr_visites||[]).filter(function(c){ return c.etape_id===id; });
-  DATA.cr_visites = (DATA.cr_visites||[]).filter(function(c){ return c.etape_id!==id; });
-  try { await dbDelete('etapes_itineraire', id); } catch(e){}
-  for (var i=0;i<crs.length;i++){ try { await dbDelete('cr_visites', crs[i].id); } catch(e){} }
+  var crs=(DATA.cr_visites||[]).filter(function(c){return c.etape_id===id;});
+  if (await deleteRecord('etapes_itineraire', id) === false) return;
+  for (var i=0;i<crs.length;i++){ await deleteRecord('cr_visites', crs[i].id, {skipIntegrity:true}); }
   renderItineraire();
   renderItinerairesTable();
   toast('Étape supprimée.', 'info');
@@ -39071,10 +39051,9 @@ async function saveConvAgr() {
 
 async function deleteConvAgr(id) {
   if (!confirm('Supprimer cette convention ?')) return;
-  DATA.conv_agrement = (DATA.conv_agrement || []).filter(function(c) { return c.id !== id; });
-  await dbDelete('conv_agrement', id);
+  if (await deleteRecord('conv_agrement', id) === false) return;
   renderConvAgrement();
-  toast('Convention supprimee.', 'success');
+  toast('Convention supprimée.', 'success');
 }
 /* FIN MODULE CONVENTIONS AGREMENT */
 
@@ -41356,8 +41335,7 @@ function renderPlans() { renderPlansFull(); }
 
 async function deletePlan(id) {
   if (!confirm('Supprimer ce plan et toutes ses vues ?')) return;
-  DATA.plans_arch = (DATA.plans_arch||[]).filter(function(p){ return p.id!==id; });
-  await dbDelete('plans_arch', id);
+  if (await deleteRecord('plans_arch', id) === false) return;
   renderPlansFull();
   toast('Plan supprimé.','info');
 }
@@ -44230,8 +44208,7 @@ async function validerConge(id, ok) {
 
 async function deleteConge(id) {
   if (!confirm('Supprimer cette demande de congé ?')) return;
-  DATA.conges_rh = (DATA.conges_rh||[]).filter(function(x){ return x.id !== id; });
-  if (typeof dbDelete === 'function') await dbDelete('conges_rh', id);
+  if (await deleteRecord('conges_rh', id) === false) return;
   updateCongesKPIs();
   renderCongesDemandes();
   toast('Demande supprimée.', 'info');
@@ -44426,8 +44403,7 @@ async function savePoste() {
 
 async function deletePoste(id) {
   if (!confirm('Supprimer ce poste ? Les candidatures associées resteront.')) return;
-  DATA.postes_ouverts = (DATA.postes_ouverts||[]).filter(function(x){ return x.id !== id; });
-  if (typeof dbDelete === 'function') await dbDelete('postes_ouverts', id);
+  if (await deleteRecord('postes_ouverts', id) === false) return;
   updateRecrutementKPIs();
   renderPostes();
   toast('Poste supprimé.', 'info');
@@ -44524,8 +44500,7 @@ async function saveCandidat() {
 
 async function deleteCandidat(id) {
   if (!confirm('Supprimer cette candidature ?')) return;
-  DATA.candidats_rh = (DATA.candidats_rh||[]).filter(function(x){ return x.id !== id; });
-  if (typeof dbDelete === 'function') await dbDelete('candidats_rh', id);
+  if (await deleteRecord('candidats_rh', id) === false) return;
   updateRecrutementKPIs();
   renderTousCandidats();
   toast('Candidature supprimée.', 'info');
@@ -44723,8 +44698,7 @@ async function saveFormation() {
 
 async function deleteFormation(id) {
   if (!confirm('Supprimer cette formation ?')) return;
-  DATA.formations_rh = (DATA.formations_rh||[]).filter(function(x){ return x.id !== id; });
-  if (typeof dbDelete === 'function') await dbDelete('formations_rh', id);
+  if (await deleteRecord('formations_rh', id) === false) return;
   updateFormationsKPIs();
   renderFormations();
   toast('Formation supprimée.', 'info');
@@ -47588,6 +47562,7 @@ function printBC(id){
     +(b.notes?('<p class="muted"><strong>Notes :</strong> '+b.notes+'</p>'):'')
     +'<div style="margin-top:40px;display:flex;justify-content:space-between;"><div class="muted">Établi par : '+((APP.currentUser&&APP.currentUser.nom)||'')+'</div><div class="muted">Visa Direction : '+(b.valide_par?(b.valide_par+' ('+b.valide_date+')'):'____________')+'</div></div>'
     +'</body></html>');
+  try{ if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('BC-'+b.numero));}}catch(e){}
   win.document.close(); win.print();
 }
 
@@ -47738,6 +47713,7 @@ function printFacture(id){
     +'<table><thead><tr><th>#</th><th>Désignation</th><th class="r">Qté</th><th class="r">PU</th><th class="r">Total</th></tr></thead><tbody>'+rows+'</tbody></table>'
     +'<table style="width:300px;margin-left:auto;"><tr><td>HT</td><td class="r">'+fmtF(Math.round(fc.ht))+'</td></tr><tr><td>TVA</td><td class="r">'+fmtF(Math.round(fc.tva))+'</td></tr>'+(fc.airsi>0?('<tr><td>AIRSI</td><td class="r">−'+fmtF(Math.round(fc.airsi))+'</td></tr>'):'')+'<tr><td><strong>Net à payer</strong></td><td class="r"><strong>'+fmtF(Math.round(fc.net))+' FCFA</strong></td></tr></table>'
     +'</body></html>');
+  try{ if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('FAC-'+fc.numero));}}catch(e){}
   win.document.close(); win.print();
 }
 
@@ -47946,7 +47922,7 @@ async function demanderLiberationGarantie(id){
   var v=await valCreate('liberation_garantie', id, 'Libération retenue '+fmtF(Math.round(rg))+' F — '+r.numero+' ('+rlConstrName(r.constructeur_id)+')', rg, {convention:r.convention_id});
   if(v) toast('📤 Demande de libération soumise à validation.','success');
 }
-async function deleteRect(id){ if(!confirm('Supprimer cette réception ?'))return; DATA.receptions_travaux=DATA.receptions_travaux.filter(function(x){return x.id!==id;}); await dbDelete('receptions_travaux',id); renderRecliv(); toast('Supprimé.','info'); }
+async function deleteRect(id){ if(!confirm('Supprimer cette réception ?'))return; if(await deleteRecord('receptions_travaux',id)===false)return; renderRecliv(); toast('Supprimé.','info'); }
 function printRect(id){
   var r=DATA.receptions_travaux.find(function(x){return x.id===id;}); if(!r)return;
   var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
@@ -47961,6 +47937,7 @@ function printRect(id){
     +(((parseFloat(r.retenue_garantie)||0)>0)?('<p><strong>Retenue de garantie :</strong> '+fmtF(Math.round(r.retenue_garantie))+' FCFA'+(r.retenue_liberation_date?(' — libération prévue le '+r.retenue_liberation_date):'')+'</p>'):'')
     +'<div class="sign"><div class="muted">Le Maître d\'ouvrage<br><br><br>____________</div><div class="muted">Le Constructeur<br><br><br>____________</div></div>'
     +'</body></html>');
+  try{ if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('PV-RECEP-'+r.numero));}}catch(e){}
   win.document.close(); win.print();
 }
 
@@ -48016,7 +47993,7 @@ async function saveLiv(){
   closeModal('modal-liv'); renderRecliv(); toast('Livraison enregistrée.'+(l.publie_portail?' 🌐 Publiée au portail.':''),'success');
 }
 async function toggleLivPortail(id){ var l=DATA.livraisons.find(function(x){return x.id===id;}); if(!l)return; l.publie_portail=!l.publie_portail; await dbPut('livraisons',l); if(typeof syncToSupabase==='function')syncToSupabase('pi_livraisons',l); renderRecliv(); toast(l.publie_portail?'🌐 Publié au portail.':'Retiré du portail.','info'); }
-async function deleteLiv(id){ if(!confirm('Supprimer cette livraison ?'))return; DATA.livraisons=DATA.livraisons.filter(function(x){return x.id!==id;}); await dbDelete('livraisons',id); renderRecliv(); toast('Supprimé.','info'); }
+async function deleteLiv(id){ if(!confirm('Supprimer cette livraison ?'))return; if(await deleteRecord('livraisons',id)===false)return; renderRecliv(); toast('Supprimé.','info'); }
 function printLiv(id){
   var l=DATA.livraisons.find(function(x){return x.id===id;}); if(!l)return;
   var soc=(DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
@@ -48031,6 +48008,7 @@ function printLiv(id){
     +'<h3>Réserves de l\'acquéreur</h3><table><thead><tr><th>#</th><th>Libellé</th><th>État</th></tr></thead><tbody>'+res+'</tbody></table>'
     +'<div class="sign"><div class="muted">Le Promoteur<br><br><br>____________</div><div class="muted">Le Souscripteur<br>'+(l.signe?('(signé le '+(l.signature_date||l.date)+')'):'')+'<br><br>____________</div></div>'
     +'</body></html>');
+  try{ if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('PV-LIV-'+l.numero));}}catch(e){}
   win.document.close(); win.print();
 }
 
@@ -48072,7 +48050,7 @@ function renderDossiers(){
     }).join('');
   }
 }
-async function deleteDossier(id){ if(!confirm('Supprimer ce dossier ?'))return; DATA.receptions_dossiers=DATA.receptions_dossiers.filter(function(x){return x.id!==id;}); await dbDelete('receptions_dossiers',id); renderDossiers(); toast('Supprimé.','info'); }
+async function deleteDossier(id){ if(!confirm('Supprimer ce dossier ?'))return; if(await deleteRecord('receptions_dossiers',id)===false)return; renderDossiers(); toast('Supprimé.','info'); }
 
 function dosFindConvention(programmeId){ return (DATA.conventions||[]).find(function(c){return c.programme_id===programmeId;}); }
 function openDossier(id){
@@ -48210,6 +48188,7 @@ function dosPrintPV(kind){
     +'<h3>Réserves</h3><table><thead><tr><th>#</th><th>Libellé</th><th>Localisation</th><th>Gravité</th><th>Délai</th><th>État</th></tr></thead><tbody>'+res+'</tbody></table>'
     +'<div class="sign"><div class="muted">Le Promoteur<br><br>____________</div>'+(kind!=='pre'?'<div class="muted">Le Souscripteur<br><br>____________</div>':'')+'<div class="muted">Le Constructeur<br><br>____________</div></div>'
     +'</body></html>');
+  try{ if(win.document.body&&!win.document.querySelector('.doc-qr')){win.document.body.insertAdjacentHTML('beforeend',printQrFooter('DOS-RECLIV-'+d.numero));}}catch(e){}
   win.document.close(); win.print();
 }
 
@@ -48462,8 +48441,8 @@ async function saveChantierCout(){
   renderChantierCoutListe(); renderMargeChantiers(); toast('Coût ajouté.','success');
 }
 async function deleteChantierCout(id){
-  DATA.chantier_couts=(DATA.chantier_couts||[]).filter(function(c){return c.id!==id;});
-  await dbDelete('chantier_couts',id); renderChantierCoutListe(); renderMargeChantiers(); toast('Coût supprimé.','info');
+  if(await deleteRecord('chantier_couts',id)===false)return;
+  renderChantierCoutListe(); renderMargeChantiers(); toast('Coût supprimé.','info');
 }
 
 function edsResOptions(sel) {
