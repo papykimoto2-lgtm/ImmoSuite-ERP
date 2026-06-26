@@ -14858,7 +14858,12 @@ var SUPA_STORE_MAP = [
   ['pi_custom_roles',       'custom_roles'],           // rôles personnalisés
   /* v118 — Financiers partenaires */
   ['pi_af_financiers',            'af_financiers'],
-  ['pi_af_versements_financiers', 'af_versements_financiers']
+  ['pi_af_versements_financiers', 'af_versements_financiers'],
+  /* RH — ajoutés pour synchro complète (étaient locaux-seulement) */
+  ['pi_conges_rh',       'conges_rh'],
+  ['pi_candidats_rh',    'candidats_rh'],
+  ['pi_postes_ouverts',  'postes_ouverts'],
+  ['pi_formations_rh',   'formations_rh']
 ];
 
 /* ── Suivi des modifications : on n'envoie que ce qui a changé ── */
@@ -15084,20 +15089,24 @@ async function analyserDivergence(){
     var table = p[0], store = p[1], isU = (table === 'pi_users');
     var local = DATA[store] || [];
     var lmap = {}; local.forEach(function(x){ if (x && x.id!=null) lmap[x.id] = _ts(x); });
-    var cmap = {}, err = false;
+    var cmap = {}, hasTs = false, err = false;
     try {
-      var sel = isU ? '?select=id,updated_at' : '?select=id,m:data->>_modifie,u:data->>updated_at';
-      var rows = await sbFetch(table + sel, 'GET');
-      if (rows === null) { err = true; }
-      else if (!isU && rows.length && rows[0].m === undefined && rows[0].u === undefined) {
-        /* Sélecteur JSON non supporté → repli sur data complet */
-        var rows2 = await sbFetch(table + '?select=id,data', 'GET') || [];
-        rows2.forEach(function(r){ var o = _supaUnwrap(table, r); cmap[r.id] = _ts(o); });
+      var rows = null;
+      /* 1) Tentative avec horodatage (tables JSONB classiques, hors users) */
+      if (!isU) {
+        rows = await sbFetch(table + '?select=id,m:data->>_modifie,u:data->>updated_at', 'GET');
+      }
+      if (rows && rows.length && (rows[0].m !== undefined || rows[0].u !== undefined)) {
+        hasTs = true;
+        rows.forEach(function(r){ var ts = Date.parse(r.m || r.u || '') || 0; cmap[r.id] = isNaN(ts) ? 0 : ts; });
+      } else if (rows && rows.length === 0) {
+        /* table existante mais vide → rien à mapper */
       } else {
-        rows.forEach(function(r){
-          var ts = isU ? (r.updated_at ? Date.parse(r.updated_at) : 0) : (Date.parse(r.m || r.u || '') || 0);
-          cmap[r.id] = isNaN(ts) ? 0 : ts;
-        });
+        /* users, schéma à plat (sans colonne data) ou sélecteur non supporté
+           → repli sur comparaison par PRÉSENCE seule (id) */
+        var r2 = await sbFetch(table + '?select=id', 'GET');
+        if (r2 === null) { err = true; }
+        else { r2.forEach(function(r){ cmap[r.id] = null; }); }   /* null = horodatage inconnu */
       }
     } catch(e) { err = true; }
     if (err) return { store: store, err: true };
@@ -15105,13 +15114,13 @@ async function analyserDivergence(){
     var pushN=0, pullN=0, pushM=0, pullM=0;
     Object.keys(lmap).forEach(function(id){
       if (!(id in cmap)) pushN++;
-      else if (!isU && lmap[id] > cmap[id] + EPS) pushM++;
+      else if (hasTs && cmap[id] !== null && lmap[id] > cmap[id] + EPS) pushM++;
     });
     Object.keys(cmap).forEach(function(id){
       if (!(id in lmap)) pullN++;
-      else if (!isU && cmap[id] > lmap[id] + EPS) pullM++;
+      else if (hasTs && cmap[id] !== null && cmap[id] > lmap[id] + EPS) pullM++;
     });
-    return { store: store, pushN:pushN, pullN:pullN, pushM:pushM, pullM:pullM };
+    return { store: store, pushN:pushN, pullN:pullN, pushM:pushM, pullM:pullM, noTs: !hasTs };
   }));
 
   var diverg = res.filter(function(d){ return d.err || d.pushN||d.pullN||d.pushM||d.pullM; });
@@ -15128,7 +15137,7 @@ async function analyserDivergence(){
     +   '<strong>🔬 Divergences de contenu</strong>'
     +   '<span style="color:var(--or)">⬆️ à envoyer : ' + tEnvN + ' nouveau(x) · ' + tEnvM + ' modifié(s)</span>'
     +   '<span style="color:#0EA5E9">⬇️ à récupérer : ' + tRecN + ' nouveau(x) · ' + tRecM + ' modifié(s)</span>'
-    +   (tErr ? '<span style="color:var(--rouge)">⚠️ ' + tErr + ' table(s) en erreur</span>' : '')
+    +   (tErr ? '<span style="color:var(--rouge)">⚠️ ' + tErr + ' table(s) absente(s) côté cloud</span>' : '')
     + '</div>'
     + '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px;">'
     + '<thead><tr style="text-align:left;border-bottom:1px solid var(--bord);">'
@@ -15142,7 +15151,7 @@ async function analyserDivergence(){
   diverg.forEach(function(d){
     if (d.err) {
       html += '<tr style="border-bottom:1px solid var(--bord);"><td style="padding:6px 8px;">' + _libelleStore(d.store) + '</td>'
-        + '<td colspan="4" style="padding:6px 8px;color:var(--rouge);text-align:center;">⚠️ Erreur de lecture cloud</td><td></td></tr>';
+        + '<td colspan="4" style="padding:6px 8px;color:var(--rouge);text-align:center;">⚠️ Table absente côté cloud (à créer)</td><td></td></tr>';
       return;
     }
     var act = '';
