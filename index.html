@@ -33243,12 +33243,15 @@ function _ppLoad(forPrint) {
       : html + '<script>setTimeout(function(){window.print();window.close();},300);<\/script>';
   }
 
-  /* Écrire dans l'iframe via document.open/write/close (pas de srcdoc → pas de sandbox) */
+  /* Rendu via Blob URL — garantit l'interprétation HTML (évite texte brut) */
   try {
-    var fdoc = frame.contentDocument || frame.contentWindow.document;
-    fdoc.open(); fdoc.write(html); fdoc.close();
+    var blob = new Blob([html], {type: 'text/html; charset=utf-8'});
+    var url  = URL.createObjectURL(blob);
+    frame.onload = function() { try { URL.revokeObjectURL(url); } catch(e){} frame.onload=null; };
+    frame.src = url;
   } catch(e) {
-    /* Repli srcdoc si cross-origin */
+    /* Repli : srcdoc */
+    try { frame.removeAttribute('src'); } catch(_){}
     frame.srcdoc = html;
   }
 
@@ -33268,14 +33271,21 @@ function _ppReload() { _ppLoad(); }
 function _ppZoom()   { _ppLoad(); }
 
 function _ppPrint() {
-  /* Ouvrir une VRAIE fenêtre (pas iframe, pas sandbox) avec auto-print */
-  var _orig = window._origOpen || window.open;
+  /* Blob URL → impression fiable sans texte brut ni sandbox */
   var printHtml = (typeof docStamp==='function') ? docStamp(_ppHtml) : _ppHtml;
   var autoHtml = printHtml.indexOf('</body>')>=0
-    ? printHtml.replace('</body>','<script>setTimeout(function(){window.print();},300);<\/script></body>')
-    : printHtml+'<script>setTimeout(function(){window.print();},300);<\/script>';
-  var w = _orig.call ? _orig.call(window,'','_blank','width=860,height=750') : _orig('','_blank','width=860,height=750');
-  w.document.open(); w.document.write(autoHtml); w.document.close();
+    ? printHtml.replace('</body>','<script>setTimeout(function(){window.print();},350);<\/script></body>')
+    : printHtml+'<script>setTimeout(function(){window.print();},350);<\/script>';
+  try {
+    var blob = new Blob([autoHtml], {type:'text/html; charset=utf-8'});
+    var url  = URL.createObjectURL(blob);
+    var w = (window._origOpen||window.open)(url,'_blank','width=880,height=780');
+    if (w) { setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} }, 10000); }
+    else   { window.location.href = url; }   /* repli si popup bloqué */
+  } catch(e) {
+    var w2=(window._origOpen||window.open)('','_blank');
+    w2.document.write(autoHtml); w2.document.close();
+  }
 }
 
 function _ppDownload() {
