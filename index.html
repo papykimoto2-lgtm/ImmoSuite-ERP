@@ -229,6 +229,10 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
 .topbar-menu-btn:active { background:rgba(184,115,51,0.15); }
 .sync-badge { padding:3px 9px; border-radius:20px; font-size:10px; font-weight:600; background:rgba(74,196,122,0.15); color:var(--vert); border:1px solid rgba(74,196,122,0.3); }
 .sync-badge.offline { background:rgba(224,82,82,0.15); color:var(--rouge); border-color:rgba(224,82,82,0.3); }
+#rt-badge.rt-on  { color:#34d399 !important; background:rgba(52,211,153,.10) !important; }
+#rt-badge.rt-off { color:#f87171 !important; background:rgba(248,113,113,.10) !important; }
+#rt-badge.rt-rx  { color:#60a5fa !important; background:rgba(96,165,250,.15) !important; }
+
 .user-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--or),var(--or-dark)); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; color:var(--noir); cursor:pointer; }
 .topbar-user { display:flex; align-items:center; gap:8px; cursor:pointer; }
 .topbar-user > span { font-size:13px; }
@@ -1995,6 +1999,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 </style>
 <!-- EmailJS SDK -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -2095,7 +2100,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     <button class="topbar-menu-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
     <div class="topbar-brand">ImmoSuite <span>ERP</span></div>
     <div class="topbar-spacer"></div>
-    <div class="sync-badge" id="sync-badge">● Sync</div>
+    <div id="rt-badge" title="Realtime multi-utilisateurs" style="font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(255,255,255,0.07);color:#94a3b8;margin-right:6px;cursor:default;letter-spacing:.5px;transition:all .4s;">⬤ RT</div><div class="sync-badge" id="sync-badge">● Sync</div>
     <div class="topbar-user" onclick="logout()">
       <div class="user-avatar" id="user-avatar">A</div>
       <span id="user-name">Admin</span>
@@ -32984,6 +32989,192 @@ async function savePreloadToDB() {
   DATA_PRELOAD = null; // éviter de re-sauvegarder à chaque démarrage
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SANIX IMMO — Moteur Realtime multi-utilisateurs (Supabase Realtime v2)
+   ─────────────────────────────────────────────────────────────────────────
+   • Connexion WebSocket à Supabase Realtime après login
+   • Écoute postgres_changes sur toutes les tables pi_* (INSERT/UPDATE/DELETE)
+   • Merge intelligent : « le plus récent gagne », ignore les propres écritures
+   • Notification toast discrète + refresh de la page active
+   • Badge ⬤ RT vert/rouge dans la topbar
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _RT = {
+  client:   null,
+  channel:  null,
+  active:   false,
+  myWrites: {},          /* id → timestamp : suppressions de rebond propre écriture */
+  _badge:   function(cls,label){ var b=document.getElementById('rt-badge'); if(b){ b.className=cls; b.textContent=label; } },
+  _flash:   function(){ var b=document.getElementById('rt-badge'); if(!b)return; b.classList.add('rt-rx'); setTimeout(function(){ if(_RT.active) b.classList.remove('rt-rx'); },600); }
+};
+
+/* Dérivé de SUPA_STORE_MAP → map table→store (calculé une fois) */
+function _rtTableStore(){
+  var m={};
+  (SUPA_STORE_MAP||[]).forEach(function(p){ m[p[0]]=p[1]; });
+  return m;
+}
+
+/* Marque une écriture propre pour l'ignorer en retour Realtime */
+function _rtMarkMyWrite(id){
+  _RT.myWrites[id] = Date.now();
+  setTimeout(function(){ delete _RT.myWrites[id]; }, 8000);
+}
+
+/* Patch syncToSupabase pour marquer les écritures propres */
+(function(){
+  var _orig = syncToSupabase;
+  syncToSupabase = async function(table, obj){
+    var r = await _orig.apply(this, arguments);
+    if (obj && obj.id) _rtMarkMyWrite(obj.id);
+    return r;
+  };
+})();
+
+/* Patch deleteFromSupabase pour marquer les suppressions propres */
+(function(){
+  var _orig = typeof deleteFromSupabase === 'function' ? deleteFromSupabase : null;
+  if (!_orig) return;
+  deleteFromSupabase = async function(table, id){
+    _rtMarkMyWrite(id);
+    return _orig.apply(this, arguments);
+  };
+})();
+
+/* Appliquer un changement entrant (upsert ou delete) dans DATA + IndexedDB */
+async function _rtApply(table, eventType, newRow, oldRow){
+  var tmap = _rtTableStore();
+  var store = tmap[table];
+  if (!store) return;
+  if (!DATA[store]) DATA[store] = [];
+  var id = (newRow && newRow.id) || (oldRow && oldRow.id);
+  if (!id) return;
+  if (_RT.myWrites[id]) return;    /* propre écriture reflétée → ignorer */
+
+  _RT.active && _RT._flash();
+
+  if (eventType === 'DELETE') {
+    DATA[store] = DATA[store].filter(function(x){ return x.id !== id; });
+    try { await dbDelete(store, id); } catch(e){}
+    _rtNotify('🗑️', store, id, null);
+  } else {
+    /* INSERT ou UPDATE */
+    var incoming = _supaUnwrap(table, newRow);
+    if (!incoming || !incoming.id) return;
+    var idx = DATA[store].findIndex(function(x){ return x.id === incoming.id; });
+    if (idx >= 0) {
+      var existing = DATA[store][idx];
+      if (_ts(incoming) >= _ts(existing)) {
+        DATA[store][idx] = incoming;
+        try { _pulling=true; await dbPut(store, incoming); _pulling=false; } catch(e){ _pulling=false; }
+        _rtNotify('🔄', store, id, incoming);
+      }
+    } else {
+      DATA[store].push(incoming);
+      try { _pulling=true; await dbPut(store, incoming); _pulling=false; } catch(e){ _pulling=false; }
+      _rtNotify('➕', store, id, incoming);
+    }
+  }
+  /* Rafraîchir la page active si elle concerne ce module */
+  _rtRefreshPage(store);
+}
+
+/* Toast discret (pas de bruit si l'utilisateur travaille) */
+var _rtLastNotif = 0;
+function _rtNotify(icon, store, id, obj){
+  var now = Date.now();
+  if (now - _rtLastNotif < 2000) return;   /* max 1 toast / 2 s */
+  _rtLastNotif = now;
+  var who = (obj && obj._auteur) ? ' · ' + obj._auteur : '';
+  toast(icon + ' ' + _libelleStore(store) + who + ' mis à jour en temps réel', 'info');
+}
+
+/* Rafraîchir la vue active si elle correspond au module modifié */
+var RT_PAGE_REFRESH = {
+  clients:['renderClients'], programmes:['renderProgrammes'],
+  lots:['renderLots'], versements:['renderVersements'],
+  employes:['renderEmployes'], bulletins:['loadPaie'],
+  ecritures:['loadComptabilite'], conventions:['renderConventions'],
+  constructeurs:['renderConstructeurs'], fournisseurs:['renderFournisseurs'],
+  bons_commande:['renderBonsCommande'], factures_fournisseur:['renderFacturesFournisseur'],
+  leads:['renderLeads'], commissions:['renderCommissions'],
+  parcelles:['renderParcelles'], af_operations:['afRenderPipeline','afRenderDashboard'],
+  af_relances:['afRenderRelances'], conceptions:['renderConception'],
+  situations:['renderSituations'], stock_mouvements:['renderStock'],
+  declarations:['loadDeclarations'], conges_rh:['renderConges'],
+  candidats_rh:['renderCandidats'], pointages:['renderPointages'],
+  visites_rdv:['renderVisitesRDV'], messages:['renderMessages'],
+  dossiersJuridiques:['renderDossiers']
+};
+
+/* MAP store → data-page pour détecter la page active */
+var RT_STORE_PAGE = {
+  clients:'clients', programmes:'programmes', lots:'lots',
+  versements:'paiements', employes:'rh-employes', bulletins:'rh-paie',
+  ecritures:'comptabilite', conventions:'conventions', constructeurs:'constructeurs',
+  fournisseurs:'stock', bons_commande:'stock', factures_fournisseur:'stock',
+  leads:'leads', commissions:'clients', parcelles:'foncier',
+  af_operations:'foncierops', af_relances:'foncierops', conceptions:'conception',
+  situations:'avancement', stock_mouvements:'stock', declarations:'rh-declarations',
+  conges_rh:'rh-conges', candidats_rh:'rh-recrutement', pointages:'rh-pointage',
+  visites_rdv:'accueil-visites', messages:'messagerie', dossiersJuridiques:'juridique'
+};
+
+function _rtRefreshPage(store){
+  var targetPage = RT_STORE_PAGE[store];
+  if (!targetPage || APP.currentPage !== targetPage) return;
+  var fns = RT_PAGE_REFRESH[store] || [];
+  fns.forEach(function(fn){
+    try { if (typeof window[fn]==='function') window[fn](); } catch(e){}
+  });
+}
+
+/* Démarrer la connexion Realtime */
+async function startRealtime(){
+  getSBConfig();
+  if (!SB.url || !SB.key) { _RT._badge('rt-off','⬤ RT'); return; }
+  if (typeof window.supabase === 'undefined') { _RT._badge('rt-off','⬤ RT'); return; }
+
+  /* Fermer proprement si déjà connecté */
+  if (_RT.channel) { try { _RT.client.removeChannel(_RT.channel); } catch(e){} }
+
+  _RT.client  = window.supabase.createClient(SB.url, SB.key, {
+    realtime: { params: { eventsPerSecond: 20 } }
+  });
+  _RT._badge('','⬤ RT…');
+
+  /* Écouter TOUTES les tables pi_* en un seul canal (filtre schema=public) */
+  _RT.channel = _RT.client
+    .channel('immo_rt_global', { config:{ broadcast:{ self:false } } })
+    .on('postgres_changes',
+        { event:'*', schema:'public', filter:'table=like.pi_%' },
+        function(payload){
+          _rtApply(payload.table, payload.eventType, payload.new, payload.old).catch(function(){});
+        })
+    .subscribe(function(status){
+      if (status === 'SUBSCRIBED') {
+        _RT.active = true;
+        _RT._badge('rt-on','⬤ RT ✓');
+        console.log('[RT] Realtime connecté');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        _RT.active = false;
+        _RT._badge('rt-off','⬤ RT ✗');
+        console.warn('[RT] Realtime déconnecté :', status);
+        /* Reconnexion auto dans 8 s */
+        setTimeout(function(){ if (!_RT.active) startRealtime(); }, 8000);
+      }
+    });
+}
+
+function stopRealtime(){
+  if (_RT.channel && _RT.client) {
+    try { _RT.client.removeChannel(_RT.channel); } catch(e){}
+  }
+  _RT.active = false; _RT.channel = null;
+  _RT._badge('rt-off','⬤ RT ✗');
+}
+
+/* Démarrer après login + arrêter sur déconnexion */
+
 async function startApp() {
   await initDB();
   mergePreload();
@@ -33055,6 +33246,8 @@ async function startApp() {
     document.getElementById('user-name').textContent   = sessionUser.nom;
     document.getElementById('user-avatar').textContent = sessionUser.nom[0].toUpperCase();
     goTo('dashboard');
+    /* Démarrage Realtime après login */
+    try { setTimeout(startRealtime, 1500); } catch(e){}
   } else {
     showLogin();
   }
