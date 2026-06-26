@@ -33186,43 +33186,65 @@ function openPrintPreview(html, titre) {
   _ppLoad();
 }
 
-function _ppLoad() {
-  var zoom = parseFloat(document.getElementById('pp-zoom').value) || 0.9;
+function _ppLoad(forPrint) {
+  var zoom = forPrint ? 1 : (parseFloat(document.getElementById('pp-zoom').value) || 0.9);
   var landscape = document.getElementById('pp-landscape').checked;
   var frame = document.getElementById('pp-frame');
-  /* Injecter HTML + CSS de zoom dans l'iframe */
-  var page = 'A4 portrait';
-  if (landscape) page = 'A4 landscape';
-  var styled = _ppHtml.replace('</head>',
-    '<style>@page{size:'+page+';margin:10mm}body{transform-origin:top left;transform:scale('+zoom+');width:'+(100/zoom)+'%}</style></head>');
-  if (!styled.includes('</head>')) styled = '<style>body{transform:scale('+zoom+');transform-origin:top left;}</style>' + styled;
-  frame.srcdoc = typeof docStamp==='function' ? docStamp(styled) : styled;
-  /* Compter les pages (estimation : ~1100px par page A4) */
-  setTimeout(function(){
-    try {
-      var h = frame.contentDocument.body.scrollHeight;
-      var pages = Math.max(1, Math.ceil(h / 1100));
-      document.getElementById('pp-pages').textContent = pages + ' page' + (pages>1?'s':'');
-    } catch(e){}
-  }, 500);
+  var page = landscape ? 'A4 landscape' : 'A4 portrait';
+
+  /* HTML de base avec QR */
+  var base = (typeof docStamp==='function') ? docStamp(_ppHtml) : _ppHtml;
+
+  /* Styles spécifiques aperçu (zoom visuel) ou impression (taille réelle) */
+  var extraCss = forPrint
+    ? '<style>@page{size:'+page+';margin:10mm}body{margin:0;}</style>'
+    : '<style>@page{size:'+page+';margin:10mm}html{zoom:'+zoom+';}body{margin:0;}</style>';
+
+  /* Injecter dans <head> ou en tête */
+  var html = base.indexOf('</head>')>=0
+    ? base.replace('</head>', extraCss+'</head>')
+    : extraCss + base;
+
+  /* Si impression : ajouter window.print() à la fin du body */
+  if (forPrint) {
+    html = html.indexOf('</body>')>=0
+      ? html.replace('</body>','<script>setTimeout(function(){window.print();window.close();},300);<\/script></body>')
+      : html + '<script>setTimeout(function(){window.print();window.close();},300);<\/script>';
+  }
+
+  /* Écrire dans l'iframe via document.open/write/close (pas de srcdoc → pas de sandbox) */
+  try {
+    var fdoc = frame.contentDocument || frame.contentWindow.document;
+    fdoc.open(); fdoc.write(html); fdoc.close();
+  } catch(e) {
+    /* Repli srcdoc si cross-origin */
+    frame.srcdoc = html;
+  }
+
+  /* Estimation pages */
+  if (!forPrint) {
+    setTimeout(function(){
+      try {
+        var h = (frame.contentDocument||frame.contentWindow.document).body.scrollHeight;
+        var pg = Math.max(1, Math.ceil(h / 1122));
+        document.getElementById('pp-pages').textContent = pg + ' page'+(pg>1?'s':'');
+      } catch(e){}
+    }, 600);
+  }
 }
 
 function _ppReload() { _ppLoad(); }
 function _ppZoom()   { _ppLoad(); }
 
 function _ppPrint() {
-  var frame = document.getElementById('pp-frame');
-  try {
-    /* Recréer le HTML sans zoom pour l'impression réelle */
-    var printHtml = typeof docStamp==='function' ? docStamp(_ppHtml) : _ppHtml;
-    frame.srcdoc = printHtml;
-    setTimeout(function(){ frame.contentWindow.print(); }, 350);
-  } catch(e) {
-    /* Repli : ouvrir dans nouvel onglet */
-    var w = window.open('','_blank');
-    w.document.write(typeof docStamp==='function' ? docStamp(_ppHtml) : _ppHtml);
-    w.document.close(); w.print();
-  }
+  /* Ouvrir une VRAIE fenêtre (pas iframe, pas sandbox) avec auto-print */
+  var _orig = window._origOpen || window.open;
+  var printHtml = (typeof docStamp==='function') ? docStamp(_ppHtml) : _ppHtml;
+  var autoHtml = printHtml.indexOf('</body>')>=0
+    ? printHtml.replace('</body>','<script>setTimeout(function(){window.print();},300);<\/script></body>')
+    : printHtml+'<script>setTimeout(function(){window.print();},300);<\/script>';
+  var w = _orig.call ? _orig.call(window,'','_blank','width=860,height=750') : _orig('','_blank','width=860,height=750');
+  w.document.open(); w.document.write(autoHtml); w.document.close();
 }
 
 function _ppDownload() {
@@ -33252,6 +33274,7 @@ document.addEventListener('keydown', function(e){
    ouvre l'aperçu au lieu d'une nouvelle fenêtre.                           */
 (function(){
   var _origOpen = window.open;
+  window._origOpen = _origOpen; /* exposé pour _ppPrint */
 
   /* Objet fenêtre factice */
   function _FakeWin(titre) {
@@ -54836,7 +54859,7 @@ function docStamp(html,ref){ try{ if(/doc-qr/.test(html))return html; var f=prin
       <iframe id="pp-frame"
         style="width:794px;min-height:1000px;border:none;border-radius:4px;
                box-shadow:0 2px 12px rgba(0,0,0,.25);background:#fff;"
-        sandbox="allow-same-origin allow-scripts">
+        >
       </iframe>
     </div>
     <!-- Barre du bas -->
