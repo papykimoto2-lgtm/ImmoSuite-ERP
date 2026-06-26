@@ -270,6 +270,14 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
 .nav-section { cursor:pointer; user-select:none; }
 .nav-section::after { order:2; }
 .nav-toggle { order:3; margin-left:8px; flex-shrink:0; width:14px; text-align:center; font-size:13px; font-weight:700; color:#4A8FD4; line-height:1; }
+
+/* ── Aperçu avant impression ── */
+@media print {
+  body > *:not(#pp-printzone) { display:none !important; }
+  #pp-printzone { display:block !important; }
+}
+#pp-printzone { display:none; }
+
 .nav-group-badge { margin-left:6px; background:var(--rouge); color:#fff; font-size:9px; font-weight:700; padding:1px 5px; border-radius:10px; min-width:14px; text-align:center; display:none; order:1; }
 .nav-group > .nav-section .nav-toggle::before { content:'\2212'; }            /* − */
 .nav-group.collapsed > .nav-section .nav-toggle::before { content:'+'; }
@@ -33164,6 +33172,128 @@ function stopRealtime(){
 
 /* Démarrer après login + arrêter sur déconnexion */
 
+
+/* ══ APERÇU AVANT IMPRESSION ═══════════════════════════════════════════════ */
+var _ppHtml = '';
+var _ppTitle = '';
+
+function openPrintPreview(html, titre) {
+  _ppHtml = html;
+  _ppTitle = titre || 'Aperçu document';
+  document.getElementById('pp-titre').textContent = _ppTitle;
+  document.getElementById('modal-print-preview').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  _ppLoad();
+}
+
+function _ppLoad() {
+  var zoom = parseFloat(document.getElementById('pp-zoom').value) || 0.9;
+  var landscape = document.getElementById('pp-landscape').checked;
+  var frame = document.getElementById('pp-frame');
+  /* Injecter HTML + CSS de zoom dans l'iframe */
+  var page = 'A4 portrait';
+  if (landscape) page = 'A4 landscape';
+  var styled = _ppHtml.replace('</head>',
+    '<style>@page{size:'+page+';margin:10mm}body{transform-origin:top left;transform:scale('+zoom+');width:'+(100/zoom)+'%}</style></head>');
+  if (!styled.includes('</head>')) styled = '<style>body{transform:scale('+zoom+');transform-origin:top left;}</style>' + styled;
+  frame.srcdoc = typeof docStamp==='function' ? docStamp(styled) : styled;
+  /* Compter les pages (estimation : ~1100px par page A4) */
+  setTimeout(function(){
+    try {
+      var h = frame.contentDocument.body.scrollHeight;
+      var pages = Math.max(1, Math.ceil(h / 1100));
+      document.getElementById('pp-pages').textContent = pages + ' page' + (pages>1?'s':'');
+    } catch(e){}
+  }, 500);
+}
+
+function _ppReload() { _ppLoad(); }
+function _ppZoom()   { _ppLoad(); }
+
+function _ppPrint() {
+  var frame = document.getElementById('pp-frame');
+  try {
+    /* Recréer le HTML sans zoom pour l'impression réelle */
+    var printHtml = typeof docStamp==='function' ? docStamp(_ppHtml) : _ppHtml;
+    frame.srcdoc = printHtml;
+    setTimeout(function(){ frame.contentWindow.print(); }, 350);
+  } catch(e) {
+    /* Repli : ouvrir dans nouvel onglet */
+    var w = window.open('','_blank');
+    w.document.write(typeof docStamp==='function' ? docStamp(_ppHtml) : _ppHtml);
+    w.document.close(); w.print();
+  }
+}
+
+function _ppDownload() {
+  try {
+    var blob = new Blob([typeof docStamp==='function' ? docStamp(_ppHtml) : _ppHtml], {type:'text/html;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (_ppTitle||'document').replace(/[^a-zA-Z0-9\-_]/g,'_') + '.html';
+    a.click();
+  } catch(e){ toast('Téléchargement indisponible.','error'); }
+}
+
+function closePrintPreview() {
+  document.getElementById('modal-print-preview').style.display = 'none';
+  document.body.style.overflow = '';
+  document.getElementById('pp-frame').srcdoc = '';
+}
+
+/* Fermer sur Echap */
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape' && document.getElementById('modal-print-preview').style.display!=='none')
+    closePrintPreview();
+});
+
+/* ── Interception de window.open pour toutes les fonctions print ────────────
+   On remplace window.open() d'un objet factice qui accumule le HTML puis
+   ouvre l'aperçu au lieu d'une nouvelle fenêtre.                           */
+(function(){
+  var _origOpen = window.open;
+
+  /* Objet fenêtre factice */
+  function _FakeWin(titre) {
+    var _buf = '';
+    var _closed = false;
+    this.name = titre || '';
+    this.document = {
+      write: function(chunk){ _buf += (chunk||''); },
+      close: function(){
+        /* Au close() : déclencher l'aperçu */
+        if (!_closed) {
+          _closed = true;
+          var t = titre || 'Document';
+          try{
+            var m=_buf.match(/<title>([^<]{1,60})<\/title>/i);
+            if(m) t=m[1].trim();
+          }catch(e){}
+          setTimeout(function(){ openPrintPreview(_buf, t); }, 0);
+        }
+      },
+      querySelector: function(){ return null; },
+      body: null,
+      open: function(){},
+    };
+    this.print = function(){
+      if (!_closed) { _closed=true; this.document.close(); }
+      else { setTimeout(function(){ openPrintPreview(_buf, titre); },0); }
+    };
+    this.focus = function(){};
+    this.close = function(){};
+  }
+
+  window.open = function(url, target, features){
+    /* Seulement intercepter les fenêtres d'impression (pas de vraie URL) */
+    if (!url || url === '' || url === 'about:blank') {
+      return new _FakeWin(target||'');
+    }
+    return _origOpen.apply(window, arguments);
+  };
+})();
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 async function startApp() {
   await initDB();
   mergePreload();
@@ -54691,5 +54821,42 @@ function docRefFromHtml(html){ var m=html&&html.match(/R[ée]f\.?\s*:?\s*([A-Za-
 function docStamp(html,ref){ try{ if(/doc-qr/.test(html))return html; var f=printQrFooter(ref||docRefFromHtml(html)); if(/<\/body>/i.test(html))return html.replace(/<\/body>/i,f+'</body>'); return html+f; }catch(e){ return html; } }
 
 </script>
+<!-- ══ APERÇU AVANT IMPRESSION ══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-print-preview" style="display:none;z-index:9999;">
+  <div style="background:var(--card);border-radius:12px;width:96vw;max-width:900px;height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.6);overflow:hidden;">
+    <!-- En-tête -->
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--bord);flex-shrink:0;">
+      <span style="font-size:16px;font-weight:700;color:var(--blanc);flex:1;" id="pp-titre">Aperçu</span>
+      <button class="btn btn-primary" onclick="_ppPrint()" style="gap:6px;">🖨️ Imprimer</button>
+      <button class="btn btn-secondary" onclick="_ppDownload()" style="gap:6px;">⬇️ PDF</button>
+      <button class="btn btn-secondary btn-icon" onclick="closePrintPreview()" title="Fermer">✕</button>
+    </div>
+    <!-- Iframe -->
+    <div style="flex:1;background:#e5e7eb;padding:16px;overflow:auto;display:flex;justify-content:center;">
+      <iframe id="pp-frame"
+        style="width:794px;min-height:1000px;border:none;border-radius:4px;
+               box-shadow:0 2px 12px rgba(0,0,0,.25);background:#fff;"
+        sandbox="allow-same-origin allow-scripts">
+      </iframe>
+    </div>
+    <!-- Barre du bas -->
+    <div style="padding:10px 20px;border-top:1px solid var(--bord);font-size:11px;color:var(--blanc-dim);display:flex;align-items:center;gap:16px;flex-shrink:0;">
+      <span>📄 Format A4 · <span id="pp-pages">1 page</span></span>
+      <span style="flex:1"></span>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="pp-landscape" onchange="_ppReload()" style="accent-color:var(--or);">
+        Paysage
+      </label>
+      <select id="pp-zoom" onchange="_ppZoom()" style="background:var(--card2);border:1px solid var(--bord);color:var(--blanc);border-radius:6px;padding:3px 8px;font-size:11px;">
+        <option value="0.6">60%</option>
+        <option value="0.75">75%</option>
+        <option value="0.9" selected>90%</option>
+        <option value="1">100%</option>
+        <option value="1.2">120%</option>
+      </select>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
