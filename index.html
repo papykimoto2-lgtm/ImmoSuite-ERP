@@ -2396,7 +2396,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="tout">Tout</option>
             </select>
             <button class="btn btn-secondary btn-sm" onclick="refreshDashboard()">↻ Actualiser</button>
-            <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Rapport</button>
+            <button class="btn btn-secondary btn-sm" onclick="_printFromElement('page-dashboard','Tableau de bord')">🖨️ Rapport</button>
             <button class="btn btn-primary btn-sm" onclick="openAnalyse360()">🧭 Analyse 360°</button>
           </div>
         </div>
@@ -9902,7 +9902,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </div>
             <div class="tab-pane" id="tab-rdpv-apercu">
               <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Imprimer PV</button>
+                <button class="btn btn-primary btn-sm" onclick="_printFromElement('page-avancement','PV Chantier')">🖨️ Imprimer PV</button>
                 <button class="btn btn-secondary btn-sm" onclick="rdCopierPV()">📋 Copier texte</button>
               </div>
               <div style="background:#fff;border:1px solid var(--bord);border-radius:var(--r2);padding:24px;box-shadow:var(--sh);" id="rd-pv-apercu">
@@ -18066,8 +18066,8 @@ function showRecu(versement) {
 }
 
 function printRecu() {
-  try{var _wqr=document.getElementById('print-qr-area');if(!_wqr){var _qd=document.createElement('div');_qd.id='print-qr-area';_qd.innerHTML=printQrFooter('RECU-VERSEMENT');document.body.appendChild(_qd);}}catch(e){}
-  window.print();
+  _printFromElement('recu-body', 'Reçu de versement',
+    '.modal-body{max-width:620px;margin:0 auto;}');
 }
 
 /* ──────────────────────────────────────────────────────
@@ -27606,8 +27606,7 @@ function showReleveTiers(clientId) {
 }
 
 function printReleveTiers() {
-  try{var _qd2=document.createElement('div');_qd2.innerHTML=printQrFooter('RELEVE-TIERS');document.body.appendChild(_qd2);}catch(e){}
-  window.print();
+  _printFromElement('releve-tiers-content', 'Relevé de compte tiers');
 }
 
 function exportTiers411CSV() {
@@ -28198,7 +28197,7 @@ function buildTableauAmort() {
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
-function printTableauAmort() { window.print(); }
+function printTableauAmort() { _printFromElement('tableau-amort-box', 'Tableau d\'amortissement'); }
 
 function exportTableauAmortCSV() {
   var bienId=(document.getElementById('filter-amort-bien')||{}).value||'';
@@ -33177,6 +33176,38 @@ function stopRealtime(){
 var _ppHtml = '';
 var _ppTitle = '';
 
+
+/* ── Extraction DOM → aperçu impression ────────────────────────────────────
+   Construit un HTML complet (avec les styles de la page) à partir d'un
+   élément DOM existant, puis ouvre l'aperçu avant impression.            */
+function _printFromElement(elementId, titre, extraCss) {
+  var el = document.getElementById(elementId);
+  if (!el) { window.print(); return; }
+
+  /* Collecter tous les styles de la page */
+  var styles = '';
+  try {
+    Array.from(document.styleSheets).forEach(function(sheet){
+      try {
+        Array.from(sheet.cssRules || sheet.rules || []).forEach(function(rule){
+          styles += rule.cssText + '\n';
+        });
+      } catch(e){ /* cross-origin */ }
+    });
+  } catch(e){}
+
+  /* HTML complet */
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    + '<title>' + (titre||'Document') + '</title>'
+    + '<style>body{background:#fff!important;color:#1a1a1a!important;padding:24px;font-family:Georgia,serif;}'
+    + '.modal-overlay,.modal-header,.modal-footer,.btn,.topbar,.sidebar,.bottom-nav{display:none!important;}'
+    + (extraCss||'')
+    + '</style><style>' + styles + '</style>'
+    + '</head><body>' + el.innerHTML + '</body></html>';
+
+  openPrintPreview(html, titre||'Document');
+}
+
 function openPrintPreview(html, titre) {
   _ppHtml = html;
   _ppTitle = titre || 'Aperçu document';
@@ -37349,7 +37380,7 @@ function genererEtatPDF(opts) {
 
   var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
     + '<title>' + escHtml(titre + (ref ? ' ' + ref : '')) + '</title>' + css + '</head><body>'
-    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>'
+    + '<div class="no-print"><button onclick="_printFromElement ? _printFromElement(document.body.id||document.body.parentElement.id,\'Itinéraire\') : window.print();">🖨️ Imprimer / Enregistrer en PDF</button>'
     +   '<button class="sec" onclick="window.close()">Fermer</button></div>'
     + '<table class="page-table">'
     +   '<thead><tr><td>' + _enteteEtatHTML(opts, s) + '</td></tr></thead>'
