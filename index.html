@@ -262,6 +262,19 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
   display:flex; align-items:center; gap:8px;
 }
 .nav-section::after { content:''; flex:1; height:1px; background:rgba(184,115,51,0.15); }
+/* ── Sidebar repliable (arborescence +/−) ── */
+.nav-section { cursor:pointer; user-select:none; }
+.nav-section::after { order:2; }
+.nav-toggle { order:3; margin-left:8px; flex-shrink:0; width:14px; text-align:center; font-size:13px; font-weight:700; color:#4A8FD4; line-height:1; }
+.nav-group-badge { margin-left:6px; background:var(--rouge); color:#fff; font-size:9px; font-weight:700; padding:1px 5px; border-radius:10px; min-width:14px; text-align:center; display:none; order:1; }
+.nav-group > .nav-section .nav-toggle::before { content:'\2212'; }            /* − */
+.nav-group.collapsed > .nav-section .nav-toggle::before { content:'+'; }
+.nav-section:hover .nav-toggle { color:#FFFFFF; }
+.nav-group.collapsed > .nav-group-body { display:none; }
+.nav-allcollapse { display:flex; gap:10px; justify-content:flex-end; padding:6px 16px 2px; }
+.nav-allcollapse span { cursor:pointer; color:#4A8FD4; font-size:9px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
+.nav-allcollapse span:hover { color:#FFFFFF; }
+
 .nav-step { width:16px; height:16px; border-radius:50%; background:rgba(184,115,51,0.20); display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#D4956A; flex-shrink:0; }
 
 .nav-item {
@@ -2095,6 +2108,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   <div class="app-body">
     <!-- ══ Sidebar — Marche en avant 1→6 ══ -->
     <nav class="sidebar" id="main-sidebar">
+
       <div class="sidebar-logo">
         <div class="sidebar-logo-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="url(#grad1)"/><defs><linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40"><stop offset="0%" stop-color="#2563EB"/><stop offset="100%" stop-color="#1D4ED8"/></linearGradient></defs><path d="M8 28 L14 18 L20 22 L26 12 L32 16" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 12 L32 16 L28 15" fill="#2563EB"/><rect x="8" y="20" width="5" height="8" rx="1" fill="white" opacity="0.9"/><rect x="16" y="23" width="5" height="5" rx="1" fill="white" opacity="0.7"/><text x="20" y="38" text-anchor="middle" font-size="5" fill="#FFFFFF" font-weight="bold">ERP</text></svg></div>
         <div>
@@ -2104,198 +2118,245 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
 
       <!-- ══ MARCHE EN AVANT : flux logique du promoteur immobilier ══
-           ● Direction → 1 Foncier → 2 Montage → 3 Travaux → 4 Commercial
-           → 5 Ventes → 6 Recouvrement → 7 Livraison → 8 Finance → 9 RH
-           → Transversal (Collab · Portail · Système)
+           ● Pilotage → 1 Foncier → 2 Montage → 3 Chantier → 4 Commercial
+           → 5 Ventes → 6 Recouvrement → 7 Livraison → 8 Finance
+           → 9 Juridique → 10 RH → Transversal (Collab · Système)
       ══════════════════════════════════════════════════════════════════ -->
 
       <!-- ● DIRECTION -->
-      <div class="nav-section"><span class="nav-step">●</span><span>Direction</span></div>
-      <div class="nav-item active" onclick="goTo('dashboard')" data-page="dashboard">
+
+      <div class="nav-allcollapse"><span onclick="collapseAllNav(true)">Déployer tout</span><span onclick="collapseAllNav(false)">Réduire tout</span></div>
+
+      <div class="nav-group" id="navgrp-0" data-group="0">
+        <div class="nav-section" onclick="toggleNavGroup(0)"><span class="nav-group-badge" id="grpbadge-0"></span><span class="nav-step">●</span><span>Pilotage</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item active" onclick="goTo('dashboard')" data-page="dashboard">
         <span class="nav-icon">📊</span><span>Tableau de bord</span>
       </div>
+        </div>
+      </div>
 
-      <!-- ÉTAPE 1 : FONCIER — prospecter, acquérir et sécuriser le terrain -->
-      <div class="nav-section"><span class="nav-step">1</span><span>Foncier &amp; Lots</span></div>
-      <div class="nav-item" onclick="goTo('filiere')" data-page="filiere">
+      <div class="nav-group" id="navgrp-1" data-group="1">
+        <div class="nav-section" onclick="toggleNavGroup(1)"><span class="nav-group-badge" id="grpbadge-1"></span><span class="nav-step">1</span><span>Foncier (amont)</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('filiere')" data-page="filiere">
         <span class="nav-icon">🔗</span><span>Filière Foncière</span>
       </div>
-      <div class="nav-item" onclick="goTo('foncier')" data-page="foncier">
+          <div class="nav-item" onclick="goTo('foncier')" data-page="foncier">
         <span class="nav-icon">🗺️</span><span>Portefeuille Foncier</span>
       </div>
-      <div class="nav-item" onclick="goTo('foncierops')" data-page="foncierops">
+          <div class="nav-item" onclick="goTo('foncierops')" data-page="foncierops">
         <span class="nav-icon">🌍</span><span>Acquisition &amp; Aménagement Foncier</span>
       </div>
-      <div class="nav-item" onclick="goTo('lots')" data-page="lots">
-        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
-      </div>
-      <div class="nav-item" onclick="goTo('juridique')" data-page="juridique">
-        <span class="nav-icon">⚖️</span><span>Dossiers Juridiques</span>
-        <span class="nav-badge" id="badge-juridique" style="display:none;">!</span>
+        </div>
       </div>
 
-      <!-- ÉTAPE 2 : MONTAGE — concevoir et contractualiser le programme -->
-      <div class="nav-section"><span class="nav-step">2</span><span>Montage du Programme</span></div>
-      <div class="nav-item" onclick="goTo('programmes')" data-page="programmes">
+      <div class="nav-group" id="navgrp-2" data-group="2">
+        <div class="nav-section" onclick="toggleNavGroup(2)"><span class="nav-group-badge" id="grpbadge-2"></span><span class="nav-step">2</span><span>Montage du Programme</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('programmes')" data-page="programmes">
         <span class="nav-icon">🏗️</span><span>Programmes</span>
       </div>
-      <div class="nav-item" onclick="goTo('conception')" data-page="conception">
+          <div class="nav-item" onclick="goTo('lots')" data-page="lots">
+        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
+      </div>
+          <div class="nav-item" onclick="goTo('conception')" data-page="conception">
         <span class="nav-icon">📐</span><span>Plans &amp; Conception</span>
       </div>
-      <div class="nav-item" onclick="goTo('constructeurs')" data-page="constructeurs">
+          <div class="nav-item" onclick="goTo('constructeurs')" data-page="constructeurs">
         <span class="nav-icon">👷</span><span>Constructeurs</span>
       </div>
-      <div class="nav-item" onclick="goTo('conventions')" data-page="conventions">
+          <div class="nav-item" onclick="goTo('conventions')" data-page="conventions">
         <span class="nav-icon">📋</span><span>Conventions</span>
         <span class="nav-badge" id="badge-conventions" style="display:none;">!</span>
       </div>
-
-      <!-- ÉTAPE 3 : ÉTUDES & CHANTIER — estimer puis construire -->
-      <div class="nav-section"><span class="nav-step">3</span><span>Études &amp; Chantier</span></div>
-      <div class="nav-item" onclick="goTo('dqe')" data-page="dqe">
-        <span class="nav-icon">📊</span><span>DQE &amp; Coût de revient</span>
+        </div>
       </div>
-      <div class="nav-item" onclick="goTo('debourse')" data-page="debourse">
+
+      <div class="nav-group" id="navgrp-3" data-group="3">
+        <div class="nav-section" onclick="toggleNavGroup(3)"><span class="nav-group-badge" id="grpbadge-3"></span><span class="nav-step">3</span><span>Études &amp; Chantier</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('debourse')" data-page="debourse">
         <span class="nav-icon">🧱</span><span>Étude de Prix &amp; Déboursé Sec</span>
       </div>
-      <div class="nav-item" onclick="goTo('amenagement')" data-page="amenagement">
+          <div class="nav-item" onclick="goTo('dqe')" data-page="dqe">
+        <span class="nav-icon">📊</span><span>DQE &amp; Coût de revient</span>
+      </div>
+          <div class="nav-item" onclick="goTo('amenagement')" data-page="amenagement">
         <span class="nav-icon">🚧</span><span>Marchés d'Aménagement (VRD)</span>
       </div>
-      <div class="nav-item" onclick="goTo('avancement')" data-page="avancement">
-        <span class="nav-icon">📈</span><span>Suivi Chantiers</span>
-      </div>
-      <div class="nav-item" onclick="goTo('stock')" data-page="stock">
-        <span class="nav-icon">📦</span><span>Stock Materiaux</span>
-      </div>
-      <div class="nav-item" onclick="goTo('achats')" data-page="achats">
+          <div class="nav-item" onclick="goTo('achats')" data-page="achats">
         <span class="nav-icon">🛒</span><span>Achats &amp; Commandes</span>
       </div>
-      <div class="nav-item" onclick="goTo('validations')" data-page="validations">
+          <div class="nav-item" onclick="goTo('stock')" data-page="stock">
+        <span class="nav-icon">📦</span><span>Stock Materiaux</span>
+      </div>
+          <div class="nav-item" onclick="goTo('avancement')" data-page="avancement">
+        <span class="nav-icon">📈</span><span>Suivi Chantiers</span>
+      </div>
+          <div class="nav-item" onclick="goTo('validations')" data-page="validations">
         <span class="nav-icon">✅</span><span>Validations</span>
       </div>
-      <div class="nav-item" onclick="goTo('recliv')" data-page="recliv">
+          <div class="nav-item" onclick="goTo('recliv')" data-page="recliv">
         <span class="nav-icon">📦</span><span>Réception &amp; Livraison</span>
       </div>
-
-      <!-- ÉTAPE 4 : COMMERCIAL — prospecter et convertir -->
-      <div class="nav-section"><span class="nav-step">4</span><span>Commercial &amp; CRM</span></div>
-      <div class="nav-item" onclick="goTo('leads')" data-page="leads">
-        <span class="nav-icon">🎯</span><span>Pipeline Leads</span>
-        <span class="nav-badge" id="badge-leads" style="display:none;">0</span>
-      </div>
-      <div class="nav-item" onclick="goTo('crm-pac')" data-page="crm-pac">
-        <span class="nav-icon">📣</span><span>Plan d'Action Commercial</span>
-      </div>
-      <div class="nav-item" onclick="goTo('crm-carte')" data-page="crm-carte">
-        <span class="nav-icon">📍</span><span>Carte &amp; Géoloc.</span>
-      </div>
-      <div class="nav-item" onclick="goTo('crm-itineraires')" data-page="crm-itineraires">
-        <span class="nav-icon">🧭</span><span>Itinéraires terrain</span>
-      </div>
-      <div class="nav-item" onclick="goTo('crm-rapports')" data-page="crm-rapports">
-        <span class="nav-icon">📊</span><span>Rapports Commerciaux</span>
-      </div>
-      <div class="nav-item" onclick="goTo('crm-apporteurs')" data-page="crm-apporteurs">
-        <span class="nav-icon">🤝</span><span>Apporteurs d'affaire</span>
+        </div>
       </div>
 
-      <!-- ÉTAPE 5 : VENTES — réserver, signer, formaliser -->
-      <div class="nav-section"><span class="nav-step">5</span><span>Ventes &amp; Contrats</span></div>
-      <div class="nav-item" onclick="goTo('clients')" data-page="clients">
-        <span class="nav-icon">👥</span><span>Souscripteurs</span>
-        <span class="nav-badge" id="badge-retard" style="display:none;">0</span>
-      </div>
-
-      <!-- ÉTAPE 6 : RECOUVREMENT — encaisser les échéances -->
-      <div class="nav-section"><span class="nav-step">6</span><span>Recouvrement</span></div>
-      <div class="nav-item" onclick="goTo('paiements')" data-page="paiements">
-        <span class="nav-icon">💳</span><span>Paiements</span>
-      </div>
-      <div class="nav-item" onclick="goTo('relances')" data-page="relances">
-        <span class="nav-icon">🔔</span><span>Relances</span>
-        <span class="nav-badge" id="badge-relance" style="display:none;">0</span>
-      </div>
-
-      <!-- ÉTAPE 7 : LIVRAISON & SAV — remettre les clés -->
-      <div class="nav-section"><span class="nav-step">7</span><span>Livraison &amp; SAV</span></div>
-      <div class="nav-item" onclick="goTo('portail-souscripteur')" data-page="portail-souscripteur">
-        <span class="nav-icon">🔑</span><span>Espace souscripteur</span>
-      </div>
-      <div class="nav-item" onclick="goTo('portail-apporteur')" data-page="portail-apporteur">
-        <span class="nav-icon">🤝</span><span>Portail Apporteur</span>
-      </div>
-      <div class="nav-item" onclick="goTo('archives-docs')" data-page="archives-docs">
-        <span class="nav-icon">📁</span><span>Archives documentaires</span>
-      </div>
-
-      <!-- ÉTAPE 8 : FINANCE — piloter les flux financiers -->
-      <div class="nav-section"><span class="nav-step">8</span><span>Finance SYSCOHADA</span></div>
-      <div class="nav-item" onclick="goTo('comptabilite')" data-page="comptabilite">
-        <span class="nav-icon">📒</span><span>Comptabilité</span>
-      </div>
-      <div class="nav-item" onclick="goTo('tresorerie-page')" data-page="tresorerie-page">
-        <span class="nav-icon">💵</span><span>Trésorerie</span>
-      </div>
-      <div class="nav-item" onclick="goTo('previsionnel')" data-page="previsionnel">
-        <span class="nav-icon">📈</span><span>Prévisionnel / BP</span>
-      </div>
-
-      <!-- ÉTAPE 9 : RH — gérer les ressources humaines -->
-      <div class="nav-section"><span class="nav-step">9</span><span>Ressources Humaines</span></div>
-      <div class="nav-item" onclick="goTo('rh-employes')" data-page="rh-employes">
-        <span class="nav-icon">👤</span><span>Employés</span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-pointage')" data-page="rh-pointage">
-        <span class="nav-icon">⏱️</span><span>Pointage &amp; Présences</span>
-        <span class="nav-badge" id="badge-pointage" style="display:none;">!</span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-paie')" data-page="rh-paie">
-        <span class="nav-icon">💼</span><span>Paie &amp; Bulletins</span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-declarations')" data-page="rh-declarations">
-        <span class="nav-icon">📑</span><span>Déclarations Sociales</span>
-        <span class="nav-badge" id="badge-declarations" style="display:none;">!</span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-livre-paie')" data-page="rh-livre-paie">
-        <span class="nav-icon">📒</span><span>Livre de Paie</span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-conges')" data-page="rh-conges">
-        <span class="nav-icon">🌴</span><span>Congés &amp; Absences</span>
-        <span class="nav-badge" id="badge-conges" style="display:none;"></span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-recrutement')" data-page="rh-recrutement">
-        <span class="nav-icon">🎯</span><span>Recrutement</span>
-        <span class="nav-badge" id="badge-recrutement" style="display:none;"></span>
-      </div>
-      <div class="nav-item" onclick="goTo('rh-formations')" data-page="rh-formations">
-        <span class="nav-icon">📚</span><span>Formations &amp; FDFP</span>
-      </div>
-
-      <!-- ── TRANSVERSAL (hors flux métier) ──────────────────────── -->
-      <div class="nav-section"><span class="nav-step">🤝</span><span>Collaboration</span></div>
-      <div class="nav-item" onclick="goTo('accueil-visites')" data-page="accueil-visites">
+      <div class="nav-group" id="navgrp-4" data-group="4">
+        <div class="nav-section" onclick="toggleNavGroup(4)"><span class="nav-group-badge" id="grpbadge-4"></span><span class="nav-step">4</span><span>Commercial &amp; CRM</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('accueil-visites')" data-page="accueil-visites">
         <span class="nav-icon">🏢</span><span>Accueil &amp; Visites</span>
         <span class="nav-badge" id="badge-visites-attente" style="display:none;">0</span>
       </div>
-      <div class="nav-item" onclick="goTo('calendrier')" data-page="calendrier">
+          <div class="nav-item" onclick="goTo('leads')" data-page="leads">
+        <span class="nav-icon">🎯</span><span>Pipeline Leads</span>
+        <span class="nav-badge" id="badge-leads" style="display:none;">0</span>
+      </div>
+          <div class="nav-item" onclick="goTo('crm-pac')" data-page="crm-pac">
+        <span class="nav-icon">📣</span><span>Plan d'Action Commercial</span>
+      </div>
+          <div class="nav-item" onclick="goTo('crm-carte')" data-page="crm-carte">
+        <span class="nav-icon">📍</span><span>Carte &amp; Géoloc.</span>
+      </div>
+          <div class="nav-item" onclick="goTo('crm-itineraires')" data-page="crm-itineraires">
+        <span class="nav-icon">🧭</span><span>Itinéraires terrain</span>
+      </div>
+          <div class="nav-item" onclick="goTo('crm-rapports')" data-page="crm-rapports">
+        <span class="nav-icon">📊</span><span>Rapports Commerciaux</span>
+      </div>
+          <div class="nav-item" onclick="goTo('crm-apporteurs')" data-page="crm-apporteurs">
+        <span class="nav-icon">🤝</span><span>Apporteurs d'affaire</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-5" data-group="5">
+        <div class="nav-section" onclick="toggleNavGroup(5)"><span class="nav-group-badge" id="grpbadge-5"></span><span class="nav-step">5</span><span>Ventes &amp; Contrats</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('clients')" data-page="clients">
+        <span class="nav-icon">👥</span><span>Souscripteurs</span>
+        <span class="nav-badge" id="badge-retard" style="display:none;">0</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-6" data-group="6">
+        <div class="nav-section" onclick="toggleNavGroup(6)"><span class="nav-group-badge" id="grpbadge-6"></span><span class="nav-step">6</span><span>Recouvrement</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('paiements')" data-page="paiements">
+        <span class="nav-icon">💳</span><span>Paiements</span>
+      </div>
+          <div class="nav-item" onclick="goTo('relances')" data-page="relances">
+        <span class="nav-icon">🔔</span><span>Relances</span>
+        <span class="nav-badge" id="badge-relance" style="display:none;">0</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-7" data-group="7">
+        <div class="nav-section" onclick="toggleNavGroup(7)"><span class="nav-group-badge" id="grpbadge-7"></span><span class="nav-step">7</span><span>Livraison &amp; SAV</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('portail-souscripteur')" data-page="portail-souscripteur">
+        <span class="nav-icon">🔑</span><span>Espace souscripteur</span>
+      </div>
+          <div class="nav-item" onclick="goTo('portail-apporteur')" data-page="portail-apporteur">
+        <span class="nav-icon">🤝</span><span>Portail Apporteur</span>
+      </div>
+          <div class="nav-item" onclick="goTo('archives-docs')" data-page="archives-docs">
+        <span class="nav-icon">📁</span><span>Archives documentaires</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-8" data-group="8">
+        <div class="nav-section" onclick="toggleNavGroup(8)"><span class="nav-group-badge" id="grpbadge-8"></span><span class="nav-step">8</span><span>Finance SYSCOHADA</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('comptabilite')" data-page="comptabilite">
+        <span class="nav-icon">📒</span><span>Comptabilité</span>
+      </div>
+          <div class="nav-item" onclick="goTo('tresorerie-page')" data-page="tresorerie-page">
+        <span class="nav-icon">💵</span><span>Trésorerie</span>
+      </div>
+          <div class="nav-item" onclick="goTo('previsionnel')" data-page="previsionnel">
+        <span class="nav-icon">📈</span><span>Prévisionnel / BP</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-9" data-group="9">
+        <div class="nav-section" onclick="toggleNavGroup(9)"><span class="nav-group-badge" id="grpbadge-9"></span><span class="nav-step">9</span><span>Juridique &amp; Contentieux</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('juridique')" data-page="juridique">
+        <span class="nav-icon">⚖️</span><span>Dossiers Juridiques</span>
+        <span class="nav-badge" id="badge-juridique" style="display:none;">!</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-10" data-group="10">
+        <div class="nav-section" onclick="toggleNavGroup(10)"><span class="nav-group-badge" id="grpbadge-10"></span><span class="nav-step">10</span><span>Ressources Humaines</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('rh-employes')" data-page="rh-employes">
+        <span class="nav-icon">👤</span><span>Employés</span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-pointage')" data-page="rh-pointage">
+        <span class="nav-icon">⏱️</span><span>Pointage &amp; Présences</span>
+        <span class="nav-badge" id="badge-pointage" style="display:none;">!</span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-paie')" data-page="rh-paie">
+        <span class="nav-icon">💼</span><span>Paie &amp; Bulletins</span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-declarations')" data-page="rh-declarations">
+        <span class="nav-icon">📑</span><span>Déclarations Sociales</span>
+        <span class="nav-badge" id="badge-declarations" style="display:none;">!</span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-livre-paie')" data-page="rh-livre-paie">
+        <span class="nav-icon">📒</span><span>Livre de Paie</span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-conges')" data-page="rh-conges">
+        <span class="nav-icon">🌴</span><span>Congés &amp; Absences</span>
+        <span class="nav-badge" id="badge-conges" style="display:none;"></span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-recrutement')" data-page="rh-recrutement">
+        <span class="nav-icon">🎯</span><span>Recrutement</span>
+        <span class="nav-badge" id="badge-recrutement" style="display:none;"></span>
+      </div>
+          <div class="nav-item" onclick="goTo('rh-formations')" data-page="rh-formations">
+        <span class="nav-icon">📚</span><span>Formations &amp; FDFP</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-11" data-group="11">
+        <div class="nav-section" onclick="toggleNavGroup(11)"><span class="nav-group-badge" id="grpbadge-11"></span><span class="nav-step">🤝</span><span>Collaboration</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('calendrier')" data-page="calendrier">
         <span class="nav-icon">📅</span><span>Calendrier partagé</span>
       </div>
-      <div class="nav-item" onclick="goTo('messagerie')" data-page="messagerie">
+          <div class="nav-item" onclick="goTo('messagerie')" data-page="messagerie">
         <span class="nav-icon">💬</span><span>Messagerie interne</span>
         <span class="nav-badge" id="badge-messages" style="display:none;">0</span>
       </div>
-      <div class="nav-item" onclick="goTo('reunion-direction')" data-page="reunion-direction">
+          <div class="nav-item" onclick="goTo('reunion-direction')" data-page="reunion-direction">
         <span class="nav-icon">🏛️</span><span>Réunions Direction</span>
         <span class="nav-badge" id="badge-reunions-retard" style="display:none;">0</span>
       </div>
+        </div>
+      </div>
 
-      <div class="nav-section"><span class="nav-step">⚙</span><span>Système</span></div>
-      <div class="nav-item" onclick="goTo('parametres')" data-page="parametres">
+      <div class="nav-group" id="navgrp-12" data-group="12">
+        <div class="nav-section" onclick="toggleNavGroup(12)"><span class="nav-group-badge" id="grpbadge-12"></span><span class="nav-step">⚙</span><span>Système</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('parametres')" data-page="parametres">
         <span class="nav-icon">⚙️</span><span>Paramètres</span>
       </div>
-      <div class="nav-item" onclick="goTo('portail')" data-page="portail">
+          <div class="nav-item" onclick="goTo('portail')" data-page="portail">
         <span class="nav-icon">🌐</span><span>Site / Portail</span>
         <span class="nav-badge" id="badge-portail-msg" style="display:none;">0</span>
+      </div>
+        </div>
       </div>
 
     </nav>
@@ -15805,6 +15866,78 @@ function logout(forced) {
 /* ──────────────────────────────────────────────────────
    NAVIGATION
 ────────────────────────────────────────────────────── */
+
+/* ── Sidebar repliable (groupes +/−) ───────────────────────────────── */
+
+/* ── Badges de groupe : remonte les alertes sur l'en-tête replié ──────────
+   Appelé après chaque mise à jour de badge enfant.                         */
+var _BADGE_TO_GROUP = {"badge-conventions": 2, "badge-visites-attente": 4, "badge-leads": 4, "badge-retard": 6, "badge-relance": 6, "badge-juridique": 9, "badge-pointage": 10, "badge-declarations": 10, "badge-conges": 10, "badge-recrutement": 10, "badge-messages": 11, "badge-reunions-retard": 11, "badge-portail-msg": 12};
+
+function refreshGroupBadges(){
+  /* Vider tous les badges de groupe */
+  document.querySelectorAll('.nav-group-badge').forEach(function(b){
+    b.style.display='none'; b.textContent='';
+  });
+  /* Agréger les badges enfants visibles → badge de groupe */
+  var totals={};
+  Object.keys(_BADGE_TO_GROUP).forEach(function(bid){
+    var grp=_BADGE_TO_GROUP[bid];
+    var el=document.getElementById(bid);
+    if(!el || el.style.display==='none') return;
+    var v=el.textContent.trim();
+    /* Compter : chiffre → sommer, '!' ou autre → marquer */
+    if(!totals[grp]) totals[grp]={n:0,excl:false};
+    var n=parseInt(v,10);
+    if(!isNaN(n) && n>0) totals[grp].n+=n;
+    else if(v) totals[grp].excl=true;
+  });
+  /* Afficher uniquement si le groupe est REPLIÉ */
+  Object.keys(totals).forEach(function(grp){
+    var g=document.getElementById('navgrp-'+grp);
+    if(!g || !g.classList.contains('collapsed')) return;
+    var gb=document.getElementById('grpbadge-'+grp);
+    if(!gb) return;
+    var t=totals[grp];
+    var label = t.n>0 ? (t.n>99?'99+':String(t.n)) : (t.excl?'!':'');
+    if(!label) return;
+    gb.textContent=label; gb.style.display='inline-flex';
+  });
+}
+
+function toggleNavGroup(idx){
+  var g=document.getElementById('navgrp-'+idx);
+  if(g){ g.classList.toggle('collapsed'); _saveNavGroups(); refreshGroupBadges(); }
+}
+function _saveNavGroups(){
+  try{
+    var st={};
+    document.querySelectorAll('.nav-group').forEach(function(g){ st[g.getAttribute('data-group')]=g.classList.contains('collapsed'); });
+    localStorage.setItem('pici_nav_groups', JSON.stringify(st));
+  }catch(e){}
+}
+function _expandActiveGroup(){
+  var act=document.querySelector('.nav-item.active');
+  if(act && act.closest){ var g=act.closest('.nav-group'); if(g) g.classList.remove('collapsed'); }
+}
+function _restoreNavGroups(){
+  var st={};
+  try{ st=JSON.parse(localStorage.getItem('pici_nav_groups')||'{}'); }catch(e){}
+  document.querySelectorAll('.nav-group').forEach(function(g){
+    var k=g.getAttribute('data-group');
+    if(st[k]) g.classList.add('collapsed'); else g.classList.remove('collapsed');
+  });
+  _expandActiveGroup(); try{refreshGroupBadges();}catch(e){}
+}
+function collapseAllNav(expand){
+  document.querySelectorAll('.nav-group').forEach(function(g){
+    if(g.getAttribute('data-group')==='0') return;       /* Pilotage toujours visible */
+    if(expand) g.classList.remove('collapsed'); else g.classList.add('collapsed');
+  });
+  _expandActiveGroup(); _saveNavGroups(); try{refreshGroupBadges();}catch(e){}
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', _restoreNavGroups);
+else setTimeout(_restoreNavGroups,0);
+
 function goTo(page) {
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
@@ -15813,6 +15946,7 @@ function goTo(page) {
   var navEl = document.querySelector('[data-page="' + page + '"]');
   if (navEl) navEl.classList.add('active');
   APP.currentPage = page;
+  if(typeof _expandActiveGroup==='function') _expandActiveGroup();
   if (typeof crmStopPolling === 'function') crmStopPolling();
   if (page === 'dashboard') refreshDashboard();
   if (page === 'clients') renderClients();
@@ -23899,7 +24033,7 @@ function checkDeclBadge() {
   var badge = document.getElementById('badge-declarations');
   if (badge) {
     badge.textContent = retard;
-    badge.style.display = retard > 0 ? 'inline-flex' : 'none';
+    badge.style.display = retard > 0 ? 'inline-flex' : 'none'; try{refreshGroupBadges();}catch(e){}
   }
 }
 
@@ -26246,7 +26380,7 @@ function checkPointageBadge() {
   var pointed=DATA.pointages.filter(function(p){return p.date===today;}).map(function(p){return p.employe_id;});
   var missing=actifs.filter(function(e){return !pointed.includes(e.id);}).length;
   var badge=document.getElementById('badge-pointage');
-  if (badge) { badge.textContent=missing; badge.style.display=missing>0?'inline-flex':'none'; }
+  if (badge) { badge.textContent=missing; badge.style.display=missing>0?'inline-flex':'none'; try{refreshGroupBadges();}catch(e){} }
 }
 
 function joursOuvresDansMois(mois) {
@@ -32753,7 +32887,7 @@ function updateBadgeMessages() {
   var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
   var nonLus=(DATA.messages||[]).filter(function(m){return !m.lu&&m.expediteur_id!==userId;}).length;
   var badge=document.getElementById('badge-messages');
-  if(badge){ badge.textContent=nonLus; badge.style.display=nonLus>0?'inline-flex':'none'; }
+  if(badge){ badge.textContent=nonLus; badge.style.display=nonLus>0?'inline-flex':'none'; try{refreshGroupBadges();}catch(e){} }
 }
 
 function renderConversations() {
@@ -33135,7 +33269,7 @@ function updateFoncierKPIs() {
   el('kpi-contentieux', contentieux);
   if (contentieux > 0) {
     var badgeJur = document.getElementById('badge-juridique');
-    if (badgeJur) { badgeJur.textContent = contentieux; badgeJur.style.display = 'inline-flex'; }
+    if (badgeJur) { badgeJur.textContent = contentieux; badgeJur.style.display = 'inline-flex'; try{refreshGroupBadges();}catch(e){} }
   }
 }
 
@@ -42482,14 +42616,20 @@ function applyRoleToSidebar() {
     navItem.style.display = ok ? '' : 'none';
     /* Masquer aussi la nav-section parente si tous ses enfants sont cachés */
   });
-  /* Masquer les nav-section orphelines */
-  document.querySelectorAll('.nav-section').forEach(function(section) {
-    var next = section.nextElementSibling;
+  /* Masquer un GROUPE entier (en-tête + corps) si aucun module visible — structure repliable */
+  document.querySelectorAll('.nav-group').forEach(function(group) {
+    if (group.getAttribute('data-group') === '0') { group.style.display = ''; return; } /* Pilotage toujours visible */
     var hasVisible = false;
+    group.querySelectorAll('.nav-item[data-page]').forEach(function(it) {
+      if (it.style.display !== 'none') hasVisible = true;
+    });
+    group.style.display = hasVisible ? '' : 'none';
+  });
+  /* Repli (compat. structure non groupée éventuelle) : nav-section orphelines */
+  document.querySelectorAll('.nav-group-body .nav-section, .sidebar > .nav-section').forEach(function(section) {
+    var next = section.nextElementSibling, hasVisible = false;
     while (next && !next.classList.contains('nav-section')) {
-      if (next.classList.contains('nav-item') && next.style.display !== 'none') {
-        hasVisible = true; break;
-      }
+      if (next.classList.contains('nav-item') && next.style.display !== 'none') { hasVisible = true; break; }
       next = next.nextElementSibling;
     }
     section.style.display = hasVisible ? '' : 'none';
