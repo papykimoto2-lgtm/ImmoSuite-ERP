@@ -21522,7 +21522,10 @@ var ALL_MODULES = [
   'Carte & Geoloc','Lots & Reservations','Souscripteurs','Paiements',
   'Relances','Comptabilite','Tresorerie',
   'RH Employes','Pointage','Paie','Conges RH','Recrutement','Formations','Livre Paie',
-  'Rapports Commerciaux','Messagerie','Parametres'
+  'Rapports Commerciaux','Messagerie','Parametres',
+  'Filiere Fonciere','Acquisition & Amenagement Foncier','Etude de Prix & Debourse',
+  'Achats & Commandes','Stock Materiaux','Validations','Reception & Livraison',
+  'Portail','Portail Apporteur'
 ];
 
 // ── Rôles système (non modifiables, non supprimables) ────────────────────────
@@ -21555,11 +21558,26 @@ function getAllRoles() {
 }
 
 // ── Charger les rôles custom depuis IndexedDB ─────────────────────────────────
+// Les rôles système modifiés sont persistés comme "surcharge" (is_override + role_id).
+// On les réapplique sur SYSTEM_ROLES au chargement plutôt que de les traiter comme un
+// rôle à part entière — sinon ils réapparaissent comme un doublon fantôme (ex: "manager_override")
+// et la personnalisation du rôle système d'origine est perdue à chaque rechargement.
 async function loadCustomRoles() {
   try {
     var rows = await dbGetAll('custom_roles');
     CUSTOM_ROLES = {};
-    rows.forEach(function(r){ CUSTOM_ROLES[r.id] = r; });
+    rows.forEach(function(r){
+      if (r.is_override && r.role_id && SYSTEM_ROLES[r.role_id]) {
+        var base = SYSTEM_ROLES[r.role_id];
+        base.permissions  = r.permissions || base.permissions;
+        base.label         = r.label || base.label;
+        base.icon          = r.icon  || base.icon;
+        base.level         = (r.level !== undefined && r.level !== null) ? r.level : base.level;
+        base.description   = (r.description !== undefined) ? r.description : base.description;
+      } else {
+        CUSTOM_ROLES[r.id] = r;
+      }
+    });
   } catch(e) { CUSTOM_ROLES = {}; }
 }
 
@@ -21604,14 +21622,17 @@ var MODULE_GROUPS = {
   general:    ['Tableau de bord','Accueil','Messagerie'],
   commercial: ['Pipeline Leads','Plan Action Commercial','Carte & Geoloc','Lots & Reservations',
                'Souscripteurs','Relances','Rapports Commerciaux'],
-  immobilier: ['Foncier','Programmes','Plans & Conception','Constructeurs','Conventions',
+  immobilier: ['Foncier','Filiere Fonciere','Acquisition & Amenagement Foncier','Programmes',
+               'Plans & Conception','Constructeurs','Conventions',
                'Suivi Chantiers','DQE & Cout de revient','Dossiers Juridiques'],
+  chantier:   ['Etude de Prix & Debourse','Achats & Commandes','Stock Materiaux','Validations','Reception & Livraison'],
   finance:    ['Paiements','Comptabilite','Tresorerie','Relances'],
   rh:         ['RH Employes','Pointage','Paie','Conges RH','Recrutement','Formations','Livre Paie'],
+  portails:   ['Portail','Portail Apporteur'],
   admin:      ['Parametres']
 };
-var GROUP_LABELS = { general:'🏠 Général', commercial:'🎯 Commercial', immobilier:'🏗️ Immobilier', finance:'💰 Finance', rh:'👥 RH & Paie', admin:'⚙️ Admin' };
-var GROUP_COLORS = { general:'#64748B', commercial:'#D97706', immobilier:'#0284C7', finance:'#059669', rh:'#7C3AED', admin:'#DC2626' };
+var GROUP_LABELS = { general:'🏠 Général', commercial:'🎯 Commercial', immobilier:'🏗️ Immobilier', chantier:'🧱 Achats & Chantier', finance:'💰 Finance', rh:'👥 RH & Paie', portails:'🌐 Portails externes', admin:'⚙️ Admin' };
+var GROUP_COLORS = { general:'#64748B', commercial:'#D97706', immobilier:'#0284C7', chantier:'#B45309', finance:'#059669', rh:'#7C3AED', portails:'#0891B2', admin:'#DC2626' };
 
 function toggleGroupModules(group, val) {
   (MODULE_GROUPS[group]||[]).forEach(function(mod) {
@@ -43420,7 +43441,16 @@ var PAGE_MODULE_MAP = {
   'amenagement':        'Foncier',
   'portail-souscripteur': null,  /* accès libre (portail client) */
   'archives-docs':      'Parametres',
-  'reunion-direction':  'Tableau de bord'
+  'reunion-direction':  'Tableau de bord',
+  'filiere':            'Filiere Fonciere',
+  'foncierops':         'Acquisition & Amenagement Foncier',
+  'debourse':           'Etude de Prix & Debourse',
+  'achats':             'Achats & Commandes',
+  'stock':              'Stock Materiaux',
+  'validations':        'Validations',
+  'recliv':             'Reception & Livraison',
+  'portail':            'Portail',
+  'portail-apporteur':  'Portail Apporteur'
 };
 
 /* ── 2. hasRole() corrigé — inclut manager + custom roles ── */
