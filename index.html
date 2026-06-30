@@ -33333,6 +33333,9 @@ function _ppLoad(forPrint) {
     var blob = new Blob([html], {type: 'text/html; charset=utf-8'});
     var url  = URL.createObjectURL(blob);
     frame.onload = function() { try { URL.revokeObjectURL(url); } catch(e){} frame.onload=null; };
+    /* [FIX 2026-06-30] Sécurité : un srcdoc résiduel (même vide) prime sur
+       src selon la spec HTML et empêcherait le nouveau document de s'afficher. */
+    frame.removeAttribute('srcdoc');
     frame.src = url;
   } catch(e) {
     /* Repli : srcdoc */
@@ -33386,7 +33389,19 @@ function _ppDownload() {
 function closePrintPreview() {
   document.getElementById('modal-print-preview').style.display = 'none';
   document.body.style.overflow = '';
-  document.getElementById('pp-frame').srcdoc = '';
+  /* [FIX 2026-06-30] Auparavant : frame.srcdoc = ''. Assigner srcdoc, même
+     vide, fait que le navigateur priorise désormais srcdoc sur src selon la
+     spec HTML : au prochain aperçu, _ppLoad() réaffecte frame.src (nouvelle
+     URL Blob) mais celui-ci était silencieusement ignoré tant que l'attribut
+     srcdoc restait présent (même vide) → aperçu vide au 2e essai sur un même
+     dossier, alors que le HTML généré était pourtant correct. On retire
+     complètement l'attribut au lieu de le vider, pour repartir d'une iframe
+     totalement vierge. */
+  var frame = document.getElementById('pp-frame');
+  if (frame) {
+    frame.removeAttribute('srcdoc');
+    frame.removeAttribute('src');
+  }
 }
 
 /* Fermer sur Echap */
