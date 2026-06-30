@@ -49847,7 +49847,14 @@ function crecEcheancierPDF(id) {
   var c = id ? (DATA.cessions_foncieres || []).find(function (x) { return x.id === id; }) : (DATA.cessions_foncieres || []).find(function (x) { return x.id === _crecId; });
   if (!c) return;
   var rows = crecEcheancier(c);
-  if (!rows.length) { toast('Définissez d\u2019abord une durée d\u2019échéancier', 'info'); return; }
+  if (!rows.length) {
+    /* [FIX 2026-06-30] Message plus visible et explicite : aucune fenêtre ne
+       doit jamais s'ouvrir tant qu'aucun plan (durée en mensualités) n'a été
+       enregistré pour ce dossier, pour éviter de laisser croire à un aperçu
+       d'impression vide/cassé. */
+    toast('Aucun plan d\u2019échéancier défini pour ' + (c.acquereur || 'cet acquéreur') + ' — renseignez d\u2019abord une durée (mensualités) puis cliquez sur « Enregistrer l\u2019échéancier ».', 'error');
+    return;
+  }
   var p = DATA.params || {}, soc = p.societe || 'La Société';
   var w = window.open('', '_blank', 'width=820,height=900');
   var trs = rows.map(function (r) {
