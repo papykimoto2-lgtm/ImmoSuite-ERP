@@ -2596,6 +2596,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="page-subtitle">Suivi des versements et des échéances</div>
           </div>
           <div class="spacer"></div>
+          <button class="btn btn-secondary" onclick="backfillEcrituresVersements()" title="Génère les écritures comptables manquantes pour les versements déjà saisis">🧾 Générer écritures manquantes</button>
           <button class="btn btn-primary" onclick="openPaiementModal()">+ Enregistrer un versement</button>
         </div>
 
@@ -17949,13 +17950,70 @@ function exportCommissionsCSV() {
   toast('Commissions exportées.','success');
 }
 
+/* ── ÉCRITURE COMPTABLE AUTOMATIQUE D'UN VERSEMENT (Débit Trésorerie / Crédit Client) ── */
+function _compteTresoVersement(mode) {
+  return mode === 'especes' ? '571' : (mode === 'mobile_money' ? '531' : '521');
+}
+async function genererEcritureVersement(versement) {
+  var client = DATA.clients.find(function(c){ return c.id === versement.client_id; }) || {};
+  var nomClient = (client.nom || '') + ' ' + (client.prenoms || '');
+  var compteTreso = _compteTresoVersement(versement.mode);
+  var estFrais = versement.type === 'frais_souscription';
+  var compteCredit = estFrais ? ((DATA.params || {}).compte_frais_souscription || '7088') : '4111';
+  var typeLabels = { apport: 'Apport initial', mensualite: 'Mensualité', regularisation: 'Régularisation', frais_souscription: 'Frais de souscription', autre: 'Versement' };
+  var ecr = {
+    id: 'ecr_vrs_' + versement.id,
+    ref: versement.ref || ('VRS-' + versement.id),
+    date: versement.date,
+    piece: versement.ref || '',
+    libelle: (typeLabels[versement.type] || 'Versement') + ' — ' + nomClient.trim(),
+    compte: compteTreso,
+    compte_debit: compteTreso,
+    compte_credit: compteCredit,
+    montant: parseFloat(versement.montant) || 0,
+    type: 'actif',
+    mode: versement.mode,
+    notes: versement.notes || '',
+    created_at: today()
+  };
+  var idx = DATA.ecritures.findIndex(function(e){ return e.id === ecr.id; });
+  if (idx >= 0) DATA.ecritures[idx] = ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures', ecr);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', ecr);
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildGrandLivre === 'function') buildGrandLivre();
+  return ecr;
+}
+async function supprimerEcritureVersement(versementId) {
+  var ecrId = 'ecr_vrs_' + versementId;
+  if (DATA.ecritures.some(function(e){ return e.id === ecrId; })) {
+    await deleteRecord('ecritures', ecrId, { skipIntegrity: true });
+  }
+}
+
+/* ── RATTRAPAGE : génère les écritures manquantes pour les versements saisis AVANT ce correctif ── */
+async function backfillEcrituresVersements() {
+  var manquants = DATA.versements.filter(function(v) {
+    return !DATA.ecritures.some(function(e){ return e.id === 'ecr_vrs_' + v.id; });
+  });
+  if (!manquants.length) { toast('Aucune écriture manquante — tout est déjà à jour.', 'success'); return; }
+  if (!confirm(manquants.length + ' versement(s) sans écriture comptable détecté(s).\nGénérer les écritures (Débit Trésorerie / Crédit Client) maintenant ?')) return;
+  for (var i = 0; i < manquants.length; i++) {
+    await genererEcritureVersement(manquants[i]);
+  }
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildGrandLivre === 'function') buildGrandLivre();
+  if (typeof buildBilan === 'function') buildBilan();
+  toast(manquants.length + ' écriture(s) générée(s) — Grand Livre et Balance mis à jour.', 'success');
+}
+
 async function savePaiement() {
   var cid = document.getElementById('v-client').value;
   var montant = parseFloat(document.getElementById('v-montant').value);
   var date = document.getElementById('v-date').value;
   if (!cid || !montant || !date) { toast('Client, montant et date sont obligatoires.', 'error'); return; }
 
-  // ── MODE ÉDITION : mise à jour + ré-impact des commissions ──
+  // ── MODE ÉDITION : mise à jour + ré-impact des commissions + ré-écriture comptable ──
   if (APP._editVersementId) {
     var vEdit = DATA.versements.find(function(x){ return x.id === APP._editVersementId; });
     if (vEdit) {
@@ -17971,10 +18029,11 @@ async function savePaiement() {
       await dbPut('versements', vEdit);
       if (typeof syncToSupabase === 'function') syncToSupabase('pi_versements', vEdit);
       await reimpacterCommissionsVersement(vEdit);
+      await genererEcritureVersement(vEdit);
       if (typeof majStatutLotClient === 'function') await majStatutLotClient(vEdit.client_id);
       APP._editVersementId = null;
       closeModal('modal-paiement');
-      toast('Versement modifié — commissions réimpactées.', 'success');
+      toast('Versement modifié — commissions et écriture comptable réimpactées.', 'success');
       renderVersements();
       if (typeof renderComptaVersements === 'function') renderComptaVersements();
       refreshDashboard();
@@ -18001,13 +18060,15 @@ async function savePaiement() {
   await dbPut('versements', versement);
   syncToSupabase('pi_versements', versement);
 
+  // ── Écriture comptable automatique (Débit Trésorerie / Crédit Client) ──────
+  await genererEcritureVersement(versement);
   // ── Génération automatique des commissions ─────────────────────────────────
   await genererCommissionsVersement(versement);
   // ── Statut du lot : passe « vendu » dès que le seuil d'immobilisation est atteint ──
   if (typeof majStatutLotClient === 'function') await majStatutLotClient(versement.client_id);
 
   closeModal('modal-paiement');
-  toast('Versement enregistré.', 'success');
+  toast('Versement enregistré — écriture ' + _compteTresoVersement(versement.mode) + '/' + (versement.type === 'frais_souscription' ? ((DATA.params||{}).compte_frais_souscription||'7088') : '4111') + ' créée.', 'success');
 
   // Afficher reçu
   showRecu(versement);
@@ -18064,10 +18125,13 @@ async function deleteVersement(id) {
   var clientId = v ? v.client_id : null;
   DATA.versements = DATA.versements.filter(function(v) { return v.id !== id; });
   await deleteRecord('versements', id);
+  await supprimerEcritureVersement(id);
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildGrandLivre === 'function') buildGrandLivre();
   if (clientId && typeof majStatutLotClient === 'function') await majStatutLotClient(clientId);
   renderVersements();
   refreshDashboard();
-  toast('Versement supprimé.', 'info');
+  toast('Versement et écriture comptable supprimés.', 'info');
 }
 
 function loadEcheancier() {
