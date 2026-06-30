@@ -23147,7 +23147,8 @@ function printBulletinData(d) {
     + '</tbody></table>');
   win.document.write('<div class="sign"><span>Signature Employé</span><span>Signature Employeur</span></div>');
   win.document.write('<div class="foot">Coût total employeur : '+fmtF(r.coutTotal)+' FCFA — Pour vous aider à faire valoir vos droits, conservez ce bulletin sans limitation de durée.</div>');
-  win.document.body.insertAdjacentHTML('beforeend',printQrFooter('BUL-'+(d&&d.nom?d.nom:'BULLETIN'))); win.document.write('</body></html>');
+  try{ win.document.body.insertAdjacentHTML('beforeend',printQrFooter('BUL-'+(d&&d.nom?d.nom:'BULLETIN'))); }catch(e){ console.warn('printQrFooter indisponible :', e); }
+  win.document.write('</body></html>');
   win.document.close();
   win.focus();
   setTimeout(function(){ win.print(); }, 250);
@@ -30124,7 +30125,10 @@ function updateRapportGauge(){var r=parseInt((document.getElementById('rch-avanc
 async function saveRapportChantier(){var convId=document.getElementById('rch-convention').value;if(!convId){toast('Sélectionnez une convention.','error');return;}var av=parseInt(document.getElementById('rch-avancement').value)||0;var r={id:APP.editingId||uid(),convention_id:convId,numero:document.getElementById('rch-numero').value.trim(),date_debut:document.getElementById('rch-date-debut').value,date_fin:document.getElementById('rch-date-fin').value,avancement:av,avancement_prevu:parseInt(document.getElementById('rch-avancement-prevu').value)||0,nb_ouvriers:parseInt(document.getElementById('rch-ouvriers').value)||0,meteo:document.getElementById('rch-meteo').value,travaux_realises:document.getElementById('rch-travaux-realises').value.trim(),travaux_prevus:document.getElementById('rch-travaux-prevus').value.trim(),difficultes:document.getElementById('rch-difficultes').value.trim(),depenses:parseFloat(document.getElementById('rch-depenses').value)||0,budget_cumul:parseFloat(document.getElementById('rch-budget-cumul').value)||0,observations:document.getElementById('rch-observations').value.trim(),valideur:document.getElementById('rch-valideur').value.trim(),statut:document.getElementById('rch-statut').value,created_at:APP.editingId?undefined:today()};if(APP.editingId){var idx=DATA.rapports_chantier.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.rapports_chantier[idx]=r;}else DATA.rapports_chantier.push(r);await dbPut('rapports_chantier',r);var conv=DATA.conventions.find(function(c){return c.id===convId;});if(conv&&av>=(conv.avancement||0)){conv.avancement=av;await dbPut('conventions',conv);}closeModal('modal-rapport-chantier');renderChantiersDashboard();renderRapports();renderConventions();toast('Rapport enregistré.','success');}
 function editRapportChantier(id){APP.editingId=id;openRapportChantier();setTimeout(function(){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=v||'';};el('rch-convention',r.convention_id);el('rch-numero',r.numero);el('rch-date-debut',r.date_debut);el('rch-date-fin',r.date_fin);el('rch-avancement',r.avancement);el('rch-avancement-prevu',r.avancement_prevu);el('rch-ouvriers',r.nb_ouvriers);el('rch-meteo',r.meteo);el('rch-travaux-realises',r.travaux_realises);el('rch-travaux-prevus',r.travaux_prevus);el('rch-difficultes',r.difficultes);el('rch-depenses',r.depenses);el('rch-budget-cumul',r.budget_cumul);el('rch-observations',r.observations);el('rch-valideur',r.valideur);el('rch-statut',r.statut);document.getElementById('rch-modal-title').textContent='Modifier rapport';updateRapportGauge();},120);}
 async function deleteRapport(id){if(!confirm('Supprimer ce rapport ?'))return;if(await deleteRecord('rapports_chantier',id)===false)return;renderRapports();toast('Supprimé.','info');}
-function printRapportId(id){var r=DATA.rapports_chantier.find(function(x){return x.id===id;});if(!r)return;var conv=DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:'—',objet:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var societe=DATA.params.societe||'ImmoSuite ERP';var ec=r.avancement-(r.avancement_prevu||r.avancement);/* [AUDIT FIX v17] Photos dans impression */var photosHtml='';if(r.photos&&r.photos.length){photosHtml='<h3>\u{1F4F8} Photos de chantier ('+r.photos.length+')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;">'+(r.photos.slice(0,9).map(function(p){return'<div style="text-align:center;"><img src="'+p.data+'" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"><div style="font-size:10px;color:#666;margin-top:2px;">'+p.legende+'</div></div>';}).join(''))+'</div>';}var win=window.open('','','width=850,height=750');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:16px 0 8px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #ddd;border-radius:8px;padding:10px 18px;margin:4px;text-align:center;min-width:90px;}.kv{font-size:18px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#888;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div><h1>📋 Rapport Hebdomadaire — Semaine du '+r.date_debut+(r.date_fin?' au '+r.date_fin:'')+'</h1><table><tr><td><strong>Convention :</strong> '+conv.numero+'</td><td><strong>Constructeur :</strong> '+constr.raison_sociale+'</td></tr></table><div><span class="kpi"><div class="kv">'+r.avancement+'%</div><div class="kl">Réalisé</div></span><span class="kpi"><div class="kv">'+(r.avancement_prevu||r.avancement)+'%</div><div class="kl">Prévu</div></span><span class="kpi"><div class="kv" style="color:'+(ec>=0?'#1A6B3A':'#C93535')+'">'+(ec>=0?'+':'')+ec+'%</div><div class="kl">Écart</div></span><span class="kpi"><div class="kv">'+r.nb_ouvriers+'</div><div class="kl">Ouvriers</div></span></div><h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'+(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')+photosHtml+'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
+/* [FIX 2026-06-30] Ancienne définition de printRapportId supprimée ici :
+   elle était dupliquée plus bas (fusionnée avec la fonctionnalité photos
+   de chantier le 2026-06-30) et était de toute façon écrasée silencieusement
+   par cette seconde définition, comme toute redéfinition de fonction en JS. */
 function exportRapportsChantier(){var rows=['Rapport,Convention,Date début,Avancement,Prévu,Ouvriers,Statut'];DATA.rapports_chantier.forEach(function(r){rows.push([r.numero,(DATA.conventions.find(function(c){return c.id===r.convention_id;})||{numero:''}).numero,r.date_debut,r.avancement+'%',(r.avancement_prevu||r.avancement)+'%',r.nb_ouvriers,r.statut].join(','));});var b=new Blob([rows.join('\n')],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='rapports_chantier.csv';a.click();toast('Export rapports chantier.','success');}
 function printRapportChantier(){var id=APP.editingId;if(id)printRapportId(id);else toast('Enregistrez d\'abord le rapport.','info');}
 
@@ -35728,6 +35732,9 @@ function printRapportId(id){
   var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};
   var societe=DATA.params.societe||'ImmoSuite ERP';
   var ec=r.avancement-(r.avancement_prevu||r.avancement);
+  /* [AUDIT FIX v17] Photos dans impression — récupérée lors de la fusion des deux
+     versions dupliquées de printRapportId (2026-06-30) */
+  var photosHtml='';if(r.photos&&r.photos.length){photosHtml='<h3>\u{1F4F8} Photos de chantier ('+r.photos.length+')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0;">'+(r.photos.slice(0,9).map(function(p){return'<div style="text-align:center;"><img src="'+p.data+'" style="width:100%;max-height:150px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"><div style="font-size:10px;color:#666;margin-top:2px;">'+p.legende+'</div></div>';}).join(''))+'</div>';}
   var win=window.open('','','width=850,height=750');
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport '+r.numero+'</title><style>body{font-family:Arial,sans-serif;padding:32px;font-size:13px;color:#222;}h1{color:#1A6B3A;border-bottom:3px solid #1A6B3A;padding-bottom:8px;}h3{color:#444;margin:18px 0 8px;border-bottom:1px solid #eee;padding-bottom:5px;}table{border-collapse:collapse;width:100%;margin:8px 0;}td,th{border:1px solid #ccc;padding:7px 12px;}th{background:#E8F4EE;text-align:left;}.kpi{display:inline-block;background:#F3F4EF;border:1px solid #D4D9D1;border-radius:8px;padding:12px 20px;margin:6px;text-align:center;min-width:100px;}.kv{font-size:22px;font-weight:bold;color:#1A6B3A;}.kl{font-size:11px;color:#8A9E92;margin-top:3px;}.travaux{background:#F8F9F5;border:1px solid #D4D9D1;border-radius:4px;padding:12px;white-space:pre-line;font-size:12px;}.diff{background:#FDECEA;border-left:4px solid #C93535;padding:10px;border-radius:4px;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body>'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><div><strong style="font-size:18px;color:#1A6B3A;">'+societe+'</strong><br><span style="font-size:11px;color:#888;">Promoteur immobilier — Côte d\'Ivoire</span></div><div style="text-align:right;font-size:12px;"><strong>RAPPORT DE CHANTIER N° '+r.numero+'</strong></div></div>'
@@ -35737,6 +35744,7 @@ function printRapportId(id){
     +'<h3>Travaux réalisés</h3><div class="travaux">'+(r.travaux_realises||'—')+'</div>'
     +(r.travaux_prevus?'<h3>Travaux prévus</h3><div class="travaux">'+r.travaux_prevus+'</div>':'')
     +(r.difficultes?'<h3>Difficultés</h3><div class="diff">'+r.difficultes+'</div>':'')
+    +photosHtml
     +'<div class="sig"><div class="sb">LE CHEF DE CHANTIER<br>'+constr.raison_sociale+'<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br>'+societe+'<br><br><br>Signature</div></div></body></html>');
   try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();
 }
@@ -50253,8 +50261,16 @@ async function seedConceptionMilitaris(){
    ImmoSuite ERP v32 — SANIX Africa
    ════════════════════════════════════════════════════════════════ */
 
-/* ── Ouvrir / fermer l'overlay ─────────────────────────────────── */
-function openPrintPreview(title, html) {
+/* ── Ouvrir / fermer l'overlay (DQE & Déboursé Sec) ──────────────
+   [FIX 2026-06-30] Renommée openPrintPreviewDQE pour ne plus entrer
+   en collision avec openPrintPreview(html, titre) définie plus haut
+   dans le fichier. Les deux fonctions portaient le même nom : la
+   définition la plus basse écrasait silencieusement la première,
+   et comme leurs paramètres sont dans un ordre inversé (titre, html)
+   vs (html, titre), tous les appels du premier système recevaient
+   leurs arguments échangés → documents mal affichés à l'impression
+   dans tout le logiciel. ───────────────────────────────────────── */
+function openPrintPreviewDQE(title, html) {
   var root = document.getElementById('modal-pp-root');
   var titleEl = document.getElementById('ppt-title');
   var content = document.getElementById('ppt-content');
@@ -50268,7 +50284,11 @@ function openPrintPreview(title, html) {
   if (scroll) scroll.scrollTop = 0;
 }
 
-function closePrintPreview() {
+/* [FIX 2026-06-30] Renommée closePrintPreviewDQE pour ne plus écraser
+   la closePrintPreview du premier système d'aperçu (modal-print-preview),
+   qui ne se fermait alors plus jamais correctement et pouvait bloquer
+   le défilement de toute l'interface (overflow:hidden non réinitialisé). */
+function closePrintPreviewDQE() {
   var root = document.getElementById('modal-pp-root');
   if (root) root.classList.remove('open');
   document.body.style.overflow = '';
@@ -50279,7 +50299,7 @@ function closePrintPreview() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     var root = document.getElementById('modal-pp-root');
-    if (root && root.classList.contains('open')) closePrintPreview();
+    if (root && root.classList.contains('open')) closePrintPreviewDQE();
   }
 });
 
@@ -50290,6 +50310,17 @@ function doPrintPreview() {
   var html = content.innerHTML;
   var w = window.open('', '_blank', 'width=960,height=860');
   if (!w) { alert('Veuillez autoriser les popups pour imprimer.'); return; }
+  /* [FIX 2026-06-30] printQrFooter sécurisée : si elle échoue ou n'est
+     pas disponible, l'impression se poursuit quand même sans le QR
+     plutôt que de planter entièrement (page blanche à l'impression). */
+  var qrFooter = '';
+  try {
+    if (typeof printQrFooter === 'function') {
+      qrFooter = printQrFooter((document.getElementById('ppt-title')||{}).textContent||'Document');
+    }
+  } catch (e) {
+    console.warn('printQrFooter indisponible, impression sans QR de pied de page :', e);
+  }
   w.document.write(
     '<!DOCTYPE html><html lang="fr"><head>'
     + '<meta charset="UTF-8">'
@@ -50310,7 +50341,7 @@ function doPrintPreview() {
     + '.pp-footer{margin-top:24px;font-size:9pt;color:#888;border-top:1px solid #ddd;padding-top:6px;page-break-before:avoid;}'
     + '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
     + '</style>'
-    + '</head><body>' + html + printQrFooter((document.getElementById('ppt-title')||{}).textContent||'Document') + '</body></html>'
+    + '</head><body>' + html + qrFooter + '</body></html>'
   );
   w.document.close();
   w.focus();
@@ -50448,7 +50479,7 @@ function printPreviewDQE() {
     + '<table class="pp-recap" style="margin-top:20px;">' + recapHtml + perApptHtml + '</table>'
     + '<div class="pp-footer">Document généré par <strong>ImmoSuite ERP</strong> · ' + _ppSoc() + ' · ' + _ppDate() + '</div>';
 
-  openPrintPreview('Aperçu DQE — ' + typeLabel, html);
+  openPrintPreviewDQE('Aperçu DQE — ' + typeLabel, html);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -50585,7 +50616,7 @@ function printPreviewDebourse(id, source) {
     + '<table class="pp-recap" style="margin-top:20px;">' + recapHtml + '</table>'
     + '<div class="pp-footer">Document généré par <strong>ImmoSuite ERP</strong> · ' + _ppSoc() + ' · ' + (e.date || _ppDate()) + '</div>';
 
-  openPrintPreview('Aperçu — Déboursé Sec : ' + (e.nom || '—'), html);
+  openPrintPreviewDQE('Aperçu — Déboursé Sec : ' + (e.nom || '—'), html);
 }
 
 /* ── Aperçu bibliothèque d'ouvrages (tous les ouvrages) ─────────── */
@@ -50626,7 +50657,7 @@ function _printPreviewBibliotheque() {
     +   '<tbody>' + rowsHtml + '</tbody>'
     + '</table>'
     + '<div class="pp-footer">Document généré par <strong>ImmoSuite ERP</strong> · ' + _ppSoc() + ' · ' + _ppDate() + '</div>';
-  openPrintPreview('Aperçu — Bibliothèque d\'ouvrages (' + ouvrages.length + ')', html);
+  openPrintPreviewDQE('Aperçu — Bibliothèque d\'ouvrages (' + ouvrages.length + ')', html);
 }
 
 
@@ -51605,7 +51636,7 @@ function finImprimerAttestationReservation(fid) {
           <span class="ppt-title" id="ppt-title">Aperçu avant impression</span>
           <span style="font-size:11px;color:var(--dim);flex-shrink:0;">Vérifiez le document puis cliquez sur Imprimer</span>
           <button class="btn btn-primary" onclick="doPrintPreview()" style="flex-shrink:0;">🖨️ Imprimer</button>
-          <button class="btn btn-secondary" onclick="closePrintPreview()" style="flex-shrink:0;">✕ Fermer</button>
+          <button class="btn btn-secondary" onclick="closePrintPreviewDQE()" style="flex-shrink:0;">✕ Fermer</button>
         </div>
         <!-- Zone de défilement avec la page A4 simulée -->
         <div class="print-preview-scroll">
@@ -55323,6 +55354,16 @@ function qrSvgTag(text){
 
 })(); /* fin IIFE simulateur */
 
+function _cyrb53(str, seed){
+  str=String(str==null?'':str); seed=seed>>>0||0;
+  var h1=0xdeadbeef^seed, h2=0x41c6ce57^seed, ch;
+  for(var i=0;i<str.length;i++){ ch=str.charCodeAt(i);
+    h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  var n=4294967296*(2097151&h2)+(h1>>>0);
+  return n.toString(16).padStart(14,'0');
+}
 function printQrFooter(ref){
   var soc=(window.DATA&&DATA.params&&(DATA.params.societe||DATA.params.nom_societe))||'';
   ref=(ref||'DOC').toString().replace(/[<>&]/g,'').slice(0,40);
