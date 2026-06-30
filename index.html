@@ -21634,19 +21634,28 @@ var MODULE_GROUPS = {
 var GROUP_LABELS = { general:'🏠 Général', commercial:'🎯 Commercial', immobilier:'🏗️ Immobilier', chantier:'🧱 Achats & Chantier', finance:'💰 Finance', rh:'👥 RH & Paie', portails:'🌐 Portails externes', admin:'⚙️ Admin' };
 var GROUP_COLORS = { general:'#64748B', commercial:'#D97706', immobilier:'#0284C7', chantier:'#B45309', finance:'#059669', rh:'#7C3AED', portails:'#0891B2', admin:'#DC2626' };
 
+/* ── Utilitaires cases module (un module peut apparaître dans plusieurs groupes) ── */
+function _modAttr(mod) { return String(mod).replace(/"/g, '&quot;'); }
+function _modChecked(mod) {
+  var el = document.querySelector('.modchk[data-mod="'+_modAttr(mod)+'"]');
+  return !!(el && el.checked);
+}
+function _setModChecked(mod, val) {
+  document.querySelectorAll('.modchk[data-mod="'+_modAttr(mod)+'"]').forEach(function(el){ el.checked = val; });
+}
+/* Toutes les cases d'un même module restent synchronisées entre groupes */
+function _syncModChk(el) {
+  _setModChecked(el.getAttribute('data-mod'), el.checked);
+  _updateNbModules();
+}
+
 function toggleGroupModules(group, val) {
-  (MODULE_GROUPS[group]||[]).forEach(function(mod) {
-    var el = document.getElementById('mod_'+mod.replace(/[^a-zA-Z0-9]/g,'_'));
-    if (el) el.checked = val;
-  });
+  (MODULE_GROUPS[group]||[]).forEach(function(mod) { _setModChecked(mod, val); });
   _updateNbModules();
 }
 
 function _updateNbModules() {
-  var nb = ALL_MODULES.filter(function(m){
-    var el = document.getElementById('mod_'+m.replace(/[^a-zA-Z0-9]/g,'_'));
-    return el && el.checked;
-  }).length;
+  var nb = ALL_MODULES.filter(function(m){ return _modChecked(m); }).length;
   var el = document.getElementById('role-nb-modules');
   if (el) el.textContent = nb + ' module(s) sélectionné(s)';
 }
@@ -21736,9 +21745,11 @@ function buildModulesGrid(permissions) {
       +'</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">';
     existing.forEach(function(mod) {
       var chkd = permissions[mod] ? 'checked' : '';
-      var iid  = 'mod_'+mod.replace(/[^a-zA-Z0-9]/g,'_');
-      html += '<label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;border:1px solid #E2E8F0;border-radius:6px;cursor:pointer;font-size:12px;color:#1E293B;">'
-        +'<input type="checkbox" id="'+iid+'" value="'+mod+'" '+chkd+' style="width:14px;height:14px;accent-color:'+color+';flex-shrink:0;" onchange="_updateNbModules()">'
+      /* id unique par occurrence (un module peut apparaître dans 2 groupes, ex: Relances) ;
+         data-mod relie toutes les occurrences entre elles pour rester synchronisées. */
+      var iid  = 'mod_'+g+'_'+mod.replace(/[^a-zA-Z0-9]/g,'_');
+      html += '<label for="'+iid+'" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;border:1px solid #E2E8F0;border-radius:6px;cursor:pointer;font-size:12px;color:#1E293B;">'
+        +'<input type="checkbox" id="'+iid+'" class="modchk" data-mod="'+_modAttr(mod)+'" value="'+mod+'" '+chkd+' style="width:14px;height:14px;accent-color:'+color+';flex-shrink:0;" onchange="_syncModChk(this)">'
         +mod+'</label>';
     });
     html += '</div></div>';
@@ -21748,10 +21759,7 @@ function buildModulesGrid(permissions) {
 }
 
 function toggleGroupMods(mods, val) {
-  mods.forEach(function(mod) {
-    var el = document.getElementById('mod_'+mod.replace(/[^a-zA-Z0-9]/g,'_'));
-    if (el) el.checked = val;
-  });
+  mods.forEach(function(mod) { _setModChecked(mod, val); });
   _updateNbModules();
 }
 
@@ -21762,10 +21770,8 @@ function applyRolePreset() {
 }
 
 function toggleAllModules(val) {
-  ALL_MODULES.forEach(function(mod) {
-    var el = document.getElementById('mod_' + mod.replace(/[^a-zA-Z0-9]/g,'_'));
-    if (el) el.checked = val;
-  });
+  document.querySelectorAll('#role-modules-grid .modchk').forEach(function(el){ el.checked = val; });
+  _updateNbModules();
 }
 
 // ══ SAUVEGARDER UN RÔLE ═══════════════════════════════════════════════════════
@@ -21779,8 +21785,7 @@ async function saveRoleFromModal() {
 
   var permissions = {};
   ALL_MODULES.forEach(function(mod) {
-    var el = document.getElementById('mod_'+mod.replace(/[^a-zA-Z0-9]/g,'_'));
-    permissions[mod] = el ? el.checked : false;
+    permissions[mod] = _modChecked(mod);
   });
   var nb = Object.values(permissions).filter(Boolean).length;
   if (nb === 0 && !confirm('Ce rôle n\'a aucun accès. Continuer quand même ?')) return;
