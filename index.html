@@ -11956,13 +11956,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;">
           <strong>Tableau des coordonnées (bornes)</strong>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;">📥 Importer bornes CSV<input type="file" accept=".csv,.txt" style="display:none;" onchange="brnImportBornesCSV(this)"></label>
             <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
             <button class="btn btn-secondary btn-sm" onclick="brnPrintPlan()">🖨 Plan de bornage</button>
             <button class="btn btn-primary btn-sm" onclick="genererPlanParcellaire()">📐 Plan parcellaire</button>
           </div>
         </div>
+        <div style="font-size:11px;color:var(--blanc-dim,#888);margin:-2px 0 6px;">Colonnes reconnues : Nom/Borne, X (ou Longitude), Y (ou Latitude), Z/Altitude, Angle, Distance — séparateur , ; ou tabulation.</div>
         <div class="table-wrap">
           <table id="table-bornes">
             <thead><tr><th>Borne</th><th style="text-align:right;">X</th><th style="text-align:right;">Y</th><th style="text-align:right;">Z (alt.)</th><th style="text-align:right;">Angle</th><th style="text-align:right;">Distance</th><th></th></tr></thead>
@@ -27567,7 +27569,41 @@ function buildTiers411() {
     totalSolde += Math.max(0, solde);
 
     var prog = DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:'—'};
-    rows.push({c:c, totalVerse:totalVerse, solde:solde, statut:statut, retardMois:retardMois, provision:provision, prog:prog});
+    rows.push({source:'client', c:c, totalVerse:totalVerse, solde:solde, statut:statut, retardMois:retardMois, provision:provision, prog:prog});
+  });
+
+  /* [FIX 2026-06-30] Inclusion des acquéreurs de cessions foncières (module
+     Recouvrement) dans le relevé 411 : ils utilisent le compte 4111 mais
+     n'étaient jusqu'ici visibles que via le Grand Livre brut, sans relevé
+     individuel ni analyse d'antériorité dédiée. */
+  (DATA.cessions_foncieres || []).forEach(function(cf) {
+    if ((cf.prix_cession || 0) <= 0) return;
+    if (search && !((cf.acquereur||'') + ' ' + (cf.designation||'')).toLowerCase().includes(search.toLowerCase())) return;
+    if (filtProg) return; /* les cessions foncières ne sont rattachées à aucun "programme" de vente classique */
+
+    var totalVerse = crecVerse(cf);
+    var solde = (cf.prix_cession || 0) - totalVerse;
+    var statut = solde<=0 ? 'solde' : 'debiteur';
+
+    if (filtStatut === 'solde' && solde > 100) return;
+    if (filtStatut === 'debiteur' && solde <= 0) return;
+    if (filtStatut === 'crediteur' && solde >= 0) return;
+
+    var r = crecRetard(cf);
+    var retardMois = r ? r.moisRetard : 0;
+    var provision = retardMois > 6 ? Math.round(solde * 0.05) : 0;
+
+    if (solde > 0) {
+      if (retardMois <= 0) anteriorite.courant += solde;
+      else if (retardMois <= 3) anteriorite.m1_3 += solde;
+      else if (retardMois <= 6) anteriorite.m3_6 += solde;
+      else if (retardMois <= 12) anteriorite.m6_12 += solde;
+      else anteriorite.plus12 += solde;
+    }
+
+    totalSolde += Math.max(0, solde);
+
+    rows.push({source:'cession', c:cf, totalVerse:totalVerse, solde:solde, statut:statut, retardMois:retardMois, provision:provision, prog:{nom:'Cession foncière'}});
   });
 
   // Antériorité KPIs
@@ -27599,17 +27635,27 @@ function buildTiers411() {
 
   tbody.innerHTML = rows.map(function(r) {
     var c=r.c, solde=r.solde;
-    var lot = DATA.lots.find(function(l){return l.id===c.lot_id;})||{numero:'—',type:'—'};
-    var mensualite = c.mensualite||0;
+    var isCession = r.source === 'cession';
+    var lot = isCession ? null : (DATA.lots.find(function(l){return l.id===c.lot_id;})||{numero:'—',type:'—'});
+    var mensualite = isCession ? crecMensualite(c) : (c.mensualite||0);
     var prog = r.prog;
     var statBadge = solde<=0 ? 'badge-vert' : r.retardMois>6 ? 'badge-rouge' : r.retardMois>0 ? 'badge-or' : 'badge-bleu';
     var statLabel = solde<=0 ? 'Soldé' : r.retardMois>6 ? 'Litigieux' : r.retardMois>0 ? 'Retard x'+r.retardMois+' mois' : 'Courant';
+    var dossier   = isCession ? ('CES-'+c.id.slice(-6).toUpperCase()) : (c.dossier||'—');
+    var nomComplet= isCession ? (c.acquereur||'—') : (c.nom+' '+c.prenoms);
+    var tel       = isCession ? ((c.acheteur && c.acheteur.tel) || c.contact || '') : (c.tel||'');
+    var progLabel = isCession ? (c.designation || (typeof cesSourceRef==='function'?cesSourceRef(c.source_key):'') || '—') : prog.nom;
+    var lotLabel  = isCession ? '' : lot.numero;
+    var typeLabel = isCession ? '🏞️ Cession foncière' : (c.type_logement||lot.type||'—');
+    var montantTotal = isCession ? (c.prix_cession||0) : (c.montant_total||0);
+    var releveBtn = isCession ? ('showReleveTiers(\'cession:'+c.id+'\')') : ('showReleveTiers(\'client:'+c.id+'\')');
+    var actionExtra = isCession ? '' : ('<button class="btn btn-secondary btn-sm btn-icon" onclick="openBienAmortFromClient(\''+c.id+'\')" title="Enregistrer bien amortissable">🏠</button>');
     return '<tr>'
-      +'<td style="font-family:monospace;font-size:12px;color:var(--or);">'+(c.dossier||'—')+'</td>'
-      +'<td><strong>'+c.nom+'</strong> '+c.prenoms+'<div style="font-size:11px;color:var(--dim);">'+c.tel+'</div></td>'
-      +'<td style="font-size:12px;">'+prog.nom+'<br><span style="color:var(--dim);">'+lot.numero+'</span></td>'
-      +'<td style="font-size:12px;">'+(c.type_logement||lot.type||'—')+'</td>'
-      +'<td style="font-weight:700;">'+fmtF(c.montant_total||0)+' FCFA</td>'
+      +'<td style="font-family:monospace;font-size:12px;color:var(--or);">'+dossier+'</td>'
+      +'<td><strong>'+nomComplet+'</strong>'+(tel?'<div style="font-size:11px;color:var(--dim);">'+tel+'</div>':'')+'</td>'
+      +'<td style="font-size:12px;">'+progLabel+(lotLabel?'<br><span style="color:var(--dim);">'+lotLabel+'</span>':'')+'</td>'
+      +'<td style="font-size:12px;">'+typeLabel+'</td>'
+      +'<td style="font-weight:700;">'+fmtF(montantTotal)+' FCFA</td>'
       +'<td style="color:var(--vert);">'+fmtF(r.totalVerse)+' FCFA</td>'
       +'<td style="font-weight:700;color:'+(solde>0?'var(--rouge)':'var(--vert)')+';">'+(solde>0?fmtF(solde)+' FCFA':'Soldé')+'</td>'
       +'<td style="font-size:12px;">'+fmtF(mensualite)+' FCFA</td>'
@@ -27617,14 +27663,26 @@ function buildTiers411() {
       +'<td style="color:'+(r.provision>0?'var(--rouge)':'var(--dim)')+';">'+(r.provision>0?fmtF(r.provision)+' FCFA':'—')+'</td>'
       +'<td><span class="badge '+statBadge+'">'+statLabel+'</span></td>'
       +'<td style="white-space:nowrap;">'
-        +'<button class="btn btn-secondary btn-sm btn-icon" onclick="showReleveTiers(\''+c.id+'\')" title="Relevé de compte">📄</button> '
-        +'<button class="btn btn-secondary btn-sm btn-icon" onclick="openBienAmortFromClient(\''+c.id+'\')" title="Enregistrer bien amortissable">🏠</button>'
+        +'<button class="btn btn-secondary btn-sm btn-icon" onclick="'+releveBtn+'" title="Relevé de compte">📄</button> '
+        +actionExtra
       +'</td>'
       +'</tr>';
   }).join('');
 }
 
-function showReleveTiers(clientId) {
+function showReleveTiers(refId) {
+  /* [FIX 2026-06-30] refId peut être "client:<id>" (souscripteur classique)
+     ou "cession:<id>" (acquéreur cession foncière). Conserve la compatibilité
+     avec les anciens appels showReleveTiers('<clientId>') sans préfixe. */
+  var type = 'client', id = refId;
+  if (refId && refId.indexOf(':') !== -1) {
+    var parts = refId.split(':'); type = parts[0]; id = parts.slice(1).join(':');
+  }
+  if (type === 'cession') return showReleveTiersCession(id);
+  return showReleveTiersClient(id);
+}
+
+function showReleveTiersClient(clientId) {
   var c = DATA.clients.find(function(x){return x.id===clientId;});
   if (!c) return;
   var box = document.getElementById('releve-tiers-box');
@@ -27687,6 +27745,73 @@ function showReleveTiers(clientId) {
     +'</div>';
 }
 
+/* [FIX 2026-06-30] Relevé de compte tiers pour les acquéreurs de cessions
+   foncières (compte 4111), miroir de showReleveTiersClient ci-dessus mais
+   sur DATA.cessions_foncieres / c.paiements au lieu de DATA.clients /
+   DATA.versements. */
+function showReleveTiersCession(cessionId) {
+  var c = (DATA.cessions_foncieres || []).find(function(x){return x.id===cessionId;});
+  if (!c) return;
+  var box = document.getElementById('releve-tiers-box');
+  var nomEl = document.getElementById('releve-tiers-nom');
+  var content = document.getElementById('releve-tiers-content');
+  if (!box||!content) return;
+  box.style.display='block';
+  if (nomEl) nomEl.textContent = (c.acquereur||'—')+' (CES-'+c.id.slice(-6).toUpperCase()+')';
+  box.scrollIntoView({behavior:'smooth'});
+
+  var paiements = (c.paiements || []).slice()
+    .sort(function(a,b){return (a.date||'').localeCompare(b.date||'');});
+  var soldeRunning = 0;
+  var montantTotal = c.prix_cession||0;
+  var bien = c.designation || (typeof cesSourceRef==='function'?cesSourceRef(c.source_key):'') || '—';
+
+  content.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;font-size:12px;">'
+    +'<div><span style="color:var(--dim);">Type</span><br><strong>🏞️ Cession foncière</strong></div>'
+    +'<div><span style="color:var(--dim);">Bien</span><br><strong>'+bien+'</strong></div>'
+    +'<div><span style="color:var(--dim);">Prix de cession</span><br><strong style="color:var(--or);">'+fmtF(montantTotal)+' FCFA</strong></div>'
+    +'</div>'
+    +'<div class="table-wrap"><table>'
+    +'<thead><tr>'
+    +'<th>Date</th><th>Libellé</th><th>Cpt Débit</th><th>Cpt Crédit</th>'
+    +'<th style="text-align:right;">Débit (FCFA)</th><th style="text-align:right;">Crédit (FCFA)</th>'
+    +'<th style="text-align:right;">Solde (FCFA)</th><th>Mode</th><th>Réf.</th>'
+    +'</tr></thead><tbody>'
+    // Ligne d'ouverture (cession)
+    +'<tr style="background:rgba(184,115,51,0.05);">'
+    +'<td>'+(c.date||'—')+'</td>'
+    +'<td style="font-weight:600;">Ouverture compte acquéreur — cession foncière</td>'
+    +'<td style="font-family:monospace;color:var(--or);">'+crecCompte()+'</td>'
+    +'<td style="font-family:monospace;color:var(--vert);">702</td>'
+    +'<td style="text-align:right;font-weight:700;">'+fmtF(montantTotal)+'</td>'
+    +'<td style="text-align:right;">—</td>'
+    +'<td style="text-align:right;color:var(--rouge);font-weight:700;">'+fmtF(montantTotal)+'</td>'
+    +'<td>—</td><td>CES-'+c.id.slice(-6).toUpperCase()+'</td>'
+    +'</tr>'
+    + paiements.map(function(p) {
+        soldeRunning += p.montant||0;
+        var soldeCourant = montantTotal - soldeRunning;
+        var compteTreso = (p.mode === 'especes') ? '571' : (p.mode === 'mobile_money' ? '531' : '521');
+        return '<tr>'
+          +'<td>'+p.date+'</td>'
+          +'<td>Versement'+(p.notes?' — '+p.notes:'')+'</td>'
+          +'<td style="font-family:monospace;color:var(--vert);">'+compteTreso+'</td>'
+          +'<td style="font-family:monospace;color:var(--or);">'+crecCompte()+'</td>'
+          +'<td style="text-align:right;">—</td>'
+          +'<td style="text-align:right;color:var(--vert);font-weight:600;">'+fmtF(p.montant)+'</td>'
+          +'<td style="text-align:right;color:'+(soldeCourant>0?'var(--rouge)':'var(--vert)')+';font-weight:700;">'+fmtF(Math.abs(soldeCourant))+(soldeCourant<0?' (CR)':'')+'</td>'
+          +'<td style="font-size:11px;">'+(p.mode||'—')+'</td>'
+          +'<td style="font-size:11px;font-family:monospace;">'+(p.ref||'—')+'</td>'
+          +'</tr>';
+      }).join('')
+    +'</tbody></table></div>'
+    +'<div style="display:flex;justify-content:flex-end;gap:24px;padding:12px 0;border-top:1px solid var(--bord);font-weight:700;font-size:13px;margin-top:8px;">'
+    +'<span>Total versé : <span style="color:var(--vert);">'+fmtF(soldeRunning)+' FCFA</span></span>'
+    +'<span>Solde dû : <span style="color:'+(montantTotal-soldeRunning>0?'var(--rouge)':'var(--vert)')+';font-size:15px;">'+fmtF(Math.abs(montantTotal-soldeRunning))+' FCFA</span></span>'
+    +'</div>';
+}
+
 function printReleveTiers() {
   _printFromElement('releve-tiers-content', 'Relevé de compte tiers');
 }
@@ -27697,6 +27822,12 @@ function exportTiers411CSV() {
     var verse=DATA.versements.filter(function(v){return v.client_id===c.id && _versementSurPrix(v);}).reduce(function(s,v){return s+v.montant;},0);
     var prog=DATA.programmes.find(function(p){return p.id===c.programme_id;})||{nom:''};
     rows.push([c.dossier,c.nom+' '+c.prenoms,prog.nom,c.montant_total||0,verse,(c.montant_total||0)-verse,0].join(','));
+  });
+  /* [FIX 2026-06-30] Export CSV étendu aux acquéreurs de cessions foncières */
+  (DATA.cessions_foncieres||[]).forEach(function(cf){
+    if ((cf.prix_cession||0)<=0) return;
+    var verse=crecVerse(cf);
+    rows.push(['CES-'+cf.id.slice(-6).toUpperCase(),(cf.acquereur||''),'Cession foncière',cf.prix_cession||0,verse,(cf.prix_cession||0)-verse,0].join(','));
   });
   var blob=new Blob([rows.join('\n')],{type:'text/csv'});
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tiers411.csv'; a.click();
@@ -45812,6 +45943,62 @@ function brnCoupe(){
     +'<path d="'+area+'" fill="rgba(138,90,43,0.12)" stroke="none"/><path d="'+line+'" fill="none" stroke="#8a5a2b" stroke-width="1.6"/>'
     +'<text x="'+(W/2)+'" y="'+(H-6)+'" font-size="10" text-anchor="middle" fill="#444">Distance '+totalD.toFixed(1)+' m · dénivelé '+(zmax-zmin).toFixed(2)+' m</text></svg>';
   document.getElementById('brn-coupe-out').innerHTML='<div style="font-size:12px;margin-bottom:4px;">Coupe '+(A.nom||ia)+' → '+(B.nom||ib)+'</div>'+svg;
+}
+/* [FIX 2026-06-30] Import CSV des bornes officielles de la parcelle (tableau
+   _brnList : nom, X, Y, Z, angle, distance) — à ne pas confondre avec
+   brnImportCSV ci-dessous, qui importe un nuage de points de LEVÉ topo
+   (_topoPoints) pour le modèle d'altitude/courbes de niveau, et reste
+   inchangée. Reconnaît : Nom/Borne, X/Longitude, Y/Latitude, Z/Altitude,
+   Angle, Distance. Coordonnées GPS décimales (lat/lon) acceptées aussi bien
+   que des coordonnées projetées X/Y locales — les deux sont stockées telles
+   quelles dans x/y (le système de calcul de superficie par la formule de
+   Gauss fonctionne avec les deux, tant que toutes les bornes de la même
+   parcelle utilisent un référentiel cohérent). */
+function brnImportBornesCSV(input){
+  var fl=input.files&&input.files[0]; if(!fl)return;
+  var mode = (_brnList && _brnList.length) ? confirm(
+    'Le tableau contient déjà '+_brnList.length+' borne(s).\n\n'
+    +'OK = Remplacer entièrement le tableau par le contenu du fichier.\n'
+    +'Annuler = Ajouter les bornes du fichier à la suite des bornes existantes.'
+  ) : true;
+  var rd=new FileReader();
+  rd.onload=function(ev){
+    var txt=ev.target.result; var lines=txt.split(/\r?\n/).filter(function(l){return l.trim();});
+    if(!lines.length){ toast('Fichier vide.','error'); input.value=''; return; }
+    var sep=(txt.indexOf(';')>-1)?';':(txt.indexOf('\t')>-1?'\t':',');
+    var first=lines[0].split(sep);
+    var isHeader=first.some(function(c){ return /[a-zA-Z]/.test(c) && isNaN(parseFloat(c)); });
+    var col={x:-1,y:-1,z:-1,nom:-1,angle:-1,distance:-1};
+    if(isHeader){
+      first.forEach(function(h,idx){ var hh=h.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if(['x','coordx','easting','est','abscisse','lon','long','longitude'].indexOf(hh)>=0)col.x=idx;
+        else if(['y','coordy','northing','nord','ordonnee','lat','latitude'].indexOf(hh)>=0)col.y=idx;
+        else if(['z','alt','altitude','cote','elevation'].indexOf(hh)>=0)col.z=idx;
+        else if(['nom','name','point','borne','id','label','repere'].indexOf(hh)>=0)col.nom=idx;
+        else if(['angle','gisement','az','azimut'].indexOf(hh)>=0)col.angle=idx;
+        else if(['distance','dist','longueur'].indexOf(hh)>=0)col.distance=idx;
+      });
+    }
+    if(col.x<0||col.y<0){ var fl0=(lines[isHeader?1:0]||'').split(sep); var base=isNaN(parseFloat(fl0[0]))?1:0; if(base===1)col.nom=0; col.x=base; col.y=base+1; col.z=base+2; col.angle=base+3; col.distance=base+4; }
+    var start=isHeader?1:0; var pts=[];
+    for(var r=start;r<lines.length;r++){
+      var c=lines[r].split(sep); if(c.length<=Math.max(col.x,col.y))continue;
+      var x=parseFloat((c[col.x]||'').replace(',','.')), y=parseFloat((c[col.y]||'').replace(',','.'));
+      if(isNaN(x)||isNaN(y))continue;
+      var z=col.z>=0?parseFloat((c[col.z]||'').replace(',','.')):0; if(isNaN(z))z=0;
+      var angle=col.angle>=0?parseFloat((c[col.angle]||'').replace(',','.')):0; if(isNaN(angle))angle=0;
+      var distance=col.distance>=0?parseFloat((c[col.distance]||'').replace(',','.')):0; if(isNaN(distance))distance=0;
+      var nom=col.nom>=0?(c[col.nom]||'').trim():('B'+(r-start+1));
+      pts.push({nom:nom,x:x,y:y,z:z,angle:angle,distance:distance});
+    }
+    if(!pts.length){ toast('Aucune borne lisible (séparateur "'+sep+'" détecté).','error'); input.value=''; return; }
+    _brnList = mode ? pts : (_brnList||[]).concat(pts);
+    brnRender();
+    var area = brnArea();
+    toast(pts.length+' borne(s) importée(s)'+(mode?' (tableau remplacé)':' (ajoutées)')+(area>0?' · superficie calculée '+(area/10000).toFixed(4)+' ha':''),'success');
+    input.value='';
+  };
+  rd.readAsText(fl);
 }
 function brnImportCSV(input){
   var fl=input.files&&input.files[0]; if(!fl)return;
