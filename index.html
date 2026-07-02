@@ -6135,7 +6135,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div id="ces-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;"></div>
           <div class="card"><div style="font-size:12px;color:var(--blanc-dim);margin-bottom:8px;">Cession de la part revenant à l'entreprise (lots / portions) pour soulager la trésorerie. Chaque cession génère l'écriture SYSCOHADA et alimente la trésorerie.</div>
             <div class="table-wrap"><table>
-              <thead><tr><th>Date</th><th>Source</th><th>Désignation</th><th>Acquéreur</th><th style="text-align:right;">Superf./Lots</th><th style="text-align:right;">Prix cession</th><th style="text-align:right;">Encaissé</th><th>Statut</th><th></th></tr></thead>
+              <thead><tr><th>Date</th><th>Source</th><th>Désignation</th><th>Acquéreur</th><th style="text-align:right;">Superf./Lots</th><th style="text-align:right;">Prix cession</th><th style="text-align:right;">Coût / Marge</th><th style="text-align:right;">Encaissé</th><th>Statut</th><th></th></tr></thead>
               <tbody id="tbody-cessions"></tbody>
             </table></div>
           </div>
@@ -9652,6 +9652,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <div class="form-group"><label>Propriétaires (%)</label><input type="number" id="af-cle-prop" class="form-control" value="40" step="0.1" oninput="afCalcRepartition()"></div>
                 <div class="form-group"><label>Aménageur (%)</label><input type="number" id="af-cle-amen" class="form-control" value="35" step="0.1" oninput="afCalcRepartition()"></div>
                 <div class="form-group"><label>Financier (%)</label><input type="number" id="af-cle-fin" class="form-control" value="25" step="0.1" oninput="afCalcRepartition()"></div>
+                <div class="form-group span-2"><label>Coût total de l'opération (FCFA)</label><input type="number" id="af-cout-total" class="form-control" value="0" oninput="afCalcRepartition()" placeholder="Indemnisations, démarches, aménagement — sert à valoriser la part entreprise en stock (33)"></div>
               </div>
               <div id="af-repartition-res" class="card" style="margin-top:12px;background:var(--card2);"></div>
               <div id="af-cessible-jauge" style="margin-top:12px;"></div>
@@ -20230,7 +20231,13 @@ function _calcResultat(year) {
   function cre(pfx){ return ec.filter(function(e){ var c=e.compte_credit||''; return pfx.some(function(p){ return c.indexOf(p)===0; }); }).reduce(function(a,e){ return a+e.montant; },0); }
   // Produits (crédits classe 7) — buckets exclusifs
   var ventes      = cre(['70']);
-  var prodStockee = cre(['71','72']);
+  /* Production stockée (71-72) = solde net crédit − débit, et non le seul crédit :
+     l'entrée en stock (crédit 712, ex. génération de lots part entreprise) augmente
+     ce produit, mais la sortie de stock (débit 712, ex. sortie à la cession) doit le
+     réduire d'autant — sinon la valeur du terrain cédé serait comptée deux fois
+     (une fois via 712 à l'entrée, une fois via 701 à la vente, sans jamais déduire
+     le stock consommé). */
+  var prodStockee = cre(['71','72']) - deb(['71','72']);
   var autresProd  = cre(['73','74','75']);
   var prodFin     = cre(['76']);
   var prodHAO     = cre(['77']);
@@ -47399,7 +47406,7 @@ function afNewOperation() {
     village:'', commune:'', departement:'', superficie:0, lat:'', lng:'', statut_nego:'',
     proprietaires:[], documents:[], rencontres:[], prop_cle:'', accord_principe:false,
     verif_droits:'', juridique_valide:false, litiges:[], demarches:[],
-    postes_vrd:[], nb_lots:0, cle:{prop:40,amen:35,fin:25},
+    postes_vrd:[], nb_lots:0, cle:{prop:40,amen:35,fin:25}, cout_total:0,
     prix_lot:0, lots_reserves:0, lots_vendus:0, titres:0, created_at:today(), updated_at:new Date().toISOString(), stage_changed_at:new Date().toISOString() };
   afBindOperation(false);
 }
@@ -47424,6 +47431,7 @@ function afBindOperation(isEdit) {
   set('af-verif-droits',_afOp.verif_droits); set('af-juridique-valide',_afOp.juridique_valide);
   set('af-nb-lots',_afOp.nb_lots);
   set('af-cle-prop',_afOp.cle.prop); set('af-cle-amen',_afOp.cle.amen); set('af-cle-fin',_afOp.cle.fin);
+  set('af-cout-total',_afOp.cout_total||0);
   set('af-prix-lot',_afOp.prix_lot); set('af-lots-reserves',_afOp.lots_reserves); set('af-lots-vendus',_afOp.lots_vendus); set('af-titres',_afOp.titres);
   afRenderProp(); afRenderDoc(); afRenderRenc(); afRenderLit(); afRenderDem(); afRenderVrd();
   afCalcRepartition();
@@ -47526,22 +47534,38 @@ function afCalcRepartition(){
   var cf=parseFloat((document.getElementById('af-cle-fin')||{}).value)||0;
   var som=cp+ca+cf;
   var lp=Math.round(nb*cp/100), la=Math.round(nb*ca/100), lf=nb-lp-la;
+  var coutTotal=parseFloat((document.getElementById('af-cout-total')||{}).value)||0;
+  var coutPartE=coutTotal*ca/100;
+  var coutUnitaire=la>0?(coutPartE/la):0;
   var z=document.getElementById('af-repartition-res');
   if(z) z.innerHTML='<table style="width:100%;border-collapse:collapse;">'
     +'<tr><th style="text-align:left;">Partie</th><th style="text-align:right;">%</th><th style="text-align:right;">Lots</th></tr>'
     +'<tr><td>Propriétaires</td><td style="text-align:right;">'+cp+'</td><td style="text-align:right;font-weight:700;">'+lp+'</td></tr>'
-    +'<tr><td>Aménageur</td><td style="text-align:right;">'+ca+'</td><td style="text-align:right;font-weight:700;">'+la+'</td></tr>'
+    +'<tr><td>Aménageur (part entreprise)</td><td style="text-align:right;">'+ca+'</td><td style="text-align:right;font-weight:700;">'+la+'</td></tr>'
     +'<tr><td>Financier</td><td style="text-align:right;">'+cf+'</td><td style="text-align:right;font-weight:700;">'+lf+'</td></tr>'
     +'<tr style="border-top:2px solid #333;font-weight:700;"><td>TOTAL</td><td style="text-align:right;color:'+(som===100?'#1A6B3A':'#c0392b')+';">'+som+'</td><td style="text-align:right;">'+nb+'</td></tr>'
-    +'</table>'+(som!==100?'<div style="color:#c0392b;font-size:12px;margin-top:6px;">⚠️ La somme des clés doit faire 100 %.</div>':'');
+    +'</table>'+(som!==100?'<div style="color:#c0392b;font-size:12px;margin-top:6px;">⚠️ La somme des clés doit faire 100 %.</div>':'')
+    +'<div style="margin-top:12px;padding:10px;border-radius:8px;background:var(--card2);border-left:3px solid '+(coutUnitaire>0?'#8B5CF6':'#6B7280')+';">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:4px;">📦 Valorisation comptable de la part entreprise (à la génération des lots)</div>'
+    +(coutTotal>0 && la>0
+      ? ('<div style="font-size:12px;">Coût total opération <strong>'+fmtF(Math.round(coutTotal))+' F</strong> × '+ca+'% (aménageur) = <strong>'+fmtF(Math.round(coutPartE))+' F</strong> réparti sur <strong>'+la+' lot(s)</strong></div>'
+         +'<div style="font-size:13px;margin-top:4px;">→ Coût unitaire par lot : <strong style="color:#8B5CF6;">'+fmtF(Math.round(coutUnitaire))+' F</strong></div>'
+         +'<div style="font-size:11px;color:var(--blanc-dim);margin-top:4px;">Écriture générée à la création des lots : Débit 331 / Crédit 712, montant '+fmtF(Math.round(coutPartE))+' F</div>')
+      : (coutTotal>0
+          ? '<div style="font-size:12px;color:var(--blanc-dim);">Aucun lot part entreprise à valoriser (aménageur 0% ou nombre de lots non défini).</div>'
+          : '<div style="font-size:12px;color:var(--blanc-dim);">Renseignez le « Coût total de l\u2019opération » ci-dessus pour valoriser la part entreprise en stock — sinon les lots générés resteront à coût 0 (aucun impact comptable).</div>'))
+    +'</div>';
   /* commercialisation res */
   var prix=parseFloat((document.getElementById('af-prix-lot')||{}).value)||0;
   var caTot=nb*prix;
   var vendus=parseInt((document.getElementById('af-lots-vendus')||{}).value)||0;
   var caReal=vendus*prix;
+  var margeUnitPrev = prix>0 ? (prix-coutUnitaire) : 0;
+  var tauxMargePrev = prix>0 ? Math.round(margeUnitPrev/prix*100) : 0;
   var cz=document.getElementById('af-commercial-res');
   if(cz) cz.innerHTML='CA prévisionnel : <strong>'+fmtF(caTot)+' FCFA</strong> · CA réalisé (lots vendus) : <strong>'+fmtF(caReal)+' FCFA</strong>'
-    +'<br>Quote-part théorique (prix×lots) — Propriétaires '+fmtF(lp*prix)+' · Aménageur '+fmtF(la*prix)+' · Financier '+fmtF(lf*prix)+' FCFA';
+    +'<br>Quote-part théorique (prix×lots) — Propriétaires '+fmtF(lp*prix)+' · Aménageur '+fmtF(la*prix)+' · Financier '+fmtF(lf*prix)+' FCFA'
+    +(prix>0 && coutUnitaire>0 ? ('<br>Marge prévisionnelle part entreprise / lot : <strong style="color:'+(margeUnitPrev>=0?'#1A6B3A':'#c0392b')+';">'+fmtF(Math.round(margeUnitPrev))+' FCFA ('+tauxMargePrev+' %)</strong> · sur '+la+' lots : <strong>'+fmtF(Math.round(margeUnitPrev*la))+' FCFA</strong>') : '');
   /* Jauge part cessible aux financiers */
   afRenderJaugeCessible(lf, cf);
 }
@@ -47618,6 +47642,7 @@ async function afSaveOperation(){
   _afOp.verif_droits=g('af-verif-droits'); _afOp.juridique_valide=g('af-juridique-valide');
   _afOp.nb_lots=parseInt(g('af-nb-lots'))||0;
   _afOp.cle={prop:parseFloat(g('af-cle-prop'))||0,amen:parseFloat(g('af-cle-amen'))||0,fin:parseFloat(g('af-cle-fin'))||0};
+  _afOp.cout_total=parseFloat(g('af-cout-total'))||0;
   _afOp.prix_lot=parseFloat(g('af-prix-lot'))||0; _afOp.lots_reserves=parseInt(g('af-lots-reserves'))||0;
   _afOp.lots_vendus=parseInt(g('af-lots-vendus'))||0; _afOp.titres=parseInt(g('af-titres'))||0;
   var _prev=DATA.af_operations.find(function(x){return x.id===_afOp.id;});
@@ -49742,7 +49767,18 @@ function cesSync() {
   var reste=prix-enc;
   z.innerHTML='Prix de cession : <strong>'+fmtF(prix)+' FCFA</strong> · Encaissé : <strong style="color:var(--vert);">'+fmtF(enc)+'</strong>'
     +(reste>0?(' · Reste à encaisser : <strong style="color:var(--rouge);">'+fmtF(reste)+'</strong>'):'')
-    +'<br><span style="font-size:12px;color:var(--blanc-dim);">À l\u2019enregistrement : écriture de vente (4111 / 707) + encaissement ('+(((document.getElementById('ces-mode')||{}).value==='especes')?'571':'521')+' / 4111).</span>';
+    +'<br><span style="font-size:12px;color:var(--blanc-dim);">À l\u2019enregistrement : écriture de vente (4111 / 701) + encaissement ('+(((document.getElementById('ces-mode')||{}).value==='especes')?'571':'521')+' / 4111)'+(cesCoutStockPrevu()>0?' + sortie de stock (712 / 331).':'.')+'</span>';
+}
+
+/* Estime, avant enregistrement, le coût de sortie de stock (331) de la
+   parcelle/opération sélectionnée, pour affichage informatif dans l'aperçu. */
+function cesCoutStockPrevu() {
+  var sel = document.getElementById('ces-source'); if (!sel || !sel.value) return 0;
+  if (sel.value.indexOf('parcelle:') !== 0) return 0;
+  var p = (DATA.parcelles||[]).find(function(x){ return x.id === sel.value.slice(9); });
+  var op = p && p.operation_id ? (DATA.af_operations||[]).find(function(x){ return x.id === p.operation_id; }) : null;
+  var nbLots = parseInt((document.getElementById('ces-nblots')||{}).value)||1;
+  return (op && op.cout_revient_unitaire) ? Math.round(op.cout_revient_unitaire * nbLots) : 0;
 }
 
 async function cesGenererEcriture(c) {
@@ -49757,6 +49793,24 @@ async function cesGenererEcriture(c) {
   DATA.ecritures.push(evente); await dbPut('ecritures', evente);
   if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', evente);
   c.ecriture_vente_id=evente.id;
+  /* 1bis. Sortie de stock de la part entreprise valorisée à la production (331) :
+     Débit 712 (Variation de stocks en cours) / Crédit 331 — en face du produit 701,
+     pour dégager une marge réelle au lieu d'un produit brut sans coût. */
+  if (c.source_key && c.source_key.indexOf('parcelle:') === 0) {
+    var pStk = (DATA.parcelles||[]).find(function(x){ return x.id === c.source_key.slice(9); });
+    var opStk = pStk && pStk.operation_id ? (DATA.af_operations||[]).find(function(x){ return x.id === pStk.operation_id; }) : null;
+    if (opStk && opStk.cout_revient_unitaire > 0) {
+      var montantSortie = Math.round(opStk.cout_revient_unitaire * (c.nb_lots || 1));
+      var numS = DATA.ecritures.length + 1;
+      var esortie = { id:uid(), ref:'STK-SORT-'+an+'-'+String(numS).padStart(4,'0'), date:c.date||today(), piece:'CESSION',
+        type:'produit', libelle:'Sortie de stock — '+(c.nb_lots||1)+' lot(s) part entreprise — '+(c.designation||''),
+        compte:'712', compte_debit:'712', compte_credit:'331', montant:montantSortie,
+        mode:'stock', programme_id:'', notes:'Coût de revient sorti en face de la cession '+evente.ref, source:'cession_fonciere', cession_id:c.id, created_at:today() };
+      DATA.ecritures.push(esortie); await dbPut('ecritures', esortie);
+      if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', esortie);
+      c.ecriture_stock_id = esortie.id;
+    }
+  }
   /* 2. Encaissement : 521/571 (débit) / 4111 (crédit) */
   if ((c.montant_encaisse||0)>0) {
     var num2=DATA.ecritures.length+1;
@@ -49964,6 +50018,26 @@ async function cesSave() {
 }
 
 /* ── KPIs commerciaux pointus + table enrichie ── */
+/* Coût de revient / marge d'une cession — priorité à l'écriture de sortie de
+   stock réellement générée (source de vérité comptable, figée dans le temps) ;
+   à défaut (cession antérieure à cette fonctionnalité, ou coût opération
+   renseigné après coup), estimation live via l'opération liée. */
+function cesCoutMarge(c) {
+  var cout = 0;
+  if (c.ecriture_stock_id) {
+    var e = (DATA.ecritures||[]).find(function(x){ return x.id === c.ecriture_stock_id; });
+    if (e) cout = e.montant || 0;
+  }
+  if (!cout && c.source_key && c.source_key.indexOf('parcelle:') === 0) {
+    var p = (DATA.parcelles||[]).find(function(x){ return x.id === c.source_key.slice(9); });
+    var op = p && p.operation_id ? (DATA.af_operations||[]).find(function(x){ return x.id === p.operation_id; }) : null;
+    if (op && op.cout_revient_unitaire) cout = Math.round(op.cout_revient_unitaire * (c.nb_lots || 1));
+  }
+  var prix = c.prix_cession || 0;
+  var marge = prix - cout;
+  var tauxMarge = prix > 0 ? Math.round(marge / prix * 100) : 0;
+  return { cout: cout, marge: marge, tauxMarge: tauxMarge };
+}
 function cesRender() {
   var tb = document.getElementById('tbody-cessions'); if (!tb) return;
   var q = ((document.getElementById('ces-search')||{}).value||'').toLowerCase();
@@ -49974,6 +50048,10 @@ function cesRender() {
   tb.innerHTML = list.length ? list.map(function(c){
     var reste=(c.prix_cession||0)-(c.montant_encaisse||0);
     var at=(c.acheteur&&c.acheteur.type==='morale')?'<span class="badge badge-violet" style="font-size:9px;">PM</span>':'<span class="badge badge-neutre" style="font-size:9px;">PP</span>';
+    var cm=cesCoutMarge(c);
+    var margeCell = cm.cout>0
+      ? ('<div style="font-size:11px;color:var(--blanc-dim);">coût '+fmtF(cm.cout)+' F</div><div style="font-weight:700;color:'+(cm.marge>=0?'var(--vert)':'var(--rouge)')+';">'+(cm.marge>=0?'+':'')+fmtF(cm.marge)+' F</div><div style="font-size:10px;color:var(--blanc-dim);">('+cm.tauxMarge+' %)</div>')
+      : '<span style="color:var(--blanc-dim);font-size:11px;">— non valorisé</span>';
     return '<tr>'
       +'<td>'+(c.date||'—')+(c.notarie?' ⚖️':'')+'</td>'
       +'<td style="font-size:12px;">'+cesSourceRef(c.source_key)+'</td>'
@@ -49981,11 +50059,12 @@ function cesRender() {
       +'<td>'+at+' '+(c.acquereur||'—')+'</td>'
       +'<td style="text-align:right;">'+(c.superficie?fmtF(c.superficie)+' m²':'')+(c.nb_lots?((c.superficie?' · ':'')+c.nb_lots+' lots'):'')+'</td>'
       +'<td style="text-align:right;font-weight:700;">'+fmtF(c.prix_cession)+'</td>'
+      +'<td style="text-align:right;">'+margeCell+'</td>'
       +'<td style="text-align:right;color:var(--vert);">'+fmtF(c.montant_encaisse)+(reste>0?('<br><span style="font-size:10px;color:var(--rouge);">reste '+fmtF(reste)+'</span>'):'')+'</td>'
       +'<td><span class="badge '+(statutBadge[c.statut]||'badge-neutre')+'">'+(c.statut||'—')+'</span></td>'
       +'<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" title="Acte / contrat" onclick="cesGenererContrat(\''+c.id+'\')">🖨</button> <button class="btn btn-secondary btn-sm btn-icon" onclick="cesOpen(\''+c.id+'\')">✏️</button></td>'
       +'</tr>';
-  }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:18px;">Aucune cession.</td></tr>';
+  }).join('') : '<tr><td colspan="10" style="text-align:center;color:var(--blanc-dim);padding:18px;">Aucune cession.</td></tr>';
 
   /* KPIs */
   var nb=L.length;
@@ -49998,11 +50077,15 @@ function cesRender() {
   var notaries=L.filter(function(c){return c.notarie;}).length;
   var pctNot=nb>0?Math.round(notaries/nb*100):0;
   var soldees=L.filter(function(c){return c.statut==='soldee';}).length;
+  var margeInfo=L.reduce(function(s,c){ var cm=cesCoutMarge(c); s.cout+=cm.cout; s.marge+=cm.marge; return s; }, {cout:0,marge:0});
+  var tauxMargeGlobal=prix>0?Math.round(margeInfo.marge/prix*100):0;
   var kpi=function(t,v,c){ return '<div class="kpi-card" style="border-top-color:'+(c||'var(--vert)')+';"><div class="kpi-label">'+t+'</div><div class="kpi-value" style="font-size:16px;color:'+(c||'inherit')+';">'+v+'</div></div>'; };
   var k=document.getElementById('ces-kpis');
   if (k) k.innerHTML=
       kpi('Cessions',nb,'#3B82F6')
     + kpi('Valeur cédée',fmtF(prix)+' F','#0EA5E9')
+    + kpi('Coût de revient',fmtF(margeInfo.cout)+' F','#8B5CF6')
+    + kpi('Marge globale',fmtF(margeInfo.marge)+' F ('+tauxMargeGlobal+' %)', margeInfo.marge>=0?'#1A6B3A':'#c0392b')
     + kpi('Encaissé',fmtF(enc)+' F','#1A6B3A')
     + kpi('Reste à recouvrer',fmtF(prix-enc)+' F','#c0392b')
     + kpi('Taux recouvrement',tx+' %', tx>=80?'#1A6B3A':(tx>=50?'#B8732F':'#c0392b'))
@@ -50919,12 +51002,20 @@ async function filiereGenererLots(opId) {
   var progId = parcelle ? (parcelle.programme_id || '') : (op.programme_id || '');
   var prefix = (op.code || (op.nom ? op.nom.substring(0, 3).toUpperCase() : 'L'));
   var base = dejaLies;
+  /* Valorisation comptable de la part entreprise (SYSCOHADA) :
+     le terrain reçu en échange du travail d'aménagement est un actif en
+     nature — il entre en stock (331 « Lots en cours d'aménagement ») à son
+     coût, et non à zéro. Coût unitaire = (coût total de l'opération × clé
+     aménageur %) réparti sur le nombre théorique de lots part entreprise. */
+  var totalPartETheorique = Math.round((op.nb_lots || 0) * ((op.cle && op.cle.amen) || 0) / 100) || nb;
+  var coutUnitaire = (op.cout_total ? (op.cout_total * ((op.cle && op.cle.amen) || 0) / 100) / totalPartETheorique : 0);
+  op.cout_revient_unitaire = coutUnitaire;
   for (var i = 1; i <= nb; i++) {
     var lot = {
       id: uid(),
       programme_id: progId,
       numero: prefix + '-' + (base + i),
-      ilot: '', type: '', surface: 0, pieces: 0, prix: 0, cout_revient: 0,
+      ilot: '', type: '', surface: 0, pieces: 0, prix: 0, cout_revient: coutUnitaire,
       standing: '', mode_livraison: 'gros_oeuvre', statut: 'disponible', notes: 'Part entreprise — ' + (op.nom || ''),
       parcelle_id: parcelle ? parcelle.id : '',
       operation_id: op.id,
@@ -50935,12 +51026,27 @@ async function filiereGenererLots(opId) {
     await dbPut('lots', lot);
     if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
   }
+  /* Écriture d'entrée en stock — uniquement si un coût a été renseigné sur l'opération. */
+  if (coutUnitaire > 0) {
+    if (!DATA.ecritures) DATA.ecritures = [];
+    var montantStock = Math.round(coutUnitaire * nb);
+    var an = today().slice(0,4);
+    var numE = DATA.ecritures.length + 1;
+    var eStk = { id: uid(), ref: 'STK-FONC-' + an + '-' + String(numE).padStart(4,'0'), date: today(), piece: 'ENTREE STOCK',
+      type: 'produit', libelle: 'Entrée en stock — part entreprise (' + nb + ' lots) — ' + (op.nom || ''),
+      compte: '712', compte_debit: '331', compte_credit: '712', montant: montantStock,
+      mode: 'stock', programme_id: progId, notes: 'Valorisation part entreprise — coût unitaire ' + fmtF(Math.round(coutUnitaire)) + ' F/lot',
+      source: 'af_operation_stock', af_operation_id: op.id, created_at: today() };
+    DATA.ecritures.push(eStk); await dbPut('ecritures', eStk);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', eStk);
+    if (typeof buildBalance === 'function') buildBalance();
+  }
   op.lots_generes = (op.lots_generes || 0) + nb;
   await dbPut('af_operations', op);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_af_operations', op);
   filiereRender();
   if (typeof renderLots === 'function') renderLots();
-  toast(nb + ' lot(s) généré(s) et rattaché(s) à l\'opération.', 'success');
+  toast(nb + ' lot(s) généré(s) et rattaché(s) à l\'opération.' + (coutUnitaire>0?' Stock valorisé (331).':''), 'success');
 }
 
 /* ── Selects de filiation dans le modal Lot (Niveau 1) ── */
