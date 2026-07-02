@@ -49752,7 +49752,7 @@ async function cesGenererEcriture(c) {
   var num1=DATA.ecritures.length+1;
   var evente={ id:uid(), ref:'CESS-'+an+'-'+String(num1).padStart(4,'0'), date:c.date||today(), piece:'CESSION',
     type:'produit', libelle:'Cession foncière — '+(c.designation||'')+' à '+(c.acquereur||''),
-    compte:'707', compte_debit:'4111', compte_credit:'707', montant:c.prix_cession||0,
+    compte:'701', compte_debit:'4111', compte_credit:'701', montant:c.prix_cession||0,
     mode:'cession', programme_id:'', notes:'Cession part entreprise — '+cesSourceRef(c.source_key), source:'cession_fonciere', cession_id:c.id, created_at:today() };
   DATA.ecritures.push(evente); await dbPut('ecritures', evente);
   if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', evente);
