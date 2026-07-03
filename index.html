@@ -52176,9 +52176,33 @@ function filiereRenderGlobal() {
       + '</tr>';
   }).join('');
 
+  /* Parcelles du portefeuille sans opération pipeline rattachée (saisie directe) */
+  var parcOrphelines = (DATA.parcelles || []).filter(function(p) {
+    return !ops.some(function(o) { return filiereFindParcelle(o) && filiereFindParcelle(o).id === p.id; });
+  });
+  var rowsParc = parcOrphelines.map(function(p) {
+    var pl = (DATA.lots || []).filter(function(l) { return l.parcelle_id === p.id; });
+    var pv = pl.filter(function(l) { return l.statut === 'vendu'; }).length;
+    var pc = filiereParcCessions(p);
+    return '<tr style="cursor:pointer;background:rgba(184,115,51,0.05);" onclick="switchTab(\'foncier\',\'parcelles\')">'
+      + '<td><strong>' + escHtml(p.ref || p.localisation || p.id) + '</strong><br><span style="font-size:11px;color:var(--blanc-dim);">Portefeuille — sans opération</span></td>'
+      + '<td><span class="badge" style="background:var(--or);color:#fff;">🗺️ Portefeuille</span></td>'
+      + '<td style="text-align:center;">✅ ' + escHtml(p.ref || p.num_titre || 'oui') + '</td>'
+      + '<td style="text-align:right;">—</td>'
+      + '<td style="text-align:right;">' + pl.length + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + pv + '</td>'
+      + '<td style="text-align:right;color:var(--or);">' + pc.length + '</td>'
+      + '</tr>';
+  }).join('');
+
+  var noteParc = parcOrphelines.length
+    ? '<div style="font-size:11px;color:var(--blanc-dim);margin:6px 0 4px;">' + ops.length + ' opération(s) + ' + parcOrphelines.length + ' parcelle(s) portefeuille sans opération = ' + (ops.length + parcOrphelines.length) + ' ligne(s).</div>'
+    : '';
+
   c.innerHTML = '<div class="card"><div style="font-weight:700;margin-bottom:8px;">Filière par opération <span style="font-size:11px;color:var(--blanc-dim);">(cliquez une ligne pour dérouler la chaîne)</span></div>'
-    + '<div class="table-wrap"><table><thead><tr><th>Opération</th><th>Étape</th><th style="text-align:center;">Parcelle/Titre</th><th style="text-align:right;">Lots prévus</th><th style="text-align:right;">Lots créés</th><th style="text-align:right;">Vendus</th><th style="text-align:right;">Cessions</th></tr></thead>'
-    + '<tbody>' + rows + '</tbody></table></div></div>';
+    + noteParc
+    + '<div class="table-wrap"><table><thead><tr><th>Opération / Parcelle</th><th>Étape</th><th style="text-align:center;">Parcelle/Titre</th><th style="text-align:right;">Lots prévus</th><th style="text-align:right;">Lots créés</th><th style="text-align:right;">Vendus</th><th style="text-align:right;">Cessions</th></tr></thead>'
+    + '<tbody>' + rows + rowsParc + '</tbody></table></div></div>';
 }
 
 function filiereGoOp(opId) {
