@@ -4294,6 +4294,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                   <input type="text" id="param-cnps" class="form-control" placeholder="422483">
                 </div>
                 <div class="form-group">
+                  <label>N° Télédéclarant e-Impôts (DGI)</label>
+                  <input type="text" id="param-teledeclarant-dgi" class="form-control" placeholder="Identifiant e-impots.gouv.ci">
+                </div>
+                <div class="form-group">
+                  <label>N° Télédéclarant e-CNPS</label>
+                  <input type="text" id="param-teledeclarant-cnps" class="form-control" placeholder="Identifiant cnps.ci">
+                </div>
+                <div class="form-group">
+                  <label>N° Télédéclarant FNE</label>
+                  <input type="text" id="param-teledeclarant-fne" class="form-control" placeholder="Identifiant fne.dgi.gouv.ci">
+                </div>
+                <div class="form-group">
                   <label>N° Agrément promoteur</label>
                   <input type="text" id="param-agrement" class="form-control">
                 </div>
@@ -22031,6 +22043,9 @@ async function saveParams() {
     regime:      gv('param-regime')||'reel_normal',
     tva_assujetti: gv('param-tva-assujetti')||'oui',
     fne_actif:   gv('param-fne-actif')||'non',
+    teledeclarant_dgi:  gv('param-teledeclarant-dgi'),
+    teledeclarant_cnps: gv('param-teledeclarant-cnps'),
+    teledeclarant_fne:  gv('param-teledeclarant-fne'),
     cnps:        gv('param-cnps'),
     agrement:    gv('param-agrement'),
     adresse:     gv('param-adresse'),
@@ -22121,6 +22136,7 @@ function loadParamFields() {
   sv('param-societe',p.societe||'ImmoSuite ERP');
   sv('param-rccm',p.rccm); sv('param-dgi',p.dgi); sv('param-cnps',p.cnps||'422483');
   sv('param-regime',p.regime||'reel_normal'); sv('param-tva-assujetti',p.tva_assujetti||'oui'); sv('param-fne-actif',p.fne_actif||'non');
+  sv('param-teledeclarant-dgi',p.teledeclarant_dgi); sv('param-teledeclarant-cnps',p.teledeclarant_cnps); sv('param-teledeclarant-fne',p.teledeclarant_fne);
   sv('param-agrement',p.agrement); sv('param-adresse',p.adresse);
   sv('param-email',p.email); sv('param-tel',p.tel); sv('param-site',p.site);
   sv('param-whatsapp',p.whatsapp); sv('param-tva',p.tva||18);
@@ -59517,13 +59533,28 @@ function facturerLot(lotId) {
 function _fneOuvrirModal(data) {
   APP._fneData = data;
   var p = DATA.params || {};
+  document.getElementById('fne-mode-toggle').value = 'fne';
   document.getElementById('fne-client').value = data.client;
   document.getElementById('fne-ncc-client').value = data.ncc_client || '';
   document.getElementById('fne-designation').value = data.designation;
   document.getElementById('fne-montant-ht').value = data.montant_ht;
   document.getElementById('fne-tva-toggle').value = (p.tva_assujetti === 'non') ? 'non' : 'oui';
-  _fneRecalc();
+  _fneModeChange();
   document.getElementById('modal-fne').classList.add('open');
+}
+
+function _fneModeChange() {
+  var mode = document.getElementById('fne-mode-toggle').value;
+  var title = document.getElementById('fne-modal-title');
+  var hint = document.getElementById('fne-mode-hint');
+  if (mode === 'simple') {
+    title.textContent = '📄 Facture simple';
+    hint.innerHTML = 'Document interne. <strong>Ne passe pas par la certification DGI.</strong> Non valable comme facture normalisée pour un client assujetti exigeant le FNE.';
+  } else {
+    title.textContent = '🧾 Facture normalisée (FNE)';
+    hint.textContent = 'Certifiable DGI — QR + numéro normatif. Obligatoire pour clients assujettis.';
+  }
+  _fneRecalc();
 }
 
 function _fneRecalc() {
@@ -59542,13 +59573,15 @@ function _fneRecalc() {
 async function _fneEnregistrer() {
   var d = APP._fneData; if (!d) return;
   var p = DATA.params || {};
+  var mode = document.getElementById('fne-mode-toggle').value;
   var ht = parseFloat(document.getElementById('fne-montant-ht').value) || 0;
   var tvaActive = document.getElementById('fne-tva-toggle').value === 'oui';
   var tauxTva = tvaActive ? (p.tva || 18) : 0;
   var tva = Math.round(ht * tauxTva / 100);
   var f = {
     id: 'fac_' + Date.now(),
-    numero: _fneNumero(),
+    numero: mode === 'simple' ? _fneNumeroSimple() : _fneNumero(),
+    mode_facture: mode,
     type: d.type,
     ref_id: d.ref_id,
     client: document.getElementById('fne-client').value.trim(),
@@ -59556,16 +59589,22 @@ async function _fneEnregistrer() {
     designation: document.getElementById('fne-designation').value.trim(),
     ht: ht, taux_tva: tauxTva, tva: tva, ttc: ht + tva,
     date: today(),
-    statut_fne: (p.fne_actif === 'oui') ? 'a_certifier' : 'hors_fne',
+    statut_fne: mode === 'simple' ? 'non_applicable' : ((p.fne_actif === 'oui') ? 'a_certifier' : 'hors_fne'),
     created_at: new Date().toISOString()
   };
   DATA.factures_client.push(f);
   await dbPut('factures_client', f);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_factures_client', f);
   closeModal('modal-fne');
-  toast('Facture ' + f.numero + ' enregistrée.', 'success');
+  toast((mode==='simple'?'Facture simple ':'Facture FNE ') + f.numero + ' enregistrée.', 'success');
   imprimerFactureFNE(f.id);
   if (typeof renderFacturesClient === 'function') renderFacturesClient();
+}
+
+function _fneNumeroSimple() {
+  var annee = new Date().getFullYear();
+  var n = (DATA.factures_client || []).filter(function(f){ return (f.numero||'').indexOf('FS-' + annee) === 0; }).length + 1;
+  return 'FS-' + annee + '-' + String(n).padStart(5, '0');
 }
 
 function imprimerFactureFNE(facId) {
@@ -59573,15 +59612,18 @@ function imprimerFactureFNE(facId) {
   if (!f) { toast('Facture introuvable.', 'error'); return; }
   var p = DATA.params || {};
   var logo = getLogoForPrint ? getLogoForPrint() : '';
-  var fneActif = p.fne_actif === 'oui';
+  var estSimple = f.mode_facture === 'simple';
+  var fneActif = !estSimple && p.fne_actif === 'oui';
   var qrPayload = _fneQrPayload(f, p.dgi);
   var qrSvg = fneActif ? _fneQrSvg(qrPayload) : '';
   var typeLabel = f.type === 'cession' ? 'Cession foncière' : 'Vente immobilière';
   var dateLbl = new Date(f.date).toLocaleDateString('fr-FR', { year:'numeric', month:'long', day:'numeric' });
+  var docTitre = estSimple ? 'FACTURE' : 'FACTURE';
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ' + f.numero + '</title>'
     + '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#1C1C2E;padding:24px;line-height:1.55;}'
     + '.header{display:flex;justify-content:space-between;border-bottom:3px solid #B87333;padding-bottom:14px;margin-bottom:18px;}'
     + '.fne-mark{display:inline-block;background:#1A6B3A;color:#fff;font-weight:800;font-size:11px;padding:3px 10px;border-radius:5px;letter-spacing:1px;}'
+    + '.simple-mark{display:inline-block;background:#64748B;color:#fff;font-weight:700;font-size:10px;padding:3px 10px;border-radius:5px;}'
     + '.parties{display:flex;justify-content:space-between;gap:20px;margin-bottom:18px;}'
     + '.party{flex:1;background:#F6F1EA;border-radius:8px;padding:12px;font-size:11px;}'
     + '.party h4{margin:0 0 6px;color:#B87333;font-size:11px;text-transform:uppercase;}'
@@ -59597,10 +59639,10 @@ function imprimerFactureFNE(facId) {
     + '<div><div style="font-size:18px;font-weight:800;color:#B87333;">' + escHtml(p.societe || 'ImmoSuite ERP') + '</div>'
     + '<div style="font-size:10px;color:#6B6B9A;">' + escHtml(p.adresse || '') + '</div>'
     + '<div style="font-size:10px;color:#6B6B9A;">RCCM ' + escHtml(p.rccm || '—') + ' · NCC ' + escHtml(p.dgi || '—') + '</div></div></div>'
-    + '<div style="text-align:right;"><div style="font-size:20px;font-weight:800;">FACTURE</div>'
+    + '<div style="text-align:right;"><div style="font-size:20px;font-weight:800;">' + docTitre + '</div>'
     + '<div style="font-size:13px;color:#B87333;font-weight:700;">' + escHtml(f.numero) + '</div>'
     + '<div style="font-size:11px;color:#6B6B9A;">' + dateLbl + '</div>'
-    + (fneActif ? '<div style="margin-top:6px;"><span class="fne-mark">✓ FNE</span></div>' : '') + '</div></div>'
+    + '<div style="margin-top:6px;">' + (fneActif ? '<span class="fne-mark">✓ FNE</span>' : (estSimple ? '<span class="simple-mark">Facture simple — hors FNE</span>' : '')) + '</div></div></div>'
     + '<div class="parties">'
     + '<div class="party"><h4>Vendeur</h4>' + escHtml(p.societe || '') + '<br>NCC : ' + escHtml(p.dgi || '—') + '<br>' + escHtml(p.tel || '') + '</div>'
     + '<div class="party"><h4>Client</h4>' + escHtml(f.client) + (f.ncc_client ? '<br>NCC : ' + escHtml(f.ncc_client) : '') + '</div></div>'
@@ -59609,10 +59651,12 @@ function imprimerFactureFNE(facId) {
     + '<table class="totaux"><tr><td>Total HT</td><td style="text-align:right;">' + fmtF(f.ht) + ' FCFA</td></tr>'
     + '<tr><td>TVA (' + f.taux_tva + '%)</td><td style="text-align:right;">' + fmtF(f.tva) + ' FCFA</td></tr>'
     + '<tr class="ttc-row"><td>Total TTC</td><td style="text-align:right;">' + fmtF(f.ttc) + ' FCFA</td></tr></table>'
-    + (fneActif
-        ? '<div class="fne-block">' + qrSvg + '<div style="font-size:11px;"><strong style="color:#1A6B3A;">Facture Normalisée Électronique</strong><br>Réf. FNE : ' + escHtml(f.numero) + '<br>NCC émetteur : ' + escHtml(p.dgi || '—') + '<br><span style="color:#6B6B9A;">Vérifiable sur fne.dgi.gouv.ci</span></div></div>'
-        : '<div class="legal" style="color:#C0392B;">⚠ Facturation FNE non activée. Certification DGI requise avant remise au client (Paramètres → Société → FNE).</div>')
-    + '<div class="legal">' + (f.taux_tva===0 ? 'Opération non soumise à TVA. ' : '') + 'Facture émise conformément au Code Général des Impôts de Côte d\'Ivoire. Conservation légale : 10 ans.</div>'
+    + (estSimple
+        ? ''
+        : (fneActif
+            ? '<div class="fne-block">' + qrSvg + '<div style="font-size:11px;"><strong style="color:#1A6B3A;">Facture Normalisée Électronique</strong><br>Réf. FNE : ' + escHtml(f.numero) + '<br>NCC émetteur : ' + escHtml(p.dgi || '—') + (p.teledeclarant_fne ? '<br>N° Télédéclarant : ' + escHtml(p.teledeclarant_fne) : '') + '<br><span style="color:#6B6B9A;">Vérifiable sur fne.dgi.gouv.ci</span></div></div>'
+            : '<div class="legal" style="color:#C0392B;">⚠ Facturation FNE non activée. Certification DGI requise avant remise au client (Paramètres → Société → FNE).</div>'))
+    + '<div class="legal">' + (f.taux_tva===0 ? 'Opération non soumise à TVA. ' : '') + (estSimple ? 'Document interne non certifié DGI. ' : 'Facture émise conformément au Code Général des Impôts de Côte d\'Ivoire. ') + 'Conservation légale : 10 ans.</div>'
     + '</body></html>';
   var w = window.open('', '_blank');
   w.document.write(html);
@@ -59702,10 +59746,18 @@ function imprimerFactureFNE(facId) {
 <div class="modal-overlay" id="modal-fne">
   <div class="modal">
     <div class="modal-header">
-      <h3>🧾 Facture normalisée (FNE)</h3>
+      <h3 id="fne-modal-title">🧾 Facturation client</h3>
       <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-fne')">✕</button>
     </div>
     <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Type de facture</label>
+        <select class="form-control" id="fne-mode-toggle" onchange="_fneModeChange()">
+          <option value="fne">🧾 Facture normalisée FNE (certifiable DGI)</option>
+          <option value="simple">📄 Facture simple (hors FNE — reçu/note interne)</option>
+        </select>
+        <div id="fne-mode-hint" style="font-size:11px;color:var(--dim);margin-top:4px;"></div>
+      </div>
       <div class="form-grid">
         <div class="form-group span-2"><label>Client *</label><input class="form-control" id="fne-client"></div>
         <div class="form-group span-2"><label>NCC client (si personne morale)</label><input class="form-control" id="fne-ncc-client" placeholder="Facultatif"></div>
