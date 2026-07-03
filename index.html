@@ -16544,6 +16544,7 @@ function refreshGroupBadges(){
 }
 
 function toggleNavGroup(idx){
+  if(String(idx)==='0') return; /* Pilotage toujours visible : non repliable */
   var g=document.getElementById('navgrp-'+idx);
   if(g){ g.classList.toggle('collapsed'); _saveNavGroups(); refreshGroupBadges(); }
 }
@@ -16563,6 +16564,7 @@ function _restoreNavGroups(){
   try{ st=JSON.parse(localStorage.getItem('pici_nav_groups')||'{}'); }catch(e){}
   document.querySelectorAll('.nav-group').forEach(function(g){
     var k=g.getAttribute('data-group');
+    if(k==='0'){ g.classList.remove('collapsed'); return; } /* Pilotage toujours visible */
     if(st[k]) g.classList.add('collapsed'); else g.classList.remove('collapsed');
   });
   _expandActiveGroup(); try{refreshGroupBadges();}catch(e){}
