@@ -3060,6 +3060,23 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <button class="tab-btn" onclick="switchAmortTab('tableau')">📋 Tableau d'amortissement</button>
             <button class="tab-btn" onclick="switchAmortTab('dotations')">📉 Dotations annuelles</button>
             <button class="tab-btn" onclick="switchAmortTab('nouveau')">➕ Enregistrer un bien</button>
+            <button class="tab-btn" onclick="switchAmortTab('societe');renderImmoSociete()" style="color:#7C3AED;font-weight:700;">🏢 Immobilisations Société</button>
+          </div>
+
+          <!-- Immobilisations de la société (terrain, véhicules, matériel...) -->
+          <div id="amort-pane-societe" style="display:none;">
+            <div class="alert alert-info" style="margin-bottom:12px;">
+              ℹ️ Immobilisations propres à la société (matériel, véhicules, mobilier, aménagements…). Distinct des biens souscripteurs. Amortissement linéaire, dotation annuelle sur compte configurable (Paramètres → Comptabilité).
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+              <div id="immo-soc-kpis" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+              <div style="display:flex;gap:8px;">
+                <select class="filter-select" id="immo-soc-annee"></select>
+                <button class="btn btn-secondary btn-sm" onclick="genererDotationsAnnuelles()">📉 Générer dotations de l'exercice</button>
+                <button class="btn btn-primary btn-sm" onclick="openImmoSocieteModal()">➕ Nouvelle immobilisation</button>
+              </div>
+            </div>
+            <div id="immo-soc-liste"></div>
           </div>
 
           <!-- Liste des biens amortissables -->
@@ -14959,6 +14976,7 @@ var DATA = {
   factures_client: [],
   financements_programme: [],
   conflits_sync: [],
+  immobilisations: [],
   // ── RAPPROCHEMENT BANCAIRE v5.0 ──
   releves_bank: [],
   rapprochements: [],
@@ -15018,7 +15036,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 133; /* v133: store 'conflits_sync' (détection conflit écriture) + comptes paie/TVA/IS configurables */
+var DB_VERSION = 134; /* v134: store 'immobilisations' (plan d'amortissement) + conflits sync étendus */
 var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
@@ -15034,6 +15052,7 @@ var ALL_STORES = [
   'factures_client',
   'financements_programme',
   'conflits_sync',
+  'immobilisations',
   'permis','plans_arch','rapports_chantier',
   'campagnes','actions_marketing','segments_marketing',
   'documents','signatures',
@@ -15579,19 +15598,24 @@ async function syncToSupabase(table, obj) {
   }
   if (!SB.url || !SB.key) return false;
   if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
-  /* ── Détection de conflit (écritures uniquement — intégrité comptable) ──
+  /* ── Détection de conflit — étendue aux stores financiers sensibles ──
      Si un tiers a modifié l'enregistrement côté cloud depuis notre dernière lecture,
-     on n'écrase pas silencieusement : on journalise le conflit et on alerte. */
-  if (table === 'pi_ecritures' && obj && obj.id && !_pulling && !obj._forceCloture) {
+     on n'écrase pas silencieusement : on journalise le conflit et on alerte.
+     Ne s'active que si obj._baseModifie est fourni (édition d'un enregistrement existant) —
+     une création ne peut pas être en conflit. */
+  var _STORES_CONFLIT = ['pi_ecritures','pi_factures_client','pi_financements_programme','pi_cessions_foncieres','pi_versements'];
+  if (_STORES_CONFLIT.indexOf(table) !== -1 && obj && obj.id && obj._baseModifie && !_pulling && !obj._forceCloture) {
     try {
-      var remote = await sbFetch('pi_ecritures?id=eq.' + obj.id + '&select=id,_modifie', 'GET');
-      if (remote && remote.length && remote[0]._modifie && obj._baseModifie && remote[0]._modifie > obj._baseModifie) {
-        console.warn('[CONFLIT SYNC] Écriture modifiée ailleurs depuis chargement local:', obj.id);
+      var remote = await sbFetch(table + '?id=eq.' + obj.id + '&select=id,_modifie', 'GET');
+      if (remote && remote.length && remote[0]._modifie && remote[0]._modifie > obj._baseModifie) {
+        var _storeLocal = (SUPA_STORE_MAP.find(function(x){ return x[0]===table; })||[])[1] || table.replace('pi_','');
+        console.warn('[CONFLIT SYNC] Enregistrement modifié ailleurs depuis chargement local:', table, obj.id);
         if (!DATA.conflits_sync) DATA.conflits_sync = [];
-        DATA.conflits_sync.push({ id: uid(), store:'ecritures', record_id: obj.id, detecte_le: new Date().toISOString(),
-          local_snapshot: JSON.parse(JSON.stringify(obj)), resolu: false });
-        try { await dbPut('conflits_sync', DATA.conflits_sync[DATA.conflits_sync.length-1]); } catch(e){}
-        try { if (typeof toast === 'function') toast('⚠️ Conflit détecté sur une écriture — modifiée ailleurs entre-temps. Voir Paramètres → Conflits de synchronisation.', 'error'); } catch(e){}
+        var _c = { id: uid(), store:_storeLocal, record_id: obj.id, detecte_le: new Date().toISOString(),
+          local_snapshot: JSON.parse(JSON.stringify(obj)), resolu: false };
+        DATA.conflits_sync.push(_c);
+        try { await dbPut('conflits_sync', _c); } catch(e){}
+        try { if (typeof toast === 'function') toast('⚠️ Conflit détecté (' + _storeLocal + ') — modifié ailleurs entre-temps. Voir Paramètres → Conflits de synchronisation.', 'error'); } catch(e){}
         return false;
       }
     } catch(e) { /* vérif réseau indisponible → on procède normalement, mieux que bloquer tout */ }
@@ -15675,6 +15699,7 @@ var SUPA_STORE_MAP = [
   ['pi_quinzainiers', 'quinzainiers'],
   ['pi_factures_client', 'factures_client'],
   ['pi_financements_programme', 'financements_programme'],
+  ['pi_immobilisations', 'immobilisations'],
   ['pi_biens_amort', 'biens_amort'],
   ['pi_releves_bank', 'releves_bank'],
   ['pi_rapprochements', 'rapprochements'],
@@ -20589,13 +20614,17 @@ function renderConflitsSync() {
   var el = document.getElementById('conflits-sync-list'); if (!el) return;
   var list = (DATA.conflits_sync || []).filter(function(c){ return !c.resolu; });
   if (!list.length) { el.innerHTML = '<div style="font-size:12px;color:var(--vert);">✅ Aucun conflit en attente.</div>'; return; }
+  var reopenFn = { ecritures:'openEcritureModal', factures_client:'imprimerFactureFNE', financements_programme:'bpEditFinancement', cessions_foncieres:'cesOpen' };
   el.innerHTML = list.map(function(c){
     var e = c.local_snapshot || {};
+    var label = e.libelle || e.designation || e.client || e.numero || c.record_id;
+    var montant = e.montant || e.ttc || e.montant_prevu || e.prix_cession || 0;
+    var fn = reopenFn[c.store] || null;
     return '<div style="padding:10px 12px;border-left:3px solid var(--rouge);background:var(--card2);border-radius:6px;margin-bottom:8px;font-size:12px;">'
-      + '<strong>' + escHtml(e.libelle||'—') + '</strong> — ' + fmtF(e.montant||0) + ' F le ' + dateShort(e.date)
+      + '<span class="badge badge-or" style="font-size:9px;">' + c.store + '</span> <strong>' + escHtml(label) + '</strong>' + (montant ? ' — ' + fmtF(montant) + ' F' : '')
       + '<br><span style="color:var(--dim);">Détecté le ' + new Date(c.detecte_le).toLocaleString('fr-FR') + '</span>'
       + '<div style="margin-top:6px;display:flex;gap:6px;">'
-      + '<button class="btn btn-secondary btn-sm" onclick="openEcritureModal(\'' + e.id + '\')">✏️ Rouvrir et corriger</button>'
+      + (fn ? '<button class="btn btn-secondary btn-sm" onclick="' + fn + '(\'' + c.record_id + '\')">✏️ Rouvrir</button>' : '')
       + '<button class="btn btn-secondary btn-sm" onclick="_conflitMarquerResolu(\'' + c.id + '\')">✔ Marquer résolu</button>'
       + '</div></div>';
   }).join('');
@@ -25973,6 +26002,7 @@ function bpAddFinancement() {
 function bpEditFinancement(id) {
   var f = (DATA.financements_programme || []).find(function(x){ return x.id === id; }); if (!f) return;
   APP._bpFinEdit = id;
+  APP._bpFinBaseModifie = f._modifie || null;
   var sv = function(i,v){ var e=document.getElementById(i); if(e) e.value = v!==undefined&&v!==null ? v : ''; };
   sv('bpf-type', f.type); sv('bpf-source', f.source); sv('bpf-prevu', f.montant_prevu);
   sv('bpf-debloque', f.montant_debloque); sv('bpf-taux', f.taux); sv('bpf-echeance', f.echeance);
@@ -25988,6 +26018,7 @@ async function bpSaveFinancement() {
   if (APP._bpFinEdit) {
     f = (DATA.financements_programme || []).find(function(x){ return x.id === APP._bpFinEdit; });
     if (!f) return;
+    f._baseModifie = APP._bpFinBaseModifie || null;
   } else {
     f = { id: 'fin_' + Date.now(), programme_id: progId, created_at: today() };
     if (!DATA.financements_programme) DATA.financements_programme = [];
@@ -29445,18 +29476,161 @@ function switchTiersTab(tab) {
   else if (tab==='autres461') buildTiers461();
 }
 
+/* ══════════════════════════════════════════════
+   IMMOBILISATIONS SOCIÉTÉ — fiche, VNC, dotations
+   Distinct des biens souscripteurs (amort_biens)
+   ══════════════════════════════════════════════ */
+function immoSocCalc(im, year) {
+  var dateAcq = new Date(im.date_acquisition);
+  var anneeAcq = dateAcq.getFullYear();
+  var y = parseInt(year) || new Date().getFullYear();
+  var base = (parseFloat(im.valeur_acquisition)||0) - (parseFloat(im.valeur_residuelle)||0);
+  var duree = parseInt(im.duree_ans) || 5;
+  var dotationAnnuelle = duree > 0 ? Math.round(base / duree) : 0;
+  var anneesEcoulees = Math.max(0, Math.min(duree, y - anneeAcq + 1));
+  var cumulAmort = Math.min(base, dotationAnnuelle * anneesEcoulees);
+  var vnc = (parseFloat(im.valeur_acquisition)||0) - cumulAmort;
+  var estAmortiPourAnnee = anneeAcq <= y && (y - anneeAcq) < duree;
+  var dejaGenere = (im.dotations_generees||[]).indexOf(y) !== -1;
+  return { dotationAnnuelle:dotationAnnuelle, cumulAmort:cumulAmort, vnc:Math.max(0,vnc), anneesEcoulees:anneesEcoulees,
+    duree:duree, base:base, estAmortiPourAnnee:estAmortiPourAnnee, dejaGenere:dejaGenere, anneeAcq:anneeAcq };
+}
+
+function renderImmoSociete() {
+  var selY = document.getElementById('immo-soc-annee');
+  if (selY && !selY.options.length) {
+    var cy = new Date().getFullYear();
+    for (var y = cy-3; y <= cy+1; y++) { var o=document.createElement('option'); o.value=y; o.textContent=y; if(y===cy)o.selected=true; selY.appendChild(o); }
+    selY.onchange = renderImmoSociete;
+  }
+  var year = selY ? selY.value : new Date().getFullYear();
+  var list = DATA.immobilisations || [];
+  var totVA = 0, totVNC = 0, totDotAnnee = 0;
+  var rows = list.map(function(im){
+    var c = immoSocCalc(im, year);
+    totVA += parseFloat(im.valeur_acquisition)||0; totVNC += c.vnc;
+    if (c.estAmortiPourAnnee) totDotAnnee += c.dotationAnnuelle;
+    return '<tr>'
+      + '<td><strong>' + escHtml(im.designation) + '</strong><br><span style="font-size:10px;color:var(--dim);">Cpte ' + escHtml(im.compte||'21') + '</span></td>'
+      + '<td>' + dateShort(im.date_acquisition) + '</td>'
+      + '<td style="text-align:right;">' + fmtF(im.valeur_acquisition) + '</td>'
+      + '<td style="text-align:right;">' + c.duree + ' ans</td>'
+      + '<td style="text-align:right;">' + fmtF(c.dotationAnnuelle) + '</td>'
+      + '<td style="text-align:right;">' + fmtF(c.cumulAmort) + '</td>'
+      + '<td style="text-align:right;font-weight:700;color:' + (c.vnc>0?'var(--vert)':'var(--dim)') + ';">' + fmtF(c.vnc) + '</td>'
+      + '<td>' + (c.dejaGenere ? '<span class="badge badge-vert" style="font-size:10px;">Dotée ' + year + '</span>' : (c.estAmortiPourAnnee ? '<span class="badge badge-or" style="font-size:10px;">À doter</span>' : '<span class="badge" style="font-size:10px;color:var(--dim);">Hors période</span>')) + '</td>'
+      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="openImmoSocieteModal(\'' + im.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteImmoSociete(\'' + im.id + '\')">🗑</button></td>'
+      + '</tr>';
+  }).join('');
+  var kpiEl = document.getElementById('immo-soc-kpis');
+  if (kpiEl) kpiEl.innerHTML =
+    '<div class="kpi-card" style="padding:8px 14px;"><div class="kpi-label" style="font-size:10px;">Valeur acquisition</div><div class="kpi-value" style="font-size:15px;">' + fmtF(totVA) + '</div></div>'
+    + '<div class="kpi-card" style="padding:8px 14px;"><div class="kpi-label" style="font-size:10px;">VNC totale</div><div class="kpi-value" style="font-size:15px;color:var(--vert);">' + fmtF(totVNC) + '</div></div>'
+    + '<div class="kpi-card" style="padding:8px 14px;"><div class="kpi-label" style="font-size:10px;">Dotation ' + year + '</div><div class="kpi-value" style="font-size:15px;color:var(--or);">' + fmtF(totDotAnnee) + '</div></div>';
+  var box = document.getElementById('immo-soc-liste');
+  if (box) box.innerHTML = list.length
+    ? '<div class="table-wrap"><table style="width:100%;font-size:12px;"><thead><tr><th>Immobilisation</th><th>Acquisition</th><th style="text-align:right;">Valeur</th><th style="text-align:right;">Durée</th><th style="text-align:right;">Dotation/an</th><th style="text-align:right;">Cumul</th><th style="text-align:right;">VNC</th><th>Statut</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    : '<div style="color:var(--dim);font-size:12px;padding:16px;">Aucune immobilisation enregistrée.</div>';
+}
+
+function openImmoSocieteModal(id) {
+  APP._immoSocEdit = id || null;
+  var sv = function(i,v){ var e=document.getElementById(i); if(e) e.value = v!==undefined&&v!==null?v:''; };
+  if (id) {
+    var im = (DATA.immobilisations||[]).find(function(x){ return x.id===id; }); if (!im) return;
+    sv('is-designation', im.designation); sv('is-compte', im.compte); sv('is-valeur', im.valeur_acquisition);
+    sv('is-date', im.date_acquisition); sv('is-duree', im.duree_ans); sv('is-residuelle', im.valeur_residuelle||0);
+    document.getElementById('modal-immo-soc-title').textContent = 'Modifier immobilisation';
+  } else {
+    ['is-designation','is-compte','is-valeur','is-date','is-duree','is-residuelle'].forEach(function(i){ sv(i,''); });
+    sv('is-date', today()); sv('is-compte','21'); sv('is-residuelle','0');
+    document.getElementById('modal-immo-soc-title').textContent = 'Nouvelle immobilisation';
+  }
+  document.getElementById('modal-immo-soc').classList.add('open');
+}
+
+async function saveImmoSociete() {
+  var gv = function(i){ return (document.getElementById(i)||{}).value || ''; };
+  var designation = gv('is-designation').trim();
+  var valeur = parseFloat(gv('is-valeur')) || 0;
+  var duree = parseInt(gv('is-duree')) || 0;
+  if (!designation || !valeur || !duree) { toast('Désignation, valeur et durée obligatoires.', 'error'); return; }
+  var im;
+  if (APP._immoSocEdit) {
+    im = (DATA.immobilisations||[]).find(function(x){ return x.id===APP._immoSocEdit; }); if (!im) return;
+  } else {
+    im = { id: 'immo_'+Date.now(), dotations_generees:[], created_at: today() };
+    if (!DATA.immobilisations) DATA.immobilisations = [];
+    DATA.immobilisations.push(im);
+  }
+  im.designation = designation; im.compte = gv('is-compte') || '21';
+  im.valeur_acquisition = valeur; im.date_acquisition = gv('is-date') || today();
+  im.duree_ans = duree; im.valeur_residuelle = parseFloat(gv('is-residuelle')) || 0;
+  await dbPut('immobilisations', im);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_immobilisations', im);
+  closeModal('modal-immo-soc');
+  toast('Immobilisation enregistrée.', 'success');
+  renderImmoSociete();
+}
+
+async function deleteImmoSociete(id) {
+  if (!confirm('Supprimer cette immobilisation ?')) return;
+  if (await deleteRecord('immobilisations', id) === false) return;
+  renderImmoSociete();
+}
+
+/* Génère les écritures de dotation annuelle (681 débit / 28 crédit) pour l'exercice sélectionné.
+   Une seule génération par immobilisation et par année (traçée dans dotations_generees). */
+async function genererDotationsAnnuelles() {
+  var year = parseInt((document.getElementById('immo-soc-annee')||{}).value) || new Date().getFullYear();
+  if (typeof exerciceEstClos === 'function' && exerciceEstClos(year+'-12-31')) {
+    toast('🔒 Exercice ' + year + ' clôturé — dotations bloquées.', 'error'); return;
+  }
+  var cd = (DATA.params && DATA.params.comptes_defaut) || {};
+  var cptDotation = cd.amort_dotation || '681';
+  var cptCumul = cd.amort_cumul || '28';
+  var list = (DATA.immobilisations || []).filter(function(im){
+    var c = immoSocCalc(im, year);
+    return c.estAmortiPourAnnee && !c.dejaGenere && c.dotationAnnuelle > 0;
+  });
+  if (!list.length) { toast('Aucune dotation à générer pour ' + year + '.', 'info'); return; }
+  if (!confirm(list.length + ' immobilisation(s) à doter pour ' + year + '. Générer les écritures ?')) return;
+  for (var i = 0; i < list.length; i++) {
+    var im = list[i];
+    var c = immoSocCalc(im, year);
+    var ec = {
+      id: uid(), ref: 'DOT-' + year + '-' + String(i+1).padStart(3,'0'), date: year+'-12-31', piece: 'DOTATION',
+      type: 'charge', libelle: 'Dotation amortissement ' + year + ' — ' + im.designation,
+      lignes: [ { compte: cptDotation, sens:'D', montant: c.dotationAnnuelle, libelle:'Dotation' }, { compte: cptCumul, sens:'C', montant: c.dotationAnnuelle, libelle:'Amortissement cumulé' } ],
+      compte: cptDotation, compte_debit: cptDotation, compte_credit: cptCumul, montant: c.dotationAnnuelle,
+      mode: 'od', programme_id: '', notes: 'Immobilisation ' + im.designation + ' — année ' + (c.anneesEcoulees) + '/' + c.duree, created_at: today()
+    };
+    DATA.ecritures.push(ec); await dbPut('ecritures', ec);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', ec);
+    im.dotations_generees = im.dotations_generees || []; im.dotations_generees.push(year);
+    await dbPut('immobilisations', im);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_immobilisations', im);
+  }
+  toast(list.length + ' dotation(s) générée(s) pour ' + year + '.', 'success');
+  renderImmoSociete();
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildCompteResultat === 'function') buildCompteResultat();
+}
+
+
 function switchAmortTab(tab) {
-  ['biens','tableau','dotations','nouveau'].forEach(function(t) {
+  ['biens','tableau','dotations','nouveau','societe'].forEach(function(t) {
     var el = document.getElementById('amort-pane-'+t);
     if (el) el.style.display = t===tab ? 'block' : 'none';
   });
   var btns = document.querySelectorAll('#tab-compta-amortissements .tab-nav .tab-btn');
-  var tabs = ['biens','tableau','dotations','nouveau'];
+  var tabs = ['biens','tableau','dotations','nouveau','societe'];
   btns.forEach(function(b,i){ b.classList.toggle('active', tabs[i]===tab); });
   if (tab==='biens') buildAmortBiens();
   else if (tab==='tableau') buildTableauAmort();
   else if (tab==='dotations') buildDotations();
   else if (tab==='nouveau') populateAmortClientSelect();
+  else if (tab==='societe') renderImmoSociete();
 }
 
 /* ─── Comptabilité Tiers — goTo patch ──────────────── */
@@ -59826,6 +60000,37 @@ function imprimerFactureFNE(facId) {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-bp-fin')">Annuler</button>
       <button class="btn btn-primary" onclick="bpSaveFinancement()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Immobilisation Société -->
+<div class="modal-overlay" id="modal-immo-soc">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-immo-soc-title">Nouvelle immobilisation</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-immo-soc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group span-2"><label>Désignation *</label><input class="form-control" id="is-designation" placeholder="Véhicule, mobilier, matériel bureau..."></div>
+        <div class="form-group"><label>Compte SYSCOHADA</label>
+          <select class="form-control" id="is-compte">
+            <option value="21">21 — Immobilisations incorporelles</option>
+            <option value="22">22 — Terrains</option>
+            <option value="23">23 — Bâtiments</option>
+            <option value="24">24 — Matériel, mobilier, transport</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Date d'acquisition *</label><input type="date" class="form-control" id="is-date"></div>
+        <div class="form-group"><label>Valeur d'acquisition (FCFA) *</label><input type="number" class="form-control" id="is-valeur"></div>
+        <div class="form-group"><label>Durée d'amortissement (années) *</label><input type="number" class="form-control" id="is-duree" placeholder="5"></div>
+        <div class="form-group span-2"><label>Valeur résiduelle (FCFA)</label><input type="number" class="form-control" id="is-residuelle" value="0"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-immo-soc')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveImmoSociete()">💾 Enregistrer</button>
     </div>
   </div>
 </div>
