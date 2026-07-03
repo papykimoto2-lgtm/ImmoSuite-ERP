@@ -5441,8 +5441,30 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <div class="form-group"><label>Commission apporteur — Charge</label><input class="form-control" id="cd-comm-app-charge" placeholder="629"></div>
               <div class="form-group"><label>Commission apporteur — À payer</label><input class="form-control" id="cd-comm-app-provision" placeholder="468"></div>
               <div class="form-group"></div>
+
+              <div class="form-group"><label>Paie — Charges personnel</label><input class="form-control" id="cd-paie-charge" placeholder="641"></div>
+              <div class="form-group"><label>Paie — Personnel dû (net)</label><input class="form-control" id="cd-paie-du" placeholder="422"></div>
+              <div class="form-group"><label>Paie — CNPS à payer</label><input class="form-control" id="cd-paie-cnps" placeholder="431"></div>
+
+              <div class="form-group"><label>Paie — ITS/CMU à payer</label><input class="form-control" id="cd-paie-its" placeholder="447"></div>
+              <div class="form-group"><label>TVA collectée</label><input class="form-control" id="cd-tva-collectee" placeholder="443"></div>
+              <div class="form-group"><label>TVA déductible</label><input class="form-control" id="cd-tva-deductible" placeholder="444"></div>
+
+              <div class="form-group"><label>Cession foncière — Produit</label><input class="form-control" id="cd-cession-produit" placeholder="701"></div>
+              <div class="form-group"><label>Amortissements — Dotation</label><input class="form-control" id="cd-amort-dotation" placeholder="681"></div>
+              <div class="form-group"><label>Amortissements — Cumul</label><input class="form-control" id="cd-amort-cumul" placeholder="28"></div>
+
+              <div class="form-group"><label>Taux Impôt sur les Sociétés (%)</label><input type="number" step="0.1" class="form-control" id="cd-taux-is" placeholder="25"></div>
+              <div class="form-group"></div>
+              <div class="form-group"></div>
             </div>
             <div style="margin-top:14px;"><button class="btn btn-primary" onclick="saveComptesDefaut()">💾 Enregistrer les comptes par défaut</button></div>
+
+            <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--bord);">
+              <div class="form-section-title" style="color:var(--rouge);">⚠️ Conflits de synchronisation</div>
+              <div style="font-size:11px;color:var(--blanc-dim);margin-bottom:8px;">Écritures modifiées ailleurs (autre poste) avant votre enregistrement. Non écrasées automatiquement — à résoudre manuellement.</div>
+              <div id="conflits-sync-list"></div>
+            </div>
           </div>
         </div>
 
@@ -11731,7 +11753,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-body">
       <div class="alert alert-warn" style="margin-bottom:16px;font-size:12px;">
-        📌 <strong>Partie double SYSCOHADA</strong> — Toute écriture comporte un compte débité et un compte crédité. Débit = Crédit.
+        📌 <strong>Partie double SYSCOHADA</strong> — Au moins 1 ligne débit et 1 ligne crédit. Σ Débit = Σ Crédit.
       </div>
       <div class="form-grid">
         <div class="form-group">
@@ -11746,29 +11768,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <label>Libellé de l'écriture *</label>
           <input type="text" class="form-control" id="e-libelle" placeholder="Décrivez l'opération...">
         </div>
-        <!-- Débit -->
-        <div class="form-group">
-          <label>Compte débité * <span style="color:var(--or);font-size:10px;">(celui qui reçoit)</span></label>
-          <select class="form-control" id="e-compte-debit" onchange="autoDetectType()">
-            <option value="">— Choisir dans le plan —</option>
-          </select>
+      </div>
+
+      <div style="margin-top:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <label style="margin:0;">Lignes d'écriture *</label>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="ecrAjouterLigne()">➕ Ajouter une ligne</button>
         </div>
-        <!-- Crédit -->
-        <div class="form-group">
-          <label>Compte crédité * <span style="color:var(--or);font-size:10px;">(celui qui donne)</span></label>
-          <select class="form-control" id="e-compte-credit" onchange="autoDetectType()">
-            <option value="">— Choisir dans le plan —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Montant (FCFA) *</label>
-          <input type="number" class="form-control" id="e-montant" oninput="checkEquilibre()">
-        </div>
-        <div class="form-group">
-          <label>Sens comptable détecté</label>
-          <input type="text" class="form-control" id="e-type-auto" readonly style="color:var(--or);font-style:italic;" placeholder="automatique...">
-          <input type="hidden" id="e-type" value="charge">
-        </div>
+        <div id="ecr-lignes-wrap"></div>
+      </div>
+
+      <div class="form-grid" style="margin-top:12px;">
         <div class="form-group">
           <label>Programme immobilier</label>
           <select class="form-control" id="e-programme"><option value="">Général / Siège</option></select>
@@ -11789,6 +11799,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <label>Notes / Commentaires</label>
           <textarea class="form-control" id="e-notes" placeholder="Informations complémentaires..."></textarea>
         </div>
+        <input type="hidden" id="e-type" value="charge">
       </div>
       <div id="equilibre-check" style="padding:10px 14px;border-radius:var(--radius);font-size:12px;font-weight:600;margin-top:8px;display:none;"></div>
     </div>
@@ -14935,6 +14946,7 @@ var DATA = {
   quinzainiers: [],
   factures_client: [],
   financements_programme: [],
+  conflits_sync: [],
   // ── RAPPROCHEMENT BANCAIRE v5.0 ──
   releves_bank: [],
   rapprochements: [],
@@ -14994,7 +15006,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 132; /* v132: store 'financements_programme' (plan de financement — bilan de promotion) */
+var DB_VERSION = 133; /* v133: store 'conflits_sync' (détection conflit écriture) + comptes paie/TVA/IS configurables */
 var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
@@ -15009,6 +15021,7 @@ var ALL_STORES = [
   'quinzainiers',
   'factures_client',
   'financements_programme',
+  'conflits_sync',
   'permis','plans_arch','rapports_chantier',
   'campagnes','actions_marketing','segments_marketing',
   'documents','signatures',
@@ -15554,6 +15567,23 @@ async function syncToSupabase(table, obj) {
   }
   if (!SB.url || !SB.key) return false;
   if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
+  /* ── Détection de conflit (écritures uniquement — intégrité comptable) ──
+     Si un tiers a modifié l'enregistrement côté cloud depuis notre dernière lecture,
+     on n'écrase pas silencieusement : on journalise le conflit et on alerte. */
+  if (table === 'pi_ecritures' && obj && obj.id && !_pulling && !obj._forceCloture) {
+    try {
+      var remote = await sbFetch('pi_ecritures?id=eq.' + obj.id + '&select=id,_modifie', 'GET');
+      if (remote && remote.length && remote[0]._modifie && obj._baseModifie && remote[0]._modifie > obj._baseModifie) {
+        console.warn('[CONFLIT SYNC] Écriture modifiée ailleurs depuis chargement local:', obj.id);
+        if (!DATA.conflits_sync) DATA.conflits_sync = [];
+        DATA.conflits_sync.push({ id: uid(), store:'ecritures', record_id: obj.id, detecte_le: new Date().toISOString(),
+          local_snapshot: JSON.parse(JSON.stringify(obj)), resolu: false });
+        try { await dbPut('conflits_sync', DATA.conflits_sync[DATA.conflits_sync.length-1]); } catch(e){}
+        try { if (typeof toast === 'function') toast('⚠️ Conflit détecté sur une écriture — modifiée ailleurs entre-temps. Voir Paramètres → Conflits de synchronisation.', 'error'); } catch(e){}
+        return false;
+      }
+    } catch(e) { /* vérif réseau indisponible → on procède normalement, mieux que bloquer tout */ }
+  }
   if (table !== 'pi_users' && obj && typeof obj === 'object') { obj._modifie = new Date().toISOString(); }
   try {
     /* Upsert (merge sur la clé id) → plus de conflit 409 "duplicate key". */
@@ -20530,6 +20560,41 @@ function loadComptesDefaut() {
   document.getElementById('cd-comm-com-provision').value = cd.comm_com_provision || '467';
   document.getElementById('cd-comm-app-charge').value = cd.comm_app_charge || '629';
   document.getElementById('cd-comm-app-provision').value = cd.comm_app_provision || '468';
+  document.getElementById('cd-paie-charge').value = cd.paie_charge || '641';
+  document.getElementById('cd-paie-du').value = cd.paie_du || '422';
+  document.getElementById('cd-paie-cnps').value = cd.paie_cnps || '431';
+  document.getElementById('cd-paie-its').value = cd.paie_its || '447';
+  document.getElementById('cd-tva-collectee').value = cd.tva_collectee || '443';
+  document.getElementById('cd-tva-deductible').value = cd.tva_deductible || '444';
+  document.getElementById('cd-cession-produit').value = cd.cession_produit || '701';
+  document.getElementById('cd-amort-dotation').value = cd.amort_dotation || '681';
+  document.getElementById('cd-amort-cumul').value = cd.amort_cumul || '28';
+  document.getElementById('cd-taux-is').value = (DATA.params && DATA.params.taux_is != null) ? DATA.params.taux_is : 25;
+  renderConflitsSync();
+}
+
+function renderConflitsSync() {
+  var el = document.getElementById('conflits-sync-list'); if (!el) return;
+  var list = (DATA.conflits_sync || []).filter(function(c){ return !c.resolu; });
+  if (!list.length) { el.innerHTML = '<div style="font-size:12px;color:var(--vert);">✅ Aucun conflit en attente.</div>'; return; }
+  el.innerHTML = list.map(function(c){
+    var e = c.local_snapshot || {};
+    return '<div style="padding:10px 12px;border-left:3px solid var(--rouge);background:var(--card2);border-radius:6px;margin-bottom:8px;font-size:12px;">'
+      + '<strong>' + escHtml(e.libelle||'—') + '</strong> — ' + fmtF(e.montant||0) + ' F le ' + dateShort(e.date)
+      + '<br><span style="color:var(--dim);">Détecté le ' + new Date(c.detecte_le).toLocaleString('fr-FR') + '</span>'
+      + '<div style="margin-top:6px;display:flex;gap:6px;">'
+      + '<button class="btn btn-secondary btn-sm" onclick="openEcritureModal(\'' + e.id + '\')">✏️ Rouvrir et corriger</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="_conflitMarquerResolu(\'' + c.id + '\')">✔ Marquer résolu</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+async function _conflitMarquerResolu(id) {
+  var c = (DATA.conflits_sync || []).find(function(x){ return x.id === id; });
+  if (!c) return;
+  c.resolu = true;
+  await dbPut('conflits_sync', c);
+  renderConflitsSync();
 }
 
 function saveComptesDefaut() {
@@ -20544,8 +20609,18 @@ function saveComptesDefaut() {
     comm_com_charge:     document.getElementById('cd-comm-com-charge').value.trim() || '622',
     comm_com_provision:  document.getElementById('cd-comm-com-provision').value.trim() || '467',
     comm_app_charge:     document.getElementById('cd-comm-app-charge').value.trim() || '629',
-    comm_app_provision:  document.getElementById('cd-comm-app-provision').value.trim() || '468'
+    comm_app_provision:  document.getElementById('cd-comm-app-provision').value.trim() || '468',
+    paie_charge:         document.getElementById('cd-paie-charge').value.trim() || '641',
+    paie_du:             document.getElementById('cd-paie-du').value.trim() || '422',
+    paie_cnps:           document.getElementById('cd-paie-cnps').value.trim() || '431',
+    paie_its:            document.getElementById('cd-paie-its').value.trim() || '447',
+    tva_collectee:       document.getElementById('cd-tva-collectee').value.trim() || '443',
+    tva_deductible:      document.getElementById('cd-tva-deductible').value.trim() || '444',
+    cession_produit:     document.getElementById('cd-cession-produit').value.trim() || '701',
+    amort_dotation:      document.getElementById('cd-amort-dotation').value.trim() || '681',
+    amort_cumul:         document.getElementById('cd-amort-cumul').value.trim() || '28'
   };
+  DATA.params.taux_is = parseFloat(document.getElementById('cd-taux-is').value) || 25;
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
   toast('✅ Comptes par défaut enregistrés — ils seront utilisés pour les prochaines écritures automatiques.', 'success');
 }
@@ -20659,44 +20734,98 @@ function deleteCompteParam(code) {
 }
 
 /* ── DÉTECTION AUTOMATIQUE DU TYPE D'ÉCRITURE ─────────── */
-function autoDetectType() {
-  var debit = document.getElementById('e-compte-debit').value;
-  var credit = document.getElementById('e-compte-credit').value;
-  var typeEl = document.getElementById('e-type');
-  var typeAuto = document.getElementById('e-type-auto');
-  if (!debit || !credit) { if (typeAuto) typeAuto.value = ''; return; }
-  var cDebit = APP.planComptable.find(function(c){ return c.code === debit; });
-  var cCredit = APP.planComptable.find(function(c){ return c.code === credit; });
-  var label = '';
-  if (cDebit && cCredit) {
-    if (cDebit.classe === '6') { label = '🔴 Charge d\'exploitation'; typeEl.value = 'charge'; }
-    else if (cDebit.classe === '7') { label = '🟢 Produit (régularisation)'; typeEl.value = 'produit'; }
-    else if (cDebit.classe === '5' && cCredit.classe === '4') { label = '🔵 Encaissement client'; typeEl.value = 'produit'; }
-    else if (cDebit.classe === '4' && cCredit.classe === '5') { label = '🟠 Décaissement fournisseur'; typeEl.value = 'charge'; }
-    else if (cDebit.classe === '2') { label = '🟡 Investissement / immobilisation'; typeEl.value = 'actif'; }
-    else if (cDebit.classe === '3') { label = '🟡 Entrée en stock'; typeEl.value = 'actif'; }
-    else if (cDebit.classe === '1') { label = '🔵 Financement / Capitaux'; typeEl.value = 'passif'; }
-    else { label = 'Cl. ' + cDebit.classe + ' → Cl. ' + cCredit.classe; typeEl.value = 'divers'; }
-  }
-  if (typeAuto) typeAuto.value = label;
-  checkEquilibre();
+/* ══════════════════════════════════════════════
+   ÉCRITURES MULTI-LIGNES — partie double SYSCOHADA
+   Chaque écriture = N lignes {compte, sens, montant, libelle}
+   Σ Débit = Σ Crédit. Legacy 2-lignes : compte_debit/compte_credit/montant dérivés.
+   ══════════════════════════════════════════════ */
+var _ecrLignes = [];
+
+function ecrCompteOptionsHtml(selected) {
+  var html = '<option value="">— Compte —</option>';
+  (APP.planComptable || []).forEach(function(c){
+    html += '<option value="' + c.code + '"' + (c.code === selected ? ' selected' : '') + '>' + c.code + ' — ' + c.label + '</option>';
+  });
+  return html;
 }
 
-function checkEquilibre() {
-  var montant = parseFloat(document.getElementById('e-montant').value) || 0;
-  var debit = document.getElementById('e-compte-debit').value;
-  var credit = document.getElementById('e-compte-credit').value;
+function ecrAjouterLigne(compte, sens, montant, libelle) {
+  _ecrLignes.push({ compte: compte || '', sens: sens || (_ecrLignes.length % 2 === 0 ? 'D' : 'C'), montant: montant || '', libelle: libelle || '' });
+  ecrRenderLignes();
+}
+
+function ecrSupprimerLigne(i) {
+  if (_ecrLignes.length <= 2) { toast('Minimum 2 lignes (1 débit + 1 crédit).', 'error'); return; }
+  _ecrLignes.splice(i, 1);
+  ecrRenderLignes();
+}
+
+function ecrUpdateLigne(i, field, val) {
+  if (!_ecrLignes[i]) return;
+  _ecrLignes[i][field] = field === 'montant' ? val : val;
+  ecrCheckEquilibre();
+}
+
+function ecrRenderLignes() {
+  var wrap = document.getElementById('ecr-lignes-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = _ecrLignes.map(function(l, i){
+    return '<div style="display:grid;grid-template-columns:2fr 90px 140px 1.3fr 34px;gap:6px;margin-bottom:6px;align-items:center;">'
+      + '<select class="form-control" onchange="ecrUpdateLigne(' + i + ',\'compte\',this.value);ecrDetectType();" style="font-size:12px;">' + ecrCompteOptionsHtml(l.compte) + '</select>'
+      + '<select class="form-control" onchange="ecrUpdateLigne(' + i + ',\'sens\',this.value);ecrDetectType();" style="font-size:12px;font-weight:700;color:' + (l.sens==='D'?'var(--rouge)':'var(--vert)') + ';">'
+      + '<option value="D"' + (l.sens==='D'?' selected':'') + '>Débit</option>'
+      + '<option value="C"' + (l.sens==='C'?' selected':'') + '>Crédit</option></select>'
+      + '<input type="number" class="form-control" value="' + (l.montant||'') + '" placeholder="Montant" oninput="ecrUpdateLigne(' + i + ',\'montant\',parseFloat(this.value)||0)" style="font-size:12px;">'
+      + '<input type="text" class="form-control" value="' + escHtml(l.libelle||'') + '" placeholder="Libellé ligne (optionnel)" oninput="ecrUpdateLigne(' + i + ',\'libelle\',this.value)" style="font-size:12px;">'
+      + '<button type="button" class="btn btn-danger btn-sm btn-icon" onclick="ecrSupprimerLigne(' + i + ')">🗑</button>'
+      + '</div>';
+  }).join('');
+  ecrCheckEquilibre();
+}
+
+function ecrDetectType() {
+  var typeEl = document.getElementById('e-type');
+  var d = _ecrLignes.filter(function(l){ return l.sens==='D' && l.compte; });
+  if (!typeEl || !d.length) return;
+  var cDebit = APP.planComptable.find(function(c){ return c.code === d[0].compte; });
+  if (cDebit) {
+    if (cDebit.classe === '6') typeEl.value = 'charge';
+    else if (cDebit.classe === '7') typeEl.value = 'produit';
+    else if (cDebit.classe === '2' || cDebit.classe === '3') typeEl.value = 'actif';
+    else if (cDebit.classe === '1') typeEl.value = 'passif';
+    else typeEl.value = 'divers';
+  }
+  ecrCheckEquilibre();
+}
+
+function ecrCheckEquilibre() {
   var box = document.getElementById('equilibre-check');
   if (!box) return;
-  if (debit && credit && montant > 0) {
-    box.style.display = 'block';
-    box.style.background = 'rgba(82,196,122,0.1)';
-    box.style.border = '1px solid rgba(82,196,122,0.3)';
-    box.style.color = 'var(--vert)';
-    box.textContent = '✔ Écriture équilibrée — Débit = Crédit = ' + fmtF(montant) + ' FCFA';
-  } else {
-    box.style.display = 'none';
-  }
+  var totD = _ecrLignes.filter(function(l){ return l.sens==='D'; }).reduce(function(s,l){ return s+(parseFloat(l.montant)||0); }, 0);
+  var totC = _ecrLignes.filter(function(l){ return l.sens==='C'; }).reduce(function(s,l){ return s+(parseFloat(l.montant)||0); }, 0);
+  if (totD === 0 && totC === 0) { box.style.display = 'none'; return _ecrEquilibre(false,0,0); }
+  box.style.display = 'block';
+  var ok = Math.abs(totD - totC) < 1;
+  box.style.background = ok ? 'rgba(82,196,122,0.1)' : 'rgba(224,82,82,0.1)';
+  box.style.border = '1px solid ' + (ok ? 'rgba(82,196,122,0.3)' : 'rgba(224,82,82,0.3)');
+  box.style.color = ok ? 'var(--vert)' : 'var(--rouge)';
+  box.textContent = ok
+    ? '✔ Écriture équilibrée — Débit = Crédit = ' + fmtF(totD) + ' FCFA (' + _ecrLignes.length + ' ligne(s))'
+    : '⚠ Déséquilibre — Débit ' + fmtF(totD) + ' ≠ Crédit ' + fmtF(totC) + ' (écart ' + fmtF(Math.abs(totD-totC)) + ' FCFA)';
+  return _ecrEquilibre(ok, totD, totC);
+}
+function _ecrEquilibre(ok, totD, totC) { return { ok:ok, totD:totD, totC:totC }; }
+
+/* Normalise n'importe quelle écriture (legacy 2-lignes ou multi-lignes) en tableau de lignes.
+   Source de vérité unique pour balance, bilan, compte de résultat, grand livre. */
+function ecrLignes(e) {
+  if (e && Array.isArray(e.lignes) && e.lignes.length) return e.lignes;
+  if (!e) return [];
+  var cd = e.compte_debit || e.compte, cc = e.compte_credit, m = e.montant || 0;
+  var out = [];
+  if (cd) out.push({ compte:cd, sens:'D', montant:m, libelle:e.libelle });
+  if (cc) out.push({ compte:cc, sens:'C', montant:m, libelle:e.libelle });
+  return out;
 }
 
 /* ── CHARGEMENT COMPTABILITÉ ──────────────────────────── */
@@ -20729,6 +20858,7 @@ function openEcritureModal(id) {
   APP.editingId = id || null;
   initPlanComptable();
   populateProgrammeSelects();
+  _ecrLignes = [];
   if (id) {
     var e = DATA.ecritures.find(function(x) { return x.id === id; });
     if (e) {
@@ -20736,28 +20866,22 @@ function openEcritureModal(id) {
       document.getElementById('e-date').value = e.date || '';
       document.getElementById('e-piece').value = e.piece || '';
       document.getElementById('e-libelle').value = e.libelle || '';
-      document.getElementById('e-montant').value = e.montant || '';
       document.getElementById('e-notes').value = e.notes || '';
       document.getElementById('e-type').value = e.type || 'charge';
-      setSelectValue('e-compte-debit', e.compte_debit || e.compte);
-      setSelectValue('e-compte-credit', e.compte_credit || '512');
       setSelectValue('e-mode', e.mode);
       setSelectValue('e-programme', e.programme_id);
-      autoDetectType();
+      APP._ecrBaseModifie = e._modifie || null;
+      _ecrLignes = ecrLignes(e).map(function(l){ return { compte:l.compte, sens:l.sens, montant:l.montant, libelle:l.libelle||'' }; });
     }
   } else {
     document.getElementById('modal-ecr-title').textContent = 'Nouvelle Écriture Comptable';
     document.getElementById('e-date').value = today();
     document.getElementById('e-piece').value = '';
     document.getElementById('e-libelle').value = '';
-    document.getElementById('e-montant').value = '';
     document.getElementById('e-notes').value = '';
-    document.getElementById('e-type-auto').value = '';
-    document.getElementById('e-compte-debit').value = '';
-    document.getElementById('e-compte-credit').value = '';
-    var checkEl = document.getElementById('equilibre-check');
-    if (checkEl) checkEl.style.display = 'none';
   }
+  if (!_ecrLignes.length) { _ecrLignes = [{compte:'',sens:'D',montant:'',libelle:''}, {compte:'',sens:'C',montant:'',libelle:''}]; }
+  ecrRenderLignes();
   openModal('modal-ecriture');
 }
 
@@ -20765,13 +20889,17 @@ function clearEcritureForm() {}
 
 async function saveEcriture() {
   var libelle = document.getElementById('e-libelle').value.trim();
-  var montant = parseFloat(document.getElementById('e-montant').value);
   var date = document.getElementById('e-date').value;
-  var compteDebit = document.getElementById('e-compte-debit').value;
-  var compteCredit = document.getElementById('e-compte-credit').value;
-  if (!libelle || !montant || !date) { toast('Libellé, date et montant sont obligatoires.', 'error'); return; }
-  if (!compteDebit || !compteCredit) { toast('Sélectionnez les comptes débit et crédit.', 'error'); return; }
-  if (compteDebit === compteCredit) { toast('Le compte débité ne peut être identique au compte crédité.', 'error'); return; }
+  if (!libelle || !date) { toast('Libellé et date sont obligatoires.', 'error'); return; }
+
+  var lignesValides = _ecrLignes.filter(function(l){ return l.compte && parseFloat(l.montant) > 0; });
+  if (lignesValides.length < 2) { toast('Minimum 2 lignes valides (compte + montant).', 'error'); return; }
+  var hasD = lignesValides.some(function(l){ return l.sens==='D'; });
+  var hasC = lignesValides.some(function(l){ return l.sens==='C'; });
+  if (!hasD || !hasC) { toast('Au moins 1 ligne débit et 1 ligne crédit requis.', 'error'); return; }
+  var totD = lignesValides.filter(function(l){ return l.sens==='D'; }).reduce(function(s,l){ return s+parseFloat(l.montant); }, 0);
+  var totC = lignesValides.filter(function(l){ return l.sens==='C'; }).reduce(function(s,l){ return s+parseFloat(l.montant); }, 0);
+  if (Math.abs(totD - totC) >= 1) { toast('Écriture déséquilibrée : Débit ' + fmtF(totD) + ' ≠ Crédit ' + fmtF(totC) + '.', 'error'); return; }
 
   /* Verrou exercice clos */
   if (typeof exerciceEstClos === 'function' && exerciceEstClos(date)) {
@@ -20784,8 +20912,9 @@ async function saveEcriture() {
   var numEcr = DATA.ecritures.length + 1;
   var ref = 'JL-' + an + '-' + String(numEcr).padStart(5, '0');
 
-  // Déterminer le type selon le compte débité
-  var cDebit = APP.planComptable.find(function(c){ return c.code === compteDebit; });
+  var lignesDebit = lignesValides.filter(function(l){ return l.sens==='D'; });
+  var lignesCredit = lignesValides.filter(function(l){ return l.sens==='C'; });
+  var cDebit = APP.planComptable.find(function(c){ return c.code === lignesDebit[0].compte; });
   var typeAuto = document.getElementById('e-type').value || 'charge';
   if (cDebit) {
     if (cDebit.classe === '6') typeAuto = 'charge';
@@ -20800,13 +20929,16 @@ async function saveEcriture() {
     piece: document.getElementById('e-piece').value.trim(),
     type: typeAuto,
     libelle: libelle,
-    compte: compteDebit,  // legacy compatibility
-    compte_debit: compteDebit,
-    compte_credit: compteCredit,
-    montant: montant,
+    lignes: lignesValides.map(function(l){ return { compte:l.compte, sens:l.sens, montant:parseFloat(l.montant), libelle:l.libelle||'' }; }),
+    /* Champs legacy dérivés — 1ère ligne D/C — pour compatibilité affichage/print/lettrage secondaires */
+    compte: lignesDebit[0].compte,
+    compte_debit: lignesDebit[0].compte,
+    compte_credit: lignesCredit[0].compte,
+    montant: totD,
     mode: document.getElementById('e-mode').value,
     programme_id: document.getElementById('e-programme').value,
     notes: document.getElementById('e-notes').value,
+    _baseModifie: APP.editingId ? (APP._ecrBaseModifie || null) : null,
     created_at: APP.editingId ? undefined : today()
   };
 
@@ -20819,7 +20951,7 @@ async function saveEcriture() {
   await dbPut('ecritures', ecriture);
   syncToSupabase('pi_ecritures', ecriture);
   closeModal('modal-ecriture');
-  toast('Écriture enregistrée.', 'success');
+  toast('Écriture enregistrée (' + lignesValides.length + ' ligne(s)).', 'success');
   filterEcritures();
   buildBalance();
   buildCompteResultat();
@@ -20893,14 +21025,12 @@ function buildBalance() {
   // Calcul des mouvements par compte
   var comptesMvt = {};
   DATA.ecritures.filter(function(e){ return !year || (e.date && e.date.startsWith(year)); }).forEach(function(e) {
-    var cd = e.compte_debit || e.compte;
-    var cc = e.compte_credit;
-    if (!comptesMvt[cd]) comptesMvt[cd] = { debit: 0, credit: 0 };
-    comptesMvt[cd].debit += e.montant;
-    if (cc) {
-      if (!comptesMvt[cc]) comptesMvt[cc] = { debit: 0, credit: 0 };
-      comptesMvt[cc].credit += e.montant;
-    }
+    ecrLignes(e).forEach(function(l){
+      if (!l.compte) return;
+      if (!comptesMvt[l.compte]) comptesMvt[l.compte] = { debit: 0, credit: 0 };
+      if (l.sens === 'D') comptesMvt[l.compte].debit += (parseFloat(l.montant)||0);
+      else comptesMvt[l.compte].credit += (parseFloat(l.montant)||0);
+    });
   });
 
   var filteredPlan = APP.planComptable.filter(function(c) {
@@ -20956,14 +21086,11 @@ function buildBilan() {
 
   var soldes = {};
   DATA.ecritures.filter(function(e){ return e.date && e.date < (year+1+'-01-01'); }).forEach(function(e) {
-    var cd = e.compte_debit || e.compte;
-    var cc = e.compte_credit;
-    if (!soldes[cd]) soldes[cd] = 0;
-    soldes[cd] += e.montant;
-    if (cc) {
-      if (!soldes[cc]) soldes[cc] = 0;
-      soldes[cc] -= e.montant;
-    }
+    ecrLignes(e).forEach(function(l){
+      if (!l.compte) return;
+      if (!soldes[l.compte]) soldes[l.compte] = 0;
+      soldes[l.compte] += (l.sens === 'D' ? 1 : -1) * (parseFloat(l.montant)||0);
+    });
   });
 
   function getSolde(codes) {
@@ -21037,8 +21164,8 @@ function buildBilan() {
 /* ── SOURCE DE CALCUL UNIQUE DU RÉSULTAT (sans chevauchement) ── */
 function _calcResultat(year) {
   var ec = DATA.ecritures.filter(function(e){ return e.date && e.date.startsWith(year); });
-  function deb(pfx){ return ec.filter(function(e){ var c=e.compte_debit||e.compte||''; return pfx.some(function(p){ return c.indexOf(p)===0; }); }).reduce(function(a,e){ return a+e.montant; },0); }
-  function cre(pfx){ return ec.filter(function(e){ var c=e.compte_credit||''; return pfx.some(function(p){ return c.indexOf(p)===0; }); }).reduce(function(a,e){ return a+e.montant; },0); }
+  function deb(pfx){ var t=0; ec.forEach(function(e){ ecrLignes(e).forEach(function(l){ if (l.sens==='D' && pfx.some(function(p){ return (l.compte||'').indexOf(p)===0; })) t += (parseFloat(l.montant)||0); }); }); return t; }
+  function cre(pfx){ var t=0; ec.forEach(function(e){ ecrLignes(e).forEach(function(l){ if (l.sens==='C' && pfx.some(function(p){ return (l.compte||'').indexOf(p)===0; })) t += (parseFloat(l.montant)||0); }); }); return t; }
   // Produits (crédits classe 7) — buckets exclusifs
   var ventes      = cre(['70']);
   /* Production stockée (71-72) = solde net crédit − débit, et non le seul crédit :
@@ -21064,6 +21191,7 @@ function _calcResultat(year) {
   var dotations   = deb(['68']);
   var participation = deb(['691']);
   var isComptab   = deb(['693']);
+  var tauxIS      = ((DATA.params && DATA.params.taux_is) || 25) / 100;
   // Soldes intermédiaires
   var production  = ventes + prodStockee;
   var consoTiers  = achats + transports + servExt;
@@ -21073,14 +21201,14 @@ function _calcResultat(year) {
   var rFin        = prodFin - chargesFin;
   var rHAO        = prodHAO - chargesHAO;
   var rAvantIS    = rExploit + rFin + rHAO - participation;
-  var is          = isComptab > 0 ? isComptab : (rAvantIS > 0 ? Math.round(rAvantIS * 0.25) : 0);
+  var is          = isComptab > 0 ? isComptab : (rAvantIS > 0 ? Math.round(rAvantIS * tauxIS) : 0);
   var isEstime    = !(isComptab > 0) && is > 0;
   var rNet        = rAvantIS - is;
   var totalProduits = ventes + prodStockee + autresProd + prodFin + prodHAO + reprises;
   var totalCharges  = achats + transports + servExt + impots + personnel + autresCh + chargesFin + chargesHAO + dotations + participation + is;
   return { year:year, ventes:ventes, prodStockee:prodStockee, autresProd:autresProd, prodFin:prodFin, prodHAO:prodHAO, reprises:reprises,
     achats:achats, transports:transports, servExt:servExt, impots:impots, personnel:personnel, autresCh:autresCh,
-    chargesFin:chargesFin, chargesHAO:chargesHAO, dotations:dotations, participation:participation, is:is, isComptab:isComptab, isEstime:isEstime,
+    chargesFin:chargesFin, chargesHAO:chargesHAO, dotations:dotations, participation:participation, is:is, isComptab:isComptab, isEstime:isEstime, tauxIS:tauxIS,
     production:production, va:va, ebe:ebe, rExploit:rExploit, rFin:rFin, rHAO:rHAO, rAvantIS:rAvantIS, rNet:rNet,
     totalProduits:totalProduits, totalCharges:totalCharges };
 }
@@ -21111,7 +21239,7 @@ function buildCompteResultat() {
     + crRow('Charges HAO (67)', R.chargesHAO, false, 'var(--rouge)')
     + crRow('Dotations amortissements (68)', R.dotations, false, 'var(--rouge)')
     + crRow('Participation des travailleurs (691)', R.participation, false, 'var(--rouge)')
-    + crRow('Imp\u00f4t sur les soci\u00e9t\u00e9s' + (R.isEstime ? ' (estim\u00e9 25%)' : ' (693)'), R.is, false, 'var(--rouge)')
+    + crRow('Imp\u00f4t sur les soci\u00e9t\u00e9s' + (R.isEstime ? ' (estim\u00e9 ' + Math.round(R.tauxIS*100) + '%)' : ' (693)'), R.is, false, 'var(--rouge)')
     + '<tr style="font-weight:700;border-top:2px solid var(--rouge);"><td>TOTAL CHARGES</td><td style="text-align:right;color:var(--rouge);font-size:15px;">' + fmtF(R.totalCharges) + '</td></tr>'
     + '</tbody></table></div>'
     + '<div><div class="form-section-title" style="color:var(--vert);">PRODUITS \u2014 Classe 7</div>'
@@ -21148,25 +21276,30 @@ function buildGrandLivre() {
   if (!compte) { box.innerHTML = '<div style="color:var(--blanc-dim);font-size:13px;">Sélectionnez un compte.</div>'; return; }
 
   var planEntry = APP.planComptable.find(function(c){ return c.code === compte; });
-  var mvts = DATA.ecritures.filter(function(e){
-    return (!year || (e.date && e.date.startsWith(year))) &&
-      ((e.compte_debit||e.compte) === compte || e.compte_credit === compte);
-  }).sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
+  var mvts = [];
+  DATA.ecritures.filter(function(e){ return !year || (e.date && e.date.startsWith(year)); }).forEach(function(e){
+    var lignes = ecrLignes(e);
+    var ligneCompte = lignes.filter(function(l){ return l.compte === compte; });
+    if (!ligneCompte.length) return;
+    var contreparties = lignes.filter(function(l){ return l.compte !== compte; }).map(function(l){ return l.compte; }).join(', ');
+    ligneCompte.forEach(function(l){
+      mvts.push({ date:e.date, ref:e.ref, libelle:l.libelle||e.libelle, contrepartie:contreparties, sens:l.sens, montant:parseFloat(l.montant)||0, multi: lignes.length>2 });
+    });
+  });
+  mvts.sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
 
   var solde = 0;
   var totD = 0, totC = 0;
-  var rows = mvts.map(function(e) {
-    var isDebit = (e.compte_debit || e.compte) === compte;
-    var d = isDebit ? e.montant : 0;
-    var c = isDebit ? 0 : e.montant;
+  var rows = mvts.map(function(m) {
+    var d = m.sens === 'D' ? m.montant : 0;
+    var c = m.sens === 'D' ? 0 : m.montant;
     totD += d; totC += c;
     solde += d - c;
-    var contrepartie = isDebit ? e.compte_credit : (e.compte_debit || e.compte);
     return '<tr>'
-      + '<td>' + dateShort(e.date) + '</td>'
-      + '<td style="font-size:11px;font-family:monospace;color:var(--bleu);">' + (e.ref||'—') + '</td>'
-      + '<td>' + e.libelle + '</td>'
-      + '<td style="font-size:11px;color:var(--blanc-dim);">' + (contrepartie||'—') + '</td>'
+      + '<td>' + dateShort(m.date) + '</td>'
+      + '<td style="font-size:11px;font-family:monospace;color:var(--bleu);">' + (m.ref||'—') + '</td>'
+      + '<td>' + m.libelle + (m.multi ? ' <span style="font-size:9px;color:var(--or);">multi</span>' : '') + '</td>'
+      + '<td style="font-size:11px;color:var(--blanc-dim);">' + (m.contrepartie||'—') + '</td>'
       + '<td style="text-align:right;color:var(--rouge);font-weight:' + (d?'600':'400') + ';">' + (d ? fmtF(d) : '—') + '</td>'
       + '<td style="text-align:right;color:var(--vert);font-weight:' + (c?'600':'400') + ';">' + (c ? fmtF(c) : '—') + '</td>'
       + '<td style="text-align:right;font-weight:600;color:' + (solde >= 0 ? 'var(--blanc)' : 'var(--rouge)') + ';">' + fmtF(solde) + '</td>'
@@ -21193,12 +21326,14 @@ function buildGrandLivre() {
 /* ── EXPORT JOURNAL CSV ──────────────────────────────── */
 function exportJournalCSV() {
   var year = document.getElementById('filter-annee-compta').value || new Date().getFullYear();
-  var rows = ['N° Écriture,Date,Pièce,Libellé,Compte Débit,Compte Crédit,Montant (FCFA),Mode,Programme'];
+  var rows = ['N° Écriture,Date,Pièce,Libellé,Compte,Sens,Montant (FCFA),Mode,Programme'];
   DATA.ecritures.filter(function(e){ return !year || (e.date && e.date.startsWith(year)); })
     .sort(function(a,b){ return new Date(a.date)-new Date(b.date); })
     .forEach(function(e) {
       var prog = e.programme_id ? ((DATA.programmes.find(function(p){ return p.id===e.programme_id; })||{}).nom||'') : '';
-      rows.push([e.ref, e.date, e.piece||'', '"'+e.libelle+'"', e.compte_debit||e.compte, e.compte_credit||'', e.montant, e.mode||'', prog].join(','));
+      ecrLignes(e).forEach(function(l){
+        rows.push([e.ref, e.date, e.piece||'', '"'+(l.libelle||e.libelle)+'"', l.compte, l.sens==='D'?'Débit':'Crédit', l.montant, e.mode||'', prog].join(','));
+      });
     });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -30139,7 +30274,7 @@ function buildTiersEtat() {
   var itsTotal=Math.round(masse*0.07);
   var tvaFact=sumCompte('443');
   var tvaRecup=sumCompte('444');
-  var is=Math.round(Math.max(0,DATA.ecritures.filter(function(e){return e.compte_debit&&e.compte_debit.startsWith('7');}).reduce(function(s,e){return s+e.montant;},0)*0.25));
+  var is=Math.round(Math.max(0,DATA.ecritures.filter(function(e){return e.compte_debit&&e.compte_debit.startsWith('7');}).reduce(function(s,e){return s+e.montant;},0)*(((DATA.params&&DATA.params.taux_is)||25)/100)));
 
   el.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">'
     +[
@@ -32333,12 +32468,16 @@ async function saveSituationAndCompta(){
     var tvaMt=Math.max(0,(parseFloat(s.montant_ttc)||0)-ht);
     var moLib=(conv&&conv.maitre_ouvrage)?conv.maitre_ouvrage:'Client';
     if(constr.interne){
+      var _cdCfg = (DATA.params && DATA.params.comptes_defaut) || {};
+      var _cptClient = _cdCfg.client_lots || '4111';
+      var _cptTva = _cdCfg.tva_collectee || '4431';
+      var _cptTreso = (s.mode==='especes') ? (_cdCfg.treso_caisse||'571') : (_cdCfg.treso_banque||'521');
       /* Département de construction INTERNE rémunéré → PRODUIT pour la société */
-      var ev={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Travaux facturés '+num+' — '+(conv?conv.numero:'')+' — '+moLib,compte:'4111',compte_debit:'4111',compte_credit:'705',montant:ht,type:'produit',mode:s.mode,notes:'Dépt interne · Avancement '+s.avancement+'%',created_at:today()};
+      var ev={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Travaux facturés '+num+' — '+(conv?conv.numero:'')+' — '+moLib,compte:_cptClient,compte_debit:_cptClient,compte_credit:'705',montant:ht,type:'produit',mode:s.mode,notes:'Dépt interne · Avancement '+s.avancement+'%',created_at:today()};
       DATA.ecritures.push(ev);await dbPut('ecritures',ev);_sync(ev);
-      if(tvaMt>0){var et={id:'ecr_tva_'+s.id,ref:'TVA-'+s.numero,date:s.date,piece:num,libelle:'TVA collectée s/ travaux '+num,compte:'4431',compte_debit:'4111',compte_credit:'4431',montant:tvaMt,type:'produit',mode:s.mode,created_at:today()};DATA.ecritures.push(et);await dbPut('ecritures',et);_sync(et);}
-      if(s.statut==='payee'){var enc={id:'ecr_enc_'+s.id,ref:'ENC-'+s.numero,date:s.date,piece:num,libelle:'Encaissement '+num+' — '+moLib,compte:'4111',compte_debit:'512',compte_credit:'4111',montant:s.net,type:'actif',mode:s.mode,created_at:today()};DATA.ecritures.push(enc);await dbPut('ecritures',enc);_sync(enc);}
-      toast('✅ Situation + produit (4111/705) — département interne rémunéré.','success');
+      if(tvaMt>0){var et={id:'ecr_tva_'+s.id,ref:'TVA-'+s.numero,date:s.date,piece:num,libelle:'TVA collectée s/ travaux '+num,compte:_cptTva,compte_debit:_cptClient,compte_credit:_cptTva,montant:tvaMt,type:'produit',mode:s.mode,created_at:today()};DATA.ecritures.push(et);await dbPut('ecritures',et);_sync(et);}
+      if(s.statut==='payee'){var enc={id:'ecr_enc_'+s.id,ref:'ENC-'+s.numero,date:s.date,piece:num,libelle:'Encaissement '+num+' — '+moLib,compte:_cptTreso,compte_debit:_cptTreso,compte_credit:_cptClient,montant:s.net,type:'actif',mode:s.mode,created_at:today()};DATA.ecritures.push(enc);await dbPut('ecritures',enc);_sync(enc);}
+      toast('✅ Situation + produit ('+_cptClient+'/705) — département interne rémunéré.','success');
     } else {
       /* Constructeur EXTERNE → CHARGE (sous-traitance) */
       var ecr={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Situation travaux '+num+' — '+(conv?conv.numero:'')+' — '+constr.raison_sociale,compte:'401',compte_debit:'6111',compte_credit:'401',montant:ht,type:'charge',mode:s.mode,notes:'Avancement '+s.avancement+'%',created_at:today()};
@@ -41077,7 +41216,7 @@ function etatJournal() {
     totD += e.montant; totC += e.montant;
     return '<tr><td>' + dateShort(e.date) + '</td><td>' + escHtml(e.ref || '—') + '</td>'
       + '<td>' + escHtml(e.libelle || '') + '</td>'
-      + '<td>' + escHtml(e.compte_debit || e.compte || '') + '</td><td>' + escHtml(e.compte_credit || '') + '</td>'
+      + '<td>' + escHtml(e.compte_debit || e.compte || '') + (ecrLignes(e).length>2?' <span style="font-size:9px;color:#B87333;">+'+(ecrLignes(e).length-2)+'</span>':'') + '</td><td>' + escHtml(e.compte_credit || '') + '</td>'
       + '<td class="num">' + fmtF(e.montant) + '</td><td class="num">' + fmtF(e.montant) + '</td></tr>';
   }).join('');
   if (!list.length) rows = '<tr><td colspan="7" style="text-align:center;color:#888;">Aucune écriture</td></tr>';
@@ -52730,11 +52869,13 @@ function cesCoutStockPrevu() {
 async function cesGenererEcriture(c) {
   if (!DATA.ecritures) DATA.ecritures = [];
   var an=(c.date||today()).slice(0,4);
-  /* 1. Vente : 4111 (débit) / 707 (crédit) */
+  var cptTiers = (typeof crecCompte === 'function') ? crecCompte() : ((DATA.params||{}).compte_acquereur_foncier || '4111');
+  var cptProduit = (DATA.params||{}).compte_cession_produit || '701';
+  /* 1. Vente : tiers (débit) / produit cession (crédit) — comptes configurables (Paramètres → Comptabilité) */
   var num1=DATA.ecritures.length+1;
   var evente={ id:uid(), ref:'CESS-'+an+'-'+String(num1).padStart(4,'0'), date:c.date||today(), piece:'CESSION',
     type:'produit', libelle:'Cession foncière — '+(c.designation||'')+' à '+(c.acquereur||''),
-    compte:'701', compte_debit:'4111', compte_credit:'701', montant:c.prix_cession||0,
+    compte:cptProduit, compte_debit:cptTiers, compte_credit:cptProduit, montant:c.prix_cession||0,
     mode:'cession', programme_id:'', notes:'Cession part entreprise — '+cesSourceRef(c.source_key), source:'cession_fonciere', cession_id:c.id, created_at:today() };
   DATA.ecritures.push(evente); await dbPut('ecritures', evente);
   if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', evente);
@@ -52763,7 +52904,7 @@ async function cesGenererEcriture(c) {
     var compteTreso=(c.mode==='especes')?'571':'521';
     var eenc={ id:uid(), ref:'ENC-CESS-'+an+'-'+String(num2).padStart(4,'0'), date:c.date||today(), piece:'CESSION',
       type:'tresorerie', libelle:'Encaissement cession — '+(c.acquereur||''),
-      compte:compteTreso, compte_debit:compteTreso, compte_credit:'4111', montant:c.montant_encaisse||0,
+      compte:compteTreso, compte_debit:compteTreso, compte_credit:cptTiers, montant:c.montant_encaisse||0,
       mode:c.mode||'virement', programme_id:'', notes:'Encaissement cession foncière', source:'cession_fonciere', cession_id:c.id, created_at:today() };
     DATA.ecritures.push(eenc); await dbPut('ecritures', eenc);
     if (typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', eenc);
@@ -54849,8 +54990,9 @@ async function luGenererEcriture(u){
       await dbPut('ecritures',e0); if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',e0); return; }
   }
   var num=DATA.ecritures.length+1;
+  var _cptCl = ((DATA.params && DATA.params.comptes_defaut) || {}).client_lots || '4111';
   var e={ id:uid(), ref:'VAPT-'+an+'-'+String(num).padStart(4,'0'), date:u.date_vente||today(), piece:'VENTE APPT',
-    type:'produit', libelle:lib, compte:'702', compte_debit:'4111', compte_credit:'702', montant:u.prix||0,
+    type:'produit', libelle:lib, compte:'702', compte_debit:_cptCl, compte_credit:'702', montant:u.prix||0,
     mode:'vente', programme_id:prog, notes:'Vente appartement (immeuble) \u2014 '+(u.numero||''),
     source:'lot_unite', lot_unite_id:u.id, created_at:today() };
   DATA.ecritures.push(e); await dbPut('ecritures',e);
