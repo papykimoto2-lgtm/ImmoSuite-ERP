@@ -2196,18 +2196,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="nav-item" onclick="goTo('programmes')" data-page="programmes">
         <span class="nav-icon">🏗️</span><span>Programmes</span>
       </div>
-          <div class="nav-item" onclick="goTo('lots')" data-page="lots">
-        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
-      </div>
           <div class="nav-item" onclick="goTo('conception')" data-page="conception">
         <span class="nav-icon">📐</span><span>Plans &amp; Conception</span>
-      </div>
-          <div class="nav-item" onclick="goTo('constructeurs')" data-page="constructeurs">
-        <span class="nav-icon">👷</span><span>Constructeurs</span>
-      </div>
-          <div class="nav-item" onclick="goTo('conventions')" data-page="conventions">
-        <span class="nav-icon">📋</span><span>Conventions</span>
-        <span class="nav-badge" id="badge-conventions" style="display:none;">!</span>
       </div>
         </div>
       </div>
@@ -2215,6 +2205,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-group" id="navgrp-3" data-group="3">
         <div class="nav-section" onclick="toggleNavGroup(3)"><span class="nav-group-badge" id="grpbadge-3"></span><span class="nav-step">3</span><span>Études &amp; Chantier</span><span class="nav-toggle"></span></div>
         <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('constructeurs')" data-page="constructeurs">
+        <span class="nav-icon">👷</span><span>Constructeurs</span>
+      </div>
+          <div class="nav-item" onclick="goTo('conventions')" data-page="conventions">
+        <span class="nav-icon">📋</span><span>Conventions</span>
+        <span class="nav-badge" id="badge-conventions" style="display:none;">!</span>
+      </div>
           <div class="nav-item" onclick="goTo('debourse')" data-page="debourse">
         <span class="nav-icon">🧱</span><span>Étude de Prix &amp; Déboursé Sec</span>
       </div>
@@ -2277,6 +2274,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="nav-group" id="navgrp-5" data-group="5">
         <div class="nav-section" onclick="toggleNavGroup(5)"><span class="nav-group-badge" id="grpbadge-5"></span><span class="nav-step">5</span><span>Ventes &amp; Contrats</span><span class="nav-toggle"></span></div>
         <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('lots')" data-page="lots">
+        <span class="nav-icon">🏠</span><span>Lots &amp; Réservations</span>
+      </div>
           <div class="nav-item" onclick="goTo('clients')" data-page="clients">
         <span class="nav-icon">👥</span><span>Souscripteurs</span>
         <span class="nav-badge" id="badge-retard" style="display:none;">0</span>
@@ -22121,17 +22121,18 @@ var MODULE_GROUPS = {
   pilotage:   ['Tableau de bord','Accueil'],
   foncier:    ['Foncier','Filiere Fonciere','Acquisition & Amenagement Foncier'],
   montage:    ['Programmes','Plans & Conception'],
-  chantier:   ['Constructeurs','Conventions','Suivi Chantiers','DQE & Cout de revient','Etude de Prix & Debourse','Achats & Commandes','Stock Materiaux','Validations','Reception & Livraison'],
-  commercial: ['Pipeline Leads','Plan Action Commercial','Carte & Geoloc','Itineraires Terrain','Ordres de Mission','Lots & Reservations','Souscripteurs','Rapports Commerciaux'],
-  recouvrement:['Relances'],
-  finance:    ['Paiements','Comptabilite','Tresorerie'],
+  chantier:   ['Constructeurs','Conventions','Etude de Prix & Debourse','DQE & Cout de revient','Achats & Commandes','Stock Materiaux','Suivi Chantiers','Validations','Reception & Livraison'],
+  commercial: ['Pipeline Leads','Plan Action Commercial','Carte & Geoloc','Itineraires Terrain','Ordres de Mission','Rapports Commerciaux'],
+  ventes:     ['Lots & Reservations','Souscripteurs'],
+  recouvrement:['Paiements','Relances'],
+  finance:    ['Comptabilite','Tresorerie'],
   juridique:  ['Dossiers Juridiques'],
   rh:         ['RH Employes','Pointage','Paie','Journaliers & Temporaires','Declarations & Teledeclaration','Livre Paie','Conges RH','Recrutement','Formations'],
   collaboration:['Messagerie','Portail','Portail Apporteur'],
   systeme:    ['Parametres']
 };
-var GROUP_LABELS = { pilotage:'📊 Pilotage', foncier:'🗺️ Foncier (amont)', montage:'📐 Montage Programme', chantier:'🧱 Études & Chantier', commercial:'🎯 Commercial & CRM', recouvrement:'📨 Recouvrement', finance:'💰 Finance SYSCOHADA', juridique:'⚖️ Juridique', rh:'👥 RH & Paie', collaboration:'🤝 Collaboration', systeme:'⚙️ Système' };
-var GROUP_COLORS = { pilotage:'#64748B', foncier:'#0284C7', montage:'#7C3AED', chantier:'#B45309', commercial:'#D97706', recouvrement:'#DB2777', finance:'#059669', juridique:'#9333EA', rh:'#7C3AED', collaboration:'#0EA5E9', systeme:'#DC2626' };
+var GROUP_LABELS = { pilotage:'📊 Pilotage', foncier:'🗺️ Foncier (amont)', montage:'📐 Montage Programme', chantier:'🧱 Études & Chantier', commercial:'🎯 Commercial & CRM', ventes:'🤝 Ventes & Contrats', recouvrement:'📨 Recouvrement', finance:'💰 Finance SYSCOHADA', juridique:'⚖️ Juridique', rh:'👥 RH & Paie', collaboration:'🤝 Collaboration', systeme:'⚙️ Système' };
+var GROUP_COLORS = { pilotage:'#64748B', foncier:'#0284C7', montage:'#7C3AED', chantier:'#B45309', commercial:'#D97706', ventes:'#0891B2', recouvrement:'#DB2777', finance:'#059669', juridique:'#9333EA', rh:'#7C3AED', collaboration:'#0EA5E9', systeme:'#DC2626' };
 
 /* ── Utilitaires cases module (un module peut apparaître dans plusieurs groupes) ── */
 function _modAttr(mod) { return String(mod).replace(/"/g, '&quot;'); }
