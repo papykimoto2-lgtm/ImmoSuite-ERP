@@ -9680,6 +9680,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="filters-bar" style="margin-bottom:12px;">
             <input type="text" class="search-input" id="af-search" placeholder="🔍 Site, village, propriétaire..." oninput="afRenderPipeline()" style="flex:1;min-width:160px;">
             <select class="filter-select" id="af-filter-agent" onchange="afRenderPipeline()"><option value="">Tous les agents</option></select>
+            <button class="btn btn-secondary btn-sm" id="af-btn-archives" onclick="afToggleArchived()">📦 Voir archives</button>
           </div>
           <div id="af-kanban" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;"></div>
         </div>
@@ -9808,6 +9809,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-af-operation')">Annuler</button>
             <button class="btn btn-secondary" onclick="afTransfererFoncier()">📍 → Portefeuille Foncier</button>
+            <button class="btn btn-secondary" id="af-op-archive" onclick="afArchiverOperation()" style="display:none;">📦 Archiver</button>
+            <button class="btn btn-secondary" id="af-op-unarchive" onclick="afDesarchiverOperation(_afOp&&_afOp.id)" style="display:none;">📂 Réactiver</button>
             <button class="btn btn-danger" id="af-op-del" onclick="afDeleteOperation()" style="display:none;">🗑 Supprimer</button>
             <button class="btn btn-primary" onclick="afSaveOperation()">💾 Enregistrer</button>
           </div>
@@ -48504,6 +48507,44 @@ var AF_STAGES = [
 ];
 function afStage(k){ return AF_STAGES.find(function(s){ return s.k===k; }) || AF_STAGES[0]; }
 
+var _afShowArchived = false;
+function afToggleArchived() {
+  _afShowArchived = !_afShowArchived;
+  var b = document.getElementById('af-btn-archives');
+  if (b) {
+    b.textContent = _afShowArchived ? '📂 Voir actives' : '📦 Voir archives';
+    b.classList.toggle('btn-primary', _afShowArchived);
+    b.classList.toggle('btn-secondary', !_afShowArchived);
+  }
+  afRenderPipeline();
+}
+
+async function afArchiverOperation(opId, silencieux) {
+  var op = opId ? DATA.af_operations.find(function(x){ return x.id===opId; }) : _afOp;
+  if (!op) return;
+  op.archived = true;
+  op.archived_at = new Date().toISOString();
+  var idx = DATA.af_operations.findIndex(function(x){ return x.id===op.id; });
+  if (idx>=0) DATA.af_operations[idx]=op;
+  await dbPut('af_operations', op);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_af_operations', op);
+  if (!silencieux) { toast('Opération archivée 📦', 'success'); afRenderPipeline(); filiereLiveRefresh(); }
+}
+
+async function afDesarchiverOperation(opId) {
+  var op = DATA.af_operations.find(function(x){ return x.id===opId; });
+  if (!op) return;
+  op.archived = false;
+  op.archived_at = null;
+  var idx = DATA.af_operations.findIndex(function(x){ return x.id===op.id; });
+  if (idx>=0) DATA.af_operations[idx]=op;
+  await dbPut('af_operations', op);
+  if (typeof syncToSupabase==='function') syncToSupabase('pi_af_operations', op);
+  toast('Opération réactivée 📂', 'success');
+  afRenderPipeline();
+  filiereLiveRefresh();
+}
+
 var _afOp = null;   /* opération en cours d'édition (copie de travail) */
 
 /* ── Entrée page ── */
@@ -48658,9 +48699,12 @@ function afRenderPipeline() {
   if (!box) return;
   var q = ((document.getElementById('af-search')||{}).value||'').toLowerCase();
   var fa = (document.getElementById('af-filter-agent')||{}).value||'';
+  var showArch = !!_afShowArchived;
   box.innerHTML = AF_STAGES.map(function(st){
     var ops = DATA.af_operations.filter(function(o){
       if (o.stage !== st.k) return false;
+      if (!showArch && o.archived) return false;
+      if (showArch && !o.archived) return false;
       if (fa && o.agent_id !== fa) return false;
       if (q) {
         var hay = ((o.nom||'')+' '+(o.village||'')+' '+(o.commune||'')+' '+(o.proprietaires||[]).map(function(p){return p.nom;}).join(' ')).toLowerCase();
@@ -48670,8 +48714,8 @@ function afRenderPipeline() {
     });
     var cards = ops.map(function(o){
       var ag = DATA.af_agents.find(function(a){ return a.id===o.agent_id; });
-      return '<div onclick="afOpenOperation(\''+o.id+'\')" style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-left:3px solid '+st.c+';border-radius:8px;padding:9px 10px;margin-bottom:8px;cursor:pointer;">'
-        + '<div style="font-weight:700;font-size:13px;">'+afEsc(o.nom||'—')+'</div>'
+      return '<div onclick="afOpenOperation(\''+o.id+'\')" style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-left:3px solid '+st.c+';border-radius:8px;padding:9px 10px;margin-bottom:8px;cursor:pointer;'+(o.archived?'opacity:.6;':'')+'">'
+        + '<div style="font-weight:700;font-size:13px;">'+afEsc(o.nom||'—')+(o.archived?' <span style="font-size:10px;color:var(--or,#B8732F);">📦</span>':'')+'</div>'
         + '<div style="font-size:11px;color:var(--muted,#888);">'+afEsc(o.village||o.commune||'—')+' · '+fmtF(o.superficie||0)+' m²</div>'
         + (ag?('<div style="font-size:11px;color:'+st.c+';margin-top:3px;">🧑‍💼 '+afEsc(ag.nom)+'</div>'):'')
         + ((o.nb_lots)?('<div style="font-size:11px;margin-top:2px;">🧮 '+o.nb_lots+' lots</div>'):'')
@@ -48707,6 +48751,10 @@ function afBindOperation(isEdit) {
   afFillAgentSelects();
   document.getElementById('af-op-titre').textContent = isEdit ? ('Opération — '+(_afOp.nom||'')) : 'Nouvelle opération foncière';
   document.getElementById('af-op-del').style.display = isEdit ? '' : 'none';
+  var elArch = document.getElementById('af-op-archive');
+  var elUnarch = document.getElementById('af-op-unarchive');
+  if (elArch) elArch.style.display = (isEdit && !_afOp.archived) ? '' : 'none';
+  if (elUnarch) elUnarch.style.display = (isEdit && _afOp.archived) ? '' : 'none';
   var set = function(id,v){ var e=document.getElementById(id); if(e){ if(e.type==='checkbox') e.checked=!!v; else e.value=(v==null?'':v); } };
   set('af-op-nom',_afOp.nom); set('af-op-agent',_afOp.agent_id); set('af-op-stage',_afOp.stage);
   set('af-village',_afOp.village); set('af-commune',_afOp.commune); set('af-departement',_afOp.departement);
@@ -49181,6 +49229,9 @@ async function afTransfererFoncier(opId) {
   await dbPut('parcelles', p);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_parcelles', p);
   op.parcelle_id = p.id;
+  /* Auto-archivage : opération transférée au portefeuille sort du pipeline actif
+     (reste consultable via « Voir archives »). Évite l'engorgement du kanban. */
+  if (op.stage === 'commercialisation') { op.archived = true; op.archived_at = new Date().toISOString(); }
   var idx = DATA.af_operations.findIndex(function(x){ return x.id === op.id; });
   if (idx >= 0) DATA.af_operations[idx] = op; else DATA.af_operations.push(op);
   await dbPut('af_operations', op);
@@ -52138,7 +52189,7 @@ function filiereRender() {
 
 /* ── Vue d'ensemble (toutes opérations) ── */
 function filiereRenderGlobal() {
-  var ops = DATA.af_operations || [];
+  var ops = (DATA.af_operations || []).filter(function(o){ return !o.archived; });
   var lots = DATA.lots || [];
   var cess = DATA.cessions_foncieres || [];
   var supTot = ops.reduce(function(s, o) { return s + (o.superficie || 0); }, 0);
