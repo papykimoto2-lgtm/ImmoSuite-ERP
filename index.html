@@ -11021,6 +11021,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <span id="mrc-fichier-nom" style="font-size:12px;color:var(--dim);">Aucun fichier sélectionné</span>
           </div>
           <div id="mrc-fichier-preview" style="margin-top:10px;"></div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--bord2);">
+            <div style="font-weight:700;margin-bottom:6px;font-size:13px;">🤖 Extraction automatique (IA)</div>
+            <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Scanne le plan de masse et extrait îlots, lots, superficies et réserves légales. Nécessite une clé IA (Paramètres → IA).</div>
+            <button class="btn btn-primary btn-sm" onclick="mrcScanPlanMasse()" style="background:var(--violet);">📐 Scanner le plan de masse</button>
+          </div>
         </div>
 
         <div style="margin-top:14px;">
@@ -48484,6 +48489,129 @@ function brnInjecterScan() {
   toast(pts.length + ' borne(s) injectée(s)' + (area>0 ? ' · superficie ' + (area/10000).toFixed(4) + ' ha' : ''), 'success');
 }
 
+/* ══════════════════════════════════════════════
+   SCAN PLAN DE MASSE — extraction IA îlots/lots/réserves
+   ══════════════════════════════════════════════ */
+var _mrcScanTmp = { parcelles: [], reserves: [], meta: {} };
+
+async function mrcScanPlanMasse() {
+  if (typeof IA === 'undefined' || !IA.key) { toast('Clé IA absente. Paramètres → IA.', 'error'); return; }
+  var data = APP._mrcFichierData;
+  if (!data) { toast('Choisissez d\'abord un fichier plan de masse.', 'error'); return; }
+  toast('Analyse du plan de masse en cours…', 'info');
+  try {
+    var m = data.match(/^data:([^;]+);base64,(.+)$/);
+    if (!m) { toast('Format fichier non reconnu.', 'error'); return; }
+    var media = m[1], b64 = m[2];
+    var isPdf = media.indexOf('pdf') !== -1;
+    var srcType = isPdf ? 'document' : 'image';
+    var prompt = 'Analyse ce plan de masse / plan de morcellement de lotissement en Côte d\'Ivoire. '
+      + 'Extrais la liste des îlots et lots, ainsi que les réserves légales (voiries, espaces verts, équipements). '
+      + 'Renvoie UNIQUEMENT un JSON strict, sans texte : '
+      + '{"meta":{"superficie_totale":0,"nombre_ilots":0,"nombre_lots":0},'
+      + '"parcelles":[{"numero":"A-01","ilot":"A","usage":"residentiel","superficie":300}],'
+      + '"reserves":[{"type":"voirie","designation":"Voies internes","superficie":1200}]}. '
+      + 'usage ∈ residentiel|commercial|voirie|espace_vert|equipement. '
+      + 'type réserve ∈ voirie|espace_vert|equipement|servitude. '
+      + 'Superficies en m². Si une info manque, mets 0 ou "". Aucun texte hors JSON.';
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'x-api-key':IA.key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 4000,
+        messages: [{ role:'user', content: [
+          { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
+    });
+    if (!resp.ok) throw new Error('API vision ' + resp.status);
+    var rd = await resp.json();
+    var raw = (rd.content||[]).map(function(b){ return b.type==='text'?b.text:''; }).join('');
+    var jsonStr = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    var obj;
+    try { obj = JSON.parse(jsonStr); } catch(e) { var mm = jsonStr.match(/\{[\s\S]*\}/); obj = mm ? JSON.parse(mm[0]) : {}; }
+    _mrcScanTmp = {
+      meta: obj.meta || {},
+      parcelles: (obj.parcelles || []).map(function(p, i){
+        return { numero: p.numero || ('M-'+String(i+1).padStart(2,'0')), ilot: p.ilot||'', usage: p.usage||'residentiel', superficie: parseFloat(p.superficie)||0 };
+      }),
+      reserves: (obj.reserves || []).map(function(r){
+        return { type: r.type||'voirie', designation: r.designation||'', superficie: parseFloat(r.superficie)||0 };
+      })
+    };
+    if (!_mrcScanTmp.parcelles.length && !_mrcScanTmp.reserves.length) { toast('Aucune donnée extraite. Plan peu lisible ?', 'error'); return; }
+    _mrcRenderScanReview();
+  } catch(e) {
+    toast('Échec analyse : ' + e.message, 'error');
+  }
+}
+
+function _mrcRenderScanReview() {
+  var t = _mrcScanTmp;
+  var totParc = t.parcelles.reduce(function(s,p){ return s + p.superficie; }, 0);
+  var totRes = t.reserves.reduce(function(s,r){ return s + r.superficie; }, 0);
+  var usageOpts = function(sel){ return ['residentiel','commercial','voirie','espace_vert','equipement'].map(function(u){ return '<option value="'+u+'"'+(u===sel?' selected':'')+'>'+u+'</option>'; }).join(''); };
+  var typeOpts = function(sel){ return ['voirie','espace_vert','equipement','servitude'].map(function(u){ return '<option value="'+u+'"'+(u===sel?' selected':'')+'>'+u+'</option>'; }).join(''); };
+  var pRows = t.parcelles.map(function(p,i){
+    return '<tr>'
+      + '<td contenteditable onblur="_mrcScanTmp.parcelles['+i+'].numero=this.textContent.trim()">'+escHtml(p.numero)+'</td>'
+      + '<td contenteditable onblur="_mrcScanTmp.parcelles['+i+'].ilot=this.textContent.trim()">'+escHtml(p.ilot)+'</td>'
+      + '<td><select onchange="_mrcScanTmp.parcelles['+i+'].usage=this.value" style="font-size:11px;padding:2px;">'+usageOpts(p.usage)+'</select></td>'
+      + '<td contenteditable style="text-align:right;" onblur="_mrcScanTmp.parcelles['+i+'].superficie=parseFloat(this.textContent)||0">'+p.superficie+'</td>'
+      + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="_mrcScanTmp.parcelles.splice('+i+',1);_mrcRenderScanReview()">🗑</button></td>'
+      + '</tr>';
+  }).join('');
+  var rRows = t.reserves.map(function(r,i){
+    return '<tr>'
+      + '<td><select onchange="_mrcScanTmp.reserves['+i+'].type=this.value" style="font-size:11px;padding:2px;">'+typeOpts(r.type)+'</select></td>'
+      + '<td contenteditable onblur="_mrcScanTmp.reserves['+i+'].designation=this.textContent.trim()">'+escHtml(r.designation)+'</td>'
+      + '<td contenteditable style="text-align:right;" onblur="_mrcScanTmp.reserves['+i+'].superficie=parseFloat(this.textContent)||0">'+r.superficie+'</td>'
+      + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="_mrcScanTmp.reserves.splice('+i+',1);_mrcRenderScanReview()">🗑</button></td>'
+      + '</tr>';
+  }).join('');
+  document.getElementById('mrc-scan-body').innerHTML =
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
+    + '<div class="kpi-card" style="flex:1;"><div class="kpi-label">Parcelles</div><div class="kpi-value or">'+t.parcelles.length+'</div></div>'
+    + '<div class="kpi-card" style="flex:1;"><div class="kpi-label">Surf. lots</div><div class="kpi-value" style="color:var(--vert);">'+fmtF(totParc)+' m²</div></div>'
+    + '<div class="kpi-card" style="flex:1;"><div class="kpi-label">Réserves</div><div class="kpi-value" style="color:var(--bleu);">'+fmtF(totRes)+' m²</div></div>'
+    + '</div>'
+    + '<div style="font-weight:700;margin:10px 0 6px;">🗂 Îlots & Lots ('+t.parcelles.length+')</div>'
+    + '<div class="table-wrap"><table style="width:100%;font-size:12px;"><thead><tr><th>Numéro</th><th>Îlot</th><th>Usage</th><th style="text-align:right;">Superficie</th><th></th></tr></thead><tbody>'+(pRows||'<tr><td colspan="5" style="text-align:center;color:var(--dim);">Aucune parcelle</td></tr>')+'</tbody></table></div>'
+    + '<div style="font-weight:700;margin:14px 0 6px;">🛣️ Réserves légales ('+t.reserves.length+')</div>'
+    + '<div class="table-wrap"><table style="width:100%;font-size:12px;"><thead><tr><th>Type</th><th>Désignation</th><th style="text-align:right;">Superficie</th><th></th></tr></thead><tbody>'+(rRows||'<tr><td colspan="4" style="text-align:center;color:var(--dim);">Aucune réserve</td></tr>')+'</tbody></table></div>';
+  document.getElementById('modal-mrc-scan').classList.add('open');
+}
+
+async function mrcInjecterScan() {
+  var t = _mrcScanTmp;
+  if (!t.parcelles.length && !t.reserves.length) { toast('Rien à injecter.', 'error'); return; }
+  var progId = APP.currentMrcProgId;
+  if (!progId) { toast('Programme non identifié.', 'error'); return; }
+  var plan = (DATA.plans_morcellement || []).find(function(p) { return p.programme_id === progId; });
+  if (!DATA.parcelles_morcellement) DATA.parcelles_morcellement = [];
+  var n = 0;
+  for (var i = 0; i < t.parcelles.length; i++) {
+    var p = t.parcelles[i];
+    var rec = { id: uid(), programme_id: progId, plan_id: plan ? plan.id : null, numero: p.numero, ilot: p.ilot, usage: p.usage, superficie: p.superficie, longueur:0, largeur:0, lat:'', lng:'', numero_tf:'', numero_acd:'', lot_id:null, source: 'scan_ia', created_at: today() };
+    DATA.parcelles_morcellement.push(rec);
+    await dbPut('parcelles_morcellement', rec);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_parcelles_morcellement', rec);
+    n++;
+  }
+  var totRes = t.reserves.reduce(function(s,r){ return s + r.superficie; }, 0);
+  if (totRes > 0) {
+    var vEl = document.getElementById('mrc-superficie-voirie');
+    if (vEl) { vEl.value = totRes; if (typeof calcSuperficieNette === 'function') calcSuperficieNette(); }
+  }
+  closeModal('modal-mrc-scan');
+  _mrcScanTmp = { parcelles: [], reserves: [], meta: {} };
+  if (typeof renderParcelleListe === 'function') renderParcelleListe();
+  toast(n + ' parcelle(s) injectée(s) · réserves : ' + fmtF(totRes) + ' m²', 'success');
+  switchTab('morcellement','parcelles');
+}
+
+
 function brnImportCSV(input){
   var fl=input.files&&input.files[0]; if(!fl)return;
   var rd=new FileReader();
@@ -58683,6 +58811,24 @@ function imprimerFactureFNE(facId) {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-fne')">Annuler</button>
       <button class="btn btn-primary" onclick="_fneEnregistrer()">💾 Émettre la facture</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal review scan plan de masse -->
+<div class="modal-overlay" id="modal-mrc-scan">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>📐 Extraction plan de masse — vérification</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-mrc-scan')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">Vérifiez et corrigez les données extraites avant injection. Cellules éditables.</div>
+      <div id="mrc-scan-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-mrc-scan')">Annuler</button>
+      <button class="btn btn-primary" onclick="mrcInjecterScan()">✅ Injecter les parcelles</button>
     </div>
   </div>
 </div>
