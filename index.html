@@ -15128,6 +15128,18 @@ function dbGetAll(store) {
 
 /* dbPut — silencieux si store absent */
 function dbPut(store, obj) {
+  /* ── Verrou clôture : bloque toute écriture (manuelle ou automatique — versement,
+     commission, achat, stock, paie…) datée dans un exercice déjà clôturé.
+     _pulling=true = réplication venant du cloud (ex. clôture faite sur un autre poste) → laissé passer. */
+  if (store === 'ecritures' && obj && obj.date && !_pulling && !obj._forceCloture
+      && typeof exerciceEstClos === 'function' && exerciceEstClos(obj.date)) {
+    if (Array.isArray(DATA.ecritures) && obj.id !== undefined) {
+      DATA.ecritures = DATA.ecritures.filter(function(x){ return x.id !== obj.id; });
+    }
+    console.warn('[VERROU CLOTURE] Écriture rejetée — exercice clos:', obj);
+    try { if (typeof toast === 'function') toast('🔒 Exercice ' + new Date(obj.date).getFullYear() + ' clôturé — écriture bloquée (' + (obj.libelle || obj.reference || obj.id) + ').', 'error'); } catch(e){}
+    return Promise.resolve(false);
+  }
   return new Promise(function(resolve) {
     if (!db) { resolve(); return; }
     if (!db.objectStoreNames.contains(store)) { resolve(); return; }
@@ -15500,6 +15512,14 @@ async function _depDetachSoft(store, id, softItems){
 
 async function deleteRecord(store, id, opts) {
   opts = opts || {};
+  /* ── Verrou clôture : interdit la suppression d'une écriture d'un exercice clos ── */
+  if (store === 'ecritures' && !opts.forceCloture && typeof exerciceEstClos === 'function') {
+    var _ecrClo = (DATA.ecritures || []).find(function(x){ return x.id === id; });
+    if (_ecrClo && _ecrClo.date && exerciceEstClos(_ecrClo.date)) {
+      try { if (typeof toast === 'function') toast('🔒 Exercice ' + new Date(_ecrClo.date).getFullYear() + ' clôturé — suppression bloquée.', 'error'); } catch(e){}
+      return false;
+    }
+  }
   if (!opts.skipIntegrity && typeof recordDependances === 'function') {
     var dep = recordDependances(store, id);
     if (dep.hard.length) {
@@ -15527,6 +15547,11 @@ async function deleteRecord(store, id, opts) {
 }
 
 async function syncToSupabase(table, obj) {
+  if (table === 'pi_ecritures' && obj && obj.date && !_pulling && !obj._forceCloture
+      && typeof exerciceEstClos === 'function' && exerciceEstClos(obj.date)) {
+    console.warn('[VERROU CLOTURE] Sync cloud bloquée — exercice clos:', obj);
+    return false;
+  }
   if (!SB.url || !SB.key) return false;
   if (!navigator.onLine) { _outboxEnqueue({ op:'upsert', table:table, id:obj.id, obj:obj }); return false; }
   if (table !== 'pi_users' && obj && typeof obj === 'object') { obj._modifie = new Date().toISOString(); }
@@ -21219,8 +21244,8 @@ function buildTresorerie() {
 
 async function deleteEcriture(id) {
   if (!confirm('Supprimer cette écriture ?')) return;
-  DATA.ecritures = DATA.ecritures.filter(function(e) { return e.id !== id; });
-  await deleteRecord('ecritures', id);
+  var ok = await deleteRecord('ecritures', id);
+  if (ok === false) return; /* bloqué : exercice clos ou élément référencé ailleurs */
   filterEcritures();
   buildCompteResultat();
   toast('Écriture supprimée.', 'info');
@@ -29525,7 +29550,7 @@ async function rouvrirExercice(annee) {
     return (e.reference==='CLOTURE-'+annee) || (e.reference==='AN-'+(annee+1));
   });
   for (var i=0; i<toDelete.length; i++) {
-    await deleteRecord('ecritures', toDelete[i].id);
+    await deleteRecord('ecritures', toDelete[i].id, { forceCloture: true });
   }
   DATA.ecritures = DATA.ecritures.filter(function(e){
     return !(e.reference==='CLOTURE-'+annee || e.reference==='AN-'+(annee+1));
@@ -54835,9 +54860,19 @@ async function luGenererEcriture(u){
 async function luSupprimerEcriture(u){
   if(!u.ecriture_vente_id) return;
   var eid=u.ecriture_vente_id;
-  DATA.ecritures=(DATA.ecritures||[]).filter(function(e){return e.id!==eid;});
-  if(typeof deleteRecord==='function'){ try{ await deleteRecord('ecritures', eid); }catch(e){} }
-  else { try{ await dbDelete('ecritures', eid); }catch(e){} if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_ecritures', eid); }
+  if(typeof deleteRecord==='function'){
+    var ok=true; try{ ok = await deleteRecord('ecritures', eid); }catch(e){}
+    if (ok === false) return; /* bloqué : exercice clos */
+  } else {
+    var _e=(DATA.ecritures||[]).find(function(x){return x.id===eid;});
+    if (_e && _e.date && typeof exerciceEstClos==='function' && exerciceEstClos(_e.date)) {
+      try{ if (typeof toast==='function') toast('🔒 Exercice clôturé — suppression bloquée.','error'); }catch(e){}
+      return;
+    }
+    DATA.ecritures=(DATA.ecritures||[]).filter(function(e){return e.id!==eid;});
+    try{ await dbDelete('ecritures', eid); }catch(e){}
+    if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_ecritures', eid);
+  }
   u.ecriture_vente_id=null;
 }
 
