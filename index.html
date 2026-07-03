@@ -16241,6 +16241,14 @@ async function pullFromCloudSilent() {
       .forEach(function(fn){
         if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} }
       });
+    /* Rôles/permissions peuvent arriver après le premier rendu de la sidebar
+       (custom_roles créé/modifié sur un autre poste, pas encore synchronisé
+       au moment du login). Sans ce recalcul, des modules autorisés restent
+       masqués jusqu'à la prochaine reconnexion. */
+    try {
+      if (typeof rebuildRoleMatrix === 'function') rebuildRoleMatrix();
+      if (typeof applyRoleToSidebar === 'function') applyRoleToSidebar();
+    } catch(e){}
     /* Toast discret : une seule ligne, pas de popup */
     toast('☁️ Données synchronisées (' + total + ' enreg.)', 'info', 2500);
     console.log('[Sync] Pull post-login : ' + total + ' enregistrement(s) mis à jour.');
@@ -16600,15 +16608,25 @@ async function doLogin() {
     return;
   }
 
-  // ── Recherche de l'utilisateur (cloud partagé prioritaire, sinon local) ──
+  // ── Recherche de l'utilisateur (version la plus récente prioritaire) ──
   var user = DATA.users.find(function(x){ return x.login === u; });
   var cloudUser = await fetchUserFromCloud(u);
   if (cloudUser) {
-    user = cloudUser;
-    var idx = DATA.users.findIndex(function(x){ return x.id === cloudUser.id || x.login === cloudUser.login; });
-    if (idx >= 0) DATA.users[idx] = cloudUser; else DATA.users.push(cloudUser);
-    try { await dbPut('users', cloudUser);
+    /* Ne remplacer la version locale que si le cloud est réellement plus récent.
+       Sinon un changement de mot de passe fait hors-ligne (poussé en attente
+       dans l'outbox) serait écrasé par l'ancien hash encore présent côté
+       cloud → connexion refusée malgré des identifiants pourtant corrects. */
+    var cloudPlusRecent = !user || !user._modifie || !cloudUser._modifie || cloudUser._modifie >= user._modifie;
+    if (cloudPlusRecent) {
+      user = cloudUser;
+      var idx = DATA.users.findIndex(function(x){ return x.id === cloudUser.id || x.login === cloudUser.login; });
+      if (idx >= 0) DATA.users[idx] = cloudUser; else DATA.users.push(cloudUser);
+      try { await dbPut('users', cloudUser);
  if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', cloudUser); } catch(e) {}
+    } else {
+      console.warn('[AUTH] Version locale plus récente que le cloud pour', u, '— cloud ignoré, re-synchronisation forcée.');
+      try { if (typeof syncToSupabase === 'function') syncToSupabase('pi_users', user); } catch(e) {}
+    }
   }
   if (!user) {
     attempts[bfKey] = attCount + 1;
@@ -16675,6 +16693,11 @@ async function doLogin() {
   demarrerSyncAuto();           // ← lance le push dirty toutes les 30 s
   startInactivityTimer();
   await logConnexion(u, true, 'Connexion réussie');
+
+  /* Rôles à jour avant le premier rendu — évite des modules manquants si
+     la session précédente (ou le chargement initial) date d'avant une
+     modification de rôle. */
+  try { if (typeof loadCustomRoles === 'function') await loadCustomRoles(); if (typeof rebuildRoleMatrix === 'function') rebuildRoleMatrix(); } catch(e){}
 
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
