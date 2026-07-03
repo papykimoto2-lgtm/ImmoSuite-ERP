@@ -22105,20 +22105,20 @@ function switchUTab(tab) {
 // ══ LISTE DES RÔLES ═══════════════════════════════════════════════════════════
 /* ── Groupes de modules pour sélection rapide ─────────────── */
 var MODULE_GROUPS = {
-  general:    ['Tableau de bord','Accueil','Messagerie'],
-  commercial: ['Pipeline Leads','Plan Action Commercial','Carte & Geoloc','Lots & Reservations',
-               'Souscripteurs','Relances','Rapports Commerciaux'],
-  immobilier: ['Foncier','Filiere Fonciere','Acquisition & Amenagement Foncier','Programmes',
-               'Plans & Conception','Constructeurs','Conventions',
-               'Suivi Chantiers','DQE & Cout de revient','Dossiers Juridiques'],
-  chantier:   ['Etude de Prix & Debourse','Achats & Commandes','Stock Materiaux','Validations','Reception & Livraison'],
-  finance:    ['Paiements','Comptabilite','Tresorerie','Relances'],
-  rh:         ['RH Employes','Pointage','Paie','Conges RH','Recrutement','Formations','Livre Paie'],
-  portails:   ['Portail','Portail Apporteur'],
-  admin:      ['Parametres']
+  pilotage:   ['Tableau de bord','Accueil'],
+  foncier:    ['Foncier','Filiere Fonciere','Acquisition & Amenagement Foncier'],
+  montage:    ['Programmes','Plans & Conception'],
+  chantier:   ['Constructeurs','Conventions','Suivi Chantiers','DQE & Cout de revient','Etude de Prix & Debourse','Achats & Commandes','Stock Materiaux','Validations','Reception & Livraison'],
+  commercial: ['Pipeline Leads','Plan Action Commercial','Carte & Geoloc','Itineraires Terrain','Ordres de Mission','Lots & Reservations','Souscripteurs','Rapports Commerciaux'],
+  recouvrement:['Relances'],
+  finance:    ['Paiements','Comptabilite','Tresorerie'],
+  juridique:  ['Dossiers Juridiques'],
+  rh:         ['RH Employes','Pointage','Paie','Journaliers & Temporaires','Declarations & Teledeclaration','Livre Paie','Conges RH','Recrutement','Formations'],
+  collaboration:['Messagerie','Portail','Portail Apporteur'],
+  systeme:    ['Parametres']
 };
-var GROUP_LABELS = { general:'🏠 Général', commercial:'🎯 Commercial', immobilier:'🏗️ Immobilier', chantier:'🧱 Achats & Chantier', finance:'💰 Finance', rh:'👥 RH & Paie', portails:'🌐 Portails externes', admin:'⚙️ Admin' };
-var GROUP_COLORS = { general:'#64748B', commercial:'#D97706', immobilier:'#0284C7', chantier:'#B45309', finance:'#059669', rh:'#7C3AED', portails:'#0891B2', admin:'#DC2626' };
+var GROUP_LABELS = { pilotage:'📊 Pilotage', foncier:'🗺️ Foncier (amont)', montage:'📐 Montage Programme', chantier:'🧱 Études & Chantier', commercial:'🎯 Commercial & CRM', recouvrement:'📨 Recouvrement', finance:'💰 Finance SYSCOHADA', juridique:'⚖️ Juridique', rh:'👥 RH & Paie', collaboration:'🤝 Collaboration', systeme:'⚙️ Système' };
+var GROUP_COLORS = { pilotage:'#64748B', foncier:'#0284C7', montage:'#7C3AED', chantier:'#B45309', commercial:'#D97706', recouvrement:'#DB2777', finance:'#059669', juridique:'#9333EA', rh:'#7C3AED', collaboration:'#0EA5E9', systeme:'#DC2626' };
 
 /* ── Utilitaires cases module (un module peut apparaître dans plusieurs groupes) ── */
 function _modAttr(mod) { return String(mod).replace(/"/g, '&quot;'); }
@@ -45401,7 +45401,8 @@ var PAGE_MODULE_MAP = {
   'leads':              'Pipeline Leads',
   'crm-pac':            'Plan Action Commercial',
   'crm-carte':          'Carte & Geoloc',
-  'crm-itineraires':    'Carte & Geoloc',
+  'crm-itineraires':    'Itineraires Terrain',
+  'ordres-mission':     'Ordres de Mission',
   'crm-rapports':       'Rapports Commerciaux',
   'crm-apporteurs':     'Rapports Commerciaux',
   'lots':               'Lots & Reservations',
@@ -45414,7 +45415,7 @@ var PAGE_MODULE_MAP = {
   'rh-employes':        'RH Employes',
   'rh-pointage':        'Pointage',
   'rh-paie':            'Paie',
-  'rh-declarations':    'Paie',
+  'rh-declarations':    'Declarations & Teledeclaration',
   'rh-conges':          'Conges RH',
   'rh-recrutement':     'Recrutement',
   'rh-formations':      'Formations',
