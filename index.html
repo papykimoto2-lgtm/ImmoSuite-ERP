@@ -4200,7 +4200,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('params','reporting');renderParamsReporting()">📊 Reporting</button>
           <button class="tab-btn" onclick="switchTab('params','localisation')">🌍 Localisation</button>
           <button class="tab-btn" onclick="switchTab('params','import');renderImportPage()">📥 Import données</button>
-          <button class="tab-btn" onclick="switchTab('params','syscohada');renderPlanComptableParam()">📒 Plan comptable SYSCOHADA</button>
+          <button class="tab-btn" onclick="switchTab('params','syscohada');renderPlanComptableParam();loadComptesDefaut()">📒 Plan comptable SYSCOHADA</button>
         </div>
 
         <!-- Société -->
@@ -5417,6 +5417,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               </table>
             </div>
             <div id="plan-comptable-empty" style="display:none;text-align:center;padding:24px;color:var(--blanc-dim);font-size:13px;">Aucun compte ne correspond à votre recherche.</div>
+          </div>
+
+          <!-- Comptes par défaut des écritures automatiques -->
+          <div class="card" style="margin-top:20px;">
+            <div class="form-section-title">⚙️ Comptes par défaut des mouvements Débit / Crédit automatiques</div>
+            <div style="font-size:12px;color:var(--blanc-dim);margin:6px 0 14px;line-height:1.6;">
+              Ces comptes sont utilisés automatiquement par l'application pour générer les écritures (versements clients, commissions, paiements fournisseurs…), sans que vous ayez à les saisir manuellement à chaque fois.
+            </div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <div class="form-group"><label>Trésorerie — Banque</label><input class="form-control" id="cd-treso-banque" placeholder="521"></div>
+              <div class="form-group"><label>Trésorerie — Caisse (espèces)</label><input class="form-control" id="cd-treso-caisse" placeholder="571"></div>
+              <div class="form-group"><label>Trésorerie — Mobile Money</label><input class="form-control" id="cd-treso-mobile" placeholder="531"></div>
+
+              <div class="form-group"><label>Client — Souscripteurs (lots)</label><input class="form-control" id="cd-client-lots" placeholder="4111"></div>
+              <div class="form-group"><label>Client — Acquéreurs fonciers</label><input class="form-control" id="cd-client-foncier" placeholder="4111"></div>
+              <div class="form-group"><label>Fournisseur par défaut</label><input class="form-control" id="cd-fournisseur" placeholder="401"></div>
+
+              <div class="form-group"><label>Commission commerciale — Charge</label><input class="form-control" id="cd-comm-com-charge" placeholder="622"></div>
+              <div class="form-group"><label>Commission commerciale — À payer</label><input class="form-control" id="cd-comm-com-provision" placeholder="467"></div>
+              <div class="form-group"></div>
+
+              <div class="form-group"><label>Commission apporteur — Charge</label><input class="form-control" id="cd-comm-app-charge" placeholder="629"></div>
+              <div class="form-group"><label>Commission apporteur — À payer</label><input class="form-control" id="cd-comm-app-provision" placeholder="468"></div>
+              <div class="form-group"></div>
+            </div>
+            <div style="margin-top:14px;"><button class="btn btn-primary" onclick="saveComptesDefaut()">💾 Enregistrer les comptes par défaut</button></div>
           </div>
         </div>
 
@@ -18055,16 +18081,17 @@ function onTypeVersementChange() {
 
 function getCompteCommission(typeB, sens) {
   // sens: 'charge' | 'provision' | 'paiement_debit' | 'paiement_credit'
+  var cd = (DATA.params && DATA.params.comptes_defaut) || {};
   if (typeB === 'commercial') {
-    if (sens === 'charge')          return '622';
-    if (sens === 'provision')       return '467';
-    if (sens === 'paiement_debit')  return '467';
+    if (sens === 'charge')          return cd.comm_com_charge || '622';
+    if (sens === 'provision')       return cd.comm_com_provision || '467';
+    if (sens === 'paiement_debit')  return cd.comm_com_provision || '467';
   } else { // apporteur
-    if (sens === 'charge')          return '629';
-    if (sens === 'provision')       return '468';
-    if (sens === 'paiement_debit')  return '468';
+    if (sens === 'charge')          return cd.comm_app_charge || '629';
+    if (sens === 'provision')       return cd.comm_app_provision || '468';
+    if (sens === 'paiement_debit')  return cd.comm_app_provision || '468';
   }
-  return '521'; // credit par défaut = banque
+  return cd.treso_banque || '521'; // credit par défaut = banque
 }
 
 /** Génère les 2 écritures SYSCOHADA pour une commission (charge + provision) */
@@ -18584,14 +18611,16 @@ function exportCommissionsCSV() {
 
 /* ── ÉCRITURE COMPTABLE AUTOMATIQUE D'UN VERSEMENT (Débit Trésorerie / Crédit Client) ── */
 function _compteTresoVersement(mode) {
-  return mode === 'especes' ? '571' : (mode === 'mobile_money' ? '531' : '521');
+  var cd = (DATA.params && DATA.params.comptes_defaut) || {};
+  return mode === 'especes' ? (cd.treso_caisse || '571') : (mode === 'mobile_money' ? (cd.treso_mobile || '531') : (cd.treso_banque || '521'));
 }
 async function genererEcritureVersement(versement) {
   var client = DATA.clients.find(function(c){ return c.id === versement.client_id; }) || {};
   var nomClient = (client.nom || '') + ' ' + (client.prenoms || '');
   var compteTreso = _compteTresoVersement(versement.mode);
   var estFrais = versement.type === 'frais_souscription';
-  var compteCredit = estFrais ? ((DATA.params || {}).compte_frais_souscription || '7088') : '4111';
+  var cd = (DATA.params && DATA.params.comptes_defaut) || {};
+  var compteCredit = estFrais ? ((DATA.params || {}).compte_frais_souscription || '7088') : (cd.client_lots || '4111');
   var typeLabels = { apport: 'Apport initial', mensualite: 'Mensualité', regularisation: 'Régularisation', frais_souscription: 'Frais de souscription', autre: 'Versement' };
   var ecr = {
     id: 'ecr_vrs_' + versement.id,
@@ -20463,6 +20492,38 @@ function initPlanComptable() {
 }
 
 var NATURE_LABELS_CPT = { actif:'Actif', passif:'Passif', actif_contra:'Actif soustractif', charge:'Charge', produit:'Produit', tresorerie:'Trésorerie', variable:'Variable' };
+
+function loadComptesDefaut() {
+  var cd = (DATA.params && DATA.params.comptes_defaut) || {};
+  document.getElementById('cd-treso-banque').value = cd.treso_banque || '521';
+  document.getElementById('cd-treso-caisse').value = cd.treso_caisse || '571';
+  document.getElementById('cd-treso-mobile').value = cd.treso_mobile || '531';
+  document.getElementById('cd-client-lots').value = cd.client_lots || '4111';
+  document.getElementById('cd-client-foncier').value = cd.client_foncier || '4111';
+  document.getElementById('cd-fournisseur').value = cd.fournisseur || '401';
+  document.getElementById('cd-comm-com-charge').value = cd.comm_com_charge || '622';
+  document.getElementById('cd-comm-com-provision').value = cd.comm_com_provision || '467';
+  document.getElementById('cd-comm-app-charge').value = cd.comm_app_charge || '629';
+  document.getElementById('cd-comm-app-provision').value = cd.comm_app_provision || '468';
+}
+
+function saveComptesDefaut() {
+  DATA.params = DATA.params || {};
+  DATA.params.comptes_defaut = {
+    treso_banque:       document.getElementById('cd-treso-banque').value.trim() || '521',
+    treso_caisse:        document.getElementById('cd-treso-caisse').value.trim() || '571',
+    treso_mobile:        document.getElementById('cd-treso-mobile').value.trim() || '531',
+    client_lots:         document.getElementById('cd-client-lots').value.trim() || '4111',
+    client_foncier:      document.getElementById('cd-client-foncier').value.trim() || '4111',
+    fournisseur:         document.getElementById('cd-fournisseur').value.trim() || '401',
+    comm_com_charge:     document.getElementById('cd-comm-com-charge').value.trim() || '622',
+    comm_com_provision:  document.getElementById('cd-comm-com-provision').value.trim() || '467',
+    comm_app_charge:     document.getElementById('cd-comm-app-charge').value.trim() || '629',
+    comm_app_provision:  document.getElementById('cd-comm-app-provision').value.trim() || '468'
+  };
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  toast('✅ Comptes par défaut enregistrés — ils seront utilisés pour les prochaines écritures automatiques.', 'success');
+}
 
 function renderPlanComptableParam() {
   var tbody = document.getElementById('tbody-plan-comptable-param');
@@ -51165,7 +51226,7 @@ async function saveStockEntree(){
   if(sv!==''){ stockSeuils()[stockKeyOf(m)]=parseFloat(sv)||0; DATA.params.id='main'; await dbPut('params',DATA.params); if(typeof syncToSupabase==='function')syncToSupabase('pi_params',DATA.params); }
   if(document.getElementById('se-ecriture').checked && coutAcq>0){
     var cfg=stockComptaCfg(); var info=stockResInfo(m); var num='ACH-'+(m.id.slice(-5));
-    var creditCompte = mode==='comptant' ? compteTreso : (four&&four.compte?four.compte:'401');
+    var creditCompte = mode==='comptant' ? compteTreso : (four&&four.compte?four.compte:((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.fournisseur)||'401'));
     var libFour = four?(' ('+four.nom+')'):'';
     var libFrais = frais>0?(' [dont frais '+fmtF(frais)+']'):'';
     var e1={ id:'ecr_stk_'+m.id, ref:num, date:m.date, piece:num, libelle:'Achat matériaux — '+info.libelle+libFour+libFrais, compte:cfg.c_achat, compte_debit:cfg.c_achat, compte_credit:creditCompte, montant:coutAcq, type:'charge', mode:mode, created_at:today() };
@@ -51260,7 +51321,7 @@ async function saveStockRetour(){
   if(typeof syncToSupabase==='function')syncToSupabase('pi_stock_mouvements',m);
   if(document.getElementById('sr-ecriture').checked && htRet>0){
     var cfg=stockComptaCfg(); var info=stockResInfo(m); var num='AV-'+(m.id.slice(-5));
-    var debitCompte = mode==='comptant' ? compteTreso : (four&&four.compte?four.compte:'401');
+    var debitCompte = mode==='comptant' ? compteTreso : (four&&four.compte?four.compte:((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.fournisseur)||'401'));
     var libFour = four?(' ('+four.nom+')'):'';
     var e1={ id:'ecr_ret_'+m.id, ref:num, date:m.date, piece:num, libelle:'Avoir / retour matériaux — '+info.libelle+libFour, compte:debitCompte, compte_debit:debitCompte, compte_credit:cfg.c_achat, montant:htRet, type:'charge', mode:mode, created_at:today() };
     DATA.ecritures.push(e1); await dbPut('ecritures',e1); if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',e1);
@@ -51565,7 +51626,7 @@ async function saveFactureFournisseur(){
   var mode=document.getElementById('fac-mode').value;
   var four=(DATA.fournisseurs||[]).find(function(x){return x.id===r.fournisseur_id;});
   var cfg=stockComptaCfg();
-  var creditCompte = mode==='comptant' ? (document.getElementById('fac-tresorerie').value||'521') : (four&&four.compte?four.compte:'401');
+  var creditCompte = mode==='comptant' ? (document.getElementById('fac-tresorerie').value||'521') : (four&&four.compte?four.compte:((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.fournisseur)||'401'));
   var recHT=Math.round(r.total_ht||0);
   var ecart=Math.round(ht-recHT);
   var tva=(tvamode!=='exonere')?Math.round(ht*0.18):0;
