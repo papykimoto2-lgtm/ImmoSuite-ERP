@@ -6285,6 +6285,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
 
         <div class="card" style="margin-top:16px;">
+          <div class="card-title">📈 Prévisionnel cash — 12 prochains mois</div>
+          <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Encaissements attendus (mensualités clients du programme) vs décaissements travaux restants (linéarisés sur la durée restante des conventions).</div>
+          <div id="bp-previsionnel"></div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" style="margin:0;">🏦 Plan de financement</div>
+            <button class="btn btn-secondary btn-sm" onclick="bpAddFinancement()">➕ Ajouter une source</button>
+          </div>
+          <div id="bp-financement" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
           <div class="card-title">🚨 Alertes de l'opération</div>
           <div id="bp-alertes"></div>
         </div>
@@ -14817,6 +14831,7 @@ var DATA = {
   ordres_mission: [],
   quinzainiers: [],
   factures_client: [],
+  financements_programme: [],
   // ── RAPPROCHEMENT BANCAIRE v5.0 ──
   releves_bank: [],
   rapprochements: [],
@@ -14876,7 +14891,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 131; /* v131: store 'factures_client' (facturation normalisée FNE — cession/commercialisation) */
+var DB_VERSION = 132; /* v132: store 'financements_programme' (plan de financement — bilan de promotion) */
 var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
@@ -14890,6 +14905,7 @@ var ALL_STORES = [
   'ordres_mission',
   'quinzainiers',
   'factures_client',
+  'financements_programme',
   'permis','plans_arch','rapports_chantier',
   'campagnes','actions_marketing','segments_marketing',
   'documents','signatures',
@@ -15488,6 +15504,7 @@ var SUPA_STORE_MAP = [
   ['pi_ordres_mission', 'ordres_mission'],
   ['pi_quinzainiers', 'quinzainiers'],
   ['pi_factures_client', 'factures_client'],
+  ['pi_financements_programme', 'financements_programme'],
   ['pi_biens_amort', 'biens_amort'],
   ['pi_releves_bank', 'releves_bank'],
   ['pi_rapprochements', 'rapprochements'],
@@ -25392,6 +25409,9 @@ function bpRender() {
     + '</div>';
 
   var alertes = [];
+  var finsA = (DATA.financements_programme || []).filter(function(f){ return f.programme_id === progId; });
+  var totPrevuA = finsA.reduce(function(s,f){ return s + (parseFloat(f.montant_prevu)||0); }, 0);
+  if (b.couts > 0 && (totPrevuA + b.encaisse) < b.couts) alertes.push({t:'Financement insuffisant : couverture ' + ((totPrevuA + b.encaisse) / b.couts * 100).toFixed(0) + '% des coûts. Compléter le plan de financement.', c:'var(--rouge)'});
   if (b.marge < 0) alertes.push({t:'Marge actuelle négative. Ventes insuffisantes face aux coûts engagés.', c:'var(--rouge)'});
   if (b.cashNet < 0) alertes.push({t:'Cash net négatif : décaissements supérieurs aux encaissements. Tension trésorerie.', c:'var(--rouge)'});
   if (b.margePot < 0) alertes.push({t:'Marge potentielle négative même à 100% vendu. Revoir prix ou coûts.', c:'var(--rouge)'});
@@ -25401,6 +25421,154 @@ function bpRender() {
   document.getElementById('bp-alertes').innerHTML = alertes.length
     ? alertes.map(function(a){ return '<div style="padding:8px 12px;border-left:3px solid '+a.c+';background:var(--card2);border-radius:6px;margin-bottom:6px;font-size:12px;">'+a.t+'</div>'; }).join('')
     : '<div style="color:var(--vert);font-size:12px;padding:8px;">✅ Aucune alerte. Opération saine.</div>';
+
+  bpRenderFinancement(progId, b);
+  bpRenderPrevisionnel(progId, b);
+}
+
+function bpRenderPrevisionnel(progId, b) {
+  var el = document.getElementById('bp-previsionnel'); if (!el) return;
+  var clients = (DATA.clients || []).filter(function(c){ return c.programme_id === progId && c.mensualite > 0; });
+  var convs = (DATA.conventions || []).filter(function(c){ return c.programme_id === progId && c.statut === 'en_cours'; });
+
+  /* Décaissement mensuel : reste travaux linéarisé sur durée restante moyenne */
+  var resteTravaux = b.resteDecaisser;
+  var moisRestants = 0;
+  var now = new Date();
+  convs.forEach(function(c){
+    if (c.date_fin_prev) {
+      var fin = new Date(c.date_fin_prev);
+      var mr = (fin.getFullYear()-now.getFullYear())*12 + (fin.getMonth()-now.getMonth());
+      if (mr > moisRestants) moisRestants = mr;
+    }
+  });
+  if (!moisRestants && resteTravaux > 0) moisRestants = 12;
+  var decMensuel = moisRestants > 0 ? resteTravaux / moisRestants : 0;
+
+  var mois = [], enc = [], dec = [], cumul = [];
+  var run = b.cashNet;
+  for (var i = 0; i < 12; i++) {
+    var d = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+    var key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    var lbl = d.toLocaleDateString('fr-FR', { month:'short' });
+    /* Encaissements : mensualités clients actives ce mois-là */
+    var e = 0;
+    clients.forEach(function(c){
+      if (!c.date_debut) { e += parseFloat(c.mensualite)||0; return; }
+      var deb = new Date(c.date_debut);
+      var finC = new Date(deb.getFullYear(), deb.getMonth() + (parseInt(c.duree)||60), 1);
+      if (d >= deb && d < finC) e += parseFloat(c.mensualite)||0;
+    });
+    var dc = (i < moisRestants) ? decMensuel : 0;
+    run += e - dc;
+    mois.push(lbl); enc.push(e); dec.push(dc); cumul.push(run);
+  }
+
+  var maxV = Math.max.apply(null, enc.concat(dec).concat([1]));
+  var barW = 100 / 12;
+  var bars = mois.map(function(m, i){
+    var hE = enc[i] / maxV * 100;
+    var hD = dec[i] / maxV * 100;
+    var neg = cumul[i] < 0;
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">'
+      + '<div style="display:flex;align-items:flex-end;gap:2px;height:80px;width:100%;justify-content:center;">'
+      + '<div title="Encaissements ' + fmtF(enc[i]) + '" style="width:38%;height:' + hE + '%;background:var(--vert);border-radius:3px 3px 0 0;min-height:2px;"></div>'
+      + '<div title="Décaissements ' + fmtF(dec[i]) + '" style="width:38%;height:' + hD + '%;background:var(--rouge);border-radius:3px 3px 0 0;min-height:2px;"></div>'
+      + '</div>'
+      + '<div style="font-size:9px;color:var(--dim);">' + m + '</div>'
+      + '<div style="font-size:9px;font-weight:700;color:' + (neg?'var(--rouge)':'var(--vert)') + ';">' + (neg?'⚠':'✓') + '</div>'
+      + '</div>';
+  }).join('');
+
+  var moisTension = cumul.findIndex(function(c){ return c < 0; });
+  el.innerHTML =
+    '<div style="display:flex;gap:4px;margin-bottom:8px;">' + bars + '</div>'
+    + '<div style="display:flex;gap:16px;font-size:11px;color:var(--dim);flex-wrap:wrap;">'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:var(--vert);border-radius:2px;"></span> Encaissements attendus</span>'
+    + '<span><span style="display:inline-block;width:10px;height:10px;background:var(--rouge);border-radius:2px;"></span> Décaissements travaux</span>'
+    + '<span>Cumul fin période : <strong style="color:' + (cumul[11]>=0?'var(--vert)':'var(--rouge)') + ';">' + fmtF(cumul[11]) + ' F</strong></span>'
+    + '</div>'
+    + (moisTension >= 0
+        ? '<div style="margin-top:8px;padding:8px 12px;border-left:3px solid var(--rouge);background:var(--card2);border-radius:6px;font-size:12px;">🚨 Tension trésorerie projetée dès <strong>' + mois[moisTension] + '</strong> (cumul négatif). Anticiper déblocage financement ou accélérer préventes.</div>'
+        : '<div style="margin-top:8px;font-size:12px;color:var(--vert);">✅ Aucun mois en cumul négatif sur 12 mois.</div>');
+}
+
+function bpRenderFinancement(progId, b) {
+  var el = document.getElementById('bp-financement'); if (!el) return;
+  var fins = (DATA.financements_programme || []).filter(function(f){ return f.programme_id === progId; });
+  var totPrevu = fins.reduce(function(s,f){ return s + (parseFloat(f.montant_prevu)||0); }, 0);
+  var totDebloque = fins.reduce(function(s,f){ return s + (parseFloat(f.montant_debloque)||0); }, 0);
+  var besoin = b.couts;
+  var couverture = besoin > 0 ? (totPrevu + b.encaisse) / besoin * 100 : 0;
+  var TYPE_LBL = { fonds_propres:'💼 Fonds propres', emprunt:'🏦 Emprunt bancaire', prevente:'📝 Préventes', apport_partenaire:'🤝 Apport partenaire', subvention:'🏛️ Subvention', autre:'📌 Autre' };
+  var rows = fins.map(function(f){
+    var pct = f.montant_prevu > 0 ? (f.montant_debloque / f.montant_prevu * 100) : 0;
+    return '<tr>'
+      + '<td>' + (TYPE_LBL[f.type]||f.type) + '<br><span style="font-size:10px;color:var(--dim);">' + escHtml(f.source||'') + '</span></td>'
+      + '<td style="text-align:right;">' + fmtF(f.montant_prevu) + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + fmtF(f.montant_debloque) + '</td>'
+      + '<td style="text-align:right;">' + pct.toFixed(0) + '%</td>'
+      + '<td style="font-size:11px;">' + (f.taux ? f.taux + '%' : '—') + (f.echeance ? '<br>' + dateShort(f.echeance) : '') + '</td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="bpEditFinancement(\'' + f.id + '\')">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="bpDelFinancement(\'' + f.id + '\')">🗑</button></td>'
+      + '</tr>';
+  }).join('');
+  el.innerHTML = (fins.length
+    ? '<div class="table-wrap"><table style="width:100%;font-size:12px;"><thead><tr><th>Source</th><th style="text-align:right;">Prévu</th><th style="text-align:right;">Débloqué</th><th style="text-align:right;">%</th><th>Taux / Échéance</th><th></th></tr></thead><tbody>' + rows
+      + '<tr style="border-top:2px solid var(--bord);font-weight:800;"><td>TOTAL</td><td style="text-align:right;">' + fmtF(totPrevu) + '</td><td style="text-align:right;color:var(--vert);">' + fmtF(totDebloque) + '</td><td colspan="3"></td></tr>'
+      + '</tbody></table></div>'
+    : '<div style="color:var(--dim);font-size:12px;padding:8px;">Aucune source de financement définie.</div>')
+    + '<div style="margin-top:10px;font-size:12px;">Besoin (coûts) : <strong style="color:var(--rouge);">' + fmtF(besoin) + ' F</strong>'
+    + ' · Couverture (financement prévu + encaissé) : <strong style="color:' + (couverture>=100?'var(--vert)':'var(--or)') + ';">' + couverture.toFixed(0) + '%</strong>'
+    + (couverture < 100 ? ' · Manque : <strong style="color:var(--rouge);">' + fmtF(Math.max(0, besoin - totPrevu - b.encaisse)) + ' F</strong>' : '')
+    + '</div>';
+}
+
+function bpAddFinancement() {
+  var progId = (document.getElementById('bp-programme')||{}).value;
+  if (!progId) { toast('Sélectionnez un programme.', 'error'); return; }
+  APP._bpFinEdit = null;
+  ['bpf-source','bpf-prevu','bpf-debloque','bpf-taux','bpf-echeance'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  var t = document.getElementById('bpf-type'); if (t) t.value = 'fonds_propres';
+  document.getElementById('modal-bp-fin').classList.add('open');
+}
+
+function bpEditFinancement(id) {
+  var f = (DATA.financements_programme || []).find(function(x){ return x.id === id; }); if (!f) return;
+  APP._bpFinEdit = id;
+  var sv = function(i,v){ var e=document.getElementById(i); if(e) e.value = v!==undefined&&v!==null ? v : ''; };
+  sv('bpf-type', f.type); sv('bpf-source', f.source); sv('bpf-prevu', f.montant_prevu);
+  sv('bpf-debloque', f.montant_debloque); sv('bpf-taux', f.taux); sv('bpf-echeance', f.echeance);
+  document.getElementById('modal-bp-fin').classList.add('open');
+}
+
+async function bpSaveFinancement() {
+  var progId = (document.getElementById('bp-programme')||{}).value;
+  var gv = function(i){ return (document.getElementById(i)||{}).value || ''; };
+  var prevu = parseFloat(gv('bpf-prevu')) || 0;
+  if (!prevu) { toast('Montant prévu obligatoire.', 'error'); return; }
+  var f;
+  if (APP._bpFinEdit) {
+    f = (DATA.financements_programme || []).find(function(x){ return x.id === APP._bpFinEdit; });
+    if (!f) return;
+  } else {
+    f = { id: 'fin_' + Date.now(), programme_id: progId, created_at: today() };
+    if (!DATA.financements_programme) DATA.financements_programme = [];
+    DATA.financements_programme.push(f);
+  }
+  f.type = gv('bpf-type'); f.source = gv('bpf-source');
+  f.montant_prevu = prevu; f.montant_debloque = parseFloat(gv('bpf-debloque')) || 0;
+  f.taux = parseFloat(gv('bpf-taux')) || 0; f.echeance = gv('bpf-echeance');
+  await dbPut('financements_programme', f);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_financements_programme', f);
+  closeModal('modal-bp-fin');
+  toast('Financement enregistré.', 'success');
+  bpRender();
+}
+
+async function bpDelFinancement(id) {
+  if (!confirm('Supprimer cette source de financement ?')) return;
+  if (await deleteRecord('financements_programme', id) === false) return;
+  bpRender();
 }
 
 function bpImprimer() {
@@ -38868,6 +39036,40 @@ function _a360Metrics() {
     : { masseBrute:0, masseNet:0, chargesPat:0, coutEmployeur:0, effectif:effectif };
   var poidsSalaireEncaisse = encaisse > 0 ? Math.round(ms.coutEmployeur / encaisse * 100) : 0;
 
+  /* ── Extension v132 : bilan promotion, financement, foncier, FNE, journaliers ── */
+  var margesProg = [], progDeficitaires = 0, cashNetGlobal = 0, couvFinanceMin = 100;
+  if (typeof bpCompute === 'function') {
+    programmes.forEach(function(p){
+      var b = bpCompute(p.id);
+      margesProg.push({ nom: p.nom, marge: b.margePot, taux: b.tauxMarge });
+      if (b.margePot < 0) progDeficitaires++;
+      cashNetGlobal += b.cashNet;
+      var fins = (DATA.financements_programme || []).filter(function(f){ return f.programme_id === p.id; });
+      var prevu = fins.reduce(function(s,f){ return s+(parseFloat(f.montant_prevu)||0); }, 0);
+      var couv = b.couts > 0 ? (prevu + b.encaisse) / b.couts * 100 : 100;
+      if (couv < couvFinanceMin) couvFinanceMin = couv;
+    });
+  }
+
+  var cessions = DATA.cessions_foncieres || [];
+  var caCessions = cessions.reduce(function(s,c){ return s+(parseFloat(c.prix_cession)||0); }, 0);
+  var parcelles = DATA.parcelles || [];
+  var valeurFoncier = parcelles.reduce(function(s,p){ return s+((p.prix_acq||0)+(p.frais_mutation||0)+(p.frais_bornage||0)+(p.frais_notaire||0)); }, 0);
+
+  var facturesFNE = DATA.factures_client || [];
+  var fneACertifier = facturesFNE.filter(function(f){ return f.statut_fne === 'a_certifier'; }).length;
+  var fneActif = (DATA.params||{}).fne_actif === 'oui';
+
+  var moisCourantQ = new Date().toISOString().slice(0,7);
+  var quinzMois = (DATA.quinzainiers || []).filter(function(q){ return q.mois === moisCourantQ; });
+  var coutJournaliers = quinzMois.reduce(function(s,q){ return s+(q.cout_emp||0); }, 0);
+
+  var in30c = new Date(); in30c.setDate(in30c.getDate()+30);
+  var contratsExp30 = employes.filter(function(e){
+    if (e.statut!=='actif'||!e.date_fin) return false;
+    var d = new Date(e.date_fin); return d>=new Date() && d<=in30c;
+  }).length;
+
   return {
     nbClients: clients.length, nbLeads: leads.length, leadsActifs: leadsActifs,
     caPortef: caPortef, encaisse: encaisse, txRecouv: txRecouv, txConv: txConv,
@@ -38879,7 +39081,12 @@ function _a360Metrics() {
     commDues: commDues, nbApporteurs: apporteurs.length,
     concentrationComm: concentrationComm, topCommNom: topCommNom, clientsSansComm: clientsSansComm,
     masseBrute: ms.masseBrute, masseNet: ms.masseNet, chargesPat: ms.chargesPat,
-    coutEmployeur: ms.coutEmployeur, poidsSalaireEncaisse: poidsSalaireEncaisse
+    coutEmployeur: ms.coutEmployeur, poidsSalaireEncaisse: poidsSalaireEncaisse,
+    /* v132 */
+    progDeficitaires: progDeficitaires, cashNetGlobal: cashNetGlobal, couvFinanceMin: Math.round(couvFinanceMin),
+    caCessions: caCessions, nbCessions: cessions.length, valeurFoncier: valeurFoncier, nbParcelles: parcelles.length,
+    fneACertifier: fneACertifier, fneActif: fneActif, nbFactures: facturesFNE.length,
+    coutJournaliers: coutJournaliers, nbQuinzMois: quinzMois.length, contratsExp30: contratsExp30
   };
 }
 
@@ -38894,6 +39101,10 @@ function _a360Diagnostic(m) {
   if (m.resultat > 0) forces.push('Résultat comptable positif ('+fmtF(m.resultat)+' F, marge '+m.margePct+'%).');
   if (m.avgAvancement >= 70 && m.convEnCours>0) forces.push('Chantiers globalement bien avancés ('+m.avgAvancement+'%).');
   if (m.chantiersRetard === 0 && m.convEnCours>0) forces.push('Aucun chantier en retard.');
+  if (m.cashNetGlobal > 0) forces.push('Cash net global positif ('+fmtF(m.cashNetGlobal)+' F) sur l\'ensemble des programmes.');
+  if (m.caCessions > 0) forces.push('Levier cession foncière actif : '+fmtF(m.caCessions)+' F ('+m.nbCessions+' cession(s)).');
+  if (m.fneActif) forces.push('Facturation normalisée FNE activée : conformité DGI.');
+  if (m.progDeficitaires === 0 && m.nbProgrammes > 0) forces.push('Aucun programme déficitaire en marge potentielle.');
 
   // ── Faiblesses ──
   if (m.txRecouv < 50) faiblesses.push('Recouvrement faible ('+m.txRecouv+'%) : trésorerie sous tension.');
@@ -38902,6 +39113,8 @@ function _a360Diagnostic(m) {
   if (m.commDues > 0) faiblesses.push('Commissions impayées : '+fmtF(m.commDues)+' F en attente.');
   if (m.clientsSansComm > 0) faiblesses.push(m.clientsSansComm+' client(s) sans commercial affecté (données incomplètes).');
   if (m.poidsSalaireEncaisse > 40 && m.encaisse > 0) faiblesses.push('Masse salariale lourde : coût employeur = '+m.poidsSalaireEncaisse+'% des encaissements.');
+  if (!m.fneActif && m.nbFactures > 0) faiblesses.push('FNE non activée alors que des factures sont émises : risque de non-conformité DGI.');
+  if (m.contratsExp30 > 0) faiblesses.push(m.contratsExp30+' contrat(s) employé(s) expirant sous 30 jours : renouveler ou anticiper.');
 
   // ── Risques ──
   if (m.resultat < 0) risques.push('Résultat négatif ('+fmtF(m.resultat)+' F) : rentabilité menacée.');
@@ -38909,12 +39122,17 @@ function _a360Diagnostic(m) {
   if (m.concentrationComm >= 50 && m.nbCommerciaux>1) risques.push('Dépendance commerciale : '+m.concentrationComm+'% du portefeuille porté par '+escHtml(m.topCommNom)+'.');
   if (m.nbProgrammes <= 2) risques.push('Faible diversification : seulement '+m.nbProgrammes+' programme(s).');
   if (m.nbCommerciaux <= 1) risques.push('Effectif commercial minimal ('+m.nbCommerciaux+') : risque de rupture d\'activité.');
+  if (m.progDeficitaires > 0) risques.push(m.progDeficitaires+' programme(s) à marge potentielle négative : perte assurée même à 100% vendu.');
+  if (m.cashNetGlobal < 0) risques.push('Cash net global négatif ('+fmtF(m.cashNetGlobal)+' F) : décaissements en avance sur les encaissements.');
+  if (m.couvFinanceMin < 80 && m.nbProgrammes > 0) risques.push('Couverture de financement insuffisante sur au moins un programme ('+m.couvFinanceMin+'%).');
 
   // ── Opportunités ──
   if (m.leadsActifs > 0) opportunites.push(m.leadsActifs+' prospect(s) actif(s) à convertir.');
   if (m.progInvendus > 0) opportunites.push(m.progInvendus+' programme(s) avec lots invendus à écouler ('+(100-m.tauxVente)+'% de stock).');
   if (m.nbApporteurs > 0 && m.txConv < 40) opportunites.push('Réseau d\'apporteurs ('+m.nbApporteurs+') à activer davantage.');
   if (m.txRecouv < 70 && m.txRecouv >= 50) opportunites.push('Marge de progression sur le recouvrement (+'+(70-m.txRecouv)+' pts atteignables).');
+  if (m.nbParcelles > 0 && m.nbCessions === 0) opportunites.push('Portefeuille foncier ('+m.nbParcelles+' parcelle(s), '+fmtF(m.valeurFoncier)+' F) mobilisable en cession pour la trésorerie.');
+  if (m.coutJournaliers > 0) opportunites.push('Main d\'œuvre flexible utilisée ('+m.nbQuinzMois+' paie(s) journaliers ce mois) : levier d\'ajustement des coûts RH.');
 
   // ── PLAN STRATÉGIQUE (long terme, structurel) ──
   if (m.nbProgrammes <= 2)
@@ -38929,6 +39147,10 @@ function _a360Diagnostic(m) {
     plan.strategique.push({ p:'Moyenne', t:'Stratégie d\'écoulement du stock foncier', d:'Taux de vente '+m.tauxVente+'%. Définir une politique commerciale (offres, financement) sur les invendus.' });
   if (m.poidsSalaireEncaisse > 40 && m.encaisse > 0)
     plan.strategique.push({ p:'Haute', t:'Maîtriser la masse salariale', d:'Coût employeur ('+fmtF(m.coutEmployeur)+' F/mois) = '+m.poidsSalaireEncaisse+'% des encaissements. Aligner effectif et productivité sur le chiffre d\'affaires.' });
+  if (m.progDeficitaires > 0)
+    plan.strategique.push({ p:'Critique', t:'Restructurer les programmes déficitaires', d:m.progDeficitaires+' programme(s) à marge potentielle négative. Réviser prix de vente, renégocier marchés travaux, ou arbitrer (cession bloc).' });
+  if (m.couvFinanceMin < 80 && m.nbProgrammes > 0)
+    plan.strategique.push({ p:'Haute', t:'Boucler les plans de financement', d:'Couverture minimale constatée : '+m.couvFinanceMin+'%. Compléter par emprunt, préventes ou cession foncière avant engagement travaux.' });
   if (!plan.strategique.length)
     plan.strategique.push({ p:'Basse', t:'Consolider la croissance', d:'Indicateurs structurels sains. Maintenir le cap et sécuriser les acquis.' });
 
@@ -39027,11 +39249,17 @@ function buildAnalyse360() {
     +kpi('Vente lots', m.tauxVente+'%', m.tauxVente>=60?'#10B981':'#EA580C', m.lotsVendus+'/'+m.lotsTotal)
     +kpi('Commissions dues', fmtF(m.commDues)+' F', m.commDues?'#EA580C':'#10B981')
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">'
     +kpi('Effectif actif', m.effectif, '#3B82F6', m.nbCommerciaux+' commercial(aux)')
     +kpi('Masse salariale (mois)', fmtF(m.masseBrute)+' F', '#B87333')
     +kpi('Charges patronales', fmtF(m.chargesPat)+' F', '#8B5CF6', 'coût '+fmtF(m.coutEmployeur)+' F')
     +kpi('Poids paie / encaissé', m.poidsSalaireEncaisse+'%', m.poidsSalaireEncaisse>40?'#EF4444':m.poidsSalaireEncaisse>25?'#B87333':'#10B981')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">'
+    +kpi('Cash net programmes', fmtF(m.cashNetGlobal)+' F', m.cashNetGlobal>=0?'#10B981':'#EF4444', m.progDeficitaires+' prog. déficitaire(s)')
+    +kpi('Couverture financement', m.couvFinanceMin+'%', m.couvFinanceMin>=100?'#10B981':m.couvFinanceMin>=80?'#B87333':'#EF4444', 'minimum constaté')
+    +kpi('Cessions foncières', fmtF(m.caCessions)+' F', '#0284C7', m.nbCessions+' cession(s) · '+m.nbParcelles+' parcelle(s)')
+    +kpi('FNE', m.fneActif?'Activée':'Inactive', m.fneActif?'#10B981':'#EA580C', m.nbFactures+' facture(s)'+(m.fneACertifier?' · '+m.fneACertifier+' à certifier':''))
     +'</div>'
 
     // SWOT
@@ -59074,6 +59302,39 @@ function imprimerFactureFNE(facId) {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-mrc-scan')">Annuler</button>
       <button class="btn btn-primary" onclick="mrcInjecterScan()">✅ Injecter les parcelles</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal source de financement -->
+<div class="modal-overlay" id="modal-bp-fin">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🏦 Source de financement</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-bp-fin')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Type *</label>
+          <select class="form-control" id="bpf-type">
+            <option value="fonds_propres">💼 Fonds propres</option>
+            <option value="emprunt">🏦 Emprunt bancaire</option>
+            <option value="prevente">📝 Préventes</option>
+            <option value="apport_partenaire">🤝 Apport partenaire</option>
+            <option value="subvention">🏛️ Subvention</option>
+            <option value="autre">📌 Autre</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Source / Banque</label><input class="form-control" id="bpf-source" placeholder="Ex : BICICI, NSIA…"></div>
+        <div class="form-group"><label>Montant prévu (FCFA) *</label><input type="number" class="form-control" id="bpf-prevu"></div>
+        <div class="form-group"><label>Montant débloqué (FCFA)</label><input type="number" class="form-control" id="bpf-debloque"></div>
+        <div class="form-group"><label>Taux (%)</label><input type="number" step="0.1" class="form-control" id="bpf-taux" placeholder="Si emprunt"></div>
+        <div class="form-group"><label>Échéance</label><input type="date" class="form-control" id="bpf-echeance"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-bp-fin')">Annuler</button>
+      <button class="btn btn-primary" onclick="bpSaveFinancement()">💾 Enregistrer</button>
     </div>
   </div>
 </div>
