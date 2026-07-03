@@ -683,6 +683,32 @@ textarea.form-control { resize:vertical; min-height:90px; }
 .paie-impact.neu { background:rgba(184,115,51,0.1); color:var(--or); }
 .pointage-action-row { display:flex; gap:6px; margin-top:10px; }
 
+/* Cartes Bulletins du mois — redesign */
+.payslip-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+.payslip-card { background:var(--card); border:1px solid var(--bord); border-left:4px solid var(--vert); border-radius:var(--r2); padding:0; overflow:hidden; transition:transform .12s, box-shadow .12s; }
+.payslip-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.12); }
+.payslip-card.pending { border-left-color:var(--rouge); }
+.ps-head { display:flex; align-items:center; gap:10px; padding:13px 14px 10px; border-bottom:1px solid var(--bord); }
+.ps-avatar { width:40px; height:40px; border-radius:50%; background:var(--card2); color:var(--or); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0; border:2px solid var(--or); }
+.ps-id { min-width:0; flex:1; }
+.ps-name { font-weight:700; font-size:14px; color:var(--blanc); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ps-post { font-size:11px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ps-mat { font-size:10px; font-weight:700; color:var(--or); }
+.ps-body { padding:12px 14px; }
+.ps-net-row { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px; }
+.ps-net-label { font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:.4px; }
+.ps-net-val { font-size:22px; font-weight:800; color:var(--vert); line-height:1.1; }
+.ps-breakdown { display:flex; gap:8px; margin-bottom:12px; }
+.ps-chip { flex:1; background:var(--card2); border-radius:8px; padding:6px 8px; text-align:center; }
+.ps-chip .l { font-size:9px; color:var(--dim); text-transform:uppercase; }
+.ps-chip .v { font-size:12px; font-weight:700; color:var(--blanc); margin-top:1px; }
+.ps-chip .v.red { color:var(--rouge); }
+.ps-foot { display:flex; gap:6px; align-items:center; }
+.ps-badge { font-size:10px; padding:3px 9px; border-radius:20px; font-weight:700; }
+.ps-badge.gen-pointage { background:rgba(37,99,235,0.12); color:var(--bleu); }
+.ps-badge.gen-manuel { background:rgba(74,196,122,0.12); color:var(--vert); }
+.ps-badge.gen-none { background:rgba(224,82,82,0.12); color:var(--rouge); }
+
 /* Livre de Paie */
 #page-rh-livre-paie .table-wrap table { font-size:12px; }
 #page-rh-livre-paie thead tr { position:sticky; top:0; z-index:2; }
@@ -23996,25 +24022,35 @@ function renderPayslips(mois) {
     var bull = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
     var r = calcPaieEmploye(e, bull);
     var hasB = !!bull;
-    return '<div class="payslip-card" style="' + (hasB ? '' : 'opacity:0.7;border-left-color:var(--gris-bord);') + '">'
-      + '<div class="emp-name">' + e.nom + ' ' + e.prenoms + '</div>'
-      + '<div class="emp-post">' + e.poste + ' — <strong style="color:var(--or);">' + e.matricule + '</strong></div>'
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-end;">'
-      + '<div><div class="salary-label">Net à payer</div><div class="salary-net">' + fmtF(r.net) + ' FCFA</div></div>'
-      + '<div style="text-align:right;">'
-      + '<div style="font-size:10px;color:var(--blanc-dim);">ITS : ' + fmtF(r.its) + '</div>'
-      + '<div style="font-size:10px;color:var(--blanc-dim);">CNPS : ' + fmtF(r.cnpsSal) + '</div>'
-      + (hasB
-          ? (bull.source_pointage
-              ? '<span class="badge badge-bleu" style="font-size:10px;" title="Généré depuis le module Pointage">⏱ Pointage</span>'
-              : '<span class="badge badge-vert" style="font-size:10px;" title="Saisi manuellement">✏️ Manuel</span>')
-          : '<span class="badge badge-rouge" style="font-size:10px;">non généré</span>')
+    var initiales = ((e.prenoms||'?')[0]||'?').toUpperCase() + ((e.nom||'?')[0]||'').toUpperCase();
+    var badge = hasB
+      ? (bull.source_pointage
+          ? '<span class="ps-badge gen-pointage">⏱ Pointage</span>'
+          : '<span class="ps-badge gen-manuel">✏️ Manuel</span>')
+      : '<span class="ps-badge gen-none">Non généré</span>';
+    return '<div class="payslip-card' + (hasB ? '' : ' pending') + '">'
+      + '<div class="ps-head">'
+      + '<div class="ps-avatar">' + initiales + '</div>'
+      + '<div class="ps-id">'
+      + '<div class="ps-name">' + escHtml(e.nom + ' ' + e.prenoms) + '</div>'
+      + '<div class="ps-post">' + escHtml(e.poste || '—') + '</div>'
+      + '<div class="ps-mat">' + escHtml(e.matricule || '') + '</div>'
       + '</div></div>'
-      + '<div style="display:flex;gap:6px;margin-top:10px;">'
-      + '<button class="btn btn-secondary btn-sm" style="flex:1;" onclick="openBulletinModal(\'' + (bull ? bull.id : '') + '\',\'' + e.id + '\')">✏️ Saisir</button>'
-      + (hasB ? '<button class="btn btn-secondary btn-sm" onclick="imprimerBulletinId(\'' + bull.id + '\')">🖨️</button>' : '')
+      + '<div class="ps-body">'
+      + '<div class="ps-net-row">'
+      + '<div><div class="ps-net-label">Net à payer</div><div class="ps-net-val">' + fmtF(r.net) + '</div></div>'
+      + badge
       + '</div>'
-      + '</div>';
+      + '<div class="ps-breakdown">'
+      + '<div class="ps-chip"><div class="l">Brut</div><div class="v">' + fmtF(r.brut) + '</div></div>'
+      + '<div class="ps-chip"><div class="l">CNPS</div><div class="v red">' + fmtF(r.cnpsSal) + '</div></div>'
+      + '<div class="ps-chip"><div class="l">ITS</div><div class="v red">' + fmtF(r.its) + '</div></div>'
+      + '</div>'
+      + '<div class="ps-foot">'
+      + '<button class="btn btn-secondary btn-sm" style="flex:1;" onclick="openBulletinModal(\'' + (bull ? bull.id : '') + '\',\'' + e.id + '\')">✏️ Saisir</button>'
+      + (hasB ? '<button class="btn btn-primary btn-sm" onclick="imprimerBulletinId(\'' + bull.id + '\')">🖨️ Imprimer</button>' : '')
+      + '</div>'
+      + '</div></div>';
   }).join('');
 }
 
