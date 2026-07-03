@@ -4200,6 +4200,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('params','reporting');renderParamsReporting()">📊 Reporting</button>
           <button class="tab-btn" onclick="switchTab('params','localisation')">🌍 Localisation</button>
           <button class="tab-btn" onclick="switchTab('params','import');renderImportPage()">📥 Import données</button>
+          <button class="tab-btn" onclick="switchTab('params','syscohada');renderPlanComptableParam()">📒 Plan comptable SYSCOHADA</button>
         </div>
 
         <!-- Société -->
@@ -5381,7 +5382,83 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div id="import-page-content"></div>
         </div>
 
+        <!-- Plan comptable SYSCOHADA -->
+        <div class="tab-pane" id="tab-params-syscohada">
+          <div class="card" style="margin-bottom:16px;">
+            <div style="font-size:12px;color:var(--blanc-dim);line-height:1.6;">
+              ℹ️ Gérez ici le <strong>plan comptable SYSCOHADA révisé</strong> utilisé dans tout le module Comptabilité (journal, bilan, compte de résultat, écritures automatiques…). Vous pouvez <strong>ajouter</strong> de nouveaux comptes, <strong>modifier</strong> le libellé d'un compte existant, ou <strong>supprimer</strong> un compte qui ne vous sert pas. Cette section est réservée aux rôles ayant accès aux Paramètres.
+            </div>
+          </div>
+          <div class="page-header" style="margin:0 0 12px;">
+            <div></div>
+            <div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openCompteParamModal()">➕ Ajouter un compte</button>
+          </div>
+          <div class="filters-bar">
+            <input type="text" class="search-input" placeholder="🔍 Code ou libellé du compte..." id="search-plan-comptable" oninput="renderPlanComptableParam()">
+            <select class="filter-select" id="filter-classe-comptable" onchange="renderPlanComptableParam()">
+              <option value="">Toutes les classes</option>
+              <option value="1">Classe 1 — Ressources durables</option>
+              <option value="2">Classe 2 — Actif immobilisé</option>
+              <option value="3">Classe 3 — Stocks</option>
+              <option value="4">Classe 4 — Tiers</option>
+              <option value="5">Classe 5 — Trésorerie</option>
+              <option value="6">Classe 6 — Charges</option>
+              <option value="7">Classe 7 — Produits</option>
+              <option value="8">Classe 8 — HAO</option>
+              <option value="9">Classe 9 — Analytique</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Code</th><th>Libellé</th><th>Classe</th><th>Nature</th><th>Origine</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody id="tbody-plan-comptable-param"></tbody>
+              </table>
+            </div>
+            <div id="plan-comptable-empty" style="display:none;text-align:center;padding:24px;color:var(--blanc-dim);font-size:13px;">Aucun compte ne correspond à votre recherche.</div>
+          </div>
+        </div>
 
+      </div>
+
+      <!-- Modal Ajout/Édition compte SYSCOHADA -->
+      <div class="modal-overlay" id="modal-compte-param">
+        <div class="modal" style="max-width:460px;">
+          <div class="modal-header"><div class="modal-title" id="modal-compte-param-title">➕ Ajouter un compte</div><button class="modal-close" onclick="closeModal('modal-compte-param')">✕</button></div>
+          <div class="modal-body">
+            <input type="hidden" id="cpm-code-original">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+              <div class="form-group"><label>Code compte *</label><input class="form-control" id="cpm-code" placeholder="Ex : 4419"></div>
+              <div class="form-group"><label>Classe *</label>
+                <select class="form-control" id="cpm-classe">
+                  <option value="1">Classe 1 — Ressources durables</option>
+                  <option value="2">Classe 2 — Actif immobilisé</option>
+                  <option value="3">Classe 3 — Stocks</option>
+                  <option value="4" selected>Classe 4 — Tiers</option>
+                  <option value="5">Classe 5 — Trésorerie</option>
+                  <option value="6">Classe 6 — Charges</option>
+                  <option value="7">Classe 7 — Produits</option>
+                  <option value="8">Classe 8 — HAO</option>
+                  <option value="9">Classe 9 — Analytique</option>
+                </select>
+              </div>
+              <div class="form-group span-2"><label>Libellé *</label><input class="form-control" id="cpm-label" placeholder="Ex : État — Taxes diverses à payer"></div>
+              <div class="form-group span-2"><label>Nature *</label>
+                <select class="form-control" id="cpm-nature">
+                  <option value="actif">Actif</option>
+                  <option value="passif">Passif</option>
+                  <option value="actif_contra">Actif soustractif (amortissement/provision)</option>
+                  <option value="charge">Charge</option>
+                  <option value="produit">Produit</option>
+                  <option value="tresorerie">Trésorerie</option>
+                  <option value="variable">Variable (selon solde)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-compte-param')">Annuler</button><button class="btn btn-primary" onclick="saveCompteParamModal()">💾 Enregistrer</button></div>
+        </div>
       </div>
       <div class="page" id="page-rh-employes">
         <div class="page-header">
@@ -16544,7 +16621,6 @@ function refreshGroupBadges(){
 }
 
 function toggleNavGroup(idx){
-  if(String(idx)==='0') return; /* Pilotage toujours visible : non repliable */
   var g=document.getElementById('navgrp-'+idx);
   if(g){ g.classList.toggle('collapsed'); _saveNavGroups(); refreshGroupBadges(); }
 }
@@ -16564,14 +16640,12 @@ function _restoreNavGroups(){
   try{ st=JSON.parse(localStorage.getItem('pici_nav_groups')||'{}'); }catch(e){}
   document.querySelectorAll('.nav-group').forEach(function(g){
     var k=g.getAttribute('data-group');
-    if(k==='0'){ g.classList.remove('collapsed'); return; } /* Pilotage toujours visible */
     if(st[k]) g.classList.add('collapsed'); else g.classList.remove('collapsed');
   });
   _expandActiveGroup(); try{refreshGroupBadges();}catch(e){}
 }
 function collapseAllNav(expand){
   document.querySelectorAll('.nav-group').forEach(function(g){
-    if(g.getAttribute('data-group')==='0') return;       /* Pilotage toujours visible */
     if(expand) g.classList.remove('collapsed'); else g.classList.add('collapsed');
   });
   _expandActiveGroup(); _saveNavGroups(); try{refreshGroupBadges();}catch(e){}
@@ -20331,8 +20405,23 @@ async function deleteTerrain(id) {
    États financiers : Journal · Balance · Bilan · CdR · GL
 ══════════════════════════════════════════════════════ */
 
+/* ── PLAN COMPTABLE : FUSION DES COMPTES PERSONNALISÉS (ajouts/modifs/suppressions) ── */
+var _BASE_PLAN_COMPTABLE = null;
+function rebuildPlanComptable() {
+  if (!_BASE_PLAN_COMPTABLE) _BASE_PLAN_COMPTABLE = APP.planComptable.slice();
+  var p = (DATA.params) || {};
+  var supprimes = p.plan_comptable_supprimes || [];
+  var modifs    = p.plan_comptable_modifs || {};
+  var ajouts    = p.plan_comptable_custom || [];
+  APP.planComptable = _BASE_PLAN_COMPTABLE
+    .filter(function(c){ return supprimes.indexOf(c.code) === -1; })
+    .map(function(c){ return modifs[c.code] ? Object.assign({}, c, modifs[c.code]) : c; })
+    .concat(ajouts);
+}
+
 /* ── INITIALISATION DU PLAN COMPTABLE ─────────────────── */
 function initPlanComptable() {
+  rebuildPlanComptable();
   // Remplir APP.comptes depuis planComptable
   APP.comptes.charge = APP.planComptable.filter(function(c){ return c.nature === 'charge'; });
   APP.comptes.produit = APP.planComptable.filter(function(c){ return c.nature === 'produit'; });
@@ -20371,6 +20460,116 @@ function initPlanComptable() {
       sel.appendChild(og);
     });
   });
+}
+
+var NATURE_LABELS_CPT = { actif:'Actif', passif:'Passif', actif_contra:'Actif soustractif', charge:'Charge', produit:'Produit', tresorerie:'Trésorerie', variable:'Variable' };
+
+function renderPlanComptableParam() {
+  var tbody = document.getElementById('tbody-plan-comptable-param');
+  if (!tbody) return;
+  var q = (document.getElementById('search-plan-comptable').value || '').toLowerCase().trim();
+  var classe = document.getElementById('filter-classe-comptable').value;
+  var ajoutsCodes = ((DATA.params && DATA.params.plan_comptable_custom) || []).map(function(c){ return c.code; });
+  var modifs = (DATA.params && DATA.params.plan_comptable_modifs) || {};
+  var liste = APP.planComptable.filter(function(c) {
+    if (classe && c.classe !== classe) return false;
+    if (q && c.code.toLowerCase().indexOf(q) === -1 && c.label.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  }).slice().sort(function(a,b){ return a.code.localeCompare(b.code, undefined, {numeric:true}); });
+
+  document.getElementById('plan-comptable-empty').style.display = liste.length ? 'none' : 'block';
+
+  tbody.innerHTML = liste.map(function(c) {
+    var origine = ajoutsCodes.indexOf(c.code) >= 0 ? '<span style="color:var(--vert);">➕ Ajouté</span>'
+                : modifs[c.code] ? '<span style="color:var(--or);">✎ Modifié</span>'
+                : '<span style="color:var(--blanc-dim);">Standard</span>';
+    return '<tr>'
+      + '<td><strong>' + c.code + '</strong></td>'
+      + '<td>' + c.label + '</td>'
+      + '<td>Classe ' + c.classe + '</td>'
+      + '<td>' + (NATURE_LABELS_CPT[c.nature] || c.nature) + '</td>'
+      + '<td>' + origine + '</td>'
+      + '<td style="text-align:right;white-space:nowrap;">'
+      +   '<button class="btn btn-secondary btn-sm" onclick="openCompteParamModal(\'' + c.code + '\')">✎</button> '
+      +   '<button class="btn btn-secondary btn-sm" style="color:var(--rouge);" onclick="deleteCompteParam(\'' + c.code + '\')">🗑️</button>'
+      + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openCompteParamModal(code) {
+  var c = code ? APP.planComptable.find(function(x){ return x.code === code; }) : null;
+  document.getElementById('modal-compte-param-title').textContent = c ? '✎ Modifier le compte' : '➕ Ajouter un compte';
+  document.getElementById('cpm-code-original').value = code || '';
+  document.getElementById('cpm-code').value = c ? c.code : '';
+  document.getElementById('cpm-classe').value = c ? c.classe : '4';
+  document.getElementById('cpm-label').value = c ? c.label : '';
+  document.getElementById('cpm-nature').value = c ? c.nature : 'actif';
+  openModal('modal-compte-param');
+}
+
+function saveCompteParamModal() {
+  var original = document.getElementById('cpm-code-original').value;
+  var code = document.getElementById('cpm-code').value.trim();
+  var classe = document.getElementById('cpm-classe').value;
+  var label = document.getElementById('cpm-label').value.trim();
+  var nature = document.getElementById('cpm-nature').value;
+
+  if (!code || !label) { toast('⚠️ Le code et le libellé du compte sont obligatoires.', 'error'); return; }
+  if (classe && code.charAt(0) !== classe) { toast('⚠️ Le code doit commencer par le chiffre de la classe choisie (ex : classe 4 → code 41...).', 'error'); return; }
+
+  var doublon = APP.planComptable.find(function(c){ return c.code === code && c.code !== original; });
+  if (doublon) { toast('⚠️ Le compte ' + code + ' existe déjà (' + doublon.label + ').', 'error'); return; }
+
+  DATA.params = DATA.params || {};
+  DATA.params.plan_comptable_custom = DATA.params.plan_comptable_custom || [];
+  DATA.params.plan_comptable_modifs = DATA.params.plan_comptable_modifs || {};
+  DATA.params.plan_comptable_supprimes = DATA.params.plan_comptable_supprimes || [];
+
+  var estCompteAjoute = DATA.params.plan_comptable_custom.some(function(c){ return c.code === original; });
+
+  if (!original) {
+    /* Nouveau compte */
+    DATA.params.plan_comptable_custom.push({ code: code, label: label, classe: classe, nature: nature });
+  } else if (estCompteAjoute) {
+    /* Édition d'un compte déjà personnalisé (ajouté) */
+    var idx = DATA.params.plan_comptable_custom.findIndex(function(c){ return c.code === original; });
+    DATA.params.plan_comptable_custom[idx] = { code: code, label: label, classe: classe, nature: nature };
+  } else {
+    /* Édition d'un compte standard → enregistrer une surcharge (le code d'origine reste la clé) */
+    if (code !== original) { toast('⚠️ Le code d\'un compte standard ne peut pas être changé (créez plutôt un nouveau compte).', 'error'); return; }
+    DATA.params.plan_comptable_modifs[original] = { label: label, classe: classe, nature: nature };
+  }
+
+  rebuildPlanComptable();
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  closeModal('modal-compte-param');
+  renderPlanComptableParam();
+  toast('✅ Compte ' + code + ' enregistré.', 'success');
+}
+
+function deleteCompteParam(code) {
+  var c = APP.planComptable.find(function(x){ return x.code === code; });
+  if (!c) return;
+  if (!confirm('Supprimer le compte ' + code + ' — ' + c.label + ' ?\n\nAttention : si ce compte est déjà utilisé dans des écritures existantes, celles-ci resteront enregistrées mais le compte n\'apparaîtra plus dans les listes.')) return;
+
+  DATA.params = DATA.params || {};
+  DATA.params.plan_comptable_custom = DATA.params.plan_comptable_custom || [];
+  DATA.params.plan_comptable_supprimes = DATA.params.plan_comptable_supprimes || [];
+
+  var idxAjout = DATA.params.plan_comptable_custom.findIndex(function(x){ return x.code === code; });
+  if (idxAjout >= 0) {
+    /* Compte personnalisé ajouté → simple retrait */
+    DATA.params.plan_comptable_custom.splice(idxAjout, 1);
+  } else {
+    /* Compte standard → marqué comme supprimé */
+    if (DATA.params.plan_comptable_supprimes.indexOf(code) === -1) DATA.params.plan_comptable_supprimes.push(code);
+  }
+
+  rebuildPlanComptable();
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  renderPlanComptableParam();
+  toast('🗑️ Compte ' + code + ' supprimé.', 'success');
 }
 
 /* ── DÉTECTION AUTOMATIQUE DU TYPE D'ÉCRITURE ─────────── */
