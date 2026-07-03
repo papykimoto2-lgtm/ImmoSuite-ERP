@@ -2172,6 +2172,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="nav-item active" onclick="goTo('dashboard')" data-page="dashboard">
         <span class="nav-icon">📊</span><span>Tableau de bord</span>
       </div>
+          <div class="nav-item" onclick="goTo('bilan-promotion')" data-page="bilan-promotion">
+        <span class="nav-icon">💹</span><span>Bilan de Promotion</span>
+      </div>
         </div>
       </div>
 
@@ -6235,6 +6238,55 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <div class="card-title">🏛️ Suivi FDFP — Fonds de Développement de la Formation Professionnelle</div>
             <div id="fdfp-recap-wrap" style="margin-top:12px;"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- ════════ BILAN DE PROMOTION — rentabilité par programme ════════ -->
+      <div class="page" id="page-bilan-promotion">
+        <div class="page-header">
+          <div>
+            <div class="step-badge">● Pilotage</div>
+            <h1 class="page-title">💹 Bilan de Promotion</h1>
+            <div class="page-subtitle">Rentabilité, financement et cash-flow par programme immobilier</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select class="filter-select" id="bp-programme" onchange="bpRender()" style="min-width:220px;"></select>
+            <button class="btn btn-secondary btn-sm" onclick="bpImprimer()">🖨️ Imprimer</button>
+          </div>
+        </div>
+
+        <div id="bp-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px;"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="paie-grid-2">
+          <div class="card">
+            <div class="card-title">💰 Produits de la promotion</div>
+            <div id="bp-produits"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🧾 Coûts de la promotion</div>
+            <div id="bp-couts"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-title">📊 Compte de résultat de l'opération</div>
+          <div id="bp-resultat"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;" class="paie-grid-2">
+          <div class="card">
+            <div class="card-title">💵 Cash-flow — encaissé vs à encaisser</div>
+            <div id="bp-cash"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">⚖️ Seuil de rentabilité</div>
+            <div id="bp-seuil"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-title">🚨 Alertes de l'opération</div>
+          <div id="bp-alertes"></div>
         </div>
       </div>
 
@@ -16524,6 +16576,7 @@ function goTo(page) {
   if (page === 'programmes') renderProgrammes();
   if (page === 'lots') { populateFilterProgrammes(); renderLots(); renderTerrains(); }
   if (page === 'filiere') filiereRender();
+  if (page === 'bilan-promotion') bpInit();
   if (page === 'comptabilite') { loadComptabilite(); updateCompteSuggestions(); }
   if (page === 'relances') detectRelances();
   if (page === 'parametres') loadParams();
@@ -22123,7 +22176,7 @@ function switchUTab(tab) {
 // ══ LISTE DES RÔLES ═══════════════════════════════════════════════════════════
 /* ── Groupes de modules pour sélection rapide ─────────────── */
 var MODULE_GROUPS = {
-  pilotage:   ['Tableau de bord','Accueil'],
+  pilotage:   ['Tableau de bord','Accueil','Bilan de Promotion'],
   foncier:    ['Foncier','Filiere Fonciere','Acquisition & Amenagement Foncier'],
   montage:    ['Programmes','Plans & Conception'],
   chantier:   ['Constructeurs','Conventions','Etude de Prix & Debourse','DQE & Cout de revient','Achats & Commandes','Stock Materiaux','Suivi Chantiers','Validations','Reception & Livraison'],
@@ -25205,6 +25258,197 @@ function printFicheIndividuelle() {
 }
 
 /* ── DÉCLARATIONS SOCIALES & FISCALES ────────────────── */
+/* ══════════════════════════════════════════════
+   BILAN DE PROMOTION — rentabilité par programme
+   Produits (lots+cessions) vs Coûts (foncier+travaux)
+   ══════════════════════════════════════════════ */
+function bpInit() {
+  var sel = document.getElementById('bp-programme');
+  if (!sel) return;
+  var cur = sel.value;
+  sel.innerHTML = '<option value="">— Choisir un programme —</option>' + (DATA.programmes || []).map(function(p){
+    return '<option value="' + p.id + '">' + escHtml(p.nom || p.id) + '</option>';
+  }).join('');
+  if (cur) sel.value = cur;
+  else if ((DATA.programmes||[]).length === 1) sel.value = DATA.programmes[0].id;
+  bpRender();
+}
+
+function bpCompute(progId) {
+  var prog = (DATA.programmes || []).find(function(p){ return p.id === progId; }) || {};
+  var lots = (DATA.lots || []).filter(function(l){ return l.programme_id === progId; });
+  var lotsVendus = lots.filter(function(l){ return l.statut === 'vendu' || l.statut === 'reserve'; });
+  var caLotsVendus = lotsVendus.reduce(function(s,l){ return s + (parseFloat(l.prix)||0); }, 0);
+  var caLotsPotentiel = lots.reduce(function(s,l){ return s + (parseFloat(l.prix)||0); }, 0);
+
+  /* Cessions liées à la parcelle du programme */
+  var parcelleId = prog.parcelle_id || '';
+  var cessions = (DATA.cessions_foncieres || []).filter(function(c){
+    return parcelleId && (c.source_key||'').indexOf(parcelleId) !== -1;
+  });
+  var caCessions = cessions.reduce(function(s,c){ return s + (parseFloat(c.prix_cession)||0); }, 0);
+
+  /* Encaissé : versements du programme */
+  var encaisse = (DATA.versements || []).filter(function(v){ return v.programme_id === progId; })
+    .reduce(function(s,v){ return s + (parseFloat(v.montant)||0); }, 0);
+
+  /* Coût foncier : parcelle d'origine (acquisition + frais) */
+  var parc = parcelleId ? (DATA.parcelles || []).find(function(p){ return p.id === parcelleId; }) : null;
+  var coutFoncier = parc ? ((parseFloat(parc.prix_acq)||0)+(parseFloat(parc.frais_mutation)||0)+(parseFloat(parc.frais_bornage)||0)+(parseFloat(parc.frais_notaire)||0)) : 0;
+
+  /* Coût travaux : conventions du programme */
+  var convs = (DATA.conventions || []).filter(function(c){ return c.programme_id === progId; });
+  var coutTravaux = convs.reduce(function(s,c){ return s + (parseFloat(c.montant_marche)||0); }, 0);
+
+  /* Payé sur travaux : situations validées/payées */
+  var convIds = convs.map(function(c){ return c.id; });
+  var situationsPayees = (DATA.situations || []).filter(function(s){
+    return convIds.indexOf(s.convention_id) !== -1 && (s.statut === 'payee' || s.statut === 'validee');
+  }).reduce(function(s,x){ return s + (parseFloat(x.montant)||0); }, 0);
+
+  var produits = caLotsVendus + caCessions;
+  var produitsPotentiel = caLotsPotentiel + caCessions;
+  var couts = coutFoncier + coutTravaux;
+  var marge = produits - couts;
+  var margePot = produitsPotentiel - couts;
+  var tauxMarge = produits > 0 ? (marge / produits * 100) : 0;
+  var resteEncaisser = produits - encaisse;
+  var resteDecaisser = coutTravaux - situationsPayees;
+  var cashNet = encaisse - coutFoncier - situationsPayees;
+
+  /* Seuil : nb lots à vendre pour couvrir coûts */
+  var prixMoyenLot = lots.length ? caLotsPotentiel / lots.length : 0;
+  var lotsSeuilBrut = prixMoyenLot > 0 ? Math.ceil((couts - caCessions) / prixMoyenLot) : 0;
+  var lotsSeuil = Math.max(0, lotsSeuilBrut);
+
+  return { prog:prog, lots:lots, lotsVendus:lotsVendus, caLotsVendus:caLotsVendus, caLotsPotentiel:caLotsPotentiel,
+    cessions:cessions, caCessions:caCessions, encaisse:encaisse, coutFoncier:coutFoncier, coutTravaux:coutTravaux,
+    situationsPayees:situationsPayees, produits:produits, produitsPotentiel:produitsPotentiel, couts:couts,
+    marge:marge, margePot:margePot, tauxMarge:tauxMarge, resteEncaisser:resteEncaisser, resteDecaisser:resteDecaisser,
+    cashNet:cashNet, prixMoyenLot:prixMoyenLot, lotsSeuil:lotsSeuil, parcelle:parc };
+}
+
+function bpRender() {
+  var progId = (document.getElementById('bp-programme')||{}).value;
+  var elK = document.getElementById('bp-kpis');
+  if (!elK) return;
+  if (!progId) {
+    elK.innerHTML = '';
+    ['bp-produits','bp-couts','bp-resultat','bp-cash','bp-seuil','bp-alertes'].forEach(function(id){
+      var e = document.getElementById(id); if (e) e.innerHTML = '<div style="color:var(--dim);font-size:12px;padding:12px;">Sélectionnez un programme.</div>';
+    });
+    return;
+  }
+  var b = bpCompute(progId);
+  var kpi = function(l,v,c,d){ return '<div class="kpi-card" style="border-top:3px solid '+c+';"><div class="kpi-label">'+l+'</div><div class="kpi-value" style="font-size:17px;color:'+c+';">'+v+'</div>'+(d?'<div class="kpi-delta">'+d+'</div>':'')+'</div>'; };
+  elK.innerHTML =
+    kpi('Produits engagés', fmtF(b.produits)+' F', 'var(--vert)', b.lotsVendus.length+' lot(s) vendu(s)/réservé(s)')
+    + kpi('Coûts opération', fmtF(b.couts)+' F', 'var(--rouge)', 'foncier + travaux')
+    + kpi('Marge actuelle', fmtF(b.marge)+' F', b.marge>=0?'var(--vert)':'var(--rouge)', b.tauxMarge.toFixed(1)+'% du CA')
+    + kpi('Marge potentielle', fmtF(b.margePot)+' F', b.margePot>=0?'var(--bleu)':'var(--rouge)', 'si 100% lots vendus')
+    + kpi('Cash net', fmtF(b.cashNet)+' F', b.cashNet>=0?'var(--vert)':'var(--or)', 'encaissé − décaissé');
+
+  var row = function(l,v,col,bold){ return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bord);'+(bold?'font-weight:800;font-size:14px;':'')+'"><span>'+l+'</span><span style="color:'+(col||'var(--blanc)')+';">'+v+'</span></div>'; };
+
+  document.getElementById('bp-produits').innerHTML =
+    row('Ventes lots (vendus/réservés)', fmtF(b.caLotsVendus)+' F', 'var(--vert)')
+    + row('Cessions foncières liées', fmtF(b.caCessions)+' F', 'var(--vert)')
+    + row('Produits engagés', fmtF(b.produits)+' F', 'var(--vert)', true)
+    + row('Stock lots restant ('+(b.lots.length-b.lotsVendus.length)+' lots)', fmtF(b.caLotsPotentiel-b.caLotsVendus)+' F', 'var(--dim)')
+    + row('Potentiel total', fmtF(b.produitsPotentiel)+' F', 'var(--bleu)', true);
+
+  document.getElementById('bp-couts').innerHTML =
+    row('Foncier (acquisition + frais)', fmtF(b.coutFoncier)+' F', 'var(--rouge)')
+    + row('Marchés travaux (conventions)', fmtF(b.coutTravaux)+' F', 'var(--rouge)')
+    + row('Coût total opération', fmtF(b.couts)+' F', 'var(--rouge)', true)
+    + row('Travaux payés (situations)', fmtF(b.situationsPayees)+' F', 'var(--or)')
+    + row('Reste à décaisser travaux', fmtF(b.resteDecaisser)+' F', 'var(--or)');
+
+  var margeBar = b.produitsPotentiel > 0 ? Math.min(100, Math.max(0, b.couts / b.produitsPotentiel * 100)) : 0;
+  document.getElementById('bp-resultat').innerHTML =
+    '<div class="table-wrap"><table style="width:100%;font-size:12px;"><tbody>'
+    + '<tr><td>Produits engagés</td><td style="text-align:right;color:var(--vert);font-weight:700;">' + fmtF(b.produits) + ' F</td></tr>'
+    + '<tr><td>− Coûts opération</td><td style="text-align:right;color:var(--rouge);font-weight:700;">− ' + fmtF(b.couts) + ' F</td></tr>'
+    + '<tr style="border-top:2px solid var(--bord);"><td style="font-weight:800;font-size:14px;padding:8px 0;">= Marge de promotion</td><td style="text-align:right;font-weight:800;font-size:16px;color:' + (b.marge>=0?'var(--vert)':'var(--rouge)') + ';">' + fmtF(b.marge) + ' F</td></tr>'
+    + '</tbody></table></div>'
+    + '<div style="margin-top:10px;"><div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Coûts couverts par le potentiel : ' + margeBar.toFixed(0) + '%</div>'
+    + '<div style="height:10px;background:var(--card2);border-radius:6px;overflow:hidden;"><div style="height:100%;width:' + margeBar + '%;background:' + (margeBar<80?'var(--vert)':(margeBar<100?'var(--or)':'var(--rouge)')) + ';"></div></div></div>';
+
+  var pctEnc = b.produits > 0 ? (b.encaisse / b.produits * 100) : 0;
+  document.getElementById('bp-cash').innerHTML =
+    row('Encaissé (versements)', fmtF(b.encaisse)+' F', 'var(--vert)')
+    + row('Reste à encaisser', fmtF(Math.max(0,b.resteEncaisser))+' F', 'var(--or)')
+    + row('Décaissé (foncier + travaux payés)', fmtF(b.coutFoncier + b.situationsPayees)+' F', 'var(--rouge)')
+    + row('Cash net actuel', fmtF(b.cashNet)+' F', b.cashNet>=0?'var(--vert)':'var(--rouge)', true)
+    + '<div style="margin-top:10px;font-size:11px;color:var(--dim);">Taux encaissement : ' + pctEnc.toFixed(0) + '% des ventes engagées.</div>';
+
+  var seuilAtteint = b.lotsVendus.length >= b.lotsSeuil && b.lotsSeuil > 0;
+  document.getElementById('bp-seuil').innerHTML =
+    row('Prix moyen lot', fmtF(b.prixMoyenLot)+' F')
+    + row('Lots à vendre pour couvrir les coûts', b.lotsSeuil + ' lot(s)', 'var(--or)', true)
+    + row('Lots vendus/réservés', b.lotsVendus.length + ' / ' + b.lots.length)
+    + '<div style="margin-top:10px;padding:10px;border-radius:8px;background:' + (seuilAtteint?'rgba(74,196,122,0.1)':'rgba(240,173,78,0.1)') + ';font-size:12px;font-weight:700;color:' + (seuilAtteint?'var(--vert)':'var(--or)') + ';">'
+    + (b.lotsSeuil===0 ? '✅ Coûts couverts par les cessions.' : (seuilAtteint ? '✅ Seuil de rentabilité atteint.' : '⏳ Encore ' + (b.lotsSeuil - b.lotsVendus.length) + ' lot(s) à vendre pour atteindre le seuil.'))
+    + '</div>';
+
+  var alertes = [];
+  if (b.marge < 0) alertes.push({t:'Marge actuelle négative. Ventes insuffisantes face aux coûts engagés.', c:'var(--rouge)'});
+  if (b.cashNet < 0) alertes.push({t:'Cash net négatif : décaissements supérieurs aux encaissements. Tension trésorerie.', c:'var(--rouge)'});
+  if (b.margePot < 0) alertes.push({t:'Marge potentielle négative même à 100% vendu. Revoir prix ou coûts.', c:'var(--rouge)'});
+  if (b.resteDecaisser > b.resteEncaisser) alertes.push({t:'Reste à décaisser supérieur au reste à encaisser. Prévoir financement relais.', c:'var(--or)'});
+  if (!b.parcelle) alertes.push({t:'Programme non rattaché à une parcelle : coût foncier absent du bilan.', c:'var(--or)'});
+  if (b.tauxMarge > 0 && b.tauxMarge < 15) alertes.push({t:'Taux de marge < 15% — inférieur aux standards promotion (20-30%).', c:'var(--or)'});
+  document.getElementById('bp-alertes').innerHTML = alertes.length
+    ? alertes.map(function(a){ return '<div style="padding:8px 12px;border-left:3px solid '+a.c+';background:var(--card2);border-radius:6px;margin-bottom:6px;font-size:12px;">'+a.t+'</div>'; }).join('')
+    : '<div style="color:var(--vert);font-size:12px;padding:8px;">✅ Aucune alerte. Opération saine.</div>';
+}
+
+function bpImprimer() {
+  var progId = (document.getElementById('bp-programme')||{}).value;
+  if (!progId) { toast('Sélectionnez un programme.', 'error'); return; }
+  var b = bpCompute(progId);
+  var params = DATA.params || {};
+  var logo = getLogoForPrint ? getLogoForPrint() : '';
+  var tr = function(l,v,col,bold){ return '<tr'+(bold?' style="font-weight:800;border-top:2px solid #1C1C2E;"':'')+'><td style="padding:6px 8px;">'+l+'</td><td style="text-align:right;padding:6px 8px;'+(col?'color:'+col+';':'')+'">'+v+'</td></tr>'; };
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Bilan promotion — ' + escHtml(b.prog.nom||'') + '</title>'
+    + '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#1C1C2E;padding:24px;line-height:1.5;}'
+    + '.header{display:flex;justify-content:space-between;border-bottom:3px solid #B87333;padding-bottom:12px;margin-bottom:16px;}'
+    + 'h2{font-size:13px;color:#B87333;margin:18px 0 6px;}table{width:100%;border-collapse:collapse;}td{border-bottom:1px solid #E0E0EA;}'
+    + '.no-print{text-align:center;margin-bottom:14px;}.no-print button{padding:8px 18px;background:#B87333;color:#fff;border:none;border-radius:6px;cursor:pointer;}'
+    + '@media print{.no-print{display:none;}body{padding:0;}}</style></head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer / PDF</button></div>'
+    + '<div class="header"><div style="display:flex;gap:10px;align-items:center;">' + (logo?'<img src="'+logo+'" style="height:44px;">':'')
+    + '<div><div style="font-size:16px;font-weight:800;color:#B87333;">' + escHtml(params.societe||'') + '</div><div style="font-size:10px;color:#6B6B9A;">Bilan de promotion immobilière</div></div></div>'
+    + '<div style="text-align:right;"><div style="font-weight:800;font-size:14px;">' + escHtml(b.prog.nom||'') + '</div><div style="font-size:10px;color:#6B6B9A;">Édité le ' + new Date().toLocaleDateString('fr-FR') + '</div></div></div>'
+    + '<h2>PRODUITS</h2><table>'
+    + tr('Ventes lots (vendus/réservés — ' + b.lotsVendus.length + ')', fmtF(b.caLotsVendus)+' F')
+    + tr('Cessions foncières', fmtF(b.caCessions)+' F')
+    + tr('Produits engagés', fmtF(b.produits)+' F', '#1A6B3A', true)
+    + tr('Potentiel total (100% vendu)', fmtF(b.produitsPotentiel)+' F', '#1D4ED8')
+    + '</table><h2>COÛTS</h2><table>'
+    + tr('Foncier (acquisition + frais)', fmtF(b.coutFoncier)+' F')
+    + tr('Marchés travaux', fmtF(b.coutTravaux)+' F')
+    + tr('Coût total', fmtF(b.couts)+' F', '#C0392B', true)
+    + '</table><h2>RÉSULTAT</h2><table>'
+    + tr('Marge actuelle', fmtF(b.marge)+' F', b.marge>=0?'#1A6B3A':'#C0392B', true)
+    + tr('Taux de marge', b.tauxMarge.toFixed(1)+' %')
+    + tr('Marge potentielle', fmtF(b.margePot)+' F', b.margePot>=0?'#1D4ED8':'#C0392B')
+    + '</table><h2>CASH-FLOW</h2><table>'
+    + tr('Encaissé', fmtF(b.encaisse)+' F', '#1A6B3A')
+    + tr('Reste à encaisser', fmtF(Math.max(0,b.resteEncaisser))+' F')
+    + tr('Décaissé', fmtF(b.coutFoncier+b.situationsPayees)+' F', '#C0392B')
+    + tr('Cash net', fmtF(b.cashNet)+' F', b.cashNet>=0?'#1A6B3A':'#C0392B', true)
+    + '</table><h2>SEUIL DE RENTABILITÉ</h2><table>'
+    + tr('Lots à vendre pour couvrir coûts', b.lotsSeuil + ' lot(s)')
+    + tr('Lots vendus/réservés', b.lotsVendus.length + ' / ' + b.lots.length)
+    + '</table>'
+    + '<div style="margin-top:24px;font-size:10px;color:#6B6B9A;">Bilan calculé depuis les données ImmoSuite : lots, cessions, versements, conventions, situations, parcelle d\'origine.</div>'
+    + '</body></html>';
+  var w = window.open('', '_blank');
+  w.document.write(docStamp(html));
+  w.document.close();
+}
+
 function renderTeledeclaration() {
   var moisEl = document.getElementById('teledecl-mois');
   if (moisEl && !moisEl.value) moisEl.value = new Date().toISOString().slice(0,7);
@@ -45448,6 +45692,7 @@ var PAGE_MODULE_MAP = {
   'archives-docs':      'Parametres',
   'reunion-direction':  'Tableau de bord',
   'filiere':            'Filiere Fonciere',
+  'bilan-promotion':    'Bilan de Promotion',
   'foncierops':         'Acquisition & Amenagement Foncier',
   'debourse':           'Etude de Prix & Debourse',
   'achats':             'Achats & Commandes',
