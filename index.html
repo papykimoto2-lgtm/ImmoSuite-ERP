@@ -4260,8 +4260,30 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                   <input type="text" id="param-rccm" class="form-control" placeholder="CI-ABJ-2024-B-1234">
                 </div>
                 <div class="form-group">
-                  <label>N° CC / DGI</label>
+                  <label>N° CC / DGI (NCC)</label>
                   <input type="text" id="param-dgi" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label>Régime fiscal</label>
+                  <select id="param-regime" class="form-control">
+                    <option value="reel_normal">Réel normal (RNI)</option>
+                    <option value="reel_simplifie">Réel simplifié (RSI)</option>
+                    <option value="micro">Micro-entreprise</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Assujetti TVA</label>
+                  <select id="param-tva-assujetti" class="form-control">
+                    <option value="oui">Oui (18%)</option>
+                    <option value="non">Non</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Facturation normalisée FNE</label>
+                  <select id="param-fne-actif" class="form-control">
+                    <option value="oui">Activée (DGI)</option>
+                    <option value="non">Désactivée</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label>N° CNPS employeur</label>
@@ -5658,6 +5680,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('declarations','its')">💼 ITS</button>
           <button class="tab-btn" onclick="switchTab('declarations','das')">📋 DAS Annuelle</button>
           <button class="tab-btn" onclick="switchTab('declarations','historique')">📂 Historique</button>
+          <button class="tab-btn" onclick="switchTab('declarations','teledeclaration')" style="color:#1D4ED8;font-weight:700;">🌐 Télédéclaration</button>
         </div>
 
         <div class="tab-pane active" id="tab-declarations-tableau-bord">
@@ -5828,6 +5851,56 @@ button:focus-visible, input:focus-visible, select:focus-visible {
                 <tbody id="tbody-declarations"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-declarations-teledeclaration">
+          <div style="background:rgba(29,78,216,0.08);border-left:3px solid #1D4ED8;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--blanc-dim);">
+            Télédéclaration et télépaiement obligatoires en Côte d'Ivoire. Portails officiels DGI et CNPS. ImmoSuite prépare les montants, la déclaration finale se fait sur les plateformes.
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <span style="font-size:24px;">🏛️</span>
+                <div><div style="font-weight:700;">e-Impôts (DGI)</div><div style="font-size:11px;color:var(--blanc-dim);">TVA · ITS · IS · Télépaiement</div></div>
+              </div>
+              <div style="font-size:12px;color:var(--blanc-dim);margin-bottom:10px;">Déclaration TVA (encaissement services), ITS mensuel, IS annuel. Télépaiement intégré.</div>
+              <a href="https://e-impots.gouv.ci/" target="_blank" class="btn btn-primary btn-sm" style="width:100%;text-align:center;text-decoration:none;">🌐 Ouvrir e-impots.gouv.ci</a>
+            </div>
+
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <span style="font-size:24px;">🧾</span>
+                <div><div style="font-weight:700;">FNE (Facture Normalisée)</div><div style="font-size:11px;color:var(--blanc-dim);">Inscription · Certification</div></div>
+              </div>
+              <div style="font-size:12px;color:var(--blanc-dim);margin-bottom:10px;">Certification factures émises. Obligatoire toutes entreprises assujetties. Pré-remplit la TVA.</div>
+              <a href="https://www.fne.dgi.gouv.ci/" target="_blank" class="btn btn-primary btn-sm" style="width:100%;text-align:center;text-decoration:none;">🌐 Ouvrir fne.dgi.gouv.ci</a>
+            </div>
+
+            <div class="card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <span style="font-size:24px;">🏥</span>
+                <div><div style="font-weight:700;">e-CNPS</div><div style="font-size:11px;color:var(--blanc-dim);">Cotisations sociales · DISA</div></div>
+              </div>
+              <div style="font-size:12px;color:var(--blanc-dim);margin-bottom:10px;">Déclaration cotisations retraite, PF, AT. DISA annuelle. Télépaiement CNPS.</div>
+              <a href="https://www.cnps.ci/" target="_blank" class="btn btn-primary btn-sm" style="width:100%;text-align:center;text-decoration:none;">🌐 Ouvrir cnps.ci</a>
+            </div>
+
+          </div>
+
+          <div class="card" style="margin-top:16px;">
+            <div class="card-title">Montants à reporter — <span id="teledecl-mois-label"></span></div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+              <input type="month" class="filter-select" id="teledecl-mois" onchange="renderTeledeclaration()">
+              <button class="btn btn-secondary btn-sm" onclick="renderTeledeclaration()">Actualiser</button>
+            </div>
+            <div id="teledecl-recap"></div>
+          </div>
+
+          <div style="background:rgba(184,115,51,0.06);border-radius:8px;padding:12px 14px;margin-top:14px;font-size:11px;color:var(--blanc-dim);">
+            ⚠️ Rappel : TVA sur services exigible à l'encaissement (non à la facturation) en CI. ITS et CNPS dus le 15 du mois suivant. IS avant le 30 avril N+1. DISA CNPS avant le 31 janvier N+1.
           </div>
         </div>
       </div>
@@ -14686,6 +14759,7 @@ var DATA = {
   cr_visites: [],
   ordres_mission: [],
   quinzainiers: [],
+  factures_client: [],
   // ── RAPPROCHEMENT BANCAIRE v5.0 ──
   releves_bank: [],
   rapprochements: [],
@@ -14745,7 +14819,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 130; /* v130: stores 'ordres_mission' + 'quinzainiers' (journaliers/temporaires) */
+var DB_VERSION = 131; /* v131: store 'factures_client' (facturation normalisée FNE — cession/commercialisation) */
 var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
@@ -14758,6 +14832,7 @@ var ALL_STORES = [
   'cr_visites','biens_amort','releves_bank','rapprochements',
   'ordres_mission',
   'quinzainiers',
+  'factures_client',
   'permis','plans_arch','rapports_chantier',
   'campagnes','actions_marketing','segments_marketing',
   'documents','signatures',
@@ -15355,6 +15430,7 @@ var SUPA_STORE_MAP = [
   ['pi_cr_visites', 'cr_visites'],
   ['pi_ordres_mission', 'ordres_mission'],
   ['pi_quinzainiers', 'quinzainiers'],
+  ['pi_factures_client', 'factures_client'],
   ['pi_biens_amort', 'biens_amort'],
   ['pi_releves_bank', 'releves_bank'],
   ['pi_rapprochements', 'rapprochements'],
@@ -16549,6 +16625,8 @@ function switchTab(context, tab) {
   /* Afficher le panneau cible */
   var tabEl = document.getElementById(prefix + tab);
   if (tabEl) tabEl.classList.add('active');
+
+  if (context === 'declarations' && tab === 'teledeclaration' && typeof renderTeledeclaration === 'function') renderTeledeclaration();
 
   /* Mettre à jour les boutons .tab-btn du même contexte */
   document.querySelectorAll('.tab-btn').forEach(function(b) {
@@ -21440,6 +21518,9 @@ async function saveParams() {
     societe:     gv('param-societe'),
     rccm:        gv('param-rccm'),
     dgi:         gv('param-dgi'),
+    regime:      gv('param-regime')||'reel_normal',
+    tva_assujetti: gv('param-tva-assujetti')||'oui',
+    fne_actif:   gv('param-fne-actif')||'non',
     cnps:        gv('param-cnps'),
     agrement:    gv('param-agrement'),
     adresse:     gv('param-adresse'),
@@ -21529,6 +21610,7 @@ function loadParamFields() {
   var sv = function(id,v){ var e=document.getElementById(id); if(e&&v!==undefined) e.value=v; };
   sv('param-societe',p.societe||'ImmoSuite ERP');
   sv('param-rccm',p.rccm); sv('param-dgi',p.dgi); sv('param-cnps',p.cnps||'422483');
+  sv('param-regime',p.regime||'reel_normal'); sv('param-tva-assujetti',p.tva_assujetti||'oui'); sv('param-fne-actif',p.fne_actif||'non');
   sv('param-agrement',p.agrement); sv('param-adresse',p.adresse);
   sv('param-email',p.email); sv('param-tel',p.tel); sv('param-site',p.site);
   sv('param-whatsapp',p.whatsapp); sv('param-tva',p.tva||18);
@@ -25104,6 +25186,43 @@ function printFicheIndividuelle() {
 }
 
 /* ── DÉCLARATIONS SOCIALES & FISCALES ────────────────── */
+function renderTeledeclaration() {
+  var moisEl = document.getElementById('teledecl-mois');
+  if (moisEl && !moisEl.value) moisEl.value = new Date().toISOString().slice(0,7);
+  var mois = moisEl ? moisEl.value : new Date().toISOString().slice(0,7);
+  var lbl = document.getElementById('teledecl-mois-label');
+  if (lbl) lbl.textContent = new Date(mois + '-01').toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
+
+  var actifs = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; });
+  var totITS = 0, totCNPSSal = 0, totCNPSPat = 0, totBrut = 0;
+  actifs.forEach(function(e){
+    var bull = (DATA.bulletins || []).find(function(b){ return b.employe_id === e.id && b.mois === mois; });
+    var r = calcPaieEmploye(e, bull);
+    totITS += r.its; totCNPSSal += r.cnpsSal; totCNPSPat += r.cnpsPat; totBrut += r.brut;
+  });
+  var cnpsTotal = totCNPSSal + totCNPSPat;
+
+  /* TVA collectée sur factures FNE du mois (exigible à l'encaissement — indicatif) */
+  var tvaFactures = (DATA.factures_client || []).filter(function(f){ return (f.date||'').slice(0,7) === mois; })
+    .reduce(function(s,f){ return s + (f.tva||0); }, 0);
+
+  var box = document.getElementById('teledecl-recap');
+  if (!box) return;
+  var line = function(portail, impot, base, montant, echeance, col) {
+    return '<tr><td><strong>' + portail + '</strong></td><td>' + impot + '</td><td style="text-align:right;">' + fmtF(base) + '</td>'
+      + '<td style="text-align:right;font-weight:700;color:' + col + ';">' + fmtF(montant) + ' FCFA</td><td style="font-size:11px;color:var(--blanc-dim);">' + echeance + '</td></tr>';
+  };
+  box.innerHTML = '<div class="table-wrap"><table style="width:100%;font-size:12px;">'
+    + '<thead><tr><th>Portail</th><th>Impôt / Cotisation</th><th style="text-align:right;">Base</th><th style="text-align:right;">Montant</th><th>Échéance</th></tr></thead><tbody>'
+    + line('e-Impôts', 'ITS (salaires)', totBrut, totITS, 'le 15 du mois suivant', 'var(--rouge)')
+    + line('e-Impôts', 'TVA collectée', tvaFactures ? tvaFactures/0.18 : 0, tvaFactures, 'le 15 (à l\'encaissement)', 'var(--or)')
+    + line('e-CNPS', 'CNPS salarié', totBrut, totCNPSSal, 'le 15 du mois suivant', 'var(--rouge)')
+    + line('e-CNPS', 'CNPS patronal', totBrut, totCNPSPat, 'le 15 du mois suivant', 'var(--violet)')
+    + '<tr style="border-top:2px solid var(--bord);font-weight:800;"><td colspan="3">Total CNPS à verser</td><td style="text-align:right;color:var(--bleu);">' + fmtF(cnpsTotal) + ' FCFA</td><td></td></tr>'
+    + '</tbody></table></div>'
+    + '<div style="font-size:11px;color:var(--blanc-dim);margin-top:8px;">Montants calculés depuis les bulletins du mois. Reporter sur les portails officiels. TVA indicative — vérifier exigibilité réelle (encaissement).</div>';
+}
+
 function loadDeclarations() {
   var selAnnee = document.getElementById('decl-annee');
   if (!selAnnee.options.length) {
@@ -51627,7 +51746,7 @@ function cesRender() {
       + '<td style="text-align:right;font-weight:700;">'+fmtF(c.prix_cession)+'</td>'
       + '<td style="text-align:right;color:var(--vert);">'+fmtF(c.montant_encaisse)+(reste>0?('<br><span style="font-size:10px;color:var(--rouge);">reste '+fmtF(reste)+'</span>'):'')+'</td>'
       + '<td><span class="badge '+(statutBadge[c.statut]||'badge-neutre')+'">'+(c.statut||'—')+'</span></td>'
-      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="cesOpen(\''+c.id+'\')">✏️</button></td>'
+      + '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm btn-icon" onclick="cesOpen(\''+c.id+'\')">✏️</button> <button class="btn btn-secondary btn-sm btn-icon" onclick="facturerCession(\''+c.id+'\')" title="Facture normalisée FNE">🧾</button></td>'
       + '</tr>';
   }).join('') : '<tr><td colspan="9" style="text-align:center;color:var(--blanc-dim);padding:18px;">Aucune cession.</td></tr>';
 
@@ -58279,6 +58398,161 @@ function printQrFooter(ref){
 function docRefFromHtml(html){ var m=html&&html.match(/R[ée]f\.?\s*:?\s*([A-Za-z0-9\-\/_]+)/); if(m)return m[1]; var t=html&&html.match(/<title>([^<]{1,40})<\/title>/); return t?t[1].trim():'DOC'; }
 function docStamp(html,ref){ try{ if(/doc-qr/.test(html))return html; var f=printQrFooter(ref||docRefFromHtml(html)); if(/<\/body>/i.test(html))return html.replace(/<\/body>/i,f+'</body>'); return html+f; }catch(e){ return html; } }
 
+/* ══════════════════════════════════════════════
+   FACTURATION NORMALISÉE FNE — DGI Côte d'Ivoire
+   Cession foncière + Commercialisation lots
+   ══════════════════════════════════════════════ */
+if (!DATA.factures_client) DATA.factures_client = [];
+
+function _fneNumero() {
+  var annee = new Date().getFullYear();
+  var n = (DATA.factures_client || []).filter(function(f){ return (f.numero||'').indexOf('FV-' + annee) === 0; }).length + 1;
+  return 'FV-' + annee + '-' + String(n).padStart(5, '0');
+}
+
+/* QR FNE : payload vérifiable (num, NCC, montant, date) */
+function _fneQrPayload(f, ncc) {
+  return 'FNE|' + f.numero + '|NCC:' + (ncc||'—') + '|TTC:' + f.ttc + '|' + f.date;
+}
+
+/* QR SVG offline (matrice pseudo depuis hash — placeholder visuel vérifiable) */
+function _fneQrSvg(payload) {
+  var h = 0; for (var i = 0; i < payload.length; i++) h = (h * 31 + payload.charCodeAt(i)) & 0x7fffffff;
+  var grid = 21, cells = '';
+  for (var y = 0; y < grid; y++) for (var x = 0; x < grid; x++) {
+    var v = ((h >> ((x*3+y*5) % 31)) ^ (x*y)) & 1;
+    var finder = (x<7&&y<7)||(x>=grid-7&&y<7)||(x<7&&y>=grid-7);
+    if (finder) { var fx=x%(grid-7), fy=y%(grid-7); v = (fx===0||fx===6||fy===0||fy===6||(fx>=2&&fx<=4&&fy>=2&&fy<=4))?1:0; }
+    if (v) cells += '<rect x="' + x + '" y="' + y + '" width="1" height="1"/>';
+  }
+  return '<svg width="90" height="90" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg"><rect width="21" height="21" fill="#fff"/><g fill="#000">' + cells + '</g></svg>';
+}
+
+/* Ouvre le modal facturation depuis une cession */
+function facturerCession(cesId) {
+  var c = (DATA.cessions_foncieres || []).find(function(x){ return x.id === cesId; });
+  if (!c) { toast('Cession introuvable.', 'error'); return; }
+  var p = DATA.params || {};
+  var acquereur = c.acquereur || ((c.raison||'') || (c.nom||'') + ' ' + (c.prenoms||'')).trim() || 'Acquéreur';
+  var designation = c.designation || (typeof cesSourceRef==='function' ? cesSourceRef(c.source_key) : 'Cession foncière');
+  _fneOuvrirModal({ type:'cession', ref_id: c.id, client: acquereur, ncc_client: c.ncc||'', designation: designation, montant_ht: c.prix_cession || 0 });
+}
+
+/* Ouvre le modal facturation depuis une souscription/lot */
+function facturerLot(lotId) {
+  var l = (DATA.lots || []).find(function(x){ return x.id === lotId; });
+  if (!l) { toast('Lot introuvable.', 'error'); return; }
+  var cli = l.client_id ? (DATA.clients || []).find(function(x){ return x.id === l.client_id; }) : null;
+  var client = cli ? (cli.nom + ' ' + cli.prenoms) : 'Souscripteur';
+  _fneOuvrirModal({ type:'commercialisation', ref_id: l.id, client: client, ncc_client: (cli&&cli.ncc)||'', designation: 'Lot ' + (l.numero||'') + ' — ' + (l.type||''), montant_ht: l.prix || 0 });
+}
+
+function _fneOuvrirModal(data) {
+  APP._fneData = data;
+  var p = DATA.params || {};
+  document.getElementById('fne-client').value = data.client;
+  document.getElementById('fne-ncc-client').value = data.ncc_client || '';
+  document.getElementById('fne-designation').value = data.designation;
+  document.getElementById('fne-montant-ht').value = data.montant_ht;
+  document.getElementById('fne-tva-toggle').value = (p.tva_assujetti === 'non') ? 'non' : 'oui';
+  _fneRecalc();
+  document.getElementById('modal-fne').classList.add('open');
+}
+
+function _fneRecalc() {
+  var p = DATA.params || {};
+  var ht = parseFloat(document.getElementById('fne-montant-ht').value) || 0;
+  var tvaActive = document.getElementById('fne-tva-toggle').value === 'oui';
+  var tauxTva = tvaActive ? (p.tva || 18) : 0;
+  var tva = Math.round(ht * tauxTva / 100);
+  var ttc = ht + tva;
+  document.getElementById('fne-recap').innerHTML =
+    '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Montant HT</span><strong>' + fmtF(ht) + ' FCFA</strong></div>'
+    + '<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>TVA (' + tauxTva + '%)</span><strong>' + fmtF(tva) + ' FCFA</strong></div>'
+    + '<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid var(--bord);font-size:15px;"><span>Total TTC</span><strong style="color:var(--vert);">' + fmtF(ttc) + ' FCFA</strong></div>';
+}
+
+async function _fneEnregistrer() {
+  var d = APP._fneData; if (!d) return;
+  var p = DATA.params || {};
+  var ht = parseFloat(document.getElementById('fne-montant-ht').value) || 0;
+  var tvaActive = document.getElementById('fne-tva-toggle').value === 'oui';
+  var tauxTva = tvaActive ? (p.tva || 18) : 0;
+  var tva = Math.round(ht * tauxTva / 100);
+  var f = {
+    id: 'fac_' + Date.now(),
+    numero: _fneNumero(),
+    type: d.type,
+    ref_id: d.ref_id,
+    client: document.getElementById('fne-client').value.trim(),
+    ncc_client: document.getElementById('fne-ncc-client').value.trim(),
+    designation: document.getElementById('fne-designation').value.trim(),
+    ht: ht, taux_tva: tauxTva, tva: tva, ttc: ht + tva,
+    date: today(),
+    statut_fne: (p.fne_actif === 'oui') ? 'a_certifier' : 'hors_fne',
+    created_at: new Date().toISOString()
+  };
+  DATA.factures_client.push(f);
+  await dbPut('factures_client', f);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_factures_client', f);
+  closeModal('modal-fne');
+  toast('Facture ' + f.numero + ' enregistrée.', 'success');
+  imprimerFactureFNE(f.id);
+  if (typeof renderFacturesClient === 'function') renderFacturesClient();
+}
+
+function imprimerFactureFNE(facId) {
+  var f = (DATA.factures_client || []).find(function(x){ return x.id === facId; });
+  if (!f) { toast('Facture introuvable.', 'error'); return; }
+  var p = DATA.params || {};
+  var logo = getLogoForPrint ? getLogoForPrint() : '';
+  var fneActif = p.fne_actif === 'oui';
+  var qrPayload = _fneQrPayload(f, p.dgi);
+  var qrSvg = fneActif ? _fneQrSvg(qrPayload) : '';
+  var typeLabel = f.type === 'cession' ? 'Cession foncière' : 'Vente immobilière';
+  var dateLbl = new Date(f.date).toLocaleDateString('fr-FR', { year:'numeric', month:'long', day:'numeric' });
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ' + f.numero + '</title>'
+    + '<style>body{font-family:Arial,sans-serif;font-size:12px;color:#1C1C2E;padding:24px;line-height:1.55;}'
+    + '.header{display:flex;justify-content:space-between;border-bottom:3px solid #B87333;padding-bottom:14px;margin-bottom:18px;}'
+    + '.fne-mark{display:inline-block;background:#1A6B3A;color:#fff;font-weight:800;font-size:11px;padding:3px 10px;border-radius:5px;letter-spacing:1px;}'
+    + '.parties{display:flex;justify-content:space-between;gap:20px;margin-bottom:18px;}'
+    + '.party{flex:1;background:#F6F1EA;border-radius:8px;padding:12px;font-size:11px;}'
+    + '.party h4{margin:0 0 6px;color:#B87333;font-size:11px;text-transform:uppercase;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:14px;} th{background:#B87333;color:#fff;padding:8px;text-align:left;font-size:11px;} td{padding:8px;border-bottom:1px solid #E0E0EA;}'
+    + '.totaux{margin-left:auto;width:280px;} .totaux td{padding:6px 8px;}'
+    + '.ttc-row{border-top:2px solid #1C1C2E;font-size:15px;font-weight:800;color:#1A6B3A;}'
+    + '.fne-block{margin-top:18px;display:flex;gap:16px;align-items:center;background:#F0FBF4;border:1px solid #1A6B3A;border-radius:8px;padding:12px;}'
+    + '.legal{font-size:10px;color:#6B6B9A;margin-top:16px;}'
+    + '.no-print{text-align:center;margin-bottom:16px;} .no-print button{padding:9px 20px;background:#B87333;color:#fff;border:none;border-radius:6px;cursor:pointer;}'
+    + '@media print{.no-print{display:none;}body{padding:0;}}</style></head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer / PDF</button></div>'
+    + '<div class="header"><div style="display:flex;gap:12px;align-items:center;">' + (logo?'<img src="'+logo+'" style="height:50px;">':'')
+    + '<div><div style="font-size:18px;font-weight:800;color:#B87333;">' + escHtml(p.societe || 'ImmoSuite ERP') + '</div>'
+    + '<div style="font-size:10px;color:#6B6B9A;">' + escHtml(p.adresse || '') + '</div>'
+    + '<div style="font-size:10px;color:#6B6B9A;">RCCM ' + escHtml(p.rccm || '—') + ' · NCC ' + escHtml(p.dgi || '—') + '</div></div></div>'
+    + '<div style="text-align:right;"><div style="font-size:20px;font-weight:800;">FACTURE</div>'
+    + '<div style="font-size:13px;color:#B87333;font-weight:700;">' + escHtml(f.numero) + '</div>'
+    + '<div style="font-size:11px;color:#6B6B9A;">' + dateLbl + '</div>'
+    + (fneActif ? '<div style="margin-top:6px;"><span class="fne-mark">✓ FNE</span></div>' : '') + '</div></div>'
+    + '<div class="parties">'
+    + '<div class="party"><h4>Vendeur</h4>' + escHtml(p.societe || '') + '<br>NCC : ' + escHtml(p.dgi || '—') + '<br>' + escHtml(p.tel || '') + '</div>'
+    + '<div class="party"><h4>Client</h4>' + escHtml(f.client) + (f.ncc_client ? '<br>NCC : ' + escHtml(f.ncc_client) : '') + '</div></div>'
+    + '<table><thead><tr><th>Désignation</th><th style="text-align:center;">Nature</th><th style="text-align:right;">Montant HT</th></tr></thead>'
+    + '<tbody><tr><td>' + escHtml(f.designation) + '</td><td style="text-align:center;">' + typeLabel + '</td><td style="text-align:right;">' + fmtF(f.ht) + ' FCFA</td></tr></tbody></table>'
+    + '<table class="totaux"><tr><td>Total HT</td><td style="text-align:right;">' + fmtF(f.ht) + ' FCFA</td></tr>'
+    + '<tr><td>TVA (' + f.taux_tva + '%)</td><td style="text-align:right;">' + fmtF(f.tva) + ' FCFA</td></tr>'
+    + '<tr class="ttc-row"><td>Total TTC</td><td style="text-align:right;">' + fmtF(f.ttc) + ' FCFA</td></tr></table>'
+    + (fneActif
+        ? '<div class="fne-block">' + qrSvg + '<div style="font-size:11px;"><strong style="color:#1A6B3A;">Facture Normalisée Électronique</strong><br>Réf. FNE : ' + escHtml(f.numero) + '<br>NCC émetteur : ' + escHtml(p.dgi || '—') + '<br><span style="color:#6B6B9A;">Vérifiable sur fne.dgi.gouv.ci</span></div></div>'
+        : '<div class="legal" style="color:#C0392B;">⚠ Facturation FNE non activée. Certification DGI requise avant remise au client (Paramètres → Société → FNE).</div>')
+    + '<div class="legal">' + (f.taux_tva===0 ? 'Opération non soumise à TVA. ' : '') + 'Facture émise conformément au Code Général des Impôts de Côte d\'Ivoire. Conservation légale : 10 ans.</div>'
+    + '</body></html>';
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+
 </script>
 <!-- ══ APERÇU AVANT IMPRESSION ══════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-print-preview" style="display:none;z-index:9999;">
@@ -58353,6 +58627,35 @@ function docStamp(html,ref){ try{ if(/doc-qr/.test(html))return html; var f=prin
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-contrats-exp')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Facturation FNE -->
+<div class="modal-overlay" id="modal-fne">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🧾 Facture normalisée (FNE)</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-fne')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group span-2"><label>Client *</label><input class="form-control" id="fne-client"></div>
+        <div class="form-group span-2"><label>NCC client (si personne morale)</label><input class="form-control" id="fne-ncc-client" placeholder="Facultatif"></div>
+        <div class="form-group span-2"><label>Désignation *</label><input class="form-control" id="fne-designation"></div>
+        <div class="form-group"><label>Montant HT (FCFA)</label><input type="number" class="form-control" id="fne-montant-ht" oninput="_fneRecalc()"></div>
+        <div class="form-group"><label>Assujetti TVA</label>
+          <select class="form-control" id="fne-tva-toggle" onchange="_fneRecalc()">
+            <option value="oui">Oui (18%)</option>
+            <option value="non">Non (exonéré)</option>
+          </select>
+        </div>
+      </div>
+      <div class="card" id="fne-recap" style="background:var(--card2);margin-top:10px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-fne')">Annuler</button>
+      <button class="btn btn-primary" onclick="_fneEnregistrer()">💾 Émettre la facture</button>
     </div>
   </div>
 </div>
