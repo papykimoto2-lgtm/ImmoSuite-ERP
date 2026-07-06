@@ -38641,20 +38641,31 @@ if (!DATA.devis_fournisseurs) DATA.devis_fournisseurs = [];
 
 /* ── Chargement global DQE ─────────────────────────── */
 async function chargerDQE() {
+  /* Fusion par id — jamais d'écrasement brut. Un chargerDQE() en vol (ex. depuis
+     goTo('dqe') précédent) qui résout après un ajout local créerait sinon une
+     course : le poste vient d'être ajouté en mémoire, puis écrasé par une lecture
+     IndexedDB lancée avant que l'écriture ne soit visible. */
+  function _merge(arr, fresh) {
+    if (!fresh || !fresh.length) return arr;
+    var byId = {};
+    (arr||[]).forEach(function(x){ byId[x.id] = x; });
+    fresh.forEach(function(x){ byId[x.id] = x; });
+    return Object.keys(byId).map(function(k){ return byId[k]; });
+  }
   try {
     var noms = await dbGetAll('nomenclatures');
-    if (noms && noms.length) DATA.nomenclatures = noms;
+    DATA.nomenclatures = _merge(DATA.nomenclatures, noms);
     var prix = await dbGetAll('prix_unitaire');
     if (prix && prix.length) {
-      DATA.prix_unitaire = prix;
-    } else {
+      DATA.prix_unitaire = _merge(DATA.prix_unitaire, prix);
+    } else if (!DATA.prix_unitaire || !DATA.prix_unitaire.length) {
       DATA.prix_unitaire = JSON.parse(JSON.stringify(PRIX_MATERIAUX_CI));
       for (var i = 0; i < DATA.prix_unitaire.length; i++) await dbPut('prix_unitaire', DATA.prix_unitaire[i]);
     }
     var devs = await dbGetAll('devis_fournisseurs');
-    if (devs && devs.length) DATA.devis_fournisseurs = devs;
+    DATA.devis_fournisseurs = _merge(DATA.devis_fournisseurs, devs);
   } catch(e) {
-    DATA.prix_unitaire = JSON.parse(JSON.stringify(PRIX_MATERIAUX_CI));
+    if (!DATA.prix_unitaire || !DATA.prix_unitaire.length) DATA.prix_unitaire = JSON.parse(JSON.stringify(PRIX_MATERIAUX_CI));
   }
   /* Peupler le filtre programme DQE */
   var selProg = document.getElementById('dqe-filter-programme');
