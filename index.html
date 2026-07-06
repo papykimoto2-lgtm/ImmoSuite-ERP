@@ -38867,8 +38867,34 @@ async function sauvegarderPosteNomenclature() {
   }
 
   APP._nomEditId = null;
+  var _idAjoute = editId || entry.id;
+  var _typeAjoute = type;
   closeModal('modal-poste-nomen');
+
+  /* Sécurité : si le filtre "Type de logement" affiché ne correspond pas
+     au type du poste qu'on vient d'ajouter, on bascule dessus automatiquement.
+     Sans ça, le poste existe bien en base mais reste invisible car filtré. */
+  var selType = document.getElementById('dqe-type-logement');
+  if (selType && selType.value !== _typeAjoute) selType.value = _typeAjoute;
+
   chargerNomenclature();
+
+  /* Mise en évidence visuelle de la ligne ajoutée — évite toute confusion
+     sur la présence réelle de l'enregistrement dans le tableau. */
+  setTimeout(function(){
+    var tbody = document.getElementById('tbody-nomenclature');
+    if (!tbody) return;
+    var btn = tbody.querySelector('button[onclick*="' + _idAjoute + '"]');
+    var row = btn ? btn.closest('tr') : null;
+    if (row) {
+      row.scrollIntoView({ behavior:'smooth', block:'center' });
+      row.style.transition = 'background-color 0.3s';
+      row.style.backgroundColor = 'rgba(184,115,51,0.25)';
+      setTimeout(function(){ row.style.backgroundColor = ''; }, 1800);
+    } else {
+      console.warn('[DQE] Poste ' + _idAjoute + ' ajouté mais introuvable dans le tableau après rendu — vérifier le filtre Type de logement (attendu : ' + _typeAjoute + ').');
+    }
+  }, 60);
 }
 
 async function supprimerPosteNomenclature(id, type) {
