@@ -531,6 +531,78 @@ textarea.form-control { resize:vertical; min-height:90px; }
 .tab-btn.active { color:#1C1C2E; border-bottom-color:#B87333; font-weight:700; }
 .tab-btn { transition: color 150ms ease, border-bottom-color 150ms ease; }
 .tab-pane { display:none; }
+
+/* ══════ MODAL PARCELLE — chips, timeline, mini-états ═══ */
+.tab-btn { position:relative; display:inline-flex; align-items:center; gap:5px; }
+.tab-btn .tbadge {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:16px; height:16px; padding:0 4px; border-radius:8px;
+  background:var(--or); color:#fff; font-size:9px; font-weight:700; line-height:1;
+}
+.tab-btn .tdot { width:7px; height:7px; border-radius:50%; background:var(--rouge); display:none; }
+.tab-btn .tdot.show { display:inline-block; }
+
+.chip-group { display:flex; flex-wrap:wrap; gap:6px; }
+.chip {
+  padding:7px 12px; border-radius:20px; border:1px solid var(--bord);
+  background:var(--card2); color:var(--dim); font-size:12px; font-weight:600;
+  cursor:pointer; transition:all var(--tr); font-family:var(--fb);
+}
+.chip:hover { border-color:var(--or); }
+.chip.active { color:#fff; border-color:transparent; }
+.chip.active[data-c="vert"]   { background:var(--vert); }
+.chip.active[data-c="rouge"]  { background:var(--rouge); }
+.chip.active[data-c="or"]     { background:var(--or); }
+.chip.active[data-c="bleu"]   { background:var(--bleu); }
+.chip.active[data-c="violet"] { background:var(--violet); }
+
+.parc-timeline { display:flex; align-items:center; margin:4px 0 2px; }
+.parc-timeline .pt-step { flex:1; text-align:center; position:relative; }
+.parc-timeline .pt-step .pt-dot {
+  width:11px; height:11px; border-radius:50%; background:var(--bord);
+  margin:0 auto 5px; border:2px solid var(--card); box-shadow:0 0 0 1px var(--bord); position:relative; z-index:1;
+}
+.parc-timeline .pt-step .pt-label { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:.4px; }
+.parc-timeline .pt-step::before {
+  content:''; position:absolute; top:5px; left:-50%; width:100%; height:2px; background:var(--bord); z-index:0;
+}
+.parc-timeline .pt-step:first-child::before { display:none; }
+.parc-timeline .pt-step.done .pt-dot { background:var(--vert); box-shadow:0 0 0 1px var(--vert); }
+.parc-timeline .pt-step.done::before { background:var(--vert); }
+.parc-timeline .pt-step.current .pt-dot { background:var(--or); box-shadow:0 0 0 3px rgba(184,115,51,0.25); }
+.parc-timeline .pt-step.current .pt-label { color:var(--or); font-weight:700; }
+
+.fin-bar { display:flex; height:12px; border-radius:6px; overflow:hidden; background:var(--card2); margin:8px 0 10px; }
+.fin-bar span { height:100%; transition:width .3s; }
+.fin-legend { display:flex; flex-wrap:wrap; gap:12px; font-size:11px; color:var(--dim); margin-bottom:4px; }
+.fin-legend b { display:inline-flex; align-items:center; gap:4px; color:var(--blanc); font-weight:600; }
+.fin-legend b i { width:9px; height:9px; border-radius:2px; display:inline-block; font-style:normal; }
+.fin-plusvalue { padding:8px 12px; border-radius:var(--r); font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px; }
+.fin-plusvalue.pos { background:rgba(74,196,122,0.12); color:var(--vert); }
+.fin-plusvalue.neg { background:rgba(224,82,82,0.12); color:var(--rouge); }
+.fin-plusvalue.nul { background:var(--card2); color:var(--dim); }
+
+.empty-state-mini { text-align:center; padding:26px 12px; color:var(--dim); }
+.empty-state-mini .esm-icon { font-size:26px; margin-bottom:6px; opacity:.6; }
+.empty-state-mini .esm-txt { font-size:12px; margin-bottom:10px; }
+
+.parc-accordion { border-bottom:1px solid var(--bord); }
+.parc-accordion:last-child { border-bottom:none; }
+.parc-accordion summary {
+  padding:12px 14px; cursor:pointer; font-weight:700; font-size:13px;
+  color:var(--blanc); list-style:none; display:flex; align-items:center;
+  user-select:none; transition:background var(--tr);
+}
+.parc-accordion summary::-webkit-details-marker { display:none; }
+.parc-accordion summary::after {
+  content:'▾'; margin-left:auto; color:var(--dim); font-size:11px;
+  transition:transform var(--tr);
+}
+.parc-accordion[open] summary::after { transform:rotate(180deg); }
+.parc-accordion summary:hover { background:var(--card2); }
+.parc-accordion-body { padding:0 14px 14px; }
+
+.parc-mini-plan-empty { text-align:center; padding:22px 10px; color:var(--dim); font-size:12px; }
 .tab-pane.active { display:block; }
 
 /* ══════ ALERTS ═════════════════════════════════════════ */
@@ -558,6 +630,7 @@ textarea.form-control { resize:vertical; min-height:90px; }
 /* Dashboard */
 .chart-row { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:16px; }
 .chart-box { background:var(--card); border:1px solid var(--bord); border-radius:var(--r2); padding:16px; }
+@media (max-width:820px){ .dash-cmrc-row{ grid-template-columns:1fr !important; } }
 .chart-box h4 { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px; font-weight:700; }
 .mini-bar-chart { display:flex; align-items:flex-end; gap:5px; height:80px; }
 .mini-bar { flex:1; background:linear-gradient(to top,#8B5520,#B87333); border-radius:3px 3px 0 0; min-height:4px; transition:height .5s; opacity:.85; }
@@ -743,6 +816,7 @@ textarea.form-control { resize:vertical; min-height:90px; }
   .main-content { padding:24px; padding-bottom:24px; }
   .modal { border-radius:var(--r2); max-width:680px; max-height:90vh; align-self:center; }
   .modal-lg { max-width:860px; }
+  .modal-xl { max-width:1080px; }
   .modal-overlay { align-items:center; padding:20px; }
   .form-grid { grid-template-columns:1fr 1fr; }
   .form-group.span-2 { grid-column:span 2; }
@@ -2507,20 +2581,60 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
         <!-- ══ TAB : COMMERCIAL ════════════════════════════════════════════ -->
         <div id="dpane-commercial" style="display:none;">
-          <div class="kpi-grid" id="kpi-grid-commercial" style="margin-bottom:24px;"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="kpi-grid" id="kpi-grid-commercial" style="margin-bottom:20px;"></div>
+
+          <!-- Ligne 1 : Funnel de conversion + Prévisionnel pondéré -->
+          <div style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:16px;margin-bottom:16px;" class="dash-cmrc-row">
             <div class="chart-box">
-              <h4>🎯 Objectifs commerciaux</h4>
+              <h4>🫙 Entonnoir de conversion <span id="cmrc-funnel-conv" style="font-weight:400;font-size:11px;color:var(--blanc-dim);"></span></h4>
+              <div id="cmrc-funnel" style="margin-top:10px;"></div>
+            </div>
+            <div class="chart-box">
+              <h4>🔮 Pipeline pondéré <span style="font-weight:400;font-size:11px;color:var(--blanc-dim);">(prév. probabilisé)</span></h4>
+              <div id="cmrc-forecast" style="margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <!-- Ligne 2 : ROI par source + Leaderboard commerciaux -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="dash-cmrc-row">
+            <div class="chart-box">
+              <h4>📡 Performance par canal <span style="font-weight:400;font-size:11px;color:var(--blanc-dim);">(source → conversion)</span></h4>
+              <div id="cmrc-sources" style="margin-top:10px;"></div>
+            </div>
+            <div class="chart-box">
+              <h4>🏆 Classement commerciaux</h4>
+              <div id="cmrc-agents" style="margin-top:10px;"></div>
+            </div>
+          </div>
+
+          <!-- Ligne 3 : Objectifs + Répartition programme -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="dash-cmrc-row">
+            <div class="chart-box">
+              <h4>🎯 Objectifs du mois</h4>
               <div id="dash-objectifs" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
             </div>
             <div class="chart-box">
-              <h4>🏠 Répartition par programme</h4>
+              <h4>🏠 Absorption par programme <span style="font-weight:400;font-size:11px;color:var(--blanc-dim);">(rythme de vente)</span></h4>
               <div id="dash-prog-repartition" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
             </div>
           </div>
-          <div class="card">
-            <div class="card-title">🔔 Activité récente</div>
-            <div id="dash-activite"></div>
+
+          <!-- Ligne 4 : Actions prioritaires (le cœur "quoi faire") -->
+          <div class="card" style="border-left:3px solid var(--or);margin-bottom:16px;">
+            <div class="card-title">⚡ Actions commerciales prioritaires</div>
+            <div id="cmrc-actions"></div>
+          </div>
+
+          <!-- Ligne 5 : tendance 6 mois + activité -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="dash-cmrc-row">
+            <div class="chart-box">
+              <h4>📈 Tendance ventes & leads <span style="font-weight:400;font-size:11px;color:var(--blanc-dim);">(6 mois)</span></h4>
+              <div id="cmrc-trend" style="margin-top:10px;"></div>
+            </div>
+            <div class="card" style="margin:0;">
+              <div class="card-title">🔔 Activité récente</div>
+              <div id="dash-activite"></div>
+            </div>
           </div>
         </div>
 
@@ -2792,12 +2906,19 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-compta-versements">
           <div class="card" style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-              <div><strong>Versements souscripteurs</strong><div style="font-size:12px;color:var(--blanc-dim);">Modifier un versement recalcule automatiquement les commissions liées (extourne + régénération).</div></div>
-              <input type="text" class="search-input" id="compta-vers-search" placeholder="🔍 Réf, souscripteur..." oninput="renderComptaVersements()" style="min-width:200px;">
+              <div><strong>Versements souscripteurs</strong><div style="font-size:12px;color:var(--blanc-dim);">Modifier un versement recalcule automatiquement les commissions liées (extourne + régénération). Vue unifiée : versements sur lots (programmes) et encaissements sur cessions foncières.</div></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select class="filter-select" id="compta-vers-filtre" onchange="renderComptaVersements()">
+                  <option value="">Tous les versements</option>
+                  <option value="lot">🏠 Lots (programmes)</option>
+                  <option value="cession">🏞️ Foncier (cessions)</option>
+                </select>
+                <input type="text" class="search-input" id="compta-vers-search" placeholder="🔍 Réf, souscripteur / acquéreur..." oninput="renderComptaVersements()" style="min-width:200px;">
+              </div>
             </div>
           </div>
           <div class="card"><div class="table-wrap"><table>
-            <thead><tr><th>Réf</th><th>Date</th><th>Souscripteur</th><th>Type</th><th style="text-align:right;">Montant</th><th>Mode</th><th>Commissions liées</th><th></th></tr></thead>
+            <thead><tr><th>Réf</th><th>Date</th><th>Souscripteur / Acquéreur</th><th>Type</th><th style="text-align:right;">Montant</th><th>Mode</th><th>Commissions liées</th><th></th></tr></thead>
             <tbody id="tbody-compta-versements"></tbody>
           </table></div></div>
         </div>
@@ -6541,6 +6662,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-foncier-cessions">
           <div class="filters-bar" style="margin-bottom:12px;">
             <input type="text" class="search-input" placeholder="🔍 Acquéreur, source, désignation..." id="ces-search" oninput="cesRender()" style="flex:1;min-width:160px;">
+            <button class="btn btn-secondary btn-sm" onclick="backfillEcrituresCessions()" title="Génère les écritures comptables manquantes pour les cessions déjà saisies">🧾 Générer écritures manquantes</button>
             <button class="btn btn-primary btn-sm" onclick="cesNew()">+ Nouvelle cession</button>
           </div>
           <div id="ces-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;"></div>
@@ -6596,10 +6718,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         </div>
       </div>
 
-      <!-- ── MODAL : Encaisser un versement ── -->
+      <!-- ── MODAL : Encaisser / Modifier un versement ── -->
       <div class="modal-overlay" id="modal-crec-paiement">
         <div class="modal" style="max-width:520px;">
-          <div class="modal-header"><div class="modal-title">💵 Encaisser — <span id="crecp-acq"></span></div><button class="modal-close" onclick="closeModal('modal-crec-paiement')">✕</button></div>
+          <div class="modal-header"><div class="modal-title" id="crecp-modal-title">💵 Encaisser — <span id="crecp-acq"></span></div><button class="modal-close" onclick="closeModal('modal-crec-paiement')">✕</button></div>
           <div class="modal-body">
             <div class="alert alert-info" style="margin-bottom:12px;">Reste à recouvrer : <strong id="crecp-reste"></strong></div>
             <div class="form-grid">
@@ -6612,7 +6734,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-crec-paiement')">Annuler</button>
-            <button class="btn btn-primary" onclick="crecSavePaiement()">💾 Encaisser + écriture</button>
+            <button class="btn btn-primary" id="btn-save-crecp" onclick="crecSavePaiement()">💾 Encaisser + écriture</button>
           </div>
         </div>
       </div>
@@ -7309,6 +7431,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
         </div>
         <div class="tab-pane" id="tab-conventions-situations">
+          <div id="situ-synthese-conv"></div>
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
               <div class="card-title">📊 Situations de travaux mensuelles</div>
@@ -7316,7 +7439,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Date</th><th>Convention</th><th>Constructeur</th><th>N° Situation</th><th>Montant HT</th><th>Retenue 10%</th><th>Net à payer</th><th>Statut</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Date</th><th>Convention</th><th>Constructeur</th><th>N° Situation</th><th>Montant HT</th><th>Retenue</th><th>Net à payer</th><th>Statut</th><th>Actions</th></tr></thead>
                 <tbody id="tbody-situations"></tbody>
               </table>
             </div>
@@ -7362,6 +7485,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('chantiers','gantt')">📅 Planning Gantt</button>
           <button class="tab-btn" onclick="switchTab('chantiers','rapports')">📋 Rapports hebdomadaires</button>
           <button class="tab-btn" onclick="switchTab('chantiers','cout')">💰 Coût de revient</button>
+          <button class="tab-btn" onclick="switchTab('chantiers','controle')">🎯 Contrôle budget/réel</button>
         </div>
 
         <div class="tab-pane active" id="tab-chantiers-dashboard">
@@ -7394,6 +7518,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-chantiers-cout">
           <div class="kpi-grid" id="cout-kpi" style="margin-bottom:16px;"></div>
           <div id="cout-revient-detail"></div>
+        </div>
+
+        <div class="tab-pane" id="tab-chantiers-controle">
+          <div class="alert alert-info" style="margin-bottom:14px;">
+            🎯 <strong>Contrôle de gestion chantier</strong> — compare le budget d'objectif (issu de l'étude de prix) au réalisé automatique : matériaux (sorties de stock affectées), main-d'œuvre (pointages affectés), sous-traitance (situations). Projection du coût final par la méthode de la valeur acquise (EVM).
+          </div>
+          <div id="cg-content"></div>
         </div>
       </div>
 
@@ -12531,30 +12662,35 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 <!-- Modal Parcelle Foncière -->
 <div class="modal-overlay" id="modal-parcelle">
-  <div class="modal modal-lg">
+  <div class="modal modal-lg modal-xl">
     <div class="modal-header">
-      <h3 id="modal-parcelle-title">Nouvelle Parcelle</h3>
+      <div style="flex:1;min-width:0;">
+        <h3 id="modal-parcelle-title" style="margin-bottom:3px;">Nouvelle Parcelle</h3>
+        <div id="modal-parcelle-subtitle" style="font-size:11px;color:var(--dim);display:flex;align-items:center;gap:8px;flex-wrap:wrap;"></div>
+      </div>
       <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-parcelle')">✕</button>
     </div>
     <div class="modal-body">
       <div class="tab-nav">
-        <button class="tab-btn active" onclick="switchTab('modal-parcelle','identification')">Identification</button>
-        <button class="tab-btn" onclick="switchTab('modal-parcelle','titre')">Titre & Droits</button>
-        <button class="tab-btn" onclick="switchTab('modal-parcelle','financier')">Financier</button>
-        <button class="tab-btn" onclick="switchTab('modal-parcelle','bornage')">Bornage &amp; Coordonnées</button>
+        <button class="tab-btn active" onclick="switchTab('modal-parcelle','identification')">📍 Identification</button>
+        <button class="tab-btn" onclick="switchTab('modal-parcelle','titre')">📜 Titre &amp; Droits <span class="tdot" id="parc-tab-risque-dot" title="Risque élevé"></span></button>
+        <button class="tab-btn" onclick="switchTab('modal-parcelle','financier')">💰 Financier</button>
+        <button class="tab-btn" onclick="switchTab('modal-parcelle','bornage')">📐 Bornage &amp; Coordonnées <span class="tbadge" id="parc-tab-bornes-count">0</span></button>
       </div>
       <div class="tab-pane active" id="tab-modal-parcelle-identification">
         <div class="form-grid">
-          <div class="form-group"><label>Référence interne *</label><input type="text" class="form-control" id="parc-ref" placeholder="EX: PARC-2024-001"></div>
+          <div class="form-group"><label>Référence interne *</label><input type="text" class="form-control" id="parc-ref" placeholder="EX: PARC-2024-001" oninput="updateParcelleStatusVisuals()"></div>
           <div class="form-group"><label>Programme affecté</label><select class="form-control" id="parc-programme"><option value="">— Non affectée —</option></select></div>
-          <div class="form-group span-2"><label>Localisation précise *</label><input type="text" class="form-control" id="parc-localisation" placeholder="Quartier, voie, repères..."></div>
+          <div class="form-group span-2"><label>📍 Localisation précise *</label><input type="text" class="form-control" id="parc-localisation" placeholder="Quartier, voie, repères..." oninput="updateParcelleStatusVisuals()"></div>
           <div class="form-group"><label>Commune</label><input type="text" class="form-control" id="parc-commune" placeholder="Ex: Cocody, Yopougon..."></div>
           <div class="form-group"><label>Sous-préfecture / Département</label><input type="text" class="form-control" id="parc-sous-prefecture"></div>
           <div class="form-group"><label>Zone UTM (levé)</label><select class="form-control" id="parc-utm-zone"><option value="30">30N — Centre/Est (Abidjan, Yamoussoukro, Bouaké…)</option><option value="29">29N — Ouest (San Pedro, Man, Daloa, Odienné…)</option></select></div>
-          <div class="form-group"><label>Superficie totale (m²) *</label><input type="number" class="form-control" id="parc-sf-totale"></div>
+          <div class="form-group"><label>📐 Superficie totale (m²) *</label><input type="number" class="form-control" id="parc-sf-totale" oninput="updateParcelleFinSummary()"></div>
           <div class="form-group"><label>Superficie constructible (m²)</label><input type="number" class="form-control" id="parc-superficie-const"></div>
           <div class="form-group span-2"><label>Description / Limites</label><textarea class="form-control" id="parc-description" placeholder="Bornage, limites géographiques, accès..."></textarea></div>
         </div>
+        <div class="form-section-title" style="margin-top:16px;">🗺️ Aperçu du polygone (d'après les bornes saisies)</div>
+        <div id="parc-mini-plan" style="border:1px solid var(--bord);border-radius:var(--r);background:var(--card2);"></div>
       </div>
       <div class="tab-pane" id="tab-modal-parcelle-titre"><!-- Bug fix v16-2 : parc-superficie renommé parc-sf-totale pour éviter collision ID avec module Morcellement -->
         <div class="form-grid">
@@ -12572,8 +12708,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group"><label>Notaire / Géomètre</label><input type="text" class="form-control" id="parc-notaire"></div>
           <div class="form-group"><label>Vendeur / Propriétaire actuel</label><input type="text" class="form-control" id="parc-vendeur"></div>
           <div class="form-group"><label>Date bornage</label><input type="date" class="form-control" id="parc-date-bornage"></div>
-          <div class="form-group"><label>Statut juridique</label>
-            <select class="form-control" id="parc-statut">
+          <div class="form-group span-2">
+            <label>Statut juridique</label>
+            <select class="form-control" id="parc-statut" style="display:none;" onchange="updateParcelleStatusVisuals()">
               <option value="prospection">Prospection</option>
               <option value="negociation">Négociation</option>
               <option value="acd">ACD obtenu</option>
@@ -12582,26 +12719,36 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="affecte">Affecté à programme</option>
               <option value="contentieux">Contentieux</option>
             </select>
+            <div class="chip-group" id="parc-statut-chips"></div>
           </div>
-          <div class="form-group"><label>Risque juridique</label>
-            <select class="form-control" id="parc-risque">
+          <div class="form-group span-2">
+            <div class="parc-timeline" id="parc-statut-timeline"></div>
+          </div>
+          <div class="form-group span-2">
+            <label>Risque juridique</label>
+            <select class="form-control" id="parc-risque" style="display:none;" onchange="updateParcelleStatusVisuals()">
               <option value="faible">Faible</option>
               <option value="moyen">Moyen</option>
               <option value="eleve">Élevé</option>
             </select>
+            <div class="chip-group" id="parc-risque-chips"></div>
           </div>
           <div class="form-group span-2"><label>Observations juridiques</label><textarea class="form-control" id="parc-obs-jur"></textarea></div>
         </div>
       </div>
       <div class="tab-pane" id="tab-modal-parcelle-financier">
         <div class="form-grid">
-          <div class="form-group"><label>Prix d'acquisition (FCFA)</label><input type="number" class="form-control" id="parc-prix-acq" oninput="calcParcelleTotal()"></div>
-          <div class="form-group"><label>Frais de mutation (FCFA)</label><input type="number" class="form-control" id="parc-frais-mutation" oninput="calcParcelleTotal()"></div>
-          <div class="form-group"><label>Frais de bornage (FCFA)</label><input type="number" class="form-control" id="parc-frais-bornage" oninput="calcParcelleTotal()"></div>
-          <div class="form-group"><label>Frais notariaux (FCFA)</label><input type="number" class="form-control" id="parc-frais-notaire" oninput="calcParcelleTotal()"></div>
-          <div class="form-group"><label>Valeur estimée actuelle (FCFA)</label><input type="number" class="form-control" id="parc-valeur-actuelle"></div>
+          <div class="form-group"><label>Prix d'acquisition (FCFA)</label><input type="number" class="form-control" id="parc-prix-acq" oninput="calcParcelleTotal();updateParcelleFinSummary()"></div>
+          <div class="form-group"><label>Frais de mutation (FCFA)</label><input type="number" class="form-control" id="parc-frais-mutation" oninput="calcParcelleTotal();updateParcelleFinSummary()"></div>
+          <div class="form-group"><label>Frais de bornage (FCFA)</label><input type="number" class="form-control" id="parc-frais-bornage" oninput="calcParcelleTotal();updateParcelleFinSummary()"></div>
+          <div class="form-group"><label>Frais notariaux (FCFA)</label><input type="number" class="form-control" id="parc-frais-notaire" oninput="calcParcelleTotal();updateParcelleFinSummary()"></div>
+          <div class="form-group"><label>Valeur estimée actuelle (FCFA)</label><input type="number" class="form-control" id="parc-valeur-actuelle" oninput="updateParcelleFinSummary()"></div>
           <div class="form-group"><label>Prix de revient total (FCFA)</label><input type="number" class="form-control" id="parc-cout-total" readonly style="color:var(--or);font-weight:bold;"></div>
         </div>
+        <div class="form-section-title" style="margin-top:18px;">Répartition du coût de revient</div>
+        <div class="fin-bar" id="parc-fin-bar"></div>
+        <div class="fin-legend" id="parc-fin-legend"></div>
+        <div id="parc-fin-plusvalue" style="margin-top:6px;"></div>
       </div>
       <!-- Modal revue bornes extraites (scan dossier technique) -->
       <div class="tab-pane" id="tab-modal-parcelle-bornage">
@@ -12617,17 +12764,25 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group"><label>Échelle</label><input type="text" class="form-control" id="parc-echelle" placeholder="1/7000"></div>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;">
-          <strong>Tableau des coordonnées (bornes)</strong>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px;flex-wrap:wrap;gap:8px;">
+          <strong>Tableau des coordonnées (bornes) <span class="tbadge" id="parc-bornes-count-inline">0</span></strong>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-right:2px;">Saisie</span>
             <button class="btn btn-secondary btn-sm" onclick="brnAdd()">+ Borne</button>
-            <label class="btn btn-secondary btn-sm" style="cursor:pointer;">📥 Importer bornes CSV<input type="file" accept=".csv,.txt" style="display:none;" onchange="brnImportBornesCSV(this)"></label>
-            <label class="btn btn-primary btn-sm" style="cursor:pointer;background:var(--vert,#1A6B3A);border-color:var(--vert,#1A6B3A);">📄 Scanner dossier technique<input type="file" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="brnScanDossier(this)"></label>
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;">📥 Import CSV<input type="file" accept=".csv,.txt" style="display:none;" onchange="brnImportBornesCSV(this)"></label>
+            <label class="btn btn-primary btn-sm" for="parc-scan-dossier-input" style="cursor:pointer;background:var(--vert,#1A6B3A);border-color:var(--vert,#1A6B3A);">📄 Scanner dossier</label>
+          </div>
+          <div style="width:1px;background:var(--bord);align-self:stretch;"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-right:2px;">Outils</span>
             <button class="btn btn-secondary btn-sm" onclick="brnApplyArea()">📐 Superficie ← bornes</button>
             <button class="btn btn-secondary btn-sm" onclick="brnPrintPlan()">🖨 Plan de bornage</button>
             <button class="btn btn-primary btn-sm" onclick="genererPlanParcellaire()">📐 Plan parcellaire</button>
           </div>
         </div>
+        <input type="file" id="parc-scan-dossier-input" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="brnScanDossier(this)">
         <div style="font-size:11px;color:var(--blanc-dim,#888);margin:-2px 0 6px;">Colonnes reconnues : Nom/Borne, X (ou Longitude), Y (ou Latitude), Z/Altitude, Angle, Distance — séparateur , ; ou tabulation.</div>
         <div class="table-wrap">
           <table id="table-bornes">
@@ -12636,41 +12791,52 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </table>
         </div>
         <div id="brn-plan" class="card" style="margin-top:12px;background:var(--card2);text-align:center;"></div>
-        <div class="card" id="brn-topo" style="margin-top:12px;">
-          <strong>⛰️ Topographie — levé, courbes de niveau, coupe</strong>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center;">
-            <label class="btn btn-secondary btn-sm" style="cursor:pointer;">📥 Importer levé CSV (X;Y;Z)<input type="file" accept=".csv,.txt" style="display:none;" onchange="brnImportCSV(this)"></label>
-            <button class="btn btn-secondary btn-sm" id="brn-ct-btn" onclick="brnToggleContours()">⛰️ Courbes de niveau</button>
-            <button class="btn btn-secondary btn-sm" onclick="brnShowQuality()">🎯 Qualité levé</button>
-            <button class="btn btn-secondary btn-sm" onclick="topoExportCSV()">⬇️ Export CSV</button>
-            <button class="btn btn-secondary btn-sm" onclick="topoGenererRapport()">📄 Rapport topo</button>
-            <label style="font-size:12px;">Équidistance <input type="number" id="brn-ct-int" value="0" step="0.5" style="width:64px;" oninput="if(_brnShowContours)brnRenderPlan()"> m (0=auto)</label>
-            <span id="brn-topo-info" style="font-size:11px;color:var(--blanc-dim);"></span>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <span style="font-size:12px;">📈 Coupe :</span>
-            <select id="brn-coupe-a" class="form-control" style="width:96px;font-size:12px;"></select><span>→</span>
-            <select id="brn-coupe-b" class="form-control" style="width:96px;font-size:12px;"></select>
-            <button class="btn btn-secondary btn-sm" onclick="brnCoupe()">Générer la coupe</button>
-          </div>
-          <div id="brn-coupe-out" style="margin-top:10px;text-align:center;"></div>
-          <div style="border-top:1px solid var(--bord);margin-top:12px;padding-top:10px;">
-            <strong>🚜 Terrassement — déblai / remblai (m³)</strong>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;">
-              <label style="font-size:12px;">Niveau plateforme <input type="number" id="terr-niv" step="0.1" style="width:80px;"> m</label>
-              <label style="font-size:12px;">Coef. compactage <input type="number" id="terr-kc" step="0.01" value="1" style="width:64px;"></label>
-              <button class="btn btn-secondary btn-sm" onclick="terrAuto()">⚖️ Niveau optimal (équilibre)</button>
-              <button class="btn btn-primary btn-sm" onclick="terrCalc()">Calculer</button>
+        <div class="card" id="brn-topo" style="margin-top:12px;padding:0;overflow:hidden;">
+          <details class="parc-accordion" open>
+            <summary>⛰️ Levé &amp; courbes de niveau</summary>
+            <div class="parc-accordion-body">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center;">
+                <label class="btn btn-secondary btn-sm" style="cursor:pointer;">📥 Importer levé CSV (X;Y;Z)<input type="file" accept=".csv,.txt" style="display:none;" onchange="brnImportCSV(this)"></label>
+                <button class="btn btn-secondary btn-sm" id="brn-ct-btn" onclick="brnToggleContours()">⛰️ Courbes de niveau</button>
+                <button class="btn btn-secondary btn-sm" onclick="brnShowQuality()">🎯 Qualité levé</button>
+                <button class="btn btn-secondary btn-sm" onclick="topoExportCSV()">⬇️ Export CSV</button>
+                <button class="btn btn-secondary btn-sm" onclick="topoGenererRapport()">📄 Rapport topo</button>
+                <label style="font-size:12px;">Équidistance <input type="number" id="brn-ct-int" value="0" step="0.5" style="width:64px;" oninput="if(_brnShowContours)brnRenderPlan()"> m (0=auto)</label>
+                <span id="brn-topo-info" style="font-size:11px;color:var(--blanc-dim);"></span>
+              </div>
             </div>
-            <div id="terr-out"></div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px;">
-              <label style="font-size:12px;">Foisonnement (transport) <input type="number" id="terr-foi" step="0.01" value="1.25" style="width:64px;"></label>
-              <label style="font-size:12px;">Imprévus <input type="number" id="terr-imp" step="1" value="10" style="width:56px;"> %</label>
-              <label style="font-size:12px;">TVA <input type="number" id="terr-tva" step="1" value="18" style="width:56px;"> %</label>
-              <button class="btn btn-primary btn-sm" onclick="terrBudgetCalc()">💰 Budget prévisionnel</button>
+          </details>
+          <details class="parc-accordion">
+            <summary>📈 Coupe altimétrique</summary>
+            <div class="parc-accordion-body">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <span style="font-size:12px;">📈 Coupe :</span>
+                <select id="brn-coupe-a" class="form-control" style="width:96px;font-size:12px;"></select><span>→</span>
+                <select id="brn-coupe-b" class="form-control" style="width:96px;font-size:12px;"></select>
+                <button class="btn btn-secondary btn-sm" onclick="brnCoupe()">Générer la coupe</button>
+              </div>
+              <div id="brn-coupe-out" style="margin-top:10px;text-align:center;"></div>
             </div>
-            <div id="terr-budget"></div>
-          </div>
+          </details>
+          <details class="parc-accordion">
+            <summary>🚜 Terrassement — déblai / remblai (m³)</summary>
+            <div class="parc-accordion-body">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;">
+                <label style="font-size:12px;">Niveau plateforme <input type="number" id="terr-niv" step="0.1" style="width:80px;"> m</label>
+                <label style="font-size:12px;">Coef. compactage <input type="number" id="terr-kc" step="0.01" value="1" style="width:64px;"></label>
+                <button class="btn btn-secondary btn-sm" onclick="terrAuto()">⚖️ Niveau optimal (équilibre)</button>
+                <button class="btn btn-primary btn-sm" onclick="terrCalc()">Calculer</button>
+              </div>
+              <div id="terr-out"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 4px;">
+                <label style="font-size:12px;">Foisonnement (transport) <input type="number" id="terr-foi" step="0.01" value="1.25" style="width:64px;"></label>
+                <label style="font-size:12px;">Imprévus <input type="number" id="terr-imp" step="1" value="10" style="width:56px;"> %</label>
+                <label style="font-size:12px;">TVA <input type="number" id="terr-tva" step="1" value="18" style="width:56px;"> %</label>
+                <button class="btn btn-primary btn-sm" onclick="terrBudgetCalc()">💰 Budget prévisionnel</button>
+              </div>
+              <div id="terr-budget"></div>
+            </div>
+          </details>
         </div>
       </div>
     </div>
@@ -13499,6 +13665,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <input type="number" class="form-control" id="pt-heures-supp" value="0" min="0" max="8" step="0.5">
         </div>
         <div class="form-group">
+          <label>Chantier affecté (imputation MO)</label>
+          <select class="form-control" id="pt-chantier"><option value="">— Non affecté (frais généraux) —</option></select>
+        </div>
+        <div class="form-group">
+          <label>Ouvrage / tâche (optionnel)</label>
+          <input type="text" class="form-control" id="pt-tache" placeholder="Ex : Élévation R+1, coffrage...">
+        </div>
+        <div class="form-group">
           <label>Justificatif fourni</label>
           <select class="form-control" id="pt-justifie">
             <option value="1">Oui — justifié</option>
@@ -14118,8 +14292,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-body">
       <div class="alert alert-info" style="margin-bottom:14px;">
-        📌 Comptabilisation automatique : <strong>Débit 401</strong> (Fournisseurs) / <strong>Crédit 512</strong> (Banque) lors du paiement.
+        📌 Décompte à l'avancement. Comptabilisation SYSCOHADA automatique (HT 6111 / TVA déductible 4452 / dette 401 · retenue isolée en 4017 · net réglé en 401→trésorerie).
       </div>
+      <!-- Bandeau récap convention (marché / facturé / reste) -->
+      <div id="situ-recap-conv" style="display:none;background:var(--card2);border:1px solid var(--bord);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;"></div>
       <div class="form-grid">
         <div class="form-group"><label>Convention *</label>
           <select class="form-control" id="situ-convention" onchange="onSelectConventionSitu()">
@@ -14129,13 +14305,24 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="form-group"><label>N° Situation *</label><input type="text" class="form-control" id="situ-numero" placeholder="SIT-001"></div>
         <div class="form-group"><label>Date situation *</label><input type="date" class="form-control" id="situ-date"></div>
         <div class="form-group"><label>Période couverte</label><input type="text" class="form-control" id="situ-periode" placeholder="Janvier 2025"></div>
-        <div class="form-group"><label>Montant HT *</label><input type="number" class="form-control" id="situ-montant-ht" oninput="calcSituTotaux()" value="0"></div>
-        <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="situ-tva" value="18" oninput="calcSituTotaux()"></div>
+
+        <div class="form-group span-2"><label>Mode de décompte</label>
+          <select class="form-control" id="situ-mode-decompte" onchange="onSituModeDecompte()">
+            <option value="avancement">À l'avancement (je saisis l'avancement cumulé %, le HT période est calculé)</option>
+            <option value="direct">Montant direct (je saisis le HT de la période)</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="situ-wrap-avct"><label>Avancement cumulé (%)</label><input type="number" class="form-control" id="situ-avancement" min="0" max="100" value="0" oninput="calcSituDecompte()"></div>
+        <div class="form-group"><label>Cumul HT antérieur</label><input type="number" class="form-control" id="situ-cumul-prec" readonly style="color:var(--blanc-dim);"></div>
+        <div class="form-group"><label>Montant HT période *</label><input type="number" class="form-control" id="situ-montant-ht" oninput="calcSituDecompte()" value="0"></div>
+        <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="situ-tva" value="18" oninput="calcSituDecompte()"></div>
         <div class="form-group"><label>Montant TTC (auto)</label><input type="number" class="form-control" id="situ-montant-ttc" readonly style="color:var(--or);font-weight:700;"></div>
-        <div class="form-group"><label>Retenue garantie 10% (auto)</label><input type="number" class="form-control" id="situ-retenue" readonly style="color:var(--rouge);"></div>
+
+        <div class="form-group"><label>Avance à récupérer (auto)</label><input type="number" class="form-control" id="situ-avance-recup" readonly style="color:var(--bleu);" title="Remboursement au prorata de l'avance de démarrage"></div>
+        <div class="form-group"><label>Retenue garantie (auto)</label><input type="number" class="form-control" id="situ-retenue" readonly style="color:var(--rouge);"></div>
         <div class="form-group"><label>Net à payer (auto)</label><input type="number" class="form-control" id="situ-net" readonly style="color:var(--vert);font-weight:700;font-size:15px;"></div>
-        <div class="form-group"><label>Avancement convention (%)</label><input type="number" class="form-control" id="situ-avancement" min="0" max="100" value="0" oninput="calcSituCumul()"></div>
-        <div class="form-group"><label>Cumul situations précédentes</label><input type="number" class="form-control" id="situ-cumul-prec" readonly></div>
+
         <div class="form-group"><label>Mode règlement</label>
           <select class="form-control" id="situ-mode">
             <option value="virement">Virement bancaire</option>
@@ -14146,8 +14333,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="form-group"><label>Statut</label>
           <select class="form-control" id="situ-statut">
             <option value="soumise">Soumise</option>
-            <option value="validee">Validée</option>
-            <option value="payee">Payée</option>
+            <option value="validee">Validée (comptabilise HT/TVA/retenue)</option>
+            <option value="payee">Payée (comptabilise + règlement du net)</option>
             <option value="contestee">Contestée</option>
           </select>
         </div>
@@ -16939,6 +17126,8 @@ function switchTab(context, tab) {
   if (tabEl) tabEl.classList.add('active');
 
   if (context === 'declarations' && tab === 'teledeclaration' && typeof renderTeledeclaration === 'function') renderTeledeclaration();
+  if (context === 'chantiers' && tab === 'controle' && typeof renderControleGestion === 'function') renderControleGestion();
+  if (context === 'chantiers' && tab === 'cout' && typeof buildCoutRevient === 'function') buildCoutRevient();
 
   /* Mettre à jour les boutons .tab-btn du même contexte */
   document.querySelectorAll('.tab-btn').forEach(function(b) {
@@ -17005,21 +17194,31 @@ function switchDashTab(tab) {
 }
 
 function buildDashTabFinance() {
-  var totalVerse = DATA.versements.reduce(function(a,v){return a+(parseFloat(v.montant)||0);},0);
-  var totalDu    = DATA.clients.reduce(function(a,c){return a+(parseFloat(c.montant_total)||0);},0);
-  var encours    = Math.max(0, totalDu-totalVerse);
-  var tauxRecouv = totalDu>0 ? Math.round((totalVerse/totalDu)*100) : 0;
-  var retard     = getRetardataires().length;
-  var now        = new Date();
-  var moisCourant = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  var caM = DATA.versements.filter(function(v){return (v.date||'').startsWith(moisCourant);})
-                           .reduce(function(s,v){return s+(parseFloat(v.montant)||0);},0);
+  var cessions      = DATA.cessions_foncieres || [];
+  var _core         = dashFinanceCore(null);
+  var totalVerse    = _core.encaisse; /* CA global = lots (encaissé sur prix) + cessions foncières */
+  var totalVerseCes = _core.encCes;
+  var totalDu       = _core.du;
+  var encours       = _core.encours;
+  var tauxRecouv    = _core.tauxRecouv;
+  var retard        = getRetardataires().length;
+  var now           = new Date();
+  var moisCourant   = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var caM = dashEncaisseLots(function(v){return (v.date||'').startsWith(moisCourant);})
+          + calcCessionsTotal('montant_encaisse', function(c){return (c.date||'').startsWith(moisCourant);});
+  var totalDec = _core.decaisse;
+  var decM = dashDecaissements(function(e){return (e.date||'').startsWith(moisCourant);});
+  var soldeNet = _core.soldeNet;
   var el = document.getElementById('kpi-grid-finance');
   if (!el) return;
   el.innerHTML = [
-    {l:'CA Encaissé total',        v:fmtF(totalVerse)+' FCFA', i:'💰', c:'kpi-green', d:'Cumul depuis le début'},
+    {l:'CA Encaissé total',        v:fmtF(totalVerse)+' FCFA', i:'💰', c:'kpi-green', d:'Lots + cessions foncières'},
     {l:'CA Mois en cours',         v:fmtF(caM)+' FCFA',        i:'📆', c:'',         d:'Encaissements du mois'},
-    {l:'Encours clients (411)',     v:fmtF(encours)+' FCFA',    i:'⏳', c:encours>100000000?'kpi-red':'', d:DATA.clients.length+' souscripteurs'},
+    {l:'dont Cessions foncières',  v:fmtF(totalVerseCes)+' FCFA', i:'🏞️', c:'',      d:cessions.length+' cession(s)'},
+    {l:'Décaissements total',      v:fmtF(totalDec)+' FCFA',   i:'💸', c:'kpi-red',  d:'Charges enregistrées'},
+    {l:'Décaissements du mois',    v:fmtF(decM)+' FCFA',       i:'📉', c:'',         d:'Charges du mois en cours'},
+    {l:'Solde net (Enc. − Déc.)',  v:fmtF(soldeNet)+' FCFA',   i:'📊', c:soldeNet>=0?'kpi-green':'kpi-red', d:soldeNet>=0?'Trésorerie positive':'Attention : tension trésorerie'},
+    {l:'Reste à recouvrer', v:fmtF(encours)+' FCFA',   i:'⏳', c:encours>100000000?'kpi-red':'', d:DATA.clients.length+' souscripteurs + '+cessions.length+' cession(s)'},
     {l:'Taux de recouvrement',      v:tauxRecouv+'%',           i:'📈', c:tauxRecouv>=50?'kpi-green':'kpi-red', d:fmtF(totalVerse)+' / '+fmtF(totalDu)},
     {l:'Clients en retard',         v:retard,                   i:'⚠️', c:retard>0?'kpi-red':'kpi-green', d:retard+' dossiers à relancer'},
     {l:'Lots vendus',              v:DATA.lots.filter(function(l){return l.statut==='vendu';}).length+' / '+DATA.lots.length, i:'🏠', c:'', d:DATA.lots.filter(function(l){return l.statut==='disponible';}).length+' disponibles'},
@@ -17030,34 +17229,337 @@ function buildDashTabFinance() {
   }).join('');
 }
 
+/* ══════════════════════════════════════════════════════════════
+   DASHBOARD COMMERCIAL — Suite CRM immobilier
+   Funnel · Forecast pondéré · ROI canaux · Leaderboard · Actions
+   ══════════════════════════════════════════════════════════════ */
+
+/* Ordre + probabilité de conversion par stade (pondération du forecast).
+   Aligné sur le pipeline défini dans la fiche lead. */
+var CMRC_STADES = [
+  {k:'prospect',     label:'Prospect froid',   proba:0.05, color:'#94A3B8'},
+  {k:'contact',      label:'Contact établi',   proba:0.15, color:'#3B82F6'},
+  {k:'visite',       label:'Visite planifiée', proba:0.30, color:'#6366F1'},
+  {k:'visite_faite', label:'Visite effectuée', proba:0.50, color:'#8B5CF6'},
+  {k:'negociation',  label:'En négociation',   proba:0.75, color:'#C5A880'},
+  {k:'reservation',  label:'Réservé',          proba:0.95, color:'#10B981'}
+];
+function _cmrcStade(k){ return CMRC_STADES.find(function(s){return s.k===k;}) || CMRC_STADES[0]; }
+
+/* Budget estimé d'un lead → sert au forecast. Repli : ticket moyen des ventes. */
+function _cmrcTicketMoyen() {
+  var vendus = DATA.lots.filter(function(l){ return l.statut==='vendu' && (parseFloat(l.prix)||0)>0; });
+  if (vendus.length) return vendus.reduce(function(s,l){return s+(parseFloat(l.prix)||0);},0)/vendus.length;
+  var avecPrix = DATA.lots.filter(function(l){ return (parseFloat(l.prix)||0)>0; });
+  if (avecPrix.length) return avecPrix.reduce(function(s,l){return s+(parseFloat(l.prix)||0);},0)/avecPrix.length;
+  return 0;
+}
+function _cmrcLeadValeur(l, ticketMoyen){ return (parseFloat(l.budget)||0) > 0 ? parseFloat(l.budget) : ticketMoyen; }
+
 function buildDashTabCommercial() {
-  var progs = DATA.programmes.filter(function(p){ return p.statut !== 'termine'; });
-  var totalLots = DATA.lots.length;
-  var vendus    = DATA.lots.filter(function(l){ return l.statut === 'vendu'; }).length;
-  var leads     = (DATA.leads||[]).length;
+  var progs      = DATA.programmes.filter(function(p){ return p.statut !== 'termine'; });
+  var totalLots  = DATA.lots.length;
+  var vendus     = DATA.lots.filter(function(l){ return l.statut === 'vendu'; }).length;
+  var reserves   = DATA.lots.filter(function(l){ return l.statut === 'reserve'; }).length;
+  var leadsAll   = DATA.leads || [];
+  var leadsOuverts = leadsAll.filter(function(l){ return l.stade !== 'reservation' && l.statut !== 'perdu'; });
+  var cessions   = DATA.cessions_foncieres || [];
+  var caCessions = cessions.reduce(function(a,c){return a+(parseFloat(c.prix_cession)||0);},0);
+  var ticketMoyen = _cmrcTicketMoyen();
+
+  /* Taux de conversion global lead → souscripteur (réservé). */
+  var convertis = leadsAll.filter(function(l){ return l.stade === 'reservation'; }).length;
+  var tauxConv  = leadsAll.length > 0 ? Math.round(convertis / leadsAll.length * 100) : 0;
+
+  /* Valeur pipeline pondérée (forecast). */
+  var forecastPondere = leadsOuverts.reduce(function(s,l){
+    return s + _cmrcLeadValeur(l, ticketMoyen) * _cmrcStade(l.stade).proba;
+  }, 0);
+  var pipelineBrut = leadsOuverts.reduce(function(s,l){ return s + _cmrcLeadValeur(l, ticketMoyen); }, 0);
+
+  /* Vélocité : durée moyenne premier contact → réservation (jours). */
+  var dureesVente = leadsAll.filter(function(l){ return l.stade==='reservation' && l.date_contact && l._modifie; })
+    .map(function(l){ return (Date.parse(l._modifie)-Date.parse(l.date_contact))/(1000*3600*24); })
+    .filter(function(d){ return d>=0 && d<3650; });
+  var velocite = dureesVente.length ? Math.round(dureesVente.reduce(function(a,b){return a+b;},0)/dureesVente.length) : 0;
+
+  /* Stock à écouler / rythme d'absorption sur 90 j (mois de stock restant). */
+  var now = new Date();
+  var d90 = new Date(now.getFullYear(), now.getMonth()-3, now.getDate()).toISOString().slice(0,10);
+  var vendus90 = DATA.clients.filter(function(c){ return (c.date_debut||'') >= d90; }).length;
+  var ventesMois = vendus90/3;
+  var dispo = totalLots - vendus - reserves;
+  var moisStock = ventesMois > 0 ? Math.round(dispo/ventesMois) : (dispo>0?99:0);
+
   var el = document.getElementById('kpi-grid-commercial');
   if (el) el.innerHTML = [
-    {l:'Programmes actifs',  v:progs.length,             i:'🏗️', c:'',         d:DATA.programmes.length+' total'},
-    {l:'Lots vendus',        v:vendus+'/'+totalLots,     i:'🏠', c:'kpi-green', d:Math.round(vendus/Math.max(totalLots,1)*100)+'% de taux de vente'},
-    {l:'Lots disponibles',   v:totalLots-vendus,         i:'📋', c:'',          d:'à commercialiser'},
-    {l:'Leads pipeline',     v:leads,                    i:'🎯', c:'',          d:'prospects en cours'},
+    {l:'Taux de conversion',   v:tauxConv+'%',              i:'🎯', c:tauxConv>=20?'kpi-green':tauxConv>=10?'':'kpi-red', d:convertis+' réservés / '+leadsAll.length+' leads'},
+    {l:'Pipeline pondéré',     v:fmtF(Math.round(forecastPondere))+' F', i:'🔮', c:'kpi-copper', d:'sur '+fmtF(Math.round(pipelineBrut))+' F brut'},
+    {l:'Leads actifs',         v:leadsOuverts.length,       i:'📇', c:'', d:leadsAll.length+' au total'},
+    {l:'Vélocité de vente',    v:(velocite||'—')+(velocite?' j':''), i:'⏱️', c:'', d:'contact → réservation'},
+    {l:'Taux d\'écoulement',   v:vendus+'/'+totalLots,      i:'🏠', c:'kpi-green', d:Math.round(vendus/Math.max(totalLots,1)*100)+'% vendus · '+reserves+' réservés'},
+    {l:'Stock à écouler',      v:dispo,                     i:'📋', c:dispo===0?'kpi-green':'', d:(moisStock>=99?'rythme nul':'~'+moisStock+' mois au rythme actuel')},
+    {l:'Cessions foncières',   v:cessions.length,           i:'🏞️', c:'', d:fmtF(caCessions)+' F valorisés'},
+    {l:'Ticket moyen',         v:fmtF(Math.round(ticketMoyen))+' F', i:'🏷️', c:'', d:'prix moyen constaté'},
   ].map(function(k){
     return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div>'
       +'<div class="kpi-value or" style="font-size:17px;">'+k.v+'</div>'
       +'<div class="kpi-delta '+(k.c==='kpi-red'?'negative':k.c==='kpi-green'?'positive':'')+'">'+k.d+'</div></div>';
   }).join('');
 
-  // Répartition par programme
+  cmrcBuildFunnel(leadsAll);
+  cmrcBuildForecast(leadsOuverts, ticketMoyen);
+  cmrcBuildSources(leadsAll);
+  cmrcBuildAgents(leadsAll, ticketMoyen);
+  cmrcBuildActions(leadsAll, ticketMoyen);
+  cmrcBuildTrend();
+  buildDashObjectifs();
+  cmrcBuildProgrammes();
+}
+
+/* ── Entonnoir de conversion ─────────────────────────────────── */
+function cmrcBuildFunnel(leads) {
+  var host = document.getElementById('cmrc-funnel');
+  if (!host) return;
+  var idx = {}; CMRC_STADES.forEach(function(s,i){ idx[s.k]=i; });
+  /* Cumul : un lead au stade N a franchi tous les stades < N. */
+  var counts = CMRC_STADES.map(function(s,i){
+    return leads.filter(function(l){ var li=idx[l.stade]; return li!==undefined && li>=i && l.statut!=='perdu'; }).length;
+  });
+  var entrants = counts[0] || leads.length || 1;
+  var maxW = counts[0] || 1;
+  var convGlobal = entrants>0 ? Math.round((counts[counts.length-1]/entrants)*100) : 0;
+  var cvSpan = document.getElementById('cmrc-funnel-conv');
+  if (cvSpan) cvSpan.textContent = '· conversion globale '+convGlobal+'%';
+
+  host.innerHTML = CMRC_STADES.map(function(s,i){
+    var n = counts[i];
+    var w = Math.max(6, Math.round(n/maxW*100));
+    var tauxEtape = i>0 && counts[i-1]>0 ? Math.round(n/counts[i-1]*100) : 100;
+    var perte = i>0 ? counts[i-1]-n : 0;
+    return '<div style="margin-bottom:7px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">'
+        +'<span style="color:var(--blanc-dim);">'+s.label+'</span>'
+        +'<span style="font-weight:700;color:'+s.color+';">'+n+(i>0?' <span style="color:var(--blanc-dim);font-weight:400;">('+tauxEtape+'%'+(perte>0?', −'+perte:'')+')</span>':'')+'</span>'
+      +'</div>'
+      +'<div style="height:18px;background:var(--bord,#eef);border-radius:4px;overflow:hidden;">'
+        +'<div style="width:'+w+'%;height:100%;background:'+s.color+';border-radius:4px;transition:width .5s;"></div>'
+      +'</div></div>';
+  }).join('');
+}
+
+/* ── Forecast pondéré par stade ──────────────────────────────── */
+function cmrcBuildForecast(leadsOuverts, ticketMoyen) {
+  var host = document.getElementById('cmrc-forecast');
+  if (!host) return;
+  var parStade = CMRC_STADES.filter(function(s){return s.k!=='reservation';}).map(function(s){
+    var ls = leadsOuverts.filter(function(l){ return l.stade===s.k; });
+    var brut = ls.reduce(function(sum,l){ return sum+_cmrcLeadValeur(l,ticketMoyen); },0);
+    return {s:s, n:ls.length, brut:brut, pondere:brut*s.proba};
+  });
+  var totalPondere = parStade.reduce(function(a,x){return a+x.pondere;},0);
+  var maxP = Math.max.apply(null, parStade.map(function(x){return x.pondere;}).concat([1]));
+
+  host.innerHTML =
+    '<div style="text-align:center;margin-bottom:12px;padding:10px;background:linear-gradient(135deg,rgba(197,168,128,.12),rgba(16,185,129,.08));border-radius:8px;">'
+      +'<div style="font-size:22px;font-weight:800;color:var(--or);">'+fmtF(Math.round(totalPondere))+' F</div>'
+      +'<div style="font-size:11px;color:var(--blanc-dim);">CA prévisionnel pondéré du pipeline ouvert</div>'
+    +'</div>'
+    + parStade.filter(function(x){return x.n>0;}).map(function(x){
+      var w = Math.round(x.pondere/maxP*100);
+      return '<div style="margin-bottom:6px;">'
+        +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">'
+          +'<span style="color:var(--blanc-dim);">'+x.s.label+' <span style="opacity:.6;">×'+Math.round(x.s.proba*100)+'%</span></span>'
+          +'<span style="font-weight:700;color:'+x.s.color+';">'+fmtF(Math.round(x.pondere))+' F</span>'
+        +'</div>'
+        +'<div style="height:6px;background:var(--bord,#eef);border-radius:3px;overflow:hidden;">'
+          +'<div style="width:'+w+'%;height:100%;background:'+x.s.color+';border-radius:3px;"></div>'
+        +'</div></div>';
+    }).join('')
+    || '<div style="color:var(--blanc-dim);font-size:12px;text-align:center;padding:16px 0;">Aucun lead ouvert. Alimentez le pipeline via le module CRM.</div>';
+}
+
+/* ── ROI par canal d'acquisition ─────────────────────────────── */
+function cmrcBuildSources(leads) {
+  var host = document.getElementById('cmrc-sources');
+  if (!host) return;
+  var SRC = {bouche_oreille:'Bouche-à-oreille',reseaux_sociaux:'Réseaux sociaux',site_web:'Site web',salon:'Salon',affichage:'Affichage',commercial:'Agent commercial',partenaire:'Partenaire'};
+  var agg = {};
+  leads.forEach(function(l){
+    var s = l.source || 'autre';
+    if (!agg[s]) agg[s] = {total:0, gagnes:0};
+    agg[s].total++;
+    if (l.stade === 'reservation') agg[s].gagnes++;
+  });
+  var rows = Object.keys(agg).map(function(k){
+    var a = agg[k];
+    return {label:SRC[k]||k, total:a.total, gagnes:a.gagnes, taux:a.total>0?Math.round(a.gagnes/a.total*100):0};
+  }).sort(function(a,b){ return b.gagnes-a.gagnes || b.taux-a.taux; });
+
+  if (!rows.length) { host.innerHTML='<div style="color:var(--blanc-dim);font-size:12px;text-align:center;padding:16px 0;">Aucune source renseignée sur les leads.</div>'; return; }
+  var maxTotal = Math.max.apply(null, rows.map(function(r){return r.total;}));
+  host.innerHTML =
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<thead><tr style="text-align:left;color:var(--blanc-dim);font-size:10px;text-transform:uppercase;">'
+      +'<th style="padding:4px 0;">Canal</th><th style="text-align:center;">Leads</th><th style="text-align:center;">Gagnés</th><th style="text-align:right;">Conv.</th></tr></thead><tbody>'
+    + rows.map(function(r){
+      var col = r.taux>=25?'#10B981':r.taux>=12?'#C5A880':'#EF4444';
+      return '<tr style="border-top:1px solid var(--bord,#eef);">'
+        +'<td style="padding:6px 0;"><div>'+escHtml(r.label)+'</div>'
+          +'<div style="height:4px;background:var(--bord,#eef);border-radius:2px;margin-top:3px;max-width:120px;"><div style="width:'+Math.round(r.total/maxTotal*100)+'%;height:100%;background:#6366F1;border-radius:2px;"></div></div></td>'
+        +'<td style="text-align:center;font-weight:600;">'+r.total+'</td>'
+        +'<td style="text-align:center;font-weight:700;color:#10B981;">'+r.gagnes+'</td>'
+        +'<td style="text-align:right;font-weight:800;color:'+col+';">'+r.taux+'%</td></tr>';
+    }).join('')
+    +'</tbody></table>'
+    +'<div style="font-size:10px;color:var(--blanc-dim);margin-top:6px;">💡 Concentrez le budget acquisition sur les canaux à forte conversion.</div>';
+}
+
+/* ── Classement des commerciaux ──────────────────────────────── */
+function cmrcBuildAgents(leads, ticketMoyen) {
+  var host = document.getElementById('cmrc-agents');
+  if (!host) return;
+  var nomAgent = function(id){
+    var u = (DATA.users||[]).find(function(x){ return x.id===id || x.username===id; });
+    return u ? ((u.prenoms?u.prenoms+' ':'')+(u.nom||u.username||id)) : (id||'Non assigné');
+  };
+  var agg = {};
+  leads.forEach(function(l){
+    var a = l.commercial_id || l.commercial || '__none__';
+    if (!agg[a]) agg[a] = {leads:0, gagnes:0, pipeline:0};
+    agg[a].leads++;
+    if (l.stade==='reservation') agg[a].gagnes++;
+    else if (l.statut!=='perdu') agg[a].pipeline += _cmrcLeadValeur(l,ticketMoyen)*_cmrcStade(l.stade).proba;
+  });
+  var rows = Object.keys(agg).filter(function(k){return k!=='__none__';}).map(function(k){
+    var a=agg[k]; return {nom:nomAgent(k), leads:a.leads, gagnes:a.gagnes, pipeline:a.pipeline, taux:a.leads>0?Math.round(a.gagnes/a.leads*100):0};
+  }).sort(function(a,b){ return b.gagnes-a.gagnes || b.pipeline-a.pipeline; });
+
+  if (!rows.length) { host.innerHTML='<div style="color:var(--blanc-dim);font-size:12px;text-align:center;padding:16px 0;">Aucun lead assigné à un commercial.</div>'; return; }
+  var medals=['🥇','🥈','🥉'];
+  host.innerHTML = rows.slice(0,6).map(function(r,i){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bord,#eef);">'
+      +'<div style="font-size:16px;width:22px;text-align:center;">'+(medals[i]||(i+1))+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(r.nom)+'</div>'
+        +'<div style="font-size:10px;color:var(--blanc-dim);">'+r.leads+' leads · '+r.taux+'% conv · pipe '+fmtF(Math.round(r.pipeline))+' F</div></div>'
+      +'<div style="text-align:right;"><div style="font-size:16px;font-weight:800;color:#10B981;">'+r.gagnes+'</div><div style="font-size:9px;color:var(--blanc-dim);">gagnés</div></div>'
+    +'</div>';
+  }).join('');
+}
+
+/* ── Actions commerciales prioritaires ───────────────────────── */
+function cmrcBuildActions(leads, ticketMoyen) {
+  var host = document.getElementById('cmrc-actions');
+  if (!host) return;
+  var now = new Date();
+  var todayStr = now.toISOString().slice(0,10);
+  var actions = [];
+
+  /* 1. Leads chauds (négo/visite faite) sans relance planifiée ou en retard. */
+  leads.forEach(function(l){
+    if (l.statut==='perdu' || l.stade==='reservation') return;
+    var chaud = (l.stade==='negociation' || l.stade==='visite_faite');
+    var relanceRetard = l.date_relance && l.date_relance < todayStr;
+    if (chaud && (relanceRetard || !l.date_relance)) {
+      actions.push({
+        prio: l.stade==='negociation'?1:2,
+        icon: l.stade==='negociation'?'🔥':'📞',
+        titre: (l.nom||'Lead')+' — '+_cmrcStade(l.stade).label,
+        detail: (relanceRetard?'Relance en retard ('+l.date_relance+')':'Aucune relance planifiée')+' · valeur ~'+fmtF(Math.round(_cmrcLeadValeur(l,ticketMoyen)))+' F',
+        action:"goTo('leads')"
+      });
+    }
+  });
+
+  /* 2. Leads dormants : contactés il y a > 30 j, jamais avancés. */
+  var d30 = new Date(now.getFullYear(),now.getMonth(),now.getDate()-30).toISOString().slice(0,10);
+  leads.forEach(function(l){
+    if (l.statut==='perdu' || l.stade==='reservation') return;
+    if ((l.stade==='prospect'||l.stade==='contact') && l.date_contact && l.date_contact < d30) {
+      actions.push({prio:3, icon:'💤', titre:(l.nom||'Lead')+' dormant', detail:'Sans progression depuis '+l.date_contact+' — relancer ou qualifier perdu', action:"goTo('leads')"});
+    }
+  });
+
+  /* 3. Programmes en surstock (rythme d'écoulement faible). */
+  DATA.programmes.forEach(function(p){
+    if (p.statut==='termine') return;
+    var lotsP = DATA.lots.filter(function(l){return l.programme_id===p.id;}).length;
+    var dispoP = DATA.lots.filter(function(l){return l.programme_id===p.id && l.statut==='disponible';}).length;
+    if (lotsP>=5 && dispoP/lotsP > 0.7) {
+      actions.push({prio:4, icon:'🏚️', titre:'Surstock : '+(p.nom||p.id), detail:dispoP+'/'+lotsP+' lots invendus ('+Math.round(dispoP/lotsP*100)+'%) — action commerciale à intensifier', action:"goTo('lots')"});
+    }
+  });
+
+  /* 4. Réservations à confirmer (lots réservés non transformés en souscription). */
+  var reservesNonClients = DATA.lots.filter(function(l){
+    return l.statut==='reserve' && !DATA.clients.some(function(c){ return c.lot_id===l.id; });
+  });
+  if (reservesNonClients.length) {
+    actions.push({prio:2, icon:'📝', titre:reservesNonClients.length+' lot(s) réservé(s) sans dossier souscripteur', detail:'Finaliser la convention avant expiration de la réservation', action:"goTo('lots')"});
+  }
+
+  actions.sort(function(a,b){ return a.prio-b.prio; });
+  if (!actions.length) {
+    host.innerHTML = '<div style="color:#10B981;padding:16px 0;text-align:center;font-size:13px;font-weight:600;">✅ Aucune action urgente — pipeline sous contrôle</div>';
+    return;
+  }
+  host.innerHTML = actions.slice(0,8).map(function(a){
+    var bg = a.prio===1?'rgba(239,68,68,.08)':a.prio===2?'rgba(197,168,128,.10)':'rgba(148,163,184,.08)';
+    var bd = a.prio===1?'#EF4444':a.prio===2?'#C5A880':'#94A3B8';
+    return '<div onclick="'+a.action+'" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+bg+';border-left:3px solid '+bd+';border-radius:6px;margin-bottom:6px;cursor:pointer;">'
+      +'<div style="font-size:18px;">'+a.icon+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#0F172A;">'+escHtml(a.titre)+'</div>'
+        +'<div style="font-size:11px;color:#64748B;">'+escHtml(a.detail)+'</div></div>'
+      +'<div style="color:'+bd+';font-size:16px;">›</div>'
+    +'</div>';
+  }).join('');
+}
+
+/* ── Tendance ventes & leads sur 6 mois (barres jumelées SVG) ── */
+function cmrcBuildTrend() {
+  var host = document.getElementById('cmrc-trend');
+  if (!host) return;
+  var now = new Date(); var months = [];
+  for (var i=5;i>=0;i--){ var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({label:d.toLocaleDateString('fr-FR',{month:'short'}).slice(0,4), key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}); }
+  var data = months.map(function(m){
+    return {
+      ventes: DATA.clients.filter(function(c){return (c.date_debut||'').startsWith(m.key);}).length,
+      leads:  (DATA.leads||[]).filter(function(l){return (l.created_at||l.date_contact||'').startsWith(m.key);}).length
+    };
+  });
+  var maxV = Math.max.apply(null, data.map(function(d){return Math.max(d.ventes,d.leads);}).concat([1]));
+  var W=100/months.length;
+  var bars = data.map(function(d,i){
+    var x = i*W;
+    var hL = d.leads/maxV*70, hV = d.ventes/maxV*70;
+    return '<g>'
+      +'<rect x="'+(x+W*0.18)+'" y="'+(78-hL)+'" width="'+(W*0.28)+'" height="'+hL+'" fill="#6366F1" rx="1"><title>'+d.leads+' leads</title></rect>'
+      +'<rect x="'+(x+W*0.50)+'" y="'+(78-hV)+'" width="'+(W*0.28)+'" height="'+hV+'" fill="#10B981" rx="1"><title>'+d.ventes+' ventes</title></rect>'
+      +'<text x="'+(x+W*0.5)+'" y="86" text-anchor="middle" font-size="4" fill="#94A3B8">'+months[i].label+'</text>'
+    +'</g>';
+  }).join('');
+  host.innerHTML = '<svg viewBox="0 0 100 90" style="width:100%;height:170px;">'+bars+'</svg>'
+    +'<div style="display:flex;gap:16px;justify-content:center;font-size:11px;margin-top:4px;">'
+    +'<span style="color:#6366F1;">■ Nouveaux leads</span><span style="color:#10B981;">■ Souscriptions</span></div>';
+}
+
+/* ── Absorption par programme (rythme de vente enrichi) ──────── */
+function cmrcBuildProgrammes() {
   var rEl = document.getElementById('dash-prog-repartition');
-  if (rEl) rEl.innerHTML = DATA.programmes.slice(0,6).map(function(p) {
-    var lotsP  = DATA.lots.filter(function(l){ return l.programme_id === p.id; }).length;
+  if (!rEl) return;
+  rEl.innerHTML = DATA.programmes.slice(0,6).map(function(p) {
+    var lotsP   = DATA.lots.filter(function(l){ return l.programme_id === p.id; }).length;
     var vendusP = DATA.lots.filter(function(l){ return l.programme_id === p.id && l.statut === 'vendu'; }).length;
+    var resP    = DATA.lots.filter(function(l){ return l.programme_id === p.id && l.statut === 'reserve'; }).length;
     var pct = lotsP > 0 ? Math.round(vendusP/lotsP*100) : 0;
-    return '<div style="margin-bottom:6px;">'
+    var pctRes = lotsP > 0 ? Math.round(resP/lotsP*100) : 0;
+    return '<div style="margin-bottom:8px;">'
       + '<div style="display:flex;justify-content:space-between;font-size:12px;color:#1E293B;margin-bottom:3px;">'
-      + '<span>'+escHtml(p.nom)+'</span><span style="font-weight:700;color:#0F172A;">'+vendusP+'/'+lotsP+' ('+pct+'%)</span></div>'
-      + '<div style="background:#E2E8F0;border-radius:4px;height:6px;">'
-      + '<div style="background:'+( pct>=80?'#10B981':pct>=50?'#C5A880':'#3B82F6')+';height:100%;width:'+pct+'%;border-radius:4px;transition:width .4s;"></div>'
+      + '<span>'+escHtml(p.nom)+'</span><span style="font-weight:700;color:#0F172A;">'+vendusP+'+'+resP+'/'+lotsP+' ('+pct+'%)</span></div>'
+      + '<div style="background:#E2E8F0;border-radius:4px;height:8px;display:flex;overflow:hidden;">'
+      + '<div style="background:'+( pct>=80?'#10B981':pct>=50?'#C5A880':'#3B82F6')+';height:100%;width:'+pct+'%;transition:width .4s;" title="'+vendusP+' vendus"></div>'
+      + '<div style="background:#C5A88088;height:100%;width:'+pctRes+'%;" title="'+resP+' réservés"></div>'
       + '</div></div>';
   }).join('') || '<div style="color:#94A3B8;font-size:13px;padding:12px 0;">Aucun programme.</div>';
 }
@@ -17128,24 +17630,39 @@ function buildDashTabVue() {
   if (eSrc && eDst) eDst.innerHTML = eSrc.innerHTML;
 }
 
+function getDashPeriodeFilter() {
+  var sel = document.getElementById('dash-periode');
+  var v = sel ? sel.value : '';
+  var now = new Date();
+  if (v === 'mois') { return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01'; }
+  if (v === 'trim') { var q=Math.floor(now.getMonth()/3)*3; return now.getFullYear()+'-'+String(q+1).padStart(2,'0')+'-01'; }
+  if (v === 'annee'){ return now.getFullYear()+'-01-01'; }
+  return null;
+}
+
 function refreshDashboard() {
   document.getElementById('dash-date').textContent =
     new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  var totalVerse = DATA.versements.reduce(function(a,v){return a+(parseFloat(v.montant)||0);},0);
-  var totalDu    = DATA.clients.reduce(function(a,c){return a+(parseFloat(c.montant_total)||0);},0);
-  var encours    = Math.max(0, totalDu-totalVerse);
+  var _pmin = getDashPeriodeFilter();
+  var _cesAll = DATA.cessions_foncieres || [];
+  var _core = dashFinanceCore(_pmin);
+  var totalVerse = _core.encaisse;
+  var totalDu    = _core.du;
+  var encours    = _core.encours;
   var lotsVendus = DATA.lots.filter(function(l){return l.statut==='vendu';}).length;
   var lotsDispo  = DATA.lots.filter(function(l){return l.statut==='disponible';}).length;
   var retardataires = getRetardataires().length;
-  var tauxRecouv = totalDu>0 ? Math.round((totalVerse/totalDu)*100) : 0;
+  var tauxRecouv = _core.tauxRecouv;
 
-  // Variation mois precedent
+  // Variation mois precedent (encaissé sur prix + cessions, cohérent avec le CA affiché)
   var now = new Date(); var prev = new Date(now.getFullYear(),now.getMonth()-1,1);
   var moisCourant = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var moisPrec    = prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0');
-  var caM  = DATA.versements.filter(function(v){return (v.date||'').startsWith(moisCourant);}).reduce(function(s,v){return s+v.montant;},0);
-  var caMP = DATA.versements.filter(function(v){return (v.date||'').startsWith(moisPrec);}).reduce(function(s,v){return s+v.montant;},0);
+  var caM  = dashEncaisseLots(function(v){return (v.date||'').startsWith(moisCourant);})
+           + calcCessionsTotal('montant_encaisse', function(c){return (c.date||'').startsWith(moisCourant);});
+  var caMP = dashEncaisseLots(function(v){return (v.date||'').startsWith(moisPrec);})
+           + calcCessionsTotal('montant_encaisse', function(c){return (c.date||'').startsWith(moisPrec);});
   var deltaCA = caMP>0?Math.round((caM-caMP)/caMP*100):0;
 
   // Remplir KPI grid dynamiquement
@@ -17153,8 +17670,8 @@ function refreshDashboard() {
   if (kpiEl) kpiEl.innerHTML = [
     {l:'CA Encaissé total', v:fmtF(totalVerse)+' FCFA', i:'💰', c:'kpi-green',
      d:(deltaCA>=0?'▲ +':'▼ ')+Math.abs(deltaCA)+'% vs mois préc.'},
-    {l:'Encours clients (411)', v:fmtF(encours)+' FCFA', i:'⏳', c:encours>100000000?'kpi-red':'',
-     d:DATA.clients.length+' souscripteurs actifs'},
+    {l:'Reste à recouvrer', v:fmtF(encours)+' FCFA', i:'⏳', c:encours>100000000?'kpi-red':'',
+     d:DATA.clients.length+' souscripteurs + '+_cesAll.length+' cession(s)'},
     {l:'Lots vendus', v:lotsVendus+' / '+DATA.lots.length, i:'🏠', c:'kpi-copper',
      d:lotsDispo+' lots encore disponibles'},
     {l:'Taux de recouvrement', v:tauxRecouv+'%', i:'📈', c:tauxRecouv>=50?'kpi-green':tauxRecouv>=30?'':'kpi-red',
@@ -17206,6 +17723,28 @@ function refreshDashboard() {
    KPIs · Graphiques · Alertes · Objectifs · Activité
 ══════════════════════════════════════════════════════ */
 
+/* ── Encaissements des cessions foncières (acquéreurs de parcelles/lots) ──
+   Reconstitue une liste de versements datés à partir de :
+   - c.paiements[] (versements granulaires enregistrés via le module Recouvrement)
+   - le solde éventuel de c.montant_encaisse non couvert par c.paiements
+     (cas d'un encaissement saisi directement à la création de la cession,
+     daté à c.date), pour ne rien perdre sans compter deux fois le même F CFA. */
+function getCessionsPaiements() {
+  var out = [];
+  (DATA.cessions_foncieres || []).forEach(function(c) {
+    var ps = c.paiements || [];
+    var sommeP = ps.reduce(function(s,p){ return s+(parseFloat(p.montant)||0); },0);
+    ps.forEach(function(p) {
+      out.push({ date:p.date||c.date, montant:parseFloat(p.montant)||0, mode:p.mode||'virement', cession:c });
+    });
+    var diff = (parseFloat(c.montant_encaisse)||0) - sommeP;
+    if (diff > 0.01) {
+      out.push({ date:c.date||today(), montant:diff, mode:c.mode||'virement', cession:c });
+    }
+  });
+  return out;
+}
+
 function buildBarChart() {
   var months = [];
   var now = new Date();
@@ -17213,8 +17752,11 @@ function buildBarChart() {
     var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({ label: d.toLocaleDateString('fr-FR',{month:'short'}).slice(0,3), key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') });
   }
+  var cesPaiements = getCessionsPaiements();
   var totals = months.map(function(m) {
-    return DATA.versements.filter(function(v){ return v.date && v.date.startsWith(m.key); }).reduce(function(a,v){ return a+(parseFloat(v.montant)||0); },0);
+    var vte = DATA.versements.filter(function(v){ return v.date && v.date.startsWith(m.key); }).reduce(function(a,v){ return a+(parseFloat(v.montant)||0); },0);
+    var ces = cesPaiements.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(a,p){ return a+p.montant; },0);
+    return vte + ces; /* Encaissements lots (souscripteurs) + cessions foncières */
   });
   var max = Math.max.apply(null,totals)||1;
   var chartEl = document.getElementById('chart-encaissements');
@@ -17252,10 +17794,12 @@ function buildBarChart() {
 function buildDonut() {
   // Regrouper par type de logement avec les lots ET les clients
   var types = {};
-  DATA.lots.forEach(function(l){ var t=l.type||l.standing||'Autre'; types[t]=(types[t]||0)+1; });
+  DATA.lots.forEach(function(l){ var t=l.type_logement||l.type||l.standing||'Autre'; types[t]=(types[t]||0)+1; });
   if (!Object.keys(types).length) {
     DATA.clients.forEach(function(c){ var t=c.type_logement||'Standard'; types[t]=(types[t]||0)+1; });
   }
+  var _ces = (DATA.cessions_foncieres||[]).length;
+  if (_ces>0) types['Parcelles cédées'] = _ces;
   var keys = Object.keys(types).sort(function(a,b){ return types[b]-types[a]; });
   var total = keys.reduce(function(s,k){ return s+types[k]; },0)||1;
   var colors = ['#2563EB','#4AC47A','#4A94E0','#8A52E0','#E05252','#E08B4A','#52C4C4','#C44A8A'];
@@ -17299,7 +17843,7 @@ function buildDonut() {
   var sub = document.createElementNS('http://www.w3.org/2000/svg','text');
   sub.setAttribute('x',cx); sub.setAttribute('y',cy+16);
   sub.setAttribute('text-anchor','middle'); sub.setAttribute('fill','rgba(154,149,160,0.7)');
-  sub.setAttribute('font-size','8'); sub.textContent = 'lots';
+  sub.setAttribute('font-size','8'); sub.textContent = _ces>0 ? 'biens' : 'lots';
   svg.appendChild(sub);
 }
 
@@ -17403,18 +17947,28 @@ function buildAlertes() {
 function buildRecentPayments() {
   var el = document.getElementById('dash-recent-payments');
   if (!el) return;
-  var recent = DATA.versements.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); }).slice(0,8);
+  var modeIcon = {wave:'📱',orange_money:'🔶',mtn:'🟡',virement:'🏦',cheque:'📝',especes:'💵'};
+  // Versements souscripteurs (lots)
+  var lignesVte = DATA.versements.map(function(v) {
+    var client = DATA.clients.find(function(c){ return c.id===v.client_id; });
+    var nom = client ? client.nom+' '+client.prenoms : 'Client inconnu';
+    var prog = client ? DATA.programmes.find(function(p){return p.id===client.programme_id;})||{nom:'—'} : {nom:'—'};
+    return { date:v.date, montant:parseFloat(v.montant)||0, nom:nom, detail:prog.nom, mode:v.mode, icon:'🏠' };
+  });
+  // Paiements cessions foncières (acquéreurs de parcelles/lots)
+  var lignesCes = getCessionsPaiements().map(function(p) {
+    return { date:p.date, montant:p.montant, nom:(p.cession.acquereur||'Acquéreur inconnu'), detail:'Cession foncière', mode:p.mode, icon:'🏞️' };
+  });
+  var recent = lignesVte.concat(lignesCes)
+    .sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); }).slice(0,8);
   if (!recent.length) { el.innerHTML='<div style="color:var(--blanc-dim);font-size:13px;padding:10px;">Aucun versement enregistré.</div>'; return; }
   el.innerHTML = '<div style="display:flex;flex-direction:column;gap:0;">'
     +recent.map(function(v) {
-      var client = DATA.clients.find(function(c){ return c.id===v.client_id; });
-      var nom = client ? client.nom+' '+client.prenoms : 'Client inconnu';
-      var prog = client ? DATA.programmes.find(function(p){return p.id===client.programme_id;})||{nom:'—'} : {nom:'—'};
-      var modeIcon = {wave:'📱',orange_money:'🔶',mtn:'🟡',virement:'🏦',cheque:'📝',especes:'💵'}[v.mode]||'💳';
+      var mIcon = modeIcon[v.mode]||'💳';
       return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:9px 0;border-bottom:1px solid rgba(51,51,80,0.3);">'
         +'<div style="flex:1;">'
-          +'<div style="font-weight:600;color:var(--blanc);">'+nom+'</div>'
-          +'<div style="font-size:10px;color:var(--blanc-dim);">'+dateShort(v.date)+' · '+prog.nom+' '+modeIcon+'</div>'
+          +'<div style="font-weight:600;color:var(--blanc);">'+v.icon+' '+v.nom+'</div>'
+          +'<div style="font-size:10px;color:var(--blanc-dim);">'+dateShort(v.date)+' · '+v.detail+' '+mIcon+'</div>'
         +'</div>'
         +'<div style="color:var(--vert);font-weight:700;font-size:13px;">+'+fmtF(v.montant)+' FCFA</div>'
       +'</div>';
@@ -17501,6 +18055,20 @@ function buildDashEcheances() {
     items.push({date:moisKey+'-28',label:c.nom+' '+c.prenoms,detail:'Mensualité '+fmtF(c.mensualite)+' FCFA',type:'paiement',color:'var(--or)'});
   });
 
+  // Échéances des cessions foncières (acquéreurs de parcelles/lots)
+  var in30Str = in30.toISOString().slice(0,10);
+  (DATA.cessions_foncieres||[]).filter(function(c){ return (c.prix_cession||0)>0 && crecReste(c)>0; }).forEach(function(c){
+    if (c.recouv && c.recouv.actif && c.recouv.duree>0) {
+      var rows = crecEcheancier(c);
+      var next = rows.find(function(r){ return !r.paye; });
+      if (next && next.date<=in30Str) {
+        items.push({date:next.date,label:'Cession — '+(c.acquereur||'—'),detail:'Mensualité '+fmtF(crecMensualite(c))+' FCFA',type:'cession',color:'var(--or)'});
+      }
+    } else if (c.echeance && c.echeance<=in30Str) {
+      items.push({date:c.echeance,label:'Cession — '+(c.acquereur||'—'),detail:'Solde '+fmtF(crecReste(c))+' FCFA',type:'cession',color:'var(--or)'});
+    }
+  });
+
   // Fins de chantiers proches
   DATA.conventions.filter(function(c){ return c.date_fin_prev && c.date_fin_prev<=in30.toISOString().slice(0,10) && c.statut==='en_cours'; }).forEach(function(c){
     var constr=DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{raison_sociale:'?'};
@@ -17532,7 +18100,7 @@ function buildDashEcheances() {
   if(!items.length){ el.innerHTML='<div style="color:var(--blanc-dim);font-size:12px;padding:8px;">Aucune échéance dans les 30 prochains jours.</div>'; return; }
 
   el.innerHTML = items.slice(0,8).map(function(item){
-    var iconMap={paiement:'💳',chantier:'🏗️',permis:'📜',autre:'📌'};
+    var iconMap={paiement:'💳',cession:'🏞️',chantier:'🏗️',permis:'📜',autre:'📌'};
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(51,51,80,0.3);">'
       +'<div style="font-size:16px;">'+( iconMap[item.type]||'📌')+'</div>'
       +'<div style="flex:1;">'
@@ -20693,6 +21261,9 @@ function saveComptesDefaut() {
     paie_its:            document.getElementById('cd-paie-its').value.trim() || '447',
     tva_collectee:       document.getElementById('cd-tva-collectee').value.trim() || '443',
     tva_deductible:      document.getElementById('cd-tva-deductible').value.trim() || '444',
+    tva_deductible_travaux: (document.getElementById('cd-tva-ded-travaux')||{}).value ? document.getElementById('cd-tva-ded-travaux').value.trim() : ((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.tva_deductible_travaux)||'4452'),
+    retenue_garantie:    (document.getElementById('cd-retenue-garantie')||{}).value ? document.getElementById('cd-retenue-garantie').value.trim() : ((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.retenue_garantie)||'4017'),
+    avance_fournisseur:  (document.getElementById('cd-avance-fournisseur')||{}).value ? document.getElementById('cd-avance-fournisseur').value.trim() : ((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.avance_fournisseur)||'4091'),
     cession_produit:     document.getElementById('cd-cession-produit').value.trim() || '701',
     amort_dotation:      document.getElementById('cd-amort-dotation').value.trim() || '681',
     amort_cumul:         document.getElementById('cd-amort-cumul').value.trim() || '28'
@@ -21239,6 +21810,64 @@ function buildBilan() {
 
 /* ── COMPTE DE RÉSULTAT SYSCOHADA ────────────────────── */
 /* ── SOURCE DE CALCUL UNIQUE DU RÉSULTAT (sans chevauchement) ── */
+/* ── Utilitaire partagé : somme sur DATA.cessions_foncieres ──────────────
+   field  : 'montant_encaisse' (trésorerie réellement encaissée)
+            ou 'prix_cession'  (produit comptable / valeur contractuelle)
+   filterFn : optionnel, ex. function(c){ return c.programme_id===id; }
+   Ne PAS utiliser pour mélanger encaissé et facturé dans un même total :
+   ce sont deux notions comptables distinctes (trésorerie vs produits). */
+function calcCessionsTotal(field, filterFn) {
+  var list = DATA.cessions_foncieres || [];
+  if (filterFn) list = list.filter(filterFn);
+  return list.reduce(function(s,c){ return s + (parseFloat(c[field])||0); }, 0);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INDICATEURS CANONIQUES DU TABLEAU DE BORD
+   Source unique de vérité — élimine les divergences entre onglets.
+   « Encaissé sur prix » exclut partout les frais de souscription
+   (non remboursables, produit 7088, hors dette 4111/411).
+   ══════════════════════════════════════════════════════════════ */
+
+/* Encaissé souscripteurs imputé sur le PRIX (exclut frais_souscription). */
+function dashEncaisseLots(filterFn) {
+  return (DATA.versements || [])
+    .filter(function(v){ return _versementSurPrix(v) && (!filterFn || filterFn(v)); })
+    .reduce(function(s,v){ return s + (parseFloat(v.montant)||0); }, 0);
+}
+
+/* Décaissements réels = somme des débits de classe 6 (charges),
+   indépendant du champ e.type qui n'est pas fiable selon le point d'entrée. */
+function dashDecaissements(filterFn) {
+  var t = 0;
+  (DATA.ecritures || []).forEach(function(e){
+    if (filterFn && !filterFn(e)) return;
+    ecrLignes(e).forEach(function(l){
+      if (l.sens === 'D' && (l.compte||'').charAt(0) === '6') t += (parseFloat(l.montant)||0);
+    });
+  });
+  return t;
+}
+
+/* Bloc trésorerie/recouvrement cohérent, réutilisé par tous les onglets. */
+function dashFinanceCore(pmin) {
+  var fPeriode = function(x){ return !pmin || (x.date||'') >= pmin; };
+  var encLots = dashEncaisseLots(fPeriode);
+  var encCes  = calcCessionsTotal('montant_encaisse', function(c){ return fPeriode(c); });
+  var encaisse = encLots + encCes;
+  /* Dû sur prix : clients = montant_total ; cessions = prix_cession */
+  var duLots = (DATA.clients||[]).reduce(function(a,c){ return a + (parseFloat(c.montant_total)||0); }, 0);
+  var duCes  = calcCessionsTotal('prix_cession');
+  var du = duLots + duCes;
+  var decaisse = dashDecaissements(fPeriode);
+  return {
+    encaisse: encaisse, encLots: encLots, encCes: encCes,
+    du: du, encours: Math.max(0, du - encaisse),
+    decaisse: decaisse, soldeNet: encaisse - decaisse,
+    tauxRecouv: du > 0 ? Math.round((encaisse/du)*100) : 0
+  };
+}
+
 function _calcResultat(year) {
   var ec = DATA.ecritures.filter(function(e){ return e.date && e.date.startsWith(year); });
   function deb(pfx){ var t=0; ec.forEach(function(e){ ecrLignes(e).forEach(function(l){ if (l.sens==='D' && pfx.some(function(p){ return (l.compte||'').indexOf(p)===0; })) t += (parseFloat(l.montant)||0); }); }); return t; }
@@ -25806,11 +26435,17 @@ function bpCompute(progId) {
   var cessions = (DATA.cessions_foncieres || []).filter(function(c){
     return parcelleId && (c.source_key||'').indexOf(parcelleId) !== -1;
   });
-  var caCessions = cessions.reduce(function(s,c){ return s + (parseFloat(c.prix_cession)||0); }, 0);
+  var caCessions = calcCessionsTotal('prix_cession', function(c){
+    return parcelleId && (c.source_key||'').indexOf(parcelleId) !== -1;
+  });
 
-  /* Encaissé : versements du programme */
-  var encaisse = (DATA.versements || []).filter(function(v){ return v.programme_id === progId; })
+  /* Encaissé : versements du programme + cessions foncières encaissées de la parcelle */
+  var encaisseVte = (DATA.versements || []).filter(function(v){ return v.programme_id === progId; })
     .reduce(function(s,v){ return s + (parseFloat(v.montant)||0); }, 0);
+  var encaisseCes = calcCessionsTotal('montant_encaisse', function(c){
+    return parcelleId && (c.source_key||'').indexOf(parcelleId) !== -1;
+  });
+  var encaisse = encaisseVte + encaisseCes;
 
   /* Coût foncier : parcelle d'origine (acquisition + frais) */
   var parc = parcelleId ? (DATA.parcelles || []).find(function(p){ return p.id === parcelleId; }) : null;
@@ -29097,6 +29732,8 @@ function ouvrirSaisiePointage(empId, date) {
     document.getElementById('pt-pause').value=existing.pause||60;
     document.getElementById('pt-justifie').value=existing.justifie||'1';
     document.getElementById('pt-notes').value=existing.notes||'';
+    var ptc=document.getElementById('pt-chantier'); if(ptc){ptc.innerHTML=stockChantierOptions();ptc.value=existing.chantier_id||'';}
+    var ptt=document.getElementById('pt-tache'); if(ptt)ptt.value=existing.tache||'';
     APP.editingId=existing.id;
   } else {
     document.getElementById('pt-statut').value='P';
@@ -29105,6 +29742,8 @@ function ouvrirSaisiePointage(empId, date) {
     document.getElementById('pt-heures-supp').value=0;
     document.getElementById('pt-pause').value=60;
     document.getElementById('pt-notes').value='';
+    var ptcN=document.getElementById('pt-chantier'); if(ptcN){ptcN.innerHTML=stockChantierOptions();ptcN.value='';}
+    var pttN=document.getElementById('pt-tache'); if(pttN)pttN.value='';
   }
   togglePointageFields();
   updatePointageImpactPreview();
@@ -29157,13 +29796,19 @@ async function savePointage() {
     heure_sortie:document.getElementById('pt-heure-sortie').value,
     pause:parseInt(document.getElementById('pt-pause').value)||60,
     heures_supp:parseFloat(document.getElementById('pt-heures-supp').value)||0,
+    chantier_id:(document.getElementById('pt-chantier')||{}).value||null,
+    tache:((document.getElementById('pt-tache')||{}).value||'').trim(),
     justifie:document.getElementById('pt-justifie').value,
     notes:document.getElementById('pt-notes').value.trim(),
     created_at:new Date().toISOString().slice(0,10),
   };
+  /* Coût MO imputé au chantier : heures travaillées × coût horaire employeur. */
+  pt.heures_travaillees = cgHeuresTravaillees(pt);
+  pt.cout_mo = pt.chantier_id ? Math.round(pt.heures_travaillees * cgCoutHoraire(empId)) : 0;
   var idx=DATA.pointages.findIndex(function(p){return p.employe_id===empId&&p.date===date;});
   if (idx>=0) DATA.pointages[idx]=pt; else DATA.pointages.push(pt);
   await dbPut('pointages',pt);
+  if(typeof syncToSupabase==='function')syncToSupabase('pi_pointages',pt);
   closeModal('modal-pointage');
   renderPointageJour(); buildPointageMensuel(); buildImpactPaie(); renderAbsences(); checkPointageBadge();
   toast('Pointage enregistré.','success');
@@ -32680,58 +33325,262 @@ async function deletePermis(id){if(!confirm('Supprimer ce permis ?'))return;if(a
 /* fonction v1 remplacée par v2 */
 
 /* ─── Situations de travaux ───────────────────────── */
-function onSelectConventionSitu(){var id=document.getElementById('situ-convention').value;if(!id)return;var conv=DATA.conventions.find(function(c){return c.id===id;});if(!conv)return;document.getElementById('situ-avancement').value=conv.avancement||0;var cumul=DATA.situations.filter(function(s){return s.convention_id===id&&s.statut!=='contestee';}).reduce(function(s,x){return s+(x.montant_ht||0);},0);document.getElementById('situ-cumul-prec').value=cumul;var nb=DATA.situations.filter(function(s){return s.convention_id===id;}).length+1;document.getElementById('situ-numero').value='SIT-'+String(nb).padStart(3,'0');}
-function calcSituTotaux(){var ht=parseFloat(document.getElementById('situ-montant-ht').value)||0;var tva=parseFloat(document.getElementById('situ-tva').value)||18;var ttc=Math.round(ht*(1+tva/100));var ret=Math.round(ttc*0.1);var net=ttc-ret;document.getElementById('situ-montant-ttc').value=ttc;document.getElementById('situ-retenue').value=ret;document.getElementById('situ-net').value=net;}
+/* ══════════════════════════════════════════════════════════════
+   DÉCOMPTE DES SITUATIONS DE TRAVAUX (moteur BTP)
+   Cumul contrôlé · double mode · avance récupérable · retenue auto
+   ══════════════════════════════════════════════════════════════ */
+
+/* Cumul HT des situations antérieures d'une convention (hors contestées et hors la situation en cours d'édition). */
+function situCumulAnterieur(convId, exclureId) {
+  return (DATA.situations||[]).filter(function(s){
+    return s.convention_id===convId && s.statut!=='contestee' && s.id!==exclureId;
+  }).reduce(function(a,x){ return a+(parseFloat(x.montant_ht)||0); }, 0);
+}
+/* Montant HT du marché (convention + avenants signés déjà répercutés sur conv.montant_ht). */
+function situMarcheHT(conv){ return conv ? (parseFloat(conv.montant_ht)||0) : 0; }
+
+function onSituModeDecompte(){
+  var mode=(document.getElementById('situ-mode-decompte')||{}).value;
+  var wrap=document.getElementById('situ-wrap-avct');
+  var htEl=document.getElementById('situ-montant-ht');
+  if (mode==='avancement'){ if(wrap)wrap.style.display=''; if(htEl)htEl.readOnly=true; if(htEl)htEl.style.background='var(--card2)'; }
+  else { if(htEl)htEl.readOnly=false; if(htEl)htEl.style.background=''; }
+  calcSituDecompte();
+}
+
+function onSelectConventionSitu(){
+  var id=document.getElementById('situ-convention').value;
+  var recap=document.getElementById('situ-recap-conv');
+  if(!id){ if(recap)recap.style.display='none'; return; }
+  var conv=DATA.conventions.find(function(c){return c.id===id;});
+  if(!conv) return;
+  var marche=situMarcheHT(conv);
+  var cumul=situCumulAnterieur(id, APP.editingId);
+  var reste=Math.max(0, marche-cumul);
+  document.getElementById('situ-cumul-prec').value=Math.round(cumul);
+  if(!APP.editingId){
+    document.getElementById('situ-avancement').value=marche>0?Math.round(cumul/marche*100):0;
+    var nb=(DATA.situations||[]).filter(function(s){return s.convention_id===id;}).length+1;
+    document.getElementById('situ-numero').value='SIT-'+String(nb).padStart(3,'0');
+    /* TVA/retenue/avance par défaut depuis la convention */
+    document.getElementById('situ-tva').value=conv.tva_pct||18;
+  }
+  /* Récap visuel marché */
+  if(recap){
+    var pctFact=marche>0?Math.round(cumul/marche*100):0;
+    var avance=parseFloat(conv.avance_montant)||0;
+    recap.style.display='';
+    recap.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">'
+      +'<div><div style="color:var(--blanc-dim);font-size:10px;">MARCHÉ HT</div><div style="font-weight:700;color:var(--or);">'+fmtF(marche)+'</div></div>'
+      +'<div><div style="color:var(--blanc-dim);font-size:10px;">DÉJÀ FACTURÉ</div><div style="font-weight:700;">'+fmtF(Math.round(cumul))+' <span style="font-size:10px;color:var(--blanc-dim);">('+pctFact+'%)</span></div></div>'
+      +'<div><div style="color:var(--blanc-dim);font-size:10px;">RESTE À FACTURER</div><div style="font-weight:700;color:var(--vert);">'+fmtF(Math.round(reste))+'</div></div>'
+      +'<div><div style="color:var(--blanc-dim);font-size:10px;">RET. '+(conv.retenue_pct||10)+'% · AV. '+(conv.avance_pct||0)+'%</div><div style="font-weight:700;color:var(--bleu);">'+(avance>0?fmtF(avance):'—')+'</div></div>'
+    +'</div>';
+  }
+  calcSituDecompte();
+}
+
+/* Cœur : calcule HT période, TTC, avance récupérée, retenue, net. */
+function calcSituDecompte(){
+  var convId=(document.getElementById('situ-convention')||{}).value;
+  var conv=DATA.conventions.find(function(c){return c.id===convId;})||{};
+  var marche=situMarcheHT(conv);
+  var cumulAnt=situCumulAnterieur(convId, APP.editingId);
+  var mode=(document.getElementById('situ-mode-decompte')||{}).value||'direct';
+  var htEl=document.getElementById('situ-montant-ht');
+  var ht;
+
+  if(mode==='avancement'){
+    var pct=Math.min(100, Math.max(0, parseFloat((document.getElementById('situ-avancement')||{}).value)||0));
+    var cumulCible=Math.round(marche*pct/100);
+    ht=Math.max(0, cumulCible-cumulAnt);   /* HT période = cumul cible − déjà facturé */
+    if(htEl) htEl.value=ht;
+  } else {
+    ht=parseFloat(htEl?htEl.value:0)||0;
+    /* Reflète l'avancement induit par le montant direct */
+    if(marche>0){ var av=document.getElementById('situ-avancement'); if(av) av.value=Math.round((cumulAnt+ht)/marche*100); }
+  }
+
+  var tvaPct=parseFloat((document.getElementById('situ-tva')||{}).value)||0;
+  var ttc=Math.round(ht*(1+tvaPct/100));
+
+  /* Avance de démarrage récupérée au prorata : avance_pct % du HT période. */
+  var avancePct=parseFloat(conv.avance_pct)||0;
+  var avanceRecup=avancePct>0?Math.round(ht*avancePct/100):0;
+
+  /* Retenue de garantie : retenue_pct % du HT période (assiette HT, standard marché). */
+  var retPct=parseFloat(conv.retenue_pct); if(isNaN(retPct)) retPct=10;
+  var retenue=Math.round(ht*retPct/100);
+
+  var net=ttc-retenue-avanceRecup;
+
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v;};
+  set('situ-montant-ttc',ttc);
+  set('situ-avance-recup',avanceRecup);
+  set('situ-retenue',retenue);
+  set('situ-net',net);
+
+  /* Alerte dépassement marché */
+  var recap=document.getElementById('situ-recap-conv');
+  if(recap && marche>0 && (cumulAnt+ht) > marche*1.0001){
+    var dep=Math.round(cumulAnt+ht-marche);
+    if(!recap.querySelector('.situ-depass')){
+      recap.insertAdjacentHTML('beforeend','<div class="situ-depass" style="margin-top:8px;padding:6px 8px;background:rgba(224,82,82,.12);border-radius:6px;color:var(--rouge);font-weight:600;">⚠️ Dépassement du marché de '+fmtF(dep)+' FCFA — un avenant est requis.</div>');
+    } else { recap.querySelector('.situ-depass').innerHTML='⚠️ Dépassement du marché de '+fmtF(dep)+' FCFA — un avenant est requis.'; }
+  } else if(recap){ var d=recap.querySelector('.situ-depass'); if(d)d.remove(); }
+}
 
 function renderSituations(){
   var tbody=document.getElementById('tbody-situations');if(!tbody)return;
-  var list=DATA.situations||[];if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--blanc-dim);">Aucune situation. Cliquez <strong>+ Nouvelle situation</strong>.</td></tr>';return;}
+  var list=DATA.situations||[];
+  /* ── Synthèse cumulée par convention (pilotage BTP) ── */
+  var synth=document.getElementById('situ-synthese-conv');
+  if(synth){
+    var convIds={}; list.forEach(function(s){ convIds[s.convention_id]=1; });
+    var cards=Object.keys(convIds).map(function(cid){
+      var conv=DATA.conventions.find(function(c){return c.id===cid;});if(!conv)return '';
+      var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};
+      var ss=list.filter(function(s){return s.convention_id===cid && s.statut!=='contestee';});
+      var marche=situMarcheHT(conv);
+      var factureHT=ss.reduce(function(a,s){return a+(parseFloat(s.montant_ht)||0);},0);
+      var reste=Math.max(0,marche-factureHT);
+      var paye=ss.filter(function(s){return s.statut==='payee';}).reduce(function(a,s){return a+(parseFloat(s.net)||0);},0);
+      var retenue=ss.reduce(function(a,s){return a+(parseFloat(s.retenue)||0);},0);
+      var pctF=marche>0?Math.round(factureHT/marche*100):0;
+      var pctPhys=conv.avancement||0;
+      var ecart=pctPhys-pctF;   /* physique − financier : + = sous-facturé, − = sur-facturé */
+      return '<div class="card" style="margin-bottom:10px;border-left:4px solid '+(reste<=0?'var(--vert)':'var(--or)')+';">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+          +'<div><span style="font-family:monospace;color:var(--bleu);font-size:12px;">'+conv.numero+'</span> <strong>'+escHtml(constr.raison_sociale)+'</strong></div>'
+          +'<div style="font-size:11px;">'+ss.length+' situation(s) · '+(conv.retenue_pct||10)+'% retenue</div>'
+        +'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;font-size:11px;text-align:center;">'
+          +'<div><div style="color:var(--blanc-dim);">Marché HT</div><div style="font-weight:700;color:var(--or);">'+fmtF(marche)+'</div></div>'
+          +'<div><div style="color:var(--blanc-dim);">Facturé HT</div><div style="font-weight:700;">'+fmtF(Math.round(factureHT))+' ('+pctF+'%)</div></div>'
+          +'<div><div style="color:var(--blanc-dim);">Reste</div><div style="font-weight:700;color:var(--vert);">'+fmtF(Math.round(reste))+'</div></div>'
+          +'<div><div style="color:var(--blanc-dim);">Payé net</div><div style="font-weight:700;color:var(--vert);">'+fmtF(Math.round(paye))+'</div></div>'
+          +'<div><div style="color:var(--blanc-dim);">Retenue</div><div style="font-weight:700;color:var(--rouge);">'+fmtF(Math.round(retenue))+'</div></div>'
+          +'<div><div style="color:var(--blanc-dim);">Phys/Fin</div><div style="font-weight:700;color:'+(Math.abs(ecart)<=5?'var(--vert)':'var(--rouge)')+';">'+pctPhys+'/'+pctF+'% '+(Math.abs(ecart)>5?(ecart>0?'⚠️sous-fact.':'⚠️sur-fact.'):'✓')+'</div></div>'
+        +'</div>'
+        +'<div class="avancement-barre" style="margin-top:8px;height:7px;"><div class="avancement-fill" style="width:'+pctF+'%;"></div></div>'
+      +'</div>';
+    }).filter(Boolean).join('');
+    synth.innerHTML = cards ? ('<div style="margin-bottom:14px;"><div class="card-title" style="margin-bottom:8px;">🎯 Suivi financier par convention</div>'+cards+'</div>') : '';
+  }
+
+  if(!list.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--blanc-dim);">Aucune situation. Cliquez <strong>+ Nouvelle situation</strong>.</td></tr>';return;}
   var sC={soumise:'badge-bleu',validee:'badge-or',payee:'badge-vert',contestee:'badge-rouge'};
   tbody.innerHTML=list.sort(function(a,b){return(b.date||'').localeCompare(a.date||'');}).map(function(s){var conv=DATA.conventions.find(function(c){return c.id===s.convention_id;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};return'<tr><td>'+s.date+'</td><td style="font-family:monospace;color:var(--or);font-size:11px;">'+conv.numero+'</td><td style="font-size:12px;">'+constr.raison_sociale+'</td><td style="font-family:monospace;color:var(--bleu);">'+s.numero+'</td><td>'+fmtF(s.montant_ht||0)+' FCFA</td><td style="color:var(--rouge);">'+fmtF(s.retenue||0)+' FCFA</td><td style="font-weight:700;color:var(--vert);">'+fmtF(s.net||0)+' FCFA</td><td><span class="badge '+(sC[s.statut]||'badge-bleu')+'">'+s.statut+'</span></td><td><button class="btn btn-secondary btn-sm btn-icon" onclick="openSituationEdit(\''+s.id+'\')">✏️</button> <button class="btn btn-secondary btn-sm btn-icon" onclick="printSituation(\''+s.id+'\')">🖨️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSituation(\''+s.id+'\')">🗑</button></td></tr>';}).join('');
 }
 
 function openSituation(convId){
-  APP.editingId=null;var cSel=document.getElementById('situ-convention');if(cSel&&cSel.options.length<=1)DATA.conventions.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.numero+' — '+(DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{raison_sociale:'?'}).raison_sociale;cSel.appendChild(o);});
+  APP.editingId=null;var cSel=document.getElementById('situ-convention');
+  if(cSel){ cSel.innerHTML='<option value="">— Sélectionner —</option>'; DATA.conventions.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.numero+' — '+(DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{raison_sociale:'?'}).raison_sociale;cSel.appendChild(o);}); }
   ['situ-numero','situ-periode','situ-travaux','situ-observations'].forEach(function(f){var e=document.getElementById(f);if(e)e.value='';});
   document.getElementById('situ-date').value=today();document.getElementById('situ-montant-ht').value='0';document.getElementById('situ-tva').value='18';document.getElementById('situ-montant-ttc').value='0';document.getElementById('situ-retenue').value='0';document.getElementById('situ-net').value='0';document.getElementById('situ-statut').value='soumise';
+  var md=document.getElementById('situ-mode-decompte'); if(md)md.value='avancement';
+  var ar=document.getElementById('situ-avance-recup'); if(ar)ar.value='0';
+  var rc=document.getElementById('situ-recap-conv'); if(rc)rc.style.display='none';
+  onSituModeDecompte();
   if(convId){setTimeout(function(){var s=document.getElementById('situ-convention');if(s){s.value=convId;onSelectConventionSitu();}},80);}
   document.getElementById('situ-modal-title').textContent='Nouvelle situation de travaux';
   document.getElementById('modal-situation').classList.add('open');
 }
 function openSituationForConv(convId){openSituation(convId);}
-function openSituationEdit(id){APP.editingId=id;openSituation();setTimeout(function(){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=v||'';};el('situ-convention',s.convention_id);el('situ-numero',s.numero);el('situ-date',s.date);el('situ-periode',s.periode);el('situ-montant-ht',s.montant_ht);el('situ-tva',s.tva||18);el('situ-montant-ttc',s.montant_ttc);el('situ-retenue',s.retenue);el('situ-net',s.net);el('situ-avancement',s.avancement);el('situ-mode',s.mode);el('situ-statut',s.statut);el('situ-travaux',s.travaux);el('situ-observations',s.observations);document.getElementById('situ-modal-title').textContent='Modifier situation';},100);}
+function openSituationEdit(id){APP.editingId=id;openSituation();setTimeout(function(){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=(v===undefined||v===null)?'':v;};el('situ-convention',s.convention_id);el('situ-numero',s.numero);el('situ-date',s.date);el('situ-periode',s.periode);el('situ-mode-decompte',s.mode_decompte||'direct');el('situ-montant-ht',s.montant_ht);el('situ-tva',s.tva||18);el('situ-montant-ttc',s.montant_ttc);el('situ-avance-recup',s.avance_recup||0);el('situ-retenue',s.retenue);el('situ-net',s.net);el('situ-avancement',s.avancement);el('situ-mode',s.mode);el('situ-statut',s.statut);el('situ-travaux',s.travaux);el('situ-observations',s.observations);onSituModeDecompte();onSelectConventionSitu();document.getElementById('situ-modal-title').textContent='Modifier situation';},100);}
 
 async function saveSituationAndCompta(){
-  var convId=document.getElementById('situ-convention').value;var num=document.getElementById('situ-numero').value.trim();var ht=parseFloat(document.getElementById('situ-montant-ht').value)||0;if(!convId||!num||!ht){toast('Convention, numéro et montant HT obligatoires.','error');return;}
-  var s={id:APP.editingId||uid(),convention_id:convId,numero:num,date:document.getElementById('situ-date').value,periode:document.getElementById('situ-periode').value.trim(),montant_ht:ht,tva:parseFloat(document.getElementById('situ-tva').value)||18,montant_ttc:parseFloat(document.getElementById('situ-montant-ttc').value)||0,retenue:parseFloat(document.getElementById('situ-retenue').value)||0,net:parseFloat(document.getElementById('situ-net').value)||0,avancement:parseInt(document.getElementById('situ-avancement').value)||0,mode:document.getElementById('situ-mode').value,statut:document.getElementById('situ-statut').value,travaux:document.getElementById('situ-travaux').value.trim(),observations:document.getElementById('situ-observations').value.trim(),created_at:APP.editingId?undefined:today()};
+  var convId=document.getElementById('situ-convention').value;
+  var num=document.getElementById('situ-numero').value.trim();
+  var ht=parseFloat(document.getElementById('situ-montant-ht').value)||0;
+  if(!convId||!num||!ht){toast('Convention, numéro et montant HT obligatoires.','error');return;}
+  var conv=DATA.conventions.find(function(c){return c.id===convId;})||{};
+
+  /* Garde-fou dépassement marché (bloquant sauf avenant couvrant). */
+  var marche=situMarcheHT(conv);
+  var cumulAnt=situCumulAnterieur(convId, APP.editingId);
+  if(marche>0 && (cumulAnt+ht) > marche*1.0001){
+    if(!confirm('⚠️ Le cumul facturé ('+fmtF(Math.round(cumulAnt+ht))+' FCFA) dépasse le marché ('+fmtF(marche)+' FCFA).\n\nNormalement un avenant doit couvrir ce surplus. Enregistrer quand même ?')) return;
+  }
+
+  var s={
+    id:APP.editingId||uid(), convention_id:convId, numero:num,
+    date:document.getElementById('situ-date').value,
+    periode:document.getElementById('situ-periode').value.trim(),
+    mode_decompte:(document.getElementById('situ-mode-decompte')||{}).value||'direct',
+    montant_ht:ht,
+    tva:parseFloat(document.getElementById('situ-tva').value)||18,
+    montant_ttc:parseFloat(document.getElementById('situ-montant-ttc').value)||0,
+    avance_recup:parseFloat(document.getElementById('situ-avance-recup').value)||0,
+    retenue:parseFloat(document.getElementById('situ-retenue').value)||0,
+    net:parseFloat(document.getElementById('situ-net').value)||0,
+    avancement:parseInt(document.getElementById('situ-avancement').value)||0,
+    mode:document.getElementById('situ-mode').value,
+    statut:document.getElementById('situ-statut').value,
+    travaux:document.getElementById('situ-travaux').value.trim(),
+    observations:document.getElementById('situ-observations').value.trim(),
+    created_at:APP.editingId?undefined:today()
+  };
   if(APP.editingId){var idx=DATA.situations.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.situations[idx]=s;}else DATA.situations.push(s);
   await dbPut('situations',s);
-  var conv=DATA.conventions.find(function(c){return c.id===convId;});if(conv&&s.avancement>(conv.avancement||0)){conv.avancement=s.avancement;await dbPut('conventions',conv);}
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_situations',s);
+
+  /* Avancement convention aligné sur le cumul financier réel. */
+  var cumulTot=cumulAnt+ht;
+  var avPct=marche>0?Math.min(100,Math.round(cumulTot/marche*100)):s.avancement;
+  if(conv&&avPct>(conv.avancement||0)){conv.avancement=avPct;conv._modifie=new Date().toISOString();await dbPut('conventions',conv);if(typeof syncToSupabase==='function')syncToSupabase('pi_conventions',conv);}
+
+  /* ── Nettoyage idempotent : on retire les écritures de cette situation
+       avant de les régénérer selon le nouveau statut (évite les orphelines). ── */
+  var prefixes=['ecr_situ_','ecr_tva_','ecr_ret_','ecr_avr_','ecr_enc_','ecr_pay_'];
+  var aPurger=DATA.ecritures.filter(function(e){ return prefixes.some(function(p){return e.id===p+s.id;}); });
+  for(var pi=0;pi<aPurger.length;pi++){ try{ await deleteRecord('ecritures',aPurger[pi].id); }catch(e){} }
+
   if(s.statut==='validee'||s.statut==='payee'){
-    var constr=DATA.constructeurs.find(function(c){return c.id===(conv?conv.constructeur_id:'');})||{raison_sociale:'Constructeur'};
+    var constr=DATA.constructeurs.find(function(c){return c.id===(conv?conv.constructeur_id:'');})||{raison_sociale:'Constructeur',interne:false};
+    var cd=(DATA.params&&DATA.params.comptes_defaut)||{};
     var _sync=function(o){ if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',o); };
     var tvaMt=Math.max(0,(parseFloat(s.montant_ttc)||0)-ht);
     var moLib=(conv&&conv.maitre_ouvrage)?conv.maitre_ouvrage:'Client';
+    var cptTreso=(s.mode==='especes')?(cd.treso_caisse||'571'):(s.mode==='cheque'?(cd.treso_banque||'521'):(cd.treso_banque||'521'));
+    var cptRetenue=cd.retenue_garantie||'4017';   /* dette de retenue de garantie */
+
     if(constr.interne){
-      var _cdCfg = (DATA.params && DATA.params.comptes_defaut) || {};
-      var _cptClient = _cdCfg.client_lots || '4111';
-      var _cptTva = _cdCfg.tva_collectee || '4431';
-      var _cptTreso = (s.mode==='especes') ? (_cdCfg.treso_caisse||'571') : (_cdCfg.treso_banque||'521');
-      /* Département de construction INTERNE rémunéré → PRODUIT pour la société */
-      var ev={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Travaux facturés '+num+' — '+(conv?conv.numero:'')+' — '+moLib,compte:_cptClient,compte_debit:_cptClient,compte_credit:'705',montant:ht,type:'produit',mode:s.mode,notes:'Dépt interne · Avancement '+s.avancement+'%',created_at:today()};
+      /* ── DÉPARTEMENT INTERNE : la société se facture à elle-même → PRODUIT ── */
+      var cptClient=cd.client_lots||'4111';
+      var cptTvaColl=cd.tva_collectee||'4431';
+      var ev={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Travaux facturés '+num+' — '+(conv?conv.numero:'')+' — '+moLib,compte:cptClient,compte_debit:cptClient,compte_credit:'705',montant:ht,type:'produit',mode:s.mode,source:'situation',situation_id:s.id,notes:'Dépt interne · Avancement '+avPct+'%',created_at:today()};
       DATA.ecritures.push(ev);await dbPut('ecritures',ev);_sync(ev);
-      if(tvaMt>0){var et={id:'ecr_tva_'+s.id,ref:'TVA-'+s.numero,date:s.date,piece:num,libelle:'TVA collectée s/ travaux '+num,compte:_cptTva,compte_debit:_cptClient,compte_credit:_cptTva,montant:tvaMt,type:'produit',mode:s.mode,created_at:today()};DATA.ecritures.push(et);await dbPut('ecritures',et);_sync(et);}
-      if(s.statut==='payee'){var enc={id:'ecr_enc_'+s.id,ref:'ENC-'+s.numero,date:s.date,piece:num,libelle:'Encaissement '+num+' — '+moLib,compte:_cptTreso,compte_debit:_cptTreso,compte_credit:_cptClient,montant:s.net,type:'actif',mode:s.mode,created_at:today()};DATA.ecritures.push(enc);await dbPut('ecritures',enc);_sync(enc);}
-      toast('✅ Situation + produit ('+_cptClient+'/705) — département interne rémunéré.','success');
+      if(tvaMt>0){var et={id:'ecr_tva_'+s.id,ref:'TVA-'+s.numero,date:s.date,piece:num,libelle:'TVA collectée s/ travaux '+num,compte:cptTvaColl,compte_debit:cptClient,compte_credit:cptTvaColl,montant:tvaMt,type:'produit',source:'situation',situation_id:s.id,mode:s.mode,created_at:today()};DATA.ecritures.push(et);await dbPut('ecritures',et);_sync(et);}
+      if(s.statut==='payee'){var enc={id:'ecr_enc_'+s.id,ref:'ENC-'+s.numero,date:s.date,piece:num,libelle:'Encaissement '+num+' — '+moLib,compte:cptTreso,compte_debit:cptTreso,compte_credit:cptClient,montant:s.net,type:'actif',source:'situation',situation_id:s.id,mode:s.mode,created_at:today()};DATA.ecritures.push(enc);await dbPut('ecritures',enc);_sync(enc);}
+      toast('✅ Situation interne comptabilisée (705 + TVA'+(s.statut==='payee'?' + encaissement':'')+').','success');
     } else {
-      /* Constructeur EXTERNE → CHARGE (sous-traitance) */
-      var ecr={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Situation travaux '+num+' — '+(conv?conv.numero:'')+' — '+constr.raison_sociale,compte:'401',compte_debit:'6111',compte_credit:'401',montant:ht,type:'charge',mode:s.mode,notes:'Avancement '+s.avancement+'%',created_at:today()};
+      /* ── CONSTRUCTEUR EXTERNE : sous-traitance → CHARGE ──
+         Facturation : D 6111 (HT) + D 4452 (TVA déd.) / C 401 (TTC)
+         Retenue     : D 401 (retenue) / C 4017 (dette de retenue isolée)
+         Avance récup: D 401 (avance) / C 4091 (avance déjà versée)  [si avance]
+         Règlement   : D 401 (net) / C trésorerie                    [si payée] */
+      var cptFour=cd.fournisseur||'401';
+      var cptTvaDed=cd.tva_deductible_travaux||'4452';
+      var cptAvance=cd.avance_fournisseur||'4091';
+
+      /* 1. Charge HT */
+      var ecr={id:'ecr_situ_'+s.id,ref:'SIT-'+s.numero,date:s.date,piece:num,libelle:'Situation travaux '+num+' — '+(conv?conv.numero:'')+' — '+constr.raison_sociale,compte:cptFour,compte_debit:'6111',compte_credit:cptFour,montant:ht,type:'charge',mode:s.mode,source:'situation',situation_id:s.id,notes:'Avancement '+avPct+'%',created_at:today()};
       DATA.ecritures.push(ecr);await dbPut('ecritures',ecr);_sync(ecr);
-      if(s.statut==='payee'){var ep={id:'ecr_pay_'+s.id,ref:'PAY-'+s.numero,date:s.date,piece:num,libelle:'Règlement '+num,compte:'401',compte_debit:'401',compte_credit:'512',montant:s.net,type:'actif',mode:s.mode,created_at:today()};DATA.ecritures.push(ep);await dbPut('ecritures',ep);_sync(ep);}
-      toast('✅ Situation + écriture 6111/401 créée.','success');
+      /* 2. TVA déductible */
+      if(tvaMt>0){var etd={id:'ecr_tva_'+s.id,ref:'TVA-'+s.numero,date:s.date,piece:num,libelle:'TVA déductible s/ situation '+num,compte:cptTvaDed,compte_debit:cptTvaDed,compte_credit:cptFour,montant:tvaMt,type:'charge',source:'situation',situation_id:s.id,mode:s.mode,created_at:today()};DATA.ecritures.push(etd);await dbPut('ecritures',etd);_sync(etd);}
+      /* 3. Retenue de garantie isolée (réduit la dette 401, crédite 4017) */
+      if((s.retenue||0)>0){var ergt={id:'ecr_ret_'+s.id,ref:'RG-'+s.numero,date:s.date,piece:num,libelle:'Retenue de garantie '+(conv.retenue_pct||10)+'% s/ situation '+num,compte:cptRetenue,compte_debit:cptFour,compte_credit:cptRetenue,montant:s.retenue,type:'passif',source:'situation',situation_id:s.id,mode:s.mode,created_at:today()};DATA.ecritures.push(ergt);await dbPut('ecritures',ergt);_sync(ergt);}
+      /* 4. Récupération avance de démarrage */
+      if((s.avance_recup||0)>0){var eavr={id:'ecr_avr_'+s.id,ref:'AVR-'+s.numero,date:s.date,piece:num,libelle:'Récupération avance démarrage s/ situation '+num,compte:cptAvance,compte_debit:cptFour,compte_credit:cptAvance,montant:s.avance_recup,type:'actif',source:'situation',situation_id:s.id,mode:s.mode,created_at:today()};DATA.ecritures.push(eavr);await dbPut('ecritures',eavr);_sync(eavr);}
+      /* 5. Règlement du net */
+      if(s.statut==='payee'&&(s.net||0)>0){var ep={id:'ecr_pay_'+s.id,ref:'PAY-'+s.numero,date:s.date,piece:num,libelle:'Règlement net situation '+num+' — '+constr.raison_sociale,compte:cptFour,compte_debit:cptFour,compte_credit:cptTreso,montant:s.net,type:'actif',source:'situation',situation_id:s.id,mode:s.mode,created_at:today()};DATA.ecritures.push(ep);await dbPut('ecritures',ep);_sync(ep);}
+      toast('✅ Situation comptabilisée (6111+4452 / 401 · retenue 4017'+((s.avance_recup||0)>0?' · avance 4091':'')+(s.statut==='payee'?' · règlement':'')+').','success');
     }
-  } else toast('Situation enregistrée.','success');
+  } else toast('Situation enregistrée (non comptabilisée — statut '+s.statut+').','info');
   closeModal('modal-situation');renderSituations();renderConventions();
+  if(typeof renderChantiersDashboard==='function')renderChantiersDashboard();
+  if(typeof filterEcritures==='function')filterEcritures();
 }
 async function deleteSituation(id){if(!confirm('Supprimer ?'))return;if(await deleteRecord('situations',id)===false)return;renderSituations();toast('Supprimé.','info');}
 function printSituation(id){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var conv=DATA.conventions.find(function(c){return c.id===s.convention_id;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var win=window.open('','','width=800,height=700');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Situation '+s.numero+'</title><style>body{font-family:Georgia,serif;padding:36px;font-size:13px;}h1{color:#1A6B3A;border-bottom:2px solid #1A6B3A;padding-bottom:8px;}table{width:100%;border-collapse:collapse;margin:14px 0;}td,th{border:1px solid #ccc;padding:8px 12px;}th{background:#E8F4EE;}.sig{display:flex;justify-content:space-between;margin-top:50px;}.sb{border-top:1px solid #999;width:40%;padding-top:8px;font-size:12px;color:#666;}</style></head><body><h1>SITUATION DE TRAVAUX N° '+s.numero+'</h1><table><tr><td><strong>Maître d\'ouvrage:</strong> '+(DATA.params.societe||'ImmoSuite ERP')+'</td><td><strong>Constructeur:</strong> '+constr.raison_sociale+'</td></tr><tr><td><strong>Convention:</strong> '+conv.numero+'</td><td><strong>Date:</strong> '+s.date+'</td></tr></table><h3>Travaux réalisés</h3><p style="border:1px solid #ddd;padding:12px;">'+(s.travaux||'—')+'</p><table><tr><th>Désignation</th><th style="text-align:right;">Montant (FCFA)</th></tr><tr><td>Montant HT</td><td style="text-align:right;">'+fmtF(s.montant_ht||0)+'</td></tr><tr><td>TVA</td><td style="text-align:right;">'+fmtF((s.montant_ttc||0)-(s.montant_ht||0))+'</td></tr><tr><td><strong>Montant TTC</strong></td><td style="text-align:right;font-weight:700;">'+fmtF(s.montant_ttc||0)+'</td></tr><tr style="color:#c0392b;"><td>Retenue garantie 10%</td><td style="text-align:right;">− '+fmtF(s.retenue||0)+'</td></tr><tr><td><strong>NET À PAYER</strong></td><td style="text-align:right;font-size:17px;font-weight:bold;color:#1A6B3A;">'+fmtF(s.net||0)+' FCFA</td></tr></table><div class="sig"><div class="sb">LE CONSTRUCTEUR<br><br><br>Signature</div><div class="sb" style="text-align:right;">LE MAÎTRE D\'OUVRAGE<br><br><br>Signature</div></div></body></html>');try{ if(win.document.body && !win.document.querySelector('.doc-qr')){ var _qr=(win.document.querySelector('title')||{}).textContent||'DOC'; win.document.body.insertAdjacentHTML('beforeend', printQrFooter(_qr)); } }catch(e){} win.document.close(); win.print();}
@@ -32747,14 +33596,69 @@ async function deleteAvenant(id){if(!confirm('Supprimer ?'))return;if(await dele
 
 /* ─── Retenues de garantie ────────────────────────── */
 function renderGaranties(){var tbody=document.getElementById('tbody-garanties');if(!tbody)return;var retenues=DATA.situations.filter(function(s){return s.retenue&&s.retenue>0&&(s.statut==='validee'||s.statut==='payee');});if(!retenues.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--blanc-dim);">Aucune retenue constituée.</td></tr>';return;}var byConv={};retenues.forEach(function(s){if(!byConv[s.convention_id])byConv[s.convention_id]={total:0};byConv[s.convention_id].total+=s.retenue||0;});tbody.innerHTML=Object.keys(byConv).map(function(convId){var conv=DATA.conventions.find(function(c){return c.id===convId;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var r=byConv[convId];var lib=conv.statut==='reception_definitive';return'<tr style="'+(lib?'background:rgba(74,196,122,0.05);':'')+'"><td style="font-family:monospace;color:var(--or);">'+conv.numero+'</td><td style="font-size:12px;">'+constr.raison_sociale+'</td><td style="font-weight:700;color:var(--rouge);">'+fmtF(r.total)+' FCFA</td><td>'+(conv.date_fin_prev||'—')+'</td><td style="font-size:11px;">Levée des réserves + réception définitive</td><td><span class="badge '+(lib?'badge-vert':'badge-or')+'">'+(lib?'Libérable':'Bloquée')+'</span></td><td>'+(lib?'<button class="btn btn-primary btn-sm" onclick="libererGarantie(\''+convId+'\','+r.total+')">💰 Libérer</button>':'<button class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:.4;">🔒</button>')+'</td></tr>';}).join('');}
-async function libererGarantie(convId,montant){if(!confirm('Libérer '+fmtF(montant)+' FCFA ? Écriture 401/512 créée.'))return;var conv=DATA.conventions.find(function(c){return c.id===convId;})||{};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'Constructeur'};var ecr={id:'ecr_gar_'+convId+'_'+Date.now(),ref:'GAR-'+conv.numero,date:today(),piece:'GAR/'+conv.numero,libelle:'Libération retenue garantie — '+constr.raison_sociale,compte:'401',compte_debit:'401',compte_credit:'512',montant:montant,type:'actif',mode:'virement',created_at:today()};DATA.ecritures.push(ecr);await dbPut('ecritures',ecr);toast('✅ Retenue libérée — Écriture 401/512.','success');renderGaranties();}
+async function libererGarantie(convId,montant){
+  var conv=DATA.conventions.find(function(c){return c.id===convId;})||{};
+  if(conv.statut!=='reception_definitive'){
+    if(!confirm('⚠️ La réception définitive n\'est pas prononcée pour cette convention.\n\nLa retenue de garantie se libère normalement après la réception définitive et l\'expiration du délai de garantie. Libérer quand même ?')) return;
+  }
+  if(!confirm('Libérer '+fmtF(montant)+' FCFA de retenue de garantie ?\nÉcriture : Débit 4017 (dette de retenue) / Crédit trésorerie.')) return;
+  var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'Constructeur'};
+  var cd=(DATA.params&&DATA.params.comptes_defaut)||{};
+  var cptRetenue=cd.retenue_garantie||'4017';
+  var cptTreso=cd.treso_banque||'521';
+  var ecr={id:'ecr_gar_'+convId+'_'+Date.now(),ref:'GAR-'+conv.numero,date:today(),piece:'GAR/'+conv.numero,libelle:'Libération retenue de garantie — '+constr.raison_sociale,compte:cptRetenue,compte_debit:cptRetenue,compte_credit:cptTreso,montant:montant,type:'passif',mode:'virement',source:'garantie',convention_id:convId,created_at:today()};
+  DATA.ecritures.push(ecr);await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',ecr);
+  /* Marque les situations de la convention comme retenue libérée. */
+  (DATA.situations||[]).filter(function(s){return s.convention_id===convId;}).forEach(function(s){ s.retenue_liberee=true; dbPut('situations',s); });
+  toast('✅ Retenue libérée — Écriture '+cptRetenue+'/'+cptTreso+'.','success');
+  renderGaranties();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PÉNALITÉS DE RETARD (marché travaux)
+   Calcul : penalites % / semaine de retard × montant HT marché,
+   souvent plafonné (5% du marché en pratique CI). Écriture SYSCOHADA :
+   Débit 401 (réduit la dette fournisseur) / Crédit 7078 (produit accessoire)
+   ══════════════════════════════════════════════════════════════ */
+function calcPenalitesRetard(conv){
+  if(!conv || !conv.date_fin_prev) return {jours:0, semaines:0, montant:0};
+  var fin=new Date(conv.date_fin_prev);
+  var ref=(conv.avancement>=100 && conv.date_reception)?new Date(conv.date_reception):new Date();
+  var jours=Math.max(0, Math.floor((ref-fin)/(1000*3600*24)));
+  var semaines=Math.floor(jours/7);
+  var pct=parseFloat(conv.penalites); if(isNaN(pct))pct=0.5;
+  var marche=parseFloat(conv.montant_ht)||0;
+  var montant=Math.round(marche*(pct/100)*semaines);
+  /* Plafond 5% du marché (usage BTP courant, paramétrable). */
+  var plafond=Math.round(marche*0.05);
+  if(montant>plafond) montant=plafond;
+  return {jours:jours, semaines:semaines, montant:montant, plafonne:(marche*(pct/100)*semaines)>plafond};
+}
+async function appliquerPenalites(convId){
+  var conv=DATA.conventions.find(function(c){return c.id===convId;});if(!conv)return;
+  var p=calcPenalitesRetard(conv);
+  if(p.montant<=0){toast('Aucune pénalité : chantier non en retard.','info');return;}
+  if(!confirm('Appliquer '+fmtF(p.montant)+' FCFA de pénalités de retard ?\n('+p.semaines+' semaine(s), '+(conv.penalites||0.5)+'%/sem'+(p.plafonne?', plafonné à 5%':'')+')\n\nÉcriture : Débit 401 / Crédit 7078 (produit accessoire).')) return;
+  var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'Constructeur'};
+  var cd=(DATA.params&&DATA.params.comptes_defaut)||{};
+  var cptFour=cd.fournisseur||'401';
+  var ecr={id:'ecr_pen_'+convId+'_'+Date.now(),ref:'PEN-'+conv.numero,date:today(),piece:'PEN/'+conv.numero,libelle:'Pénalités de retard '+p.semaines+' sem. — '+constr.raison_sociale,compte:cptFour,compte_debit:cptFour,compte_credit:'7078',montant:p.montant,type:'produit',mode:'compensation',source:'penalite',convention_id:convId,created_at:today()};
+  DATA.ecritures.push(ecr);await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',ecr);
+  conv.penalites_appliquees=(conv.penalites_appliquees||0)+p.montant;conv._modifie=new Date().toISOString();
+  await dbPut('conventions',conv);if(typeof syncToSupabase==='function')syncToSupabase('pi_conventions',conv);
+  toast('✅ Pénalités appliquées ('+cptFour+'/7078). La dette fournisseur est réduite d\'autant.','success');
+  if(typeof renderChantiersDashboard==='function')renderChantiersDashboard();
+  renderConventions();
+}
 
 /* ─── Chantiers dashboard ──────────────────────────── */
 function renderChantiersDashboard(){
   var box=document.getElementById('chantiers-dashboard');if(!box)return;
   var chantiers=DATA.conventions.filter(function(c){return['signe','en_cours','reception_provisoire'].indexOf(c.statut)>=0;});
   if(!chantiers.length){box.innerHTML='<div class="card"><div style="padding:24px;text-align:center;color:var(--blanc-dim);">Aucun chantier en cours.</div></div>';return;}
-  box.innerHTML=chantiers.map(function(c){var constr=DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{raison_sociale:'—'};var prog=DATA.programmes.find(function(x){return x.id===c.programme_id;})||{nom:'—'};var retard=c.date_fin_prev&&c.date_fin_prev<today()&&c.statut==='en_cours';var av=c.avancement||0;var situs=DATA.situations.filter(function(s){return s.convention_id===c.id;});var paye=situs.filter(function(s){return s.statut==='payee';}).reduce(function(s,x){return s+(x.net||0);},0);var reten=situs.reduce(function(s,x){return s+(x.retenue||0);},0);var rpts=DATA.rapports_chantier.filter(function(r){return r.convention_id===c.id;});var last=rpts.sort(function(a,b){return(b.date_debut||'').localeCompare(a.date_debut||'');}).slice(0,1)[0];return'<div class="constructeur-card" style="margin-bottom:16px;"><div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:flex-start;"><div><div style="display:flex;gap:8px;margin-bottom:4px;"><span class="badge '+(retard?'badge-rouge':c.statut==='reception_provisoire'?'badge-or':'badge-vert')+'">'+c.statut.replace(/_/g,' ')+'</span><span style="font-family:monospace;font-size:11px;color:var(--bleu);">'+c.numero+'</span></div><div style="font-weight:700;font-size:16px;">'+prog.nom+'</div><div style="font-size:12px;color:var(--blanc-dim);">'+c.objet+'</div><div style="font-size:12px;color:var(--blanc-dim);">👷 '+constr.raison_sociale+'</div></div><div style="text-align:right;"><div style="font-size:28px;font-weight:700;color:'+(av>=100?'var(--vert)':retard?'var(--rouge)':'var(--or)')+';">'+av+'%</div>'+(retard?'<div class="badge badge-rouge">⚠️ RETARD</div>':'')+'</div></div><div class="avancement-barre" style="margin:10px 0;height:10px;"><div class="avancement-fill '+(retard?'retard':'')+'" style="width:'+av+'%;"></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px;margin-bottom:12px;"><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Montant TTC</div><div style="font-weight:700;color:var(--or);">'+fmtF(c.montant_ttc||0)+'</div></div><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Payé</div><div style="font-weight:700;color:var(--vert);">'+fmtF(paye)+'</div></div><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Retenues</div><div style="font-weight:700;color:var(--rouge);">'+fmtF(reten)+'</div></div><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Fin prévue</div><div style="font-weight:700;color:'+(retard?'var(--rouge)':'var(--blanc)')+';">'+(c.date_fin_prev||'—')+'</div></div></div>'+(last?'<div style="background:var(--card2);border-radius:var(--r);padding:10px;font-size:12px;margin-bottom:10px;border-left:3px solid var(--bleu);"><strong style="color:var(--bleu);">Dernier rapport</strong> — '+last.date_debut+' — <strong>'+last.avancement+'%</strong><br><span style="color:var(--blanc-dim);">'+(last.travaux_realises||'').slice(0,100)+'</span></div>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-secondary btn-sm" onclick="openConvention(\''+c.id+'\')">✏️ Convention</button><button class="btn btn-secondary btn-sm" onclick="openRapportChantierForConv(\''+c.id+'\')">📋 Rapport</button><button class="btn btn-secondary btn-sm" onclick="openSituationForConv(\''+c.id+'\')">📊 Situation</button><button class="btn btn-secondary btn-sm" onclick="printConventionId(\''+c.id+'\')">🖨️</button></div></div>';}).join('');
+  box.innerHTML=chantiers.map(function(c){var constr=DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{raison_sociale:'—'};var prog=DATA.programmes.find(function(x){return x.id===c.programme_id;})||{nom:'—'};var retard=c.date_fin_prev&&c.date_fin_prev<today()&&c.statut==='en_cours';var av=c.avancement||0;var situs=DATA.situations.filter(function(s){return s.convention_id===c.id;});var paye=situs.filter(function(s){return s.statut==='payee';}).reduce(function(s,x){return s+(x.net||0);},0);var reten=situs.reduce(function(s,x){return s+(x.retenue||0);},0);var rpts=DATA.rapports_chantier.filter(function(r){return r.convention_id===c.id;});var last=rpts.sort(function(a,b){return(b.date_debut||'').localeCompare(a.date_debut||'');}).slice(0,1)[0];return'<div class="constructeur-card" style="margin-bottom:16px;"><div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:flex-start;"><div><div style="display:flex;gap:8px;margin-bottom:4px;"><span class="badge '+(retard?'badge-rouge':c.statut==='reception_provisoire'?'badge-or':'badge-vert')+'">'+c.statut.replace(/_/g,' ')+'</span><span style="font-family:monospace;font-size:11px;color:var(--bleu);">'+c.numero+'</span></div><div style="font-weight:700;font-size:16px;">'+prog.nom+'</div><div style="font-size:12px;color:var(--blanc-dim);">'+c.objet+'</div><div style="font-size:12px;color:var(--blanc-dim);">👷 '+constr.raison_sociale+'</div></div><div style="text-align:right;"><div style="font-size:28px;font-weight:700;color:'+(av>=100?'var(--vert)':retard?'var(--rouge)':'var(--or)')+';">'+av+'%</div>'+(retard?'<div class="badge badge-rouge">⚠️ RETARD</div>':'')+'</div></div><div class="avancement-barre" style="margin:10px 0;height:10px;"><div class="avancement-fill '+(retard?'retard':'')+'" style="width:'+av+'%;"></div></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px;margin-bottom:12px;"><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Montant TTC</div><div style="font-weight:700;color:var(--or);">'+fmtF(c.montant_ttc||0)+'</div></div><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Payé</div><div style="font-weight:700;color:var(--vert);">'+fmtF(paye)+'</div></div><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Retenues</div><div style="font-weight:700;color:var(--rouge);">'+fmtF(reten)+'</div></div><div style="background:var(--card2);border-radius:var(--r);padding:8px;text-align:center;"><div style="color:var(--blanc-dim);font-size:10px;">Fin prévue</div><div style="font-weight:700;color:'+(retard?'var(--rouge)':'var(--blanc)')+';">'+(c.date_fin_prev||'—')+'</div></div></div>'+(last?'<div style="background:var(--card2);border-radius:var(--r);padding:10px;font-size:12px;margin-bottom:10px;border-left:3px solid var(--bleu);"><strong style="color:var(--bleu);">Dernier rapport</strong> — '+last.date_debut+' — <strong>'+last.avancement+'%</strong><br><span style="color:var(--blanc-dim);">'+(last.travaux_realises||'').slice(0,100)+'</span></div>':'')+'<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-secondary btn-sm" onclick="openConvention(\''+c.id+'\')">✏️ Convention</button><button class="btn btn-secondary btn-sm" onclick="openRapportChantierForConv(\''+c.id+'\')">📋 Rapport</button><button class="btn btn-secondary btn-sm" onclick="openSituationForConv(\''+c.id+'\')">📊 Situation</button>'+(retard?'<button class="btn btn-danger btn-sm" onclick="appliquerPenalites(\''+c.id+'\')" title="Calculer et appliquer les pénalités de retard">⏰ Pénalités</button>':'')+'<button class="btn btn-secondary btn-sm" onclick="printConventionId(\''+c.id+'\')">🖨️</button></div></div>';}).join('');
 }
 function openRapportChantierForConv(convId){openRapportChantier(convId);}
 
@@ -36499,6 +37403,8 @@ function openParcelle(id) {
   }
   document.getElementById('modal-parcelle-title').textContent = id ? 'Modifier Parcelle' : 'Nouvelle Parcelle';
   fonLoadCadastreBornes(id);
+  updateParcelleStatusVisuals();
+  updateParcelleFinSummary();
   switchTab('modal-parcelle','identification');
   document.getElementById('modal-parcelle').classList.add('open');
 }
@@ -36595,6 +37501,167 @@ function calcParcelleTotal() {
     .reduce(function(s,id){ var e=document.getElementById(id); return s+(e?parseFloat(e.value)||0:0); },0);
   var ct = document.getElementById('parc-cout-total');
   if (ct) ct.value = total;
+}
+
+/* ── Améliorations visuelles modal Parcelle : chips statut/risque, timeline, en-tête, synthèse financière ── */
+var PARC_STATUT_DEFS = [
+  { v:'prospection',   l:'Prospection',   c:'or' },
+  { v:'negociation',   l:'Négociation',   c:'bleu' },
+  { v:'acd',           l:'ACD obtenu',    c:'violet' },
+  { v:'tf_provisoire', l:'TF Provisoire', c:'or' },
+  { v:'tf_definitif',  l:'TF Définitif',  c:'vert' },
+  { v:'affecte',       l:'Affecté',       c:'vert' },
+  { v:'contentieux',   l:'Contentieux',   c:'rouge' }
+];
+var PARC_RISQUE_DEFS = [
+  { v:'faible', l:'Faible', c:'vert' },
+  { v:'moyen',  l:'Moyen',  c:'or' },
+  { v:'eleve',  l:'Élevé',  c:'rouge' }
+];
+var PARC_TIMELINE_STEPS = [
+  { v:'prospection',   l:'Prospection' },
+  { v:'negociation',   l:'Négociation' },
+  { v:'acd',           l:'ACD' },
+  { v:'tf_provisoire', l:'TF Provis.' },
+  { v:'tf_definitif',  l:'TF Définitif' }
+];
+
+function _parcBuildChips(containerId, selectId, defs) {
+  var box = document.getElementById(containerId);
+  var sel = document.getElementById(selectId);
+  if (!box || !sel) return;
+  var current = sel.value;
+  box.innerHTML = defs.map(function(d) {
+    var active = (d.v === current) ? ' active' : '';
+    return '<button type="button" class="chip' + active + '" data-c="' + d.c + '" onclick="_parcSetChip(\'' + selectId + '\',\'' + d.v + '\')">' + d.l + '</button>';
+  }).join('');
+}
+
+function _parcSetChip(selectId, value) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.value = value;
+  updateParcelleStatusVisuals();
+}
+
+function updateParcelleStatusVisuals() {
+  var statutSel = document.getElementById('parc-statut');
+  var risqueSel = document.getElementById('parc-risque');
+  if (!statutSel || !risqueSel) return;
+  var statut = statutSel.value || 'prospection';
+  var risque = risqueSel.value || 'faible';
+  var statutDef = PARC_STATUT_DEFS.filter(function(d){ return d.v === statut; })[0] || PARC_STATUT_DEFS[0];
+  var risqueDef = PARC_RISQUE_DEFS.filter(function(d){ return d.v === risque; })[0] || PARC_RISQUE_DEFS[0];
+
+  _parcBuildChips('parc-statut-chips', 'parc-statut', PARC_STATUT_DEFS);
+  _parcBuildChips('parc-risque-chips', 'parc-risque', PARC_RISQUE_DEFS);
+
+  /* Timeline (masquée si contentieux) */
+  var tl = document.getElementById('parc-statut-timeline');
+  if (tl) {
+    if (statut === 'contentieux') {
+      tl.innerHTML = '<div class="fin-plusvalue neg" style="width:100%;justify-content:center;">⚠ Dossier en contentieux — parcours de titrisation interrompu</div>';
+    } else {
+      var refIdx = (statut === 'affecte') ? PARC_TIMELINE_STEPS.length - 1 : PARC_TIMELINE_STEPS.map(function(s){return s.v;}).indexOf(statut);
+      tl.innerHTML = PARC_TIMELINE_STEPS.map(function(s, i) {
+        var cls = i < refIdx ? 'done' : (i === refIdx ? 'current' : '');
+        return '<div class="pt-step ' + cls + '"><div class="pt-dot"></div><div class="pt-label">' + s.l + '</div></div>';
+      }).join('');
+    }
+  }
+
+  /* En-tête : sous-titre avec réf + badges */
+  var sub = document.getElementById('modal-parcelle-subtitle');
+  if (sub) {
+    var ref = (document.getElementById('parc-ref')||{}).value || '';
+    var loc = (document.getElementById('parc-localisation')||{}).value || '';
+    sub.innerHTML = (ref ? '<span>' + escHtml(ref) + (loc ? ' · ' + escHtml(loc) : '') + '</span>' : '')
+      + '<span class="badge badge-' + statutDef.c + '">' + statutDef.l + '</span>'
+      + '<span class="badge badge-' + risqueDef.c + '">Risque ' + risqueDef.l.toLowerCase() + '</span>';
+  }
+
+  /* Point rouge sur l'onglet Titre & Droits si risque élevé */
+  var dot = document.getElementById('parc-tab-risque-dot');
+  if (dot) { if (risque === 'eleve') dot.classList.add('show'); else dot.classList.remove('show'); }
+}
+
+function updateParcelleFinSummary() {
+  var vals = {
+    acq:  parseFloat((document.getElementById('parc-prix-acq')||{}).value)      || 0,
+    mut:  parseFloat((document.getElementById('parc-frais-mutation')||{}).value) || 0,
+    born: parseFloat((document.getElementById('parc-frais-bornage')||{}).value)  || 0,
+    not:  parseFloat((document.getElementById('parc-frais-notaire')||{}).value)  || 0
+  };
+  var total = vals.acq + vals.mut + vals.born + vals.not;
+  var segs = [
+    { k:'acq',  l:'Acquisition', c:'var(--or)' },
+    { k:'mut',  l:'Mutation',    c:'var(--bleu)' },
+    { k:'born', l:'Bornage',     c:'var(--vert)' },
+    { k:'not',  l:'Notaire',     c:'var(--violet)' }
+  ];
+
+  var bar = document.getElementById('parc-fin-bar');
+  var legend = document.getElementById('parc-fin-legend');
+  if (bar) {
+    bar.innerHTML = total > 0 ? segs.map(function(s) {
+      var pct = (vals[s.k] / total) * 100;
+      return pct > 0 ? '<span style="width:' + pct.toFixed(2) + '%;background:' + s.c + ';"></span>' : '';
+    }).join('') : '<span style="width:100%;background:var(--card2);"></span>';
+  }
+  if (legend) {
+    legend.innerHTML = segs.map(function(s) {
+      return '<b><i style="background:' + s.c + ';"></i>' + s.l + ' — ' + fcfa(vals[s.k]) + '</b>';
+    }).join('');
+  }
+
+  var pvBox = document.getElementById('parc-fin-plusvalue');
+  var valeurActuelle = parseFloat((document.getElementById('parc-valeur-actuelle')||{}).value) || 0;
+  if (pvBox) {
+    if (!valeurActuelle) {
+      pvBox.innerHTML = '<span class="fin-plusvalue nul">ℹ Renseignez la valeur estimée actuelle pour calculer la plus-value</span>';
+    } else {
+      var delta = valeurActuelle - total;
+      var cls = delta > 0 ? 'pos' : (delta < 0 ? 'neg' : 'nul');
+      var icon = delta > 0 ? '📈' : (delta < 0 ? '📉' : '➖');
+      pvBox.innerHTML = '<span class="fin-plusvalue ' + cls + '">' + icon + ' '
+        + (delta >= 0 ? 'Plus-value' : 'Moins-value') + ' : ' + fcfa(Math.abs(delta)) + '</span>';
+    }
+  }
+}
+
+/* Aperçu schématique (SVG) du polygone de la parcelle, d'après les bornes saisies.
+   NB: les coordonnées X/Y du bornage sont un repère local (topographique), pas des
+   coordonnées GPS — c'est pourquoi l'aperçu est un schéma proportionnel et non une
+   carte géographique (Leaflet) : une projection sur carte réelle exigerait une
+   conversion UTM→WGS84 fiable, non garantie ici. */
+function parcRenderMiniPlan() {
+  var box = document.getElementById('parc-mini-plan');
+  if (!box) return;
+  var pts = (typeof _brnList !== 'undefined' ? _brnList : []).filter(function(b){ return b.x || b.y; });
+  if (pts.length < 3) {
+    box.innerHTML = '<div class="parc-mini-plan-empty">📐 Aucun polygone à afficher — saisissez au moins 3 bornes dans l\'onglet Bornage &amp; Coordonnées.</div>';
+    return;
+  }
+  var W = 560, H = 200, pad = 24;
+  var xs = pts.map(function(p){ return p.x||0; });
+  var ys = pts.map(function(p){ return p.y||0; });
+  var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+  var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+  var spanX = (maxX - minX) || 1, spanY = (maxY - minY) || 1;
+  var scale = Math.min((W - pad*2) / spanX, (H - pad*2) / spanY);
+  function px(p) { return pad + ((p.x||0) - minX) * scale; }
+  function py(p) { return H - pad - ((p.y||0) - minY) * scale; }
+  var poly = pts.map(function(p){ return px(p).toFixed(1) + ',' + py(p).toFixed(1); }).join(' ');
+  var dots = pts.map(function(p, i) {
+    return '<circle cx="' + px(p).toFixed(1) + '" cy="' + py(p).toFixed(1) + '" r="4" fill="#B87333"/>'
+      + '<text x="' + px(p).toFixed(1) + '" y="' + (py(p) - 8).toFixed(1) + '" font-size="9" text-anchor="middle" fill="#5A6475">' + escHtml(p.nom || ('B' + (i + 1))) + '</text>';
+  }).join('');
+  var area = brnArea(pts);
+  box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:160px;display:block;">'
+    + '<polygon points="' + poly + '" fill="rgba(184,115,51,0.12)" stroke="#B87333" stroke-width="2"/>'
+    + dots
+    + '</svg>'
+    + '<div style="text-align:center;font-size:11px;color:var(--dim);padding:0 0 8px;">Surface estimée du polygone : <strong style="color:var(--blanc);">' + fmtF(Math.round(area)) + ' m²</strong> · ' + pts.length + ' bornes</div>';
 }
 
 /* ── Bug fix v16-2 : renderTitresFonciers ──────────────── */
@@ -38408,10 +39475,13 @@ function buildTresorerieDetaille() {
   var year = selAnnee ? selAnnee.value : new Date().getFullYear();
   var months = [];
   var soldeCumul = 0;
+  var cesPaie = getCessionsPaiements();
   for (var m = 1; m <= 12; m++) {
     var mStr = year + '-' + String(m).padStart(2,'0');
     var label = new Date(year, m-1, 1).toLocaleDateString('fr-FR',{month:'short'});
-    var enc = DATA.versements.filter(function(v){return v.date&&v.date.startsWith(mStr);}).reduce(function(a,v){return a+(parseFloat(v.montant)||0);},0);
+    var encVte = DATA.versements.filter(function(v){return v.date&&v.date.startsWith(mStr);}).reduce(function(a,v){return a+(parseFloat(v.montant)||0);},0);
+    var encCes = cesPaie.filter(function(p){return p.date&&p.date.startsWith(mStr);}).reduce(function(a,p){return a+p.montant;},0);
+    var enc = encVte + encCes;
     var dec = DATA.ecritures.filter(function(e){return e.type==='charge'&&e.date&&e.date.startsWith(mStr);}).reduce(function(a,e){return a+e.montant;},0);
     var soldeM = enc - dec; soldeCumul += soldeM;
     months.push({label:label,enc:enc,dec:dec,solde:soldeM,cumul:soldeCumul});
@@ -38419,7 +39489,7 @@ function buildTresorerieDetaille() {
   var totEnc = months.reduce(function(a,m){return a+m.enc;},0);
   var totDec = months.reduce(function(a,m){return a+m.dec;},0);
   box.innerHTML = '<div class="kpi-grid" style="margin-bottom:20px;">'
-    + '<div class="kpi-card" data-icon="💰"><div class="kpi-label">Total Encaissements</div><div class="kpi-value" style="color:var(--vert);">' + fmtF(totEnc) + ' FCFA</div><div class="kpi-delta positive">souscripteurs ' + year + '</div></div>'
+    + '<div class="kpi-card" data-icon="💰"><div class="kpi-label">Total Encaissements</div><div class="kpi-value" style="color:var(--vert);">' + fmtF(totEnc) + ' FCFA</div><div class="kpi-delta positive">lots + cessions ' + year + '</div></div>'
     + '<div class="kpi-card" data-icon="💸"><div class="kpi-label">Total Décaissements</div><div class="kpi-value" style="color:var(--rouge);">' + fmtF(totDec) + ' FCFA</div><div class="kpi-delta negative">charges ' + year + '</div></div>'
     + '<div class="kpi-card" data-icon="📊"><div class="kpi-label">Solde Net</div><div class="kpi-value" style="color:' + (totEnc-totDec>=0?'var(--vert)':'var(--rouge)') + ';">' + fmtF(totEnc-totDec) + ' FCFA</div><div class="kpi-delta">exercice ' + year + '</div></div>'
     + '</div>'
@@ -38641,31 +39711,20 @@ if (!DATA.devis_fournisseurs) DATA.devis_fournisseurs = [];
 
 /* ── Chargement global DQE ─────────────────────────── */
 async function chargerDQE() {
-  /* Fusion par id — jamais d'écrasement brut. Un chargerDQE() en vol (ex. depuis
-     goTo('dqe') précédent) qui résout après un ajout local créerait sinon une
-     course : le poste vient d'être ajouté en mémoire, puis écrasé par une lecture
-     IndexedDB lancée avant que l'écriture ne soit visible. */
-  function _merge(arr, fresh) {
-    if (!fresh || !fresh.length) return arr;
-    var byId = {};
-    (arr||[]).forEach(function(x){ byId[x.id] = x; });
-    fresh.forEach(function(x){ byId[x.id] = x; });
-    return Object.keys(byId).map(function(k){ return byId[k]; });
-  }
   try {
     var noms = await dbGetAll('nomenclatures');
-    DATA.nomenclatures = _merge(DATA.nomenclatures, noms);
+    if (noms && noms.length) DATA.nomenclatures = noms;
     var prix = await dbGetAll('prix_unitaire');
     if (prix && prix.length) {
-      DATA.prix_unitaire = _merge(DATA.prix_unitaire, prix);
-    } else if (!DATA.prix_unitaire || !DATA.prix_unitaire.length) {
+      DATA.prix_unitaire = prix;
+    } else {
       DATA.prix_unitaire = JSON.parse(JSON.stringify(PRIX_MATERIAUX_CI));
       for (var i = 0; i < DATA.prix_unitaire.length; i++) await dbPut('prix_unitaire', DATA.prix_unitaire[i]);
     }
     var devs = await dbGetAll('devis_fournisseurs');
-    DATA.devis_fournisseurs = _merge(DATA.devis_fournisseurs, devs);
+    if (devs && devs.length) DATA.devis_fournisseurs = devs;
   } catch(e) {
-    if (!DATA.prix_unitaire || !DATA.prix_unitaire.length) DATA.prix_unitaire = JSON.parse(JSON.stringify(PRIX_MATERIAUX_CI));
+    DATA.prix_unitaire = JSON.parse(JSON.stringify(PRIX_MATERIAUX_CI));
   }
   /* Peupler le filtre programme DQE */
   var selProg = document.getElementById('dqe-filter-programme');
@@ -38878,34 +39937,8 @@ async function sauvegarderPosteNomenclature() {
   }
 
   APP._nomEditId = null;
-  var _idAjoute = editId || entry.id;
-  var _typeAjoute = type;
   closeModal('modal-poste-nomen');
-
-  /* Sécurité : si le filtre "Type de logement" affiché ne correspond pas
-     au type du poste qu'on vient d'ajouter, on bascule dessus automatiquement.
-     Sans ça, le poste existe bien en base mais reste invisible car filtré. */
-  var selType = document.getElementById('dqe-type-logement');
-  if (selType && selType.value !== _typeAjoute) selType.value = _typeAjoute;
-
   chargerNomenclature();
-
-  /* Mise en évidence visuelle de la ligne ajoutée — évite toute confusion
-     sur la présence réelle de l'enregistrement dans le tableau. */
-  setTimeout(function(){
-    var tbody = document.getElementById('tbody-nomenclature');
-    if (!tbody) return;
-    var btn = tbody.querySelector('button[onclick*="' + _idAjoute + '"]');
-    var row = btn ? btn.closest('tr') : null;
-    if (row) {
-      row.scrollIntoView({ behavior:'smooth', block:'center' });
-      row.style.transition = 'background-color 0.3s';
-      row.style.backgroundColor = 'rgba(184,115,51,0.25)';
-      setTimeout(function(){ row.style.backgroundColor = ''; }, 1800);
-    } else {
-      console.warn('[DQE] Poste ' + _idAjoute + ' ajouté mais introuvable dans le tableau après rendu — vérifier le filtre Type de logement (attendu : ' + _typeAjoute + ').');
-    }
-  }, 60);
 }
 
 async function supprimerPosteNomenclature(id, type) {
@@ -39764,6 +40797,19 @@ function _a360Metrics() {
   var parcelles = DATA.parcelles || [];
   var valeurFoncier = parcelles.reduce(function(s,p){ return s+((p.prix_acq||0)+(p.frais_mutation||0)+(p.frais_bornage||0)+(p.frais_notaire||0)); }, 0);
 
+  /* ── Fusion des totaux lots + foncier ──
+     caPortef/encaisse/txRecouv (et le poids paie qui en dépend) sont
+     désormais des totaux GLOBAUX incluant les cessions foncières, dont
+     l'encaissement réel est suivi via c.montant_encaisse (maintenu à jour
+     par crecSavePaiement). Le détail lots-seul reste disponible via
+     caPortefLots / encaisseLots / txRecouvLots pour qui veut la distinction. */
+  var encaisseCessions = cessions.reduce(function(s,c){ return s+(parseFloat(c.montant_encaisse)||0); }, 0);
+  var caPortefLots = caPortef, encaisseLots = encaisse, txRecouvLots = txRecouv;
+  caPortef = caPortefLots + caCessions;
+  encaisse = encaisseLots + encaisseCessions;
+  txRecouv = caPortef > 0 ? Math.round(encaisse / caPortef * 100) : 0;
+  poidsSalaireEncaisse = encaisse > 0 ? Math.round(ms.coutEmployeur / encaisse * 100) : 0;
+
   var facturesFNE = DATA.factures_client || [];
   var fneACertifier = facturesFNE.filter(function(f){ return f.statut_fne === 'a_certifier'; }).length;
   var fneActif = (DATA.params||{}).fne_actif === 'oui';
@@ -39781,6 +40827,7 @@ function _a360Metrics() {
   return {
     nbClients: clients.length, nbLeads: leads.length, leadsActifs: leadsActifs,
     caPortef: caPortef, encaisse: encaisse, txRecouv: txRecouv, txConv: txConv,
+    caPortefLots: caPortefLots, encaisseLots: encaisseLots, txRecouvLots: txRecouvLots,
     nbRetard: retard.length, montantRetard: montantRetard, topRetard: retard.slice().sort(function(a,b){return b.montantDu-a.montantDu;}).slice(0,5),
     convEnCours: convEnCours.length, chantiersRetard: chantiersRetard.length, avgAvancement: avgAvancement,
     lotsVendus: lotsVendus, lotsTotal: lotsTotal, tauxVente: tauxVente, progInvendus: progInvendus, nbProgrammes: programmes.length,
@@ -39792,7 +40839,7 @@ function _a360Metrics() {
     coutEmployeur: ms.coutEmployeur, poidsSalaireEncaisse: poidsSalaireEncaisse,
     /* v132 */
     progDeficitaires: progDeficitaires, cashNetGlobal: cashNetGlobal, couvFinanceMin: Math.round(couvFinanceMin),
-    caCessions: caCessions, nbCessions: cessions.length, valeurFoncier: valeurFoncier, nbParcelles: parcelles.length,
+    caCessions: caCessions, encaisseCessions: encaisseCessions, nbCessions: cessions.length, valeurFoncier: valeurFoncier, nbParcelles: parcelles.length,
     fneACertifier: fneACertifier, fneActif: fneActif, nbFactures: facturesFNE.length,
     coutJournaliers: coutJournaliers, nbQuinzMois: quinzMois.length, contratsExp30: contratsExp30
   };
@@ -39940,10 +40987,16 @@ function buildAnalyse360() {
     // Tableau de bord 360
     +'<div style="font-size:13px;font-weight:700;color:#1C1C2E;margin-bottom:10px;">📊 Tableau de bord 360°</div>'
     +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">'
-    +kpi('CA portefeuille', fmtF(m.caPortef)+' F', '#B87333')
-    +kpi('Encaissé', fmtF(m.encaisse)+' F', '#10B981')
+    +kpi('CA portefeuille', fmtF(m.caPortef)+' F', '#B87333', 'lots + foncier')
+    +kpi('Encaissé', fmtF(m.encaisse)+' F', '#10B981', 'lots + foncier')
     +kpi('Taux recouvrement', m.txRecouv+'%', m.txRecouv>=70?'#10B981':m.txRecouv>=50?'#B87333':'#EF4444')
     +kpi('Résultat', fmtF(m.resultat)+' F', m.resultat>=0?'#10B981':'#EF4444', 'marge '+m.margePct+'%')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">'
+    +kpi('CA lots', fmtF(m.caPortefLots)+' F', '#B87333', 'hors foncier · '+(m.txRecouvLots)+'% recouvré')
+    +kpi('CA cessions foncières', fmtF(m.caCessions)+' F', '#0284C7', m.nbCessions+' cession(s)')
+    +kpi('Encaissé foncier', fmtF(m.encaisseCessions)+' F', '#0284C7', 'sur '+fmtF(m.caCessions)+' F dus')
+    +kpi('Valeur foncier en stock', fmtF(m.valeurFoncier)+' F', '#7C3AED', m.nbParcelles+' parcelle(s) · coût acquis.')
     +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">'
     +kpi('Clients', m.nbClients, '#3B82F6')
@@ -39961,7 +41014,7 @@ function buildAnalyse360() {
     +kpi('Effectif actif', m.effectif, '#3B82F6', m.nbCommerciaux+' commercial(aux)')
     +kpi('Masse salariale (mois)', fmtF(m.masseBrute)+' F', '#B87333')
     +kpi('Charges patronales', fmtF(m.chargesPat)+' F', '#8B5CF6', 'coût '+fmtF(m.coutEmployeur)+' F')
-    +kpi('Poids paie / encaissé', m.poidsSalaireEncaisse+'%', m.poidsSalaireEncaisse>40?'#EF4444':m.poidsSalaireEncaisse>25?'#B87333':'#10B981')
+    +kpi('Poids paie / encaissé', m.poidsSalaireEncaisse+'%', m.poidsSalaireEncaisse>40?'#EF4444':m.poidsSalaireEncaisse>25?'#B87333':'#10B981', 'lots + foncier')
     +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;">'
     +kpi('Cash net programmes', fmtF(m.cashNetGlobal)+' F', m.cashNetGlobal>=0?'#10B981':'#EF4444', m.progDeficitaires+' prog. déficitaire(s)')
@@ -40002,6 +41055,8 @@ function imprimerAnalyse360() {
     +'<h2>Indicateurs clés</h2><table>'
     +'<tr><th>CA portefeuille</th><td>'+fmtF(m.caPortef)+' F</td><th>Encaissé</th><td>'+fmtF(m.encaisse)+' F</td></tr>'
     +'<tr><th>Taux recouvrement</th><td>'+m.txRecouv+'%</td><th>Résultat</th><td>'+fmtF(m.resultat)+' F (marge '+m.margePct+'%)</td></tr>'
+    +'<tr><th>dont CA lots / foncier</th><td>'+fmtF(m.caPortefLots)+' F / '+fmtF(m.caCessions)+' F</td><th>dont Encaissé lots / foncier</th><td>'+fmtF(m.encaisseLots)+' F / '+fmtF(m.encaisseCessions)+' F</td></tr>'
+    +'<tr><th>Valeur foncier en stock</th><td>'+fmtF(m.valeurFoncier)+' F ('+m.nbParcelles+' parcelle(s))</td><th>Cessions foncières</th><td>'+m.nbCessions+' cession(s)</td></tr>'
     +'<tr><th>Clients / Prospects actifs</th><td>'+m.nbClients+' / '+m.leadsActifs+'</td><th>Taux conversion</th><td>'+m.txConv+'%</td></tr>'
     +'<tr><th>Impayés</th><td>'+fmtF(m.montantRetard)+' F ('+m.nbRetard+')</td><th>Commissions dues</th><td>'+fmtF(m.commDues)+' F</td></tr>'
     +'<tr><th>Chantiers en cours / retard</th><td>'+m.convEnCours+' / '+m.chantiersRetard+'</td><th>Vente lots</th><td>'+m.tauxVente+'% ('+m.lotsVendus+'/'+m.lotsTotal+')</td></tr>'
@@ -49083,6 +50138,261 @@ function edsCalcEtude(e) {
   return { debSec: debSec, fg: fg, aleas: aleas, prixRevient: prixRevient, marge: marge, prixVente: prixVente, parPoste: parPoste };
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   CONTRÔLE DE GESTION CHANTIER (cœur ERP BTP)
+   Budget d'objectif (issu de l'étude) → Réel automatique (MO+matériaux+ST)
+   → Écart par poste → Reste à terminaison (EVM)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Coût horaire employeur EXACT, dérivé du moteur de paie (calcPaieEmploye).
+   coutTotal = brut + CNPS (retraite pat. + AT + PF) + ITS pat. + FDFP + CMU pat.
+   Base 173,33 h/mois (39 h/sem légal CI). Repli sur salaire_base×1,25 si paie indisponible. */
+function cgCoutHoraire(empId){
+  var e=(DATA.employes||[]).find(function(x){return x.id===empId;});
+  if(!e) return 0;
+  var coutMensuel=0;
+  try {
+    if(typeof calcPaieEmploye==='function'){
+      var r=calcPaieEmploye(e);
+      coutMensuel=(r && r.coutTotal)?r.coutTotal:0;
+    }
+  } catch(err){ coutMensuel=0; }
+  if(!coutMensuel){
+    /* Repli : approximation si la paie n'a pas pu être calculée. */
+    var base=parseFloat(e.salaire_categoriel!=null?e.salaire_categoriel:e.salaire_base)||0;
+    coutMensuel=base*1.25;
+  }
+  return coutMensuel/173.33;
+}
+/* Heures effectivement travaillées d'un pointage (normales + supp), déduites de la pause. */
+function cgHeuresTravaillees(pt){
+  if(!pt || (pt.statut && pt.statut!=='present' && pt.statut!=='P' && pt.statut!=='H')) {
+    /* absent/congé/maladie → 0 h chantier */
+    if(pt.statut && ['A','C','M','AT','CM'].indexOf(pt.statut)>=0) return 0;
+  }
+  if(pt.heure_entree && pt.heure_sortie){
+    var toMin=function(h){var p=(h||'').split(':');return (parseInt(p[0])||0)*60+(parseInt(p[1])||0);};
+    var diff=(toMin(pt.heure_sortie)-toMin(pt.heure_entree)-(parseInt(pt.pause)||0))/60;
+    return Math.max(0, diff) + (parseFloat(pt.heures_supp)||0);
+  }
+  return (parseFloat(pt.heures_supp)||0);
+}
+
+/* Budget d'objectif : ventilation du déboursé de l'étude par poste. */
+function cgBudgetDepuisEtude(etude){
+  var b={materiau:0, mo:0, materiel:0, st:0, total:0, parOuvrage:[]};
+  (etude.lignes||[]).forEach(function(l){
+    var o=(DATA.eds_ouvrages||[]).find(function(x){return x.id===l.ouvrage_id;});
+    if(!o) return;
+    var d=edsDebourse(o); var q=parseFloat(l.qte)||0;
+    b.materiau+=d.materiau*q; b.mo+=d.mo*q; b.materiel+=d.materiel*q; b.st+=(d.st||0)*q;
+    b.total+=d.total*q;
+    b.parOuvrage.push({code:o.code, designation:o.designation, unite:o.unite, qte:q,
+      pu_debourse:d.total, total:d.total*q, categorie:o.categorie||'Divers'});
+  });
+  return b;
+}
+
+/* Réel consommé sur une convention/chantier, ventilé par poste. */
+function cgRealiseChantier(convId){
+  var r={materiau:0, mo:0, st:0, autre:0, total:0};
+  /* 1. Matériaux : sorties de stock affectées (hors pertes). */
+  (DATA.stock_mouvements||[]).forEach(function(m){
+    if(m.type==='sortie' && m.chantier_id===convId && m.sortie_nature!=='perte'){
+      r.materiau += (parseFloat(m.cout)||parseFloat(m._val)||0);
+    }
+  });
+  /* 2. Main-d'œuvre : pointages affectés. */
+  (DATA.pointages||[]).forEach(function(p){
+    if(p.chantier_id===convId){ r.mo += (parseFloat(p.cout_mo)|| (p.chantier_id?Math.round(cgHeuresTravaillees(p)*cgCoutHoraire(p.employe_id)):0)); }
+  });
+  /* 3. Sous-traitance : situations validées/payées de la convention (HT). */
+  (DATA.situations||[]).forEach(function(s){
+    if(s.convention_id===convId && (s.statut==='validee'||s.statut==='payee')){
+      r.st += (parseFloat(s.montant_ht)||0);
+    }
+  });
+  r.total = r.materiau + r.mo + r.st + r.autre;
+  return r;
+}
+
+/* Analyse complète budget vs réel + EVM pour un chantier. */
+function cgAnalyseChantier(conv){
+  if(!conv) return null;
+  var etude = conv.etude_budget_id ? (DATA.eds_etudes||[]).find(function(e){return e.id===conv.etude_budget_id;}) : null;
+  var budget = etude ? cgBudgetDepuisEtude(etude) : (conv.budget_objectif||null);
+  var reel = cgRealiseChantier(conv.id);
+  var av = (conv.avancement||0)/100;
+
+  var res = { budget:budget, reel:reel, avancement:conv.avancement||0, ecarts:null, evm:null };
+  if(budget && budget.total>0){
+    /* Écarts par poste (MO+matériaux : ST comparée séparément). */
+    res.ecarts = {
+      materiau:{budget:budget.materiau, reel:reel.materiau, ecart:reel.materiau-budget.materiau*av},
+      mo:{budget:budget.mo, reel:reel.mo, ecart:reel.mo-budget.mo*av},
+      st:{budget:budget.st, reel:reel.st, ecart:reel.st-budget.st*av},
+      total:{budget:budget.total, reel:reel.total, ecart:reel.total-budget.total*av}
+    };
+    /* EVM — Earned Value Management :
+       BAC = budget à terminaison (coût étudié total)
+       VA (CBTE) = valeur acquise = BAC × avancement physique
+       CR (CRTE) = coût réel = réel total
+       IPC = VA/CR (>1 = sous budget) ; CFE = BAC/IPC (coût final estimé) */
+    var BAC=budget.total;
+    var VA=BAC*av;
+    var CR=reel.total;
+    var IPC = CR>0 ? VA/CR : 1;
+    var CFE = IPC>0 ? BAC/IPC : BAC;
+    res.evm = { BAC:BAC, VA:VA, CR:CR, IPC:IPC, CFE:CFE, ecartFinal:BAC-CFE,
+      resteADepenser: Math.max(0, CFE-CR) };
+  }
+  return res;
+}
+
+/* Affecte une étude comme budget d'objectif d'une convention (chantier). */
+async function cgAffecterBudget(etudeId){
+  var etude=(DATA.eds_etudes||[]).find(function(e){return e.id===etudeId;});
+  if(!etude){toast('Étude introuvable.','error');return;}
+  var convs=(DATA.conventions||[]).filter(function(c){return c.statut!=='brouillon';});
+  if(!convs.length){toast('Aucune convention disponible. Créez d\'abord une convention de travaux.','error');return;}
+  var opts=convs.map(function(c){var cs=DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{};return c.numero+' — '+(cs.raison_sociale||'?');});
+  var choix=prompt('Affecter l\'étude « '+etude.nom+' » comme budget d\'objectif de quelle convention ?\n\n'+convs.map(function(c,i){return (i+1)+'. '+opts[i];}).join('\n')+'\n\nEntrez le numéro (1-'+convs.length+') :');
+  var idx=parseInt(choix)-1;
+  if(isNaN(idx)||idx<0||idx>=convs.length){toast('Affectation annulée.','info');return;}
+  var conv=convs[idx];
+  var budget=cgBudgetDepuisEtude(etude);
+  conv.etude_budget_id=etude.id;
+  conv.budget_objectif=budget;       /* snapshot figé du budget au moment de l'affectation */
+  conv.budget_date=today();
+  conv._modifie=new Date().toISOString();
+  await dbPut('conventions',conv);
+  if(typeof syncToSupabase==='function')syncToSupabase('pi_conventions',conv);
+  toast('🎯 Budget d\'objectif affecté à '+conv.numero+' ('+fmtF(budget.total)+' FCFA déboursé).','success');
+  if(typeof renderControleGestion==='function')renderControleGestion();
+  renderConventions();
+}
+
+/* Écart au niveau ouvrage.
+   Le réel fin par ouvrage n'est pas tracé nativement (les sorties stock et
+   pointages ne pointent pas vers un ouvrage précis). On ventile donc le réel
+   total au prorata du poids budgétaire de chaque ouvrage, SAUF pour la MO dont
+   une partie peut être rattachée par la « tâche » du pointage si elle contient
+   le code ou la désignation de l'ouvrage. Hypothèse affichée à l'utilisateur. */
+function cgEcartParOuvrage(conv){
+  var etude = conv.etude_budget_id ? (DATA.eds_etudes||[]).find(function(e){return e.id===conv.etude_budget_id;}) : null;
+  var budget = etude ? cgBudgetDepuisEtude(etude) : (conv.budget_objectif||null);
+  if(!budget || !budget.parOuvrage || !budget.parOuvrage.length) return [];
+  var reel = cgRealiseChantier(conv.id);
+  var av = (conv.avancement||0)/100;
+  var budgetTotal = budget.total||1;
+
+  /* MO rattachée explicitement à un ouvrage via la tâche du pointage. */
+  var moParOuvrage = {};
+  (DATA.pointages||[]).forEach(function(p){
+    if(p.chantier_id!==conv.id || !p.tache) return;
+    var t=(p.tache||'').toLowerCase();
+    var match=budget.parOuvrage.find(function(o){
+      return t.indexOf((o.code||'').toLowerCase())>=0 || (o.designation && t.indexOf(o.designation.toLowerCase().slice(0,12))>=0);
+    });
+    if(match){ var c=parseFloat(p.cout_mo)||0; moParOuvrage[match.code]=(moParOuvrage[match.code]||0)+c; }
+  });
+  var moRattachee=Object.keys(moParOuvrage).reduce(function(a,k){return a+moParOuvrage[k];},0);
+  var moDiffuse=Math.max(0, reel.mo - moRattachee);  /* MO non rattachée → prorata */
+  var reelDiffus = reel.materiau + reel.st + moDiffuse; /* réel à ventiler au prorata */
+
+  return budget.parOuvrage.map(function(o){
+    var poids = o.total/budgetTotal;
+    var budgetAvct = o.total*av;
+    var reelOuvrage = (moParOuvrage[o.code]||0) + reelDiffus*poids;
+    return {
+      code:o.code, designation:o.designation, categorie:o.categorie,
+      unite:o.unite, qte:o.qte, budget:o.total, budgetAvct:budgetAvct,
+      reel:reelOuvrage, ecart:reelOuvrage-budgetAvct,
+      moExplicite:!!moParOuvrage[o.code]
+    };
+  }).sort(function(a,b){ return b.ecart-a.ecart; });  /* pires écarts en tête */
+}
+
+/* Rendu du tableau de contrôle de gestion (onglet Suivi chantiers). */
+function renderControleGestion(){
+  var box=document.getElementById('cg-content');
+  if(!box) return;
+  var convs=(DATA.conventions||[]).filter(function(c){return c.etude_budget_id||c.budget_objectif;});
+  if(!convs.length){
+    box.innerHTML='<div class="card"><div style="padding:24px;text-align:center;color:var(--blanc-dim);">'
+      +'Aucun chantier budgété.<br><br>Rendez-vous dans <strong>Étude de Prix & Déboursé Sec</strong>, ouvrez une étude et cliquez sur 🎯 pour l\'affecter comme budget d\'objectif d\'une convention.'
+      +'</div></div>';
+    return;
+  }
+  box.innerHTML=convs.map(function(conv){
+    var a=cgAnalyseChantier(conv);
+    if(!a||!a.budget) return '';
+    var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};
+    var e=a.evm||{};
+    var ipcCol = e.IPC>=1 ? 'var(--vert)' : e.IPC>=0.9 ? 'var(--or)' : 'var(--rouge)';
+    var poste=function(lbl, o){
+      var depasse=o.ecart>0;
+      var pctConso=o.budget>0?Math.round(o.reel/o.budget*100):0;
+      return '<tr>'
+        +'<td>'+lbl+'</td>'
+        +'<td style="text-align:right;">'+fmtF(Math.round(o.budget))+'</td>'
+        +'<td style="text-align:right;font-weight:600;">'+fmtF(Math.round(o.reel))+'</td>'
+        +'<td style="text-align:right;">'+pctConso+'%</td>'
+        +'<td style="text-align:right;font-weight:700;color:'+(depasse?'var(--rouge)':'var(--vert)')+';">'+(depasse?'+':'')+fmtF(Math.round(o.ecart))+'</td>'
+      +'</tr>';
+    };
+    return '<div class="card" style="margin-bottom:16px;border-left:4px solid '+ipcCol+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+        +'<div><span style="font-family:monospace;color:var(--bleu);font-size:12px;">'+conv.numero+'</span> <strong>'+escHtml(constr.raison_sociale)+'</strong>'
+          +'<div style="font-size:11px;color:var(--blanc-dim);">Budget figé le '+(conv.budget_date||'—')+' · avancement '+a.avancement+'%</div></div>'
+        +'<div style="text-align:right;"><div style="font-size:11px;color:var(--blanc-dim);">Indice de perf. coût (IPC)</div>'
+          +'<div style="font-size:22px;font-weight:800;color:'+ipcCol+';">'+(e.IPC||0).toFixed(2)+'</div></div>'
+      +'</div>'
+      /* Tableau écart par poste */
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">'
+        +'<thead><tr style="color:var(--blanc-dim);font-size:10px;text-transform:uppercase;text-align:right;">'
+          +'<th style="text-align:left;">Poste</th><th>Budget (avct)</th><th>Réel</th><th>Conso.</th><th>Écart</th></tr></thead><tbody>'
+        +poste('🧱 Matériaux', a.ecarts.materiau)
+        +poste('👷 Main-d\'œuvre', a.ecarts.mo)
+        +poste('🤝 Sous-traitance', a.ecarts.st)
+        +'<tr style="border-top:2px solid var(--bord);font-weight:700;"><td>TOTAL</td>'
+          +'<td style="text-align:right;">'+fmtF(Math.round(a.ecarts.total.budget))+'</td>'
+          +'<td style="text-align:right;">'+fmtF(Math.round(a.ecarts.total.reel))+'</td>'
+          +'<td style="text-align:right;">'+(a.ecarts.total.budget>0?Math.round(a.ecarts.total.reel/a.ecarts.total.budget*100):0)+'%</td>'
+          +'<td style="text-align:right;color:'+(a.ecarts.total.ecart>0?'var(--rouge)':'var(--vert)')+';">'+(a.ecarts.total.ecart>0?'+':'')+fmtF(Math.round(a.ecarts.total.ecart))+'</td></tr>'
+        +'</tbody></table>'
+      /* EVM — projection à terminaison */
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px;text-align:center;background:var(--card2);padding:10px;border-radius:8px;">'
+        +'<div><div style="color:var(--blanc-dim);">Budget total (BAC)</div><div style="font-weight:700;color:var(--or);">'+fmtF(Math.round(e.BAC||0))+'</div></div>'
+        +'<div><div style="color:var(--blanc-dim);">Coût réel à ce jour</div><div style="font-weight:700;">'+fmtF(Math.round(e.CR||0))+'</div></div>'
+        +'<div><div style="color:var(--blanc-dim);">Coût final estimé</div><div style="font-weight:700;color:'+ipcCol+';">'+fmtF(Math.round(e.CFE||0))+'</div></div>'
+        +'<div><div style="color:var(--blanc-dim);">Écart final projeté</div><div style="font-weight:700;color:'+((e.ecartFinal||0)>=0?'var(--vert)':'var(--rouge)')+';">'+((e.ecartFinal||0)>=0?'+':'')+fmtF(Math.round(e.ecartFinal||0))+'</div></div>'
+      +'</div>'
+      +(e.IPC<0.9?'<div style="margin-top:10px;padding:8px 10px;background:rgba(224,82,82,.10);border-radius:6px;color:var(--rouge);font-size:12px;font-weight:600;">⚠️ Dérive budgétaire : au rythme actuel, dépassement final projeté de '+fmtF(Math.round(Math.abs(e.ecartFinal||0)))+' FCFA. Action corrective requise.</div>':'')
+      /* Détail par ouvrage (dépliable) */
+      +(function(){
+        var ouvrages=cgEcartParOuvrage(conv);
+        if(!ouvrages.length) return '';
+        var rows=ouvrages.map(function(o){
+          var dep=o.ecart>0;
+          return '<tr>'
+            +'<td style="font-family:monospace;font-size:10px;color:var(--bleu);">'+escHtml(o.code)+'</td>'
+            +'<td style="font-size:11px;">'+escHtml(o.designation)+(o.moExplicite?' <span title="MO rattachée par tâche" style="color:var(--vert);">•</span>':'')+'</td>'
+            +'<td style="text-align:right;font-size:11px;">'+fmtF(Math.round(o.budgetAvct))+'</td>'
+            +'<td style="text-align:right;font-size:11px;font-weight:600;">'+fmtF(Math.round(o.reel))+'</td>'
+            +'<td style="text-align:right;font-size:11px;font-weight:700;color:'+(dep?'var(--rouge)':'var(--vert)')+';">'+(dep?'+':'')+fmtF(Math.round(o.ecart))+'</td>'
+          +'</tr>';
+        }).join('');
+        return '<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;color:var(--or);font-weight:600;">🔍 Détail écart par ouvrage ('+ouvrages.length+')</summary>'
+          +'<div style="font-size:10px;color:var(--blanc-dim);margin:6px 0;">Réel ventilé au prorata budgétaire · MO avec • = rattachée par tâche de pointage</div>'
+          +'<table style="width:100%;border-collapse:collapse;margin-top:4px;">'
+          +'<thead><tr style="color:var(--blanc-dim);font-size:9px;text-transform:uppercase;text-align:right;"><th style="text-align:left;">Code</th><th style="text-align:left;">Ouvrage</th><th>Budget</th><th>Réel</th><th>Écart</th></tr></thead>'
+          +'<tbody>'+rows+'</tbody></table></details>';
+      })()
+    +'</div>';
+  }).filter(Boolean).join('');
+}
+
 function edsRenderEtudes() {
   var tb = document.getElementById('tbody-eds-etudes');
   if (!tb) return;
@@ -49099,6 +50409,7 @@ function edsRenderEtudes() {
       '<td style="text-align:right;font-weight:700;color:var(--vert,#1A6B3A);">' + fmtF(c.prixVente) + '</td>' +
       '<td style="text-align:right;color:#B8732F;">' + fmtF(c.marge) + '</td>' +
       '<td><button class="btn btn-secondary btn-sm" onclick="edsOpenEtude(\'' + e.id + '\')">✎</button> ' +
+      '<button class="btn btn-secondary btn-sm" onclick="cgAffecterBudget(\'' + e.id + '\')" title="Affecter cette étude comme budget d\'objectif d\'un chantier">🎯</button> ' +
       '<button class="btn btn-secondary btn-sm" onclick="printPreviewDebourse(\'' + e.id + '\')" title="Aperçu avant impression">👁</button> ' +
       '<button class="btn btn-secondary btn-sm" onclick="edsExportPDF(\'' + e.id + '\')">🖨</button> ' +
       '<button class="btn btn-secondary btn-sm" onclick="edsDeleteEtude(\'' + e.id + '\')">🗑</button></td>' +
@@ -50073,7 +51384,18 @@ function brnRemove(i) { _brnList.splice(i,1); brnRender(); }
 function brnRender() {
   var tb = document.getElementById('tbody-bornes');
   if (!tb) return;
-  if (!_brnList.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--blanc-dim,#888);padding:12px;">Aucune borne — cliquez sur + Borne.</td></tr>'; }
+  var cEl1 = document.getElementById('parc-tab-bornes-count');
+  var cEl2 = document.getElementById('parc-bornes-count-inline');
+  if (cEl1) cEl1.textContent = String(_brnList.length);
+  if (cEl2) cEl2.textContent = String(_brnList.length);
+  parcRenderMiniPlan();
+  if (!_brnList.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="padding:0;border-bottom:none;">'
+      + '<div class="empty-state-mini"><div class="esm-icon">📐</div>'
+      + '<div class="esm-txt">Aucune borne enregistrée pour cette parcelle.<br>Ajoutez-les manuellement, importez un CSV, ou scannez le dossier technique.</div>'
+      + '<button class="btn btn-primary btn-sm" onclick="brnAdd()">+ Ajouter une borne</button></div>'
+      + '</td></tr>';
+  }
   else {
     tb.innerHTML = _brnList.map(function(b,i){
       return '<tr>'
@@ -50579,11 +51901,13 @@ async function afArchiverOperation(opId, silencieux) {
   if (!op) return;
   op.archived = true;
   op.archived_at = new Date().toISOString();
+  op._modifie = new Date().toISOString();
   var idx = DATA.af_operations.findIndex(function(x){ return x.id===op.id; });
   if (idx>=0) DATA.af_operations[idx]=op;
+  if (_afOp && _afOp.id===op.id) { _afOp.archived=true; _afOp.archived_at=op.archived_at; }
   await dbPut('af_operations', op);
   if (typeof syncToSupabase==='function') syncToSupabase('pi_af_operations', op);
-  if (!silencieux) { toast('Opération archivée 📦', 'success'); afRenderPipeline(); filiereLiveRefresh(); }
+  if (!silencieux) { toast('Opération archivée 📦', 'success'); closeModal('modal-af-operation'); afRenderPipeline(); filiereLiveRefresh(); }
 }
 
 async function afDesarchiverOperation(opId) {
@@ -50591,11 +51915,14 @@ async function afDesarchiverOperation(opId) {
   if (!op) return;
   op.archived = false;
   op.archived_at = null;
+  op._modifie = new Date().toISOString();
   var idx = DATA.af_operations.findIndex(function(x){ return x.id===op.id; });
   if (idx>=0) DATA.af_operations[idx]=op;
+  if (_afOp && _afOp.id===op.id) { _afOp.archived=false; _afOp.archived_at=null; }
   await dbPut('af_operations', op);
   if (typeof syncToSupabase==='function') syncToSupabase('pi_af_operations', op);
   toast('Opération réactivée 📂', 'success');
+  closeModal('modal-af-operation');
   afRenderPipeline();
   filiereLiveRefresh();
 }
@@ -51393,45 +52720,107 @@ function editVersement(id) {
 /* ══════════════════════════════════════════════════════════
    COMPTABILITÉ — Onglet Versements souscripteurs (éditable)
    Modifier ici recalcule les commissions liées (extourne + régén.)
+   Vue unifiée depuis v6.1 : inclut aussi les encaissements sur
+   cessions foncières (DATA.cessions_foncieres[].paiements), qui
+   étaient auparavant invisibles dans cet onglet (store séparé,
+   commissions liées via cession_id et non versement_id).
 ══════════════════════════════════════════════════════════ */
 function renderComptaVersements() {
   var tb = document.getElementById('tbody-compta-versements');
   if (!tb) return;
   var q = ((document.getElementById('compta-vers-search') || {}).value || '').toLowerCase();
+  var filtreSrc = (document.getElementById('compta-vers-filtre') || {}).value || '';
   var typeLabels = { frais_souscription:'Frais souscription', apport:'Apport', mensualite:'Mensualité', regularisation:'Régularisation', autre:'Autre' };
   var modeLabels = { especes:'Espèces', virement:'Virement', cheque:'Chèque', mobile_money:'Mobile Money' };
   var fmt = (typeof fcfa === 'function') ? fcfa : function(n){ return fmtF(n) + ' FCFA'; };
   var dts = (typeof dateShort === 'function') ? dateShort : function(d){ return d || '—'; };
 
-  var list = (DATA.versements || []).filter(function(v) {
-    var cl = (DATA.clients || []).find(function(c){ return c.id === v.client_id; });
-    var nom = cl ? (cl.nom + ' ' + (cl.prenoms || '')).toLowerCase() : '';
-    return !q || nom.indexOf(q) !== -1 || (v.ref || '').toLowerCase().indexOf(q) !== -1;
-  }).sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
-
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun versement</td></tr>'; return; }
-
-  tb.innerHTML = list.map(function(v) {
+  /* ── 1) Versements souscripteurs de lots (programmes) ── */
+  var lignesLot = (DATA.versements || []).map(function(v) {
     var cl = (DATA.clients || []).find(function(c){ return c.id === v.client_id; });
     var nom = cl ? (cl.nom + ' ' + (cl.prenoms || '')) : '—';
     var comms = (DATA.commissions || []).filter(function(c){ return c.versement_id === v.id && c.statut !== 'annulee'; });
     var totComm = comms.reduce(function(s, c){ return s + (c.montant_comm || 0); }, 0);
     var payee = comms.some(function(c){ return c.statut === 'payee'; });
-    var commTxt = comms.length
-      ? (fmt(totComm) + ' <span style="font-size:11px;color:var(--blanc-dim);">(' + comms.length + ')' + (payee ? ' 🔒payée' : '') + '</span>')
+    return {
+      ref: v.ref, date: v.date, nom: nom,
+      typeTxt: typeLabels[v.type] || v.type || '—', typeBadge: 'badge-bleu',
+      montant: parseFloat(v.montant) || 0, mode: modeLabels[v.mode] || v.mode || '—',
+      commCount: comms.length, commTot: totComm, commPayee: payee, commNote: '',
+      source: 'lot', srcIcon: '🏠', srcTitle: 'Souscripteur — lot / programme',
+      editAction: "editVersement('" + v.id + "')",
+      editTitle: 'Modifier (recalcule les commissions)'
+    };
+  });
+
+  /* ── 2) Encaissements sur cessions foncières (acquéreurs de parcelles/lots) ──
+     Les commissions d'une cession sont calculées une seule fois sur le prix
+     total de cession (cesGenererCommissions, clé cession_id), pas versement
+     par versement. On les affiche donc uniquement sur le dernier paiement
+     enregistré pour la cession, avec la mention « · cession », pour éviter
+     tout double comptage visuel. */
+  var lignesFoncier = [];
+  (DATA.cessions_foncieres || []).forEach(function(c) {
+    var ps = (c.paiements || []).slice().sort(function(a, b){ return new Date(a.date) - new Date(b.date); });
+    if (!ps.length) return;
+    var commsCession = (DATA.commissions || []).filter(function(x){ return x.cession_id === c.id && x.statut !== 'annulee'; });
+    var totCommCession = commsCession.reduce(function(s, x){ return s + (x.montant_comm || 0); }, 0);
+    var payeeCession = commsCession.some(function(x){ return x.statut === 'payee'; });
+    ps.forEach(function(p, idx) {
+      var dernier = (idx === ps.length - 1);
+      lignesFoncier.push({
+        ref: p.ref || ('CES-' + String(c.id).slice(-6).toUpperCase()), date: p.date,
+        nom: c.acquereur || '—', typeTxt: 'Cession foncière', typeBadge: 'badge-violet',
+        montant: parseFloat(p.montant) || 0, mode: modeLabels[p.mode] || p.mode || '—',
+        commCount: dernier ? commsCession.length : 0,
+        commTot: dernier ? totCommCession : 0,
+        commPayee: payeeCession, commNote: dernier && commsCession.length ? ' · cession' : '',
+        source: 'cession', srcIcon: '🏞️', srcTitle: 'Acquéreur — cession foncière',
+        editAction: "editCessionPaiement('" + c.id + "','" + p.id + "')",
+        editTitle: 'Modifier ce versement (recalcule le solde et l\u2019écriture liée)'
+      });
+    });
+  });
+
+  var base = filtreSrc === 'lot' ? lignesLot
+           : filtreSrc === 'cession' ? lignesFoncier
+           : lignesLot.concat(lignesFoncier);
+
+  var list = base.filter(function(r) {
+    return !q || (r.nom || '').toLowerCase().indexOf(q) !== -1 || (r.ref || '').toLowerCase().indexOf(q) !== -1;
+  }).sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
+
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun versement</td></tr>'; return; }
+
+  tb.innerHTML = list.map(function(r) {
+    var commTxt = r.commCount
+      ? (fmt(r.commTot) + ' <span style="font-size:11px;color:var(--blanc-dim);">(' + r.commCount + ')' + (r.commPayee ? ' 🔒payée' : '') + r.commNote + '</span>')
       : '<span style="color:var(--blanc-dim);">—</span>';
     return '<tr>'
-      + '<td><strong>' + (v.ref || '—') + '</strong></td>'
-      + '<td>' + dts(v.date) + '</td>'
-      + '<td>' + nom + '</td>'
-      + '<td><span class="badge badge-bleu">' + (typeLabels[v.type] || v.type || '—') + '</span></td>'
-      + '<td style="text-align:right;color:var(--vert);font-weight:bold;">' + fmt(v.montant) + '</td>'
-      + '<td>' + (modeLabels[v.mode] || v.mode || '—') + '</td>'
+      + '<td><span title="' + r.srcTitle + '">' + r.srcIcon + '</span> <strong>' + (r.ref || '—') + '</strong></td>'
+      + '<td>' + dts(r.date) + '</td>'
+      + '<td>' + r.nom + '</td>'
+      + '<td><span class="badge ' + r.typeBadge + '">' + r.typeTxt + '</span></td>'
+      + '<td style="text-align:right;color:var(--vert);font-weight:bold;">' + fmt(r.montant) + '</td>'
+      + '<td>' + r.mode + '</td>'
       + '<td style="font-size:12px;">' + commTxt + '</td>'
       + '<td style="white-space:nowrap;text-align:right;">'
-      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="editVersement(\'' + v.id + '\')" title="Modifier (recalcule les commissions)">✎</button>'
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="' + r.editAction + '" title="' + r.editTitle + '">✎</button>'
       + '</td></tr>';
   }).join('');
+}
+
+/* Ouvre le paiement d'une cession foncière depuis la vue unifiée pour
+   modification directe (montant, date, mode). Le solde encaissé, le statut
+   de la cession et l'écriture SYSCOHADA liée sont recalculés automatiquement.
+   NB : la commission d'une cession est fixée une seule fois sur le prix
+   total (cesGenererCommissions, clé cession_id) — elle n'est donc pas
+   recalculée versement par versement comme pour les lots. */
+function editCessionPaiement(cessionId, paiementId) {
+  goTo('foncier');
+  if (typeof switchTab === 'function') switchTab('foncier', 'recouvrement');
+  if (typeof crecRender === 'function') crecRender();
+  if (typeof crecEditPaiement === 'function') crecEditPaiement(cessionId, paiementId);
 }
 
 
@@ -53217,6 +54606,24 @@ async function cesGenererEcriture(c) {
   }
 }
 
+/* ── RATTRAPAGE : génère les écritures manquantes pour les cessions saisies AVANT ce correctif ── */
+async function backfillEcrituresCessions() {
+  var manquantes = (DATA.cessions_foncieres || []).filter(function(c) { return !c.ecriture_vente_id; });
+  if (!manquantes.length) { toast('Aucune écriture manquante — tout est déjà à jour.', 'success'); return; }
+  if (!confirm(manquantes.length + ' cession(s) sans écriture comptable détectée(s).\nGénérer les écritures (4111/701 + encaissement + sortie de stock) maintenant ?')) return;
+  for (var i = 0; i < manquantes.length; i++) {
+    await cesGenererEcriture(manquantes[i]);
+    await dbPut('cessions_foncieres', manquantes[i]);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_cessions_foncieres', manquantes[i]);
+  }
+  if (typeof filterEcritures === 'function') filterEcritures();
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildGrandLivre === 'function') buildGrandLivre();
+  if (typeof buildBilan === 'function') buildBilan();
+  if (typeof buildCompteResultat === 'function') buildCompteResultat();
+  toast(manquantes.length + ' écriture(s) générée(s) — Journal, Balance, Bilan et Grand Livre mis à jour.', 'success');
+}
+
 async function cesSave() {
   var g=function(id){var e=document.getElementById(id); return e?e.value:'';};
   var src=g('ces-source'); var acq=g('ces-acquereur').trim();
@@ -53904,45 +55311,133 @@ function crecRenderPaiements(c) {
   box.innerHTML = '<table style="width:100%;font-size:12px;"><thead><tr><th>Date</th><th>Montant</th><th>Mode</th><th>Réf.</th><th></th></tr></thead><tbody>'
     + (ps.length ? ps.map(function (p) {
         return '<tr><td>' + dateShort(p.date) + '</td><td style="text-align:right;color:var(--vert);">' + fmtF(p.montant) + '</td><td>' + (p.mode || '—') + '</td><td>' + (p.ref || '—') + '</td>'
-          + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="crecDeletePaiement(\'' + c.id + '\',\'' + p.id + '\')">🗑</button></td></tr>';
+          + '<td style="white-space:nowrap;">'
+          + '<button class="btn btn-secondary btn-sm btn-icon" title="Modifier" onclick="closeModal(\'modal-crec-plan\');crecEditPaiement(\'' + c.id + '\',\'' + p.id + '\')">✎</button> '
+          + '<button class="btn btn-danger btn-sm btn-icon" title="Supprimer" onclick="crecDeletePaiement(\'' + c.id + '\',\'' + p.id + '\')">🗑</button></td></tr>';
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--blanc-dim);padding:8px;">Aucun versement enregistré.</td></tr>')
     + '</tbody></table>';
 }
 
 /* ── Encaissement d'un versement (+ écriture SYSCOHADA) ── */
+var _crecEditPaiementId = null;
 function crecEncaisser(id) {
   var c = (DATA.cessions_foncieres || []).find(function (x) { return x.id === id; });
   if (!c) return;
   _crecId = id;
+  _crecEditPaiementId = null;
   var set = function (i, v) { var e = document.getElementById(i); if (e) e.value = v; };
-  set('crecp-acq', c.acquereur || '—');
-  set('crecp-reste', fmtF(crecReste(c)) + ' FCFA');
   set('crecp-date', today());
   set('crecp-montant', '');
   set('crecp-mode', 'virement');
   set('crecp-ref', '');
   set('crecp-notes', '');
+  var acqEl = document.getElementById('crecp-acq'); if (acqEl) acqEl.textContent = c.acquereur || '—';
+  var resteEl = document.getElementById('crecp-reste'); if (resteEl) resteEl.textContent = fmtF(crecReste(c)) + ' FCFA';
+  var t = document.getElementById('crecp-modal-title'); if (t) t.innerHTML = '💵 Encaisser — <span id="crecp-acq">' + (c.acquereur || '—') + '</span>';
+  var b = document.getElementById('btn-save-crecp'); if (b) b.textContent = '💾 Encaisser + écriture';
   openModal('modal-crec-paiement');
 }
+
+/* Ouvre le même modal en mode édition, pré-rempli avec un versement existant.
+   Utilisé depuis Foncier › Recouvrement (crecRenderPaiements) et depuis la
+   vue unifiée Comptabilité › Versements souscripteurs. */
+function crecEditPaiement(cessionId, paiementId) {
+  var c = (DATA.cessions_foncieres || []).find(function (x) { return x.id === cessionId; });
+  if (!c) return;
+  var p = (c.paiements || []).find(function (x) { return x.id === paiementId; });
+  if (!p) { toast('Versement introuvable', 'error'); return; }
+  _crecId = cessionId;
+  _crecEditPaiementId = paiementId;
+  var set = function (i, v) { var e = document.getElementById(i); if (e) e.value = v; };
+  set('crecp-date', p.date || today());
+  set('crecp-montant', p.montant || 0);
+  set('crecp-mode', p.mode || 'virement');
+  set('crecp-ref', p.ref || '');
+  set('crecp-notes', p.notes || '');
+  var acqEl = document.getElementById('crecp-acq'); if (acqEl) acqEl.textContent = c.acquereur || '—';
+  var resteAvant = crecReste(c) + (parseFloat(p.montant) || 0);
+  var resteEl = document.getElementById('crecp-reste'); if (resteEl) resteEl.textContent = fmtF(resteAvant) + ' FCFA (hors ce versement)';
+  var t = document.getElementById('crecp-modal-title'); if (t) t.innerHTML = '✏️ Modifier — <span id="crecp-acq">' + (c.acquereur || '—') + '</span>';
+  var b = document.getElementById('btn-save-crecp'); if (b) b.textContent = '💾 Enregistrer les modifications';
+  openModal('modal-crec-paiement');
+}
+
 async function crecSavePaiement() {
   var c = (DATA.cessions_foncieres || []).find(function (x) { return x.id === _crecId; });
   if (!c) return;
   var montant = parseFloat((document.getElementById('crecp-montant') || {}).value) || 0;
   if (montant <= 0) { toast('Montant invalide', 'error'); return; }
+
+  /* ── Mode édition d'un versement existant ──
+     Le montant total encaissé (c.montant_encaisse) et le statut sont
+     recalculés à partir de l'écart entre ancien et nouveau montant.
+     L'écriture SYSCOHADA déjà liée (p.ecriture_id) est mise à jour plutôt
+     que recréée, pour ne pas dupliquer le mouvement de trésorerie.
+     NB : les commissions liées à la cession (cesGenererCommissions) sont
+     calculées une seule fois sur le prix total de cession, pas versement
+     par versement — elles ne sont donc pas affectées par cette édition. */
+  if (_crecEditPaiementId) {
+    var p = (c.paiements || []).find(function (x) { return x.id === _crecEditPaiementId; });
+    if (!p) { toast('Versement introuvable', 'error'); return; }
+    var ancienMontant = parseFloat(p.montant) || 0;
+    var resteHorsCe = crecReste(c) + ancienMontant;
+    if (montant > resteHorsCe + 1) { if (!confirm('Le montant dépasse le reste dû (' + fmtF(resteHorsCe) + ' F). Continuer ?')) return; }
+
+    p.date = (document.getElementById('crecp-date') || {}).value || p.date;
+    p.mode = (document.getElementById('crecp-mode') || {}).value || p.mode;
+    p.ref = ((document.getElementById('crecp-ref') || {}).value || '').trim();
+    p.notes = ((document.getElementById('crecp-notes') || {}).value || '').trim();
+    p.montant = montant;
+
+    c.montant_encaisse = Math.max(0, crecVerse(c) - ancienMontant + montant);
+    if (c.montant_encaisse >= (c.prix_cession || 0)) c.statut = 'soldee';
+    else if (c.statut === 'soldee') c.statut = 'cedee';
+
+    if (p.ecriture_id && DATA.ecritures) {
+      var e = DATA.ecritures.find(function (x) { return x.id === p.ecriture_id; });
+      if (e) {
+        var compteTreso = (p.mode === 'especes') ? '571' : (p.mode === 'mobile_money' ? '531' : '521');
+        e.date = p.date; e.montant = montant; e.mode = p.mode;
+        e.compte = compteTreso; e.compte_debit = compteTreso;
+        e.libelle = 'Recouvrement acquéreur foncier — ' + (c.acquereur || '') + ' (modifié)';
+        await dbPut('ecritures', e);
+        if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', e);
+      } else {
+        await crecGenEcriture(c, p);
+      }
+    } else {
+      await crecGenEcriture(c, p);
+    }
+
+    await dbPut('cessions_foncieres', c);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_cessions_foncieres', c);
+    closeModal('modal-crec-paiement');
+    toast('Versement modifié — solde et écriture mis à jour', 'success');
+    _crecEditPaiementId = null;
+    crecRenderPaiements(c); crecRender();
+    if (typeof cesRender === 'function') cesRender();
+    if (typeof filterEcritures === 'function') filterEcritures();
+    if (typeof buildTresorerie === 'function') buildTresorerie();
+    if (typeof renderComptaVersements === 'function') renderComptaVersements();
+    filiereLiveRefresh();
+    return;
+  }
+
+  /* ── Mode ajout d'un nouveau versement (comportement original) ── */
   var reste = crecReste(c);
   if (montant > reste + 1) { if (!confirm('Le montant dépasse le reste dû (' + fmtF(reste) + ' F). Continuer ?')) return; }
-  var p = {
+  var p2 = {
     id: uid(), date: (document.getElementById('crecp-date') || {}).value || today(),
     montant: montant, mode: (document.getElementById('crecp-mode') || {}).value || 'virement',
     ref: ((document.getElementById('crecp-ref') || {}).value || '').trim(),
     notes: ((document.getElementById('crecp-notes') || {}).value || '').trim()
   };
   if (!c.paiements) c.paiements = [];
-  c.paiements.push(p);
+  c.paiements.push(p2);
   c.montant_encaisse = crecVerse(c) + montant;
   if (c.montant_encaisse >= (c.prix_cession || 0)) c.statut = 'soldee';
   else if (c.statut === 'promesse') c.statut = 'cedee';
-  await crecGenEcriture(c, p);
+  await crecGenEcriture(c, p2);
   await dbPut('cessions_foncieres', c);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_cessions_foncieres', c);
   closeModal('modal-crec-paiement');
@@ -53951,6 +55446,7 @@ async function crecSavePaiement() {
   if (typeof cesRender === 'function') cesRender();
   if (typeof filterEcritures === 'function') filterEcritures();
   if (typeof buildTresorerie === 'function') buildTresorerie();
+  if (typeof renderComptaVersements === 'function') renderComptaVersements();
   filiereLiveRefresh();
 }
 async function crecGenEcriture(c, p) {
@@ -54252,7 +55748,7 @@ function filiereRenderGlobal() {
   var supTot = ops.reduce(function(s, o) { return s + (o.superficie || 0); }, 0);
   var lotsVendus = lots.filter(function(l) { return l.statut === 'vendu'; }).length;
   var lotsCedes = cess.reduce(function(s, c) { return s + (c.nb_lots || 0); }, 0);
-  var caCess = cess.reduce(function(s, c) { return s + (c.montant_encaisse || 0); }, 0);
+  var caCess = calcCessionsTotal('montant_encaisse');
 
   var k = document.getElementById('fil-kpis');
   if (k) k.innerHTML =
