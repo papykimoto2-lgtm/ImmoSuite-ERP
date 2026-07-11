@@ -2267,6 +2267,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="nav-item" onclick="goTo('foncierops')" data-page="foncierops">
         <span class="nav-icon">🌍</span><span>Acquisition &amp; Aménagement Foncier</span>
       </div>
+          <div class="nav-item" onclick="goTo('sig')" data-page="sig">
+        <span class="nav-icon">🛰️</span><span>Cartographie &amp; SIG</span>
+      </div>
         </div>
       </div>
 
@@ -2964,6 +2967,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchTab('compta','grandlivre')">📚 Grand Livre</button>
           <button class="tab-btn" onclick="switchTab('compta','rapprochement')">🏦 Rapprochement Bancaire</button>
           <button class="tab-btn" onclick="switchTab('compta','cloture');renderClotureFEC()">🔒 Clôture & FEC</button>
+          <button class="tab-btn" onclick="switchTab('compta','bilanouverture');renderBilanOuverture()">🆕 Bilan d'ouverture</button>
           <button class="tab-btn" onclick="switchTab('compta','periodique')">📅 État périodique</button>
         </div>
 
@@ -2991,6 +2995,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane active" id="tab-compta-journal">
           <div class="filters-bar">
             <input type="text" class="search-input" placeholder="🔍 Libellé, compte, référence..." id="search-ecritures" oninput="filterEcritures()">
+            <select class="filter-select" id="filter-journal-ecriture" onchange="filterEcritures()">
+              <option value="">📓 Tous les journaux</option>
+            </select>
             <select class="filter-select" id="filter-type-ecriture" onchange="filterEcritures()">
               <option value="">Toutes catégories</option>
               <option value="charge">Charges (cl. 6)</option>
@@ -3010,12 +3017,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </select>
             <input type="month" class="filter-select" id="filter-mois-ecriture" onchange="filterEcritures()">
           </div>
+          <div class="card" id="journal-resume" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"></div>
           <div class="card">
             <div class="table-wrap">
               <table id="table-journal">
                 <thead>
                   <tr>
                     <th>N° Écriture</th>
+                    <th>Journal</th>
                     <th>Date</th>
                     <th>Compte Débit</th>
                     <th>Compte Crédit</th>
@@ -3760,6 +3769,46 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-compta-cloture">
           <div id="cloture-fec-content"></div>
         </div>
+
+        <!-- Bilan d'ouverture -->
+        <div class="tab-pane" id="tab-compta-bilanouverture">
+          <div id="bo-alert-wrap"></div>
+          <div class="card" style="margin-bottom:12px;">
+            <div class="form-section-title">🆕 Saisie du bilan d'ouverture</div>
+            <div style="font-size:12px;color:var(--blanc-dim);line-height:1.7;margin:8px 0 14px;">
+              📌 À utiliser <strong>une seule fois</strong>, lors du démarrage du logiciel avec une comptabilité déjà existante (reprise des soldes de la balance de l'exercice précédent, établie par ailleurs — expert-comptable, ancien logiciel...). Saisissez le solde <strong>débiteur ou créditeur</strong> de chaque compte de bilan (classes 1 à 5). Le système génère automatiquement les écritures d'à-nouveaux correspondantes, équilibrées via un compte de liaison technique (890), et les classe dans le <strong>journal des À-Nouveaux (AN)</strong>.
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Exercice concerné</label>
+                <select class="form-control" id="bo-annee" onchange="renderBilanOuverture()"></select>
+              </div>
+              <div class="form-group">
+                <label>Date du bilan d'ouverture *</label>
+                <input type="date" class="form-control" id="bo-date">
+              </div>
+              <div class="form-group span-2">
+                <label>Référence / note (optionnel)</label>
+                <input type="text" class="form-control" id="bo-note" placeholder="Ex : Reprise balance cabinet XYZ au 31/12/2025">
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label style="margin:0;">Soldes par compte *</label>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="boAjouterLigne()">➕ Ajouter une ligne</button>
+              </div>
+              <div id="bo-lignes-wrap"></div>
+            </div>
+            <div id="bo-equilibre-check" style="padding:10px 14px;border-radius:var(--radius);font-size:12px;font-weight:600;margin-top:8px;display:none;"></div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+              <button class="btn btn-primary" onclick="saveBilanOuverture()">💾 Enregistrer le bilan d'ouverture</button>
+              <button class="btn btn-danger" id="bo-btn-suppr" style="display:none;" onclick="supprimerBilanOuverture()">🗑 Supprimer le bilan d'ouverture existant</button>
+            </div>
+          </div>
+        </div>
+
         <div class="tab-pane" id="tab-compta-periodique">
           <div class="card" style="margin-bottom:12px;">
             <div class="card-title">📅 État périodique — Caisse & Comptabilité</div>
@@ -5698,6 +5747,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <div class="form-group"><label>Paie — CNPS à payer</label><input class="form-control" id="cd-paie-cnps" placeholder="431"></div>
 
               <div class="form-group"><label>Paie — ITS/CMU à payer</label><input class="form-control" id="cd-paie-its" placeholder="447"></div>
+              <div class="form-group"><label>Paie — Charges patronales (664)</label><input class="form-control" id="cd-paie-charge-pat" placeholder="664"></div>
+              <div class="form-group"><label>Paie — Avances récupérées (421)</label><input class="form-control" id="cd-paie-avances" placeholder="421"></div>
+              <div class="form-group"><label>Paie — Retenues diverses (427)</label><input class="form-control" id="cd-paie-retenues" placeholder="427"></div>
               <div class="form-group"><label>TVA collectée</label><input class="form-control" id="cd-tva-collectee" placeholder="443"></div>
               <div class="form-group"><label>TVA déductible</label><input class="form-control" id="cd-tva-deductible" placeholder="444"></div>
 
@@ -6519,6 +6571,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <select class="filter-select" id="lp-filter-dept-journal" onchange="renderLPJournal()">
               <option value="">Tous départements</option>
             </select>
+          </div>
+          <div class="card" style="margin-bottom:12px;padding:12px 14px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <strong style="font-size:13px;">📒 Comptabilisation SYSCOHADA</strong>
+              <select class="filter-select" id="lp-compta-mode">
+                <option value="global">OD globale (1 écriture/mois)</option>
+                <option value="detail">Détaillée (1 écriture/employé)</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;"><input type="checkbox" id="lp-compta-reglement" checked style="accent-color:var(--or,#B87333);"> Générer aussi le règlement (→ 521)</label>
+              <button class="btn btn-primary btn-sm" onclick="comptabiliserPaieUI()">📒 Comptabiliser la paie du mois</button>
+              <button class="btn btn-secondary btn-sm" onclick="decomptabiliserPaieUI()">↩︎ Annuler la comptabilisation</button>
+              <span id="lp-compta-status" style="font-size:12px;"></span>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:6px;">OD de paie : D 661 brut + D 664 charges patronales / C 422 net · 431 CNPS · 447 ITS+CMU · 421 avances · 427 retenues. Visible dans Comptabilité → journal <strong>PA</strong>.</div>
           </div>
           <div class="card" style="padding:0;overflow:hidden;">
             <div class="table-wrap" id="lp-journal-wrap" style="overflow-x:auto;">
@@ -10730,6 +10796,69 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       </div>
 
       <!-- ══════════════════════════════════════════════════
+           PAGE : CARTOGRAPHIE & SIG — parcelles, orthophotos, mesures
+      ═══════════════════════════════════════════════════ -->
+      <div class="page" id="page-sig">
+        <div class="page-header">
+          <div>
+            <div class="page-title">🛰️ Cartographie &amp; SIG</div>
+            <div class="page-subtitle">Portefeuille foncier sur carte · orthophotos · mesures · import/export</div>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn-secondary btn-sm" onclick="sigImportTrigger()">📥 Import GeoJSON/KML</button>
+          <button class="btn btn-secondary btn-sm" onclick="sigExportGeoJSON()">⬇ Export GeoJSON</button>
+          <input type="file" id="sig-import-file" accept=".geojson,.json,.kml" style="display:none;" onchange="sigImportFile(this)">
+        </div>
+
+        <div id="sig-kpis" class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;"></div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div style="flex:2 1 620px;min-width:340px;">
+            <div class="card" style="padding:10px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+                <select class="filter-select" id="sig-fond" onchange="sigSetFond(this.value)">
+                  <option value="osm">🗺️ OpenStreetMap</option>
+                  <option value="sat">🛰️ Satellite (Esri)</option>
+                  <option value="hyb">🛰️+🗺️ Hybride</option>
+                </select>
+                <select class="filter-select" id="sig-filtre-statut" onchange="sigRenderParcelles()">
+                  <option value="">Tous statuts</option>
+                  <option value="prospection">Prospection</option>
+                  <option value="disponible">Disponible</option>
+                  <option value="acquis">Acquis</option>
+                  <option value="litige">En litige</option>
+                  <option value="vendu">Vendu</option>
+                  <option value="amenage">Aménagé</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" id="sig-btn-mesure" onclick="sigToggleMesure()">📏 Mesurer</button>
+                <button class="btn btn-secondary btn-sm" id="sig-btn-dessin" onclick="sigToggleDessin()">✏️ Dessiner parcelle</button>
+                <button class="btn btn-secondary btn-sm" onclick="sigGPS()">📍 Ma position</button>
+                <button class="btn btn-secondary btn-sm" onclick="sigFitAll()">⤢ Tout voir</button>
+              </div>
+              <div id="sig-map" style="height:62vh;min-height:380px;border-radius:8px;overflow:hidden;background:#0d0d14;"></div>
+              <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:11px;color:var(--blanc-dim);">
+                <span id="sig-coords">Lat/Lng : — · UTM : —</span>
+                <span id="sig-mesure-info"></span>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1 1 300px;min-width:270px;">
+            <div class="card" style="padding:12px;margin-bottom:10px;">
+              <div class="card-title" style="font-size:13px;">🖼️ Orthophotos (superposition)</div>
+              <div style="font-size:11px;color:var(--blanc-dim);margin:6px 0;">Image géoréférencée par ses coins NO / SE (lat,lng). Opacité réglable, comparaison avant/après.</div>
+              <button class="btn btn-secondary btn-sm" onclick="sigOrthoTrigger()">+ Ajouter une orthophoto</button>
+              <input type="file" id="sig-ortho-file" accept="image/*" style="display:none;" onchange="sigOrthoFile(this)">
+              <div id="sig-ortho-liste" style="margin-top:8px;font-size:12px;"></div>
+            </div>
+            <div class="card" style="padding:12px;">
+              <div class="card-title" style="font-size:13px;">🗂️ Parcelles sur carte <span class="tbadge" id="sig-parc-count">0</span></div>
+              <div id="sig-parc-liste" style="margin-top:8px;font-size:12px;max-height:38vh;overflow:auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
            PAGE : RÉUNIONS DIRECTION
            Module : Planification 360° · PV · Plan d'action
       ═══════════════════════════════════════════════════ -->
@@ -12364,6 +12493,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <option value="mtn">MTN MoMo</option>
             <option value="compensation">Compensation</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>📓 Journal comptable</label>
+          <select class="form-control" id="e-journal">
+            <option value="auto">🤖 Auto (déduit des comptes)</option>
+          </select>
+          <div style="font-size:11px;color:var(--blanc-dim);margin-top:4px;">Laissez sur « Auto » pour un classement automatique selon les comptes mouvementés (trésorerie, achats, ventes…), ou choisissez un journal précis.</div>
         </div>
         <div class="form-group span-2">
           <label>Notes / Commentaires</label>
@@ -17895,6 +18031,7 @@ function goTo(page) {
   if (page === 'portail-apporteur') { if (!SESSION_APPORTEUR) { ouvrirLoginApporteur(); return; } chargerPortailApporteur(); }
   if (page === 'leads') { renderPipeline(); if (typeof crmStartPolling === 'function') crmStartPolling(); }
   if (page === 'crm-carte') { setTimeout(function(){ if(!_geoMap) initLeafletMap(); else { renderCarteGeo(); _refreshGeoMap(false); } }, 80); }
+  if (page === 'sig') { setTimeout(function(){ if(window.L){ _sigBuild(); } else { _sigLoadLeaflet(); } }, 80); }
   if (page === 'crm-itineraires') { loadPageItineraires(); }
   if (page === 'ordres-mission') { loadPageOrdresMission(); }
   if (page === 'crm-rapports')   { buildRapportsCommerciaux(); }
@@ -22535,6 +22672,102 @@ function initPlanComptable() {
   });
 }
 
+/* ══════════════════════════════════════════════════════
+   JOURNAUX COMPTABLES (auxiliaires SYSCOHADA)
+   Chaque écriture appartient à un journal. Si l'utilisateur
+   ne le précise pas (mode "Auto"), il est déduit du/des
+   compte(s) mouvementés (comptes de trésorerie paramétrés,
+   classe 6/7, etc.). Ceci permet de classer correctement
+   même les écritures générées automatiquement par le reste
+   de l'application sans avoir à toucher chaque générateur.
+   ══════════════════════════════════════════════════════ */
+var JOURNAUX_COMPTABLES = [
+  { code:'VE',  label:'Journal des Ventes',              icone:'🛒', couleur:'#4AC47A' },
+  { code:'AC',  label:'Journal des Achats',               icone:'📦', couleur:'#D4956A' },
+  { code:'BQ',  label:'Journal de Banque',                icone:'🏦', couleur:'#4A94E0' },
+  { code:'CA',  label:'Journal de Caisse',                icone:'💵', couleur:'#4AC47A' },
+  { code:'MM',  label:'Journal Mobile Money',             icone:'📱', couleur:'#8A52E0' },
+  { code:'PA',  label:'Journal de Paie',                  icone:'👥', couleur:'#E05252' },
+  { code:'ST',  label:'Journal des Stocks',               icone:'🧱', couleur:'#B87333' },
+  { code:'OD',  label:'Journal des Opérations Diverses',  icone:'📓', couleur:'#6B6B9A' },
+  { code:'AN',  label:'Journal des À-Nouveaux',           icone:'🔄', couleur:'#4A8FD4' },
+  { code:'CLO', label:'Journal de Clôture',                icone:'🔒', couleur:'#E05252' }
+];
+
+function journalInfo(code) {
+  return JOURNAUX_COMPTABLES.find(function(j){ return j.code === code; })
+    || { code: code || 'OD', label: code || 'Journal des Opérations Diverses', icone:'📓', couleur:'#6B6B9A' };
+}
+
+/** Renvoie tous les comptes (codes) réellement mouvementés par une écriture, legacy inclus */
+function _ecritureComptes(e) {
+  var lignes = (typeof ecrLignes === 'function') ? ecrLignes(e) : (e.lignes || []);
+  var codes = lignes.map(function(l){ return l.compte; });
+  return codes.concat([e.compte_debit, e.compte_credit, e.compte]).filter(Boolean);
+}
+
+/** Déduit le journal d'une écriture à partir des comptes mouvementés, si non renseigné explicitement */
+function detectJournalCode(e) {
+  if (e.journal) return e.journal;
+  if (e._auto === 'stock_terrain') return 'ST';
+  if (e._auto === 'vente_terrain') return 'VE';
+  if ((e.ref || '').indexOf('AN-') === 0) return 'AN';
+  if ((e.ref || '').indexOf('CLOTURE') === 0) return 'CLO';
+
+  var cd = (DATA.params && DATA.params.comptes_defaut) || {};
+  var comptes = _ecritureComptes(e);
+  var startsAny = function(pref) { return comptes.some(function(c){ return c === pref || (c && c.indexOf(pref) === 0); }); };
+
+  var cCaisse = cd.treso_caisse || '571';
+  var cMobile = cd.treso_mobile || '531';
+  var cBanque = cd.treso_banque || '521';
+  var cPaie   = cd.paie_charge  || '641';
+
+  if (startsAny(cCaisse) || startsAny('57')) return 'CA';
+  if (startsAny(cMobile) || startsAny('53')) return 'MM';
+  if (startsAny(cBanque) || startsAny('52')) return 'BQ';
+  if (startsAny(cPaie)) return 'PA';
+
+  var classeOf = function(code) {
+    var c = APP.planComptable && APP.planComptable.find(function(x){ return x.code === code; });
+    return c ? c.classe : (code ? code.charAt(0) : '');
+  };
+  if (comptes.some(function(c){ return classeOf(c) === '7'; })) return 'VE';
+  if (comptes.some(function(c){ return classeOf(c) === '6'; })) return 'AC';
+
+  return 'OD';
+}
+
+/** Journal effectif d'une écriture : explicite si présent, sinon détecté */
+function getEcritureJournal(e) { return e.journal || detectJournalCode(e); }
+
+function journalBadgeHtml(code) {
+  var j = journalInfo(code);
+  return '<span class="badge" style="font-size:9px;padding:2px 6px;border-radius:6px;white-space:nowrap;background:'
+    + j.couleur + '22;color:' + j.couleur + ';border:1px solid ' + j.couleur + '55;" title="' + j.label + '">'
+    + j.icone + ' ' + j.code + '</span>';
+}
+
+/** Remplit les listes déroulantes de journal (filtre + formulaire écriture) */
+function populateJournauxSelects() {
+  var selFiltre = document.getElementById('filter-journal-ecriture');
+  if (selFiltre && selFiltre.options.length <= 1) {
+    JOURNAUX_COMPTABLES.forEach(function(j) {
+      var o = document.createElement('option');
+      o.value = j.code; o.textContent = j.icone + ' ' + j.code + ' — ' + j.label;
+      selFiltre.appendChild(o);
+    });
+  }
+  var selForm = document.getElementById('e-journal');
+  if (selForm && selForm.options.length <= 1) {
+    JOURNAUX_COMPTABLES.forEach(function(j) {
+      var o = document.createElement('option');
+      o.value = j.code; o.textContent = j.icone + ' ' + j.code + ' — ' + j.label;
+      selForm.appendChild(o);
+    });
+  }
+}
+
 var NATURE_LABELS_CPT = { actif:'Actif', passif:'Passif', actif_contra:'Actif soustractif', charge:'Charge', produit:'Produit', tresorerie:'Trésorerie', variable:'Variable' };
 
 function loadComptesDefaut() {
@@ -22553,6 +22786,9 @@ function loadComptesDefaut() {
   document.getElementById('cd-paie-du').value = cd.paie_du || '422';
   document.getElementById('cd-paie-cnps').value = cd.paie_cnps || '431';
   document.getElementById('cd-paie-its').value = cd.paie_its || '447';
+  var _pcp=document.getElementById('cd-paie-charge-pat'); if(_pcp)_pcp.value=cd.paie_charge_pat||'664';
+  var _pav=document.getElementById('cd-paie-avances'); if(_pav)_pav.value=cd.paie_avances||'421';
+  var _pret=document.getElementById('cd-paie-retenues'); if(_pret)_pret.value=cd.paie_retenues||'427';
   document.getElementById('cd-tva-collectee').value = cd.tva_collectee || '443';
   document.getElementById('cd-tva-deductible').value = cd.tva_deductible || '444';
   document.getElementById('cd-cession-produit').value = cd.cession_produit || '701';
@@ -22614,6 +22850,9 @@ function saveComptesDefaut() {
     paie_du:             document.getElementById('cd-paie-du').value.trim() || '422',
     paie_cnps:           document.getElementById('cd-paie-cnps').value.trim() || '431',
     paie_its:            document.getElementById('cd-paie-its').value.trim() || '447',
+    paie_charge_pat:     (document.getElementById('cd-paie-charge-pat')||{}).value ? document.getElementById('cd-paie-charge-pat').value.trim() : '664',
+    paie_avances:        (document.getElementById('cd-paie-avances')||{}).value ? document.getElementById('cd-paie-avances').value.trim() : '421',
+    paie_retenues:       (document.getElementById('cd-paie-retenues')||{}).value ? document.getElementById('cd-paie-retenues').value.trim() : '427',
     tva_collectee:       document.getElementById('cd-tva-collectee').value.trim() || '443',
     tva_deductible:      document.getElementById('cd-tva-deductible').value.trim() || '444',
     tva_deductible_travaux: (document.getElementById('cd-tva-ded-travaux')||{}).value ? document.getElementById('cd-tva-ded-travaux').value.trim() : ((DATA.params&&DATA.params.comptes_defaut&&DATA.params.comptes_defaut.tva_deductible_travaux)||'4452'),
@@ -22868,6 +23107,7 @@ function openEcritureModal(id) {
   APP.editingId = id || null;
   initPlanComptable();
   populateProgrammeSelects();
+  populateJournauxSelects();
   _ecrLignes = [];
   if (id) {
     var e = DATA.ecritures.find(function(x) { return x.id === id; });
@@ -22880,6 +23120,7 @@ function openEcritureModal(id) {
       document.getElementById('e-type').value = e.type || 'charge';
       setSelectValue('e-mode', e.mode);
       setSelectValue('e-programme', e.programme_id);
+      setSelectValue('e-journal', e.journal || 'auto');
       APP._ecrBaseModifie = e._modifie || null;
       _ecrLignes = ecrLignes(e).map(function(l){ return { compte:l.compte, sens:l.sens, montant:l.montant, libelle:l.libelle||'' }; });
     }
@@ -22889,6 +23130,7 @@ function openEcritureModal(id) {
     document.getElementById('e-piece').value = '';
     document.getElementById('e-libelle').value = '';
     document.getElementById('e-notes').value = '';
+    setSelectValue('e-journal', 'auto');
   }
   if (!_ecrLignes.length) { _ecrLignes = [{compte:'',sens:'D',montant:'',libelle:''}, {compte:'',sens:'C',montant:'',libelle:''}]; }
   ecrRenderLignes();
@@ -22932,6 +23174,8 @@ async function saveEcriture() {
     else if (['1','2','3','4','5'].indexOf(cDebit.classe) >= 0) typeAuto = cDebit.nature || 'divers';
   }
 
+  var journalChoisi = (document.getElementById('e-journal') || {}).value || 'auto';
+
   var ecriture = {
     id: id,
     ref: APP.editingId ? ((DATA.ecritures.find(function(e) { return e.id === id; }) || {}).ref || ref) : ref,
@@ -22951,6 +23195,10 @@ async function saveEcriture() {
     _baseModifie: APP.editingId ? (APP._ecrBaseModifie || null) : null,
     created_at: APP.editingId ? undefined : today()
   };
+  /* Journal : si l'utilisateur a choisi explicitement un journal, on le fige ;
+     sinon (mode "Auto"), on le déduit des comptes mouvementés et il restera
+     recalculable dynamiquement (getEcritureJournal) si les comptes changent. */
+  ecriture.journal = (journalChoisi && journalChoisi !== 'auto') ? journalChoisi : detectJournalCode(ecriture);
 
   if (APP.editingId) {
     var idx = DATA.ecritures.findIndex(function(e) { return e.id === id; });
@@ -22971,11 +23219,31 @@ async function saveEcriture() {
 
 /* ── JOURNAL ─────────────────────────────────────────── */
 function filterEcritures() {
+  populateJournauxSelects();
   var year = document.getElementById('filter-annee-compta').value;
   var type = document.getElementById('filter-type-ecriture') ? document.getElementById('filter-type-ecriture').value : '';
   var classe = document.getElementById('filter-classe-ecriture') ? document.getElementById('filter-classe-ecriture').value : '';
+  var journalF = document.getElementById('filter-journal-ecriture') ? document.getElementById('filter-journal-ecriture').value : '';
   var mois = document.getElementById('filter-mois-ecriture') ? document.getElementById('filter-mois-ecriture').value : '';
   var search = (document.getElementById('search-ecritures') ? document.getElementById('search-ecritures').value : '').toLowerCase();
+
+  /* Résumé par journal — calculé sur l'année/mois sélectionné, indépendamment du filtre journal lui-même */
+  var ecrPeriode = DATA.ecritures.filter(function(e) {
+    var matchYear = !year || (e.date && e.date.startsWith(year));
+    var matchMois = !mois || (e.date && e.date.startsWith(mois));
+    return matchYear && matchMois;
+  });
+  var resumeEl = document.getElementById('journal-resume');
+  if (resumeEl) {
+    var compteurs = {};
+    ecrPeriode.forEach(function(e) { var j = getEcritureJournal(e); compteurs[j] = (compteurs[j]||0) + 1; });
+    resumeEl.innerHTML = JOURNAUX_COMPTABLES.filter(function(j){ return compteurs[j.code]; }).map(function(j) {
+      var actif = journalF === j.code;
+      return '<button class="btn btn-sm" style="border-radius:20px;font-size:11px;background:' + (actif ? j.couleur : (j.couleur+'18')) + ';color:' + (actif ? '#fff' : j.couleur) + ';border:1px solid ' + j.couleur + '55;" '
+        + 'onclick="document.getElementById(\'filter-journal-ecriture\').value=\'' + (actif ? '' : j.code) + '\';filterEcritures();">'
+        + j.icone + ' ' + j.label + ' (' + compteurs[j.code] + ')</button>';
+    }).join('') || '<span style="font-size:12px;color:var(--blanc-dim);">Aucune écriture sur la période.</span>';
+  }
 
   var list = DATA.ecritures.filter(function(e) {
     var matchYear = !year || (e.date && e.date.startsWith(year));
@@ -22983,13 +23251,14 @@ function filterEcritures() {
     var matchType = !type || e.type === type;
     var cDebit = APP.planComptable.find(function(c){ return c.code === (e.compte_debit || e.compte); });
     var matchClasse = !classe || (cDebit && cDebit.classe === classe);
+    var matchJournal = !journalF || getEcritureJournal(e) === journalF;
     var matchSearch = !search || (e.libelle||'').toLowerCase().includes(search) || (e.ref||'').toLowerCase().includes(search) || (e.compte_debit||e.compte||'').includes(search);
-    return matchYear && matchMois && matchType && matchClasse && matchSearch;
+    return matchYear && matchMois && matchType && matchClasse && matchJournal && matchSearch;
   }).sort(function(a, b) { return new Date(a.date) - new Date(b.date); });
 
   var tbody = document.getElementById('tbody-ecritures');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucune écriture</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--blanc-dim);padding:24px;">Aucune écriture</td></tr>';
     var totEl = document.getElementById('journal-totaux');
     if (totEl) totEl.innerHTML = '';
     return;
@@ -23003,6 +23272,7 @@ function filterEcritures() {
     totDebit += e.montant; totCredit += e.montant;
     return '<tr>'
       + '<td style="font-family:monospace;font-size:11px;color:var(--bleu);">' + (e.ref||'—') + '</td>'
+      + '<td>' + journalBadgeHtml(getEcritureJournal(e)) + '</td>'
       + '<td style="font-size:11px;white-space:nowrap;">' + dateShort(e.date) + '</td>'
       + '<td><span style="color:var(--rouge);font-weight:600;font-size:12px;">' + (e.compte_debit||e.compte||'?') + '</span><br><span style="font-size:10px;color:var(--blanc-dim);">' + (cDebit ? cDebit.label.slice(0,28) : '') + '</span></td>'
       + '<td><span style="color:var(--vert);font-weight:600;font-size:12px;">' + (e.compte_credit||'?') + '</span><br><span style="font-size:10px;color:var(--blanc-dim);">' + (cCredit ? cCredit.label.slice(0,28) : '') + '</span></td>'
@@ -23638,18 +23908,20 @@ function buildGrandLivre() {
 /* ── EXPORT JOURNAL CSV ──────────────────────────────── */
 function exportJournalCSV() {
   var year = document.getElementById('filter-annee-compta').value || new Date().getFullYear();
-  var rows = ['N° Écriture,Date,Pièce,Libellé,Compte,Sens,Montant (FCFA),Mode,Programme'];
-  DATA.ecritures.filter(function(e){ return !year || (e.date && e.date.startsWith(year)); })
+  var journalF = document.getElementById('filter-journal-ecriture') ? document.getElementById('filter-journal-ecriture').value : '';
+  var rows = ['Journal,N° Écriture,Date,Pièce,Libellé,Compte,Sens,Montant (FCFA),Mode,Programme'];
+  DATA.ecritures.filter(function(e){ return (!year || (e.date && e.date.startsWith(year))) && (!journalF || getEcritureJournal(e) === journalF); })
     .sort(function(a,b){ return new Date(a.date)-new Date(b.date); })
     .forEach(function(e) {
       var prog = e.programme_id ? ((DATA.programmes.find(function(p){ return p.id===e.programme_id; })||{}).nom||'') : '';
+      var jCode = getEcritureJournal(e);
       ecrLignes(e).forEach(function(l){
-        rows.push([e.ref, e.date, e.piece||'', '"'+(l.libelle||e.libelle)+'"', l.compte, l.sens==='D'?'Débit':'Crédit', l.montant, e.mode||'', prog].join(','));
+        rows.push([jCode, e.ref, e.date, e.piece||'', '"'+(l.libelle||e.libelle)+'"', l.compte, l.sens==='D'?'Débit':'Crédit', l.montant, e.mode||'', prog].join(','));
       });
     });
   var blob = new Blob(['\uFEFF'+rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'journal_' + year + '_SYSCOHADA.csv'; a.click();
+  a.download = 'journal_' + (journalF ? journalF + '_' : '') + year + '_SYSCOHADA.csv'; a.click();
   toast('Journal exporté.', 'success');
 }
 
@@ -28609,6 +28881,8 @@ function renderLPJournal() {
     + '<tfoot><tr style="background:rgba(184,115,51,0.08);border-top:2px solid var(--or);">' + tfHtml + '</tr></tfoot>'
     + '</table>';
 
+  if (typeof paieComptaStatut === 'function') paieComptaStatut(moisKey);
+
   if (totDiv) {
     totDiv.innerHTML = '<div class="form-section-title" style="margin-bottom:12px;">Synthèse — ' + moisLabel + '</div>'
       + '<div class="kpi-grid">'
@@ -28620,6 +28894,123 @@ function renderLPJournal() {
       + '<div class="kpi-card" data-icon="🏛️"><div class="kpi-label">Coût total employeur</div><div class="kpi-value">' + fmtF(totals.coutTotal || 0) + ' FCFA</div></div>'
       + '</div>';
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   COMPTABILISATION DE LA PAIE (OD SYSCOHADA) → journal PA
+   Global (1 écriture/mois) ou détaillée (1/employé) + règlement (→521).
+   ══════════════════════════════════════════════════════════════════ */
+function _paieComptes(){
+  var cd=(DATA.params&&DATA.params.comptes_defaut)||{};
+  return { brut:cd.paie_charge||'661', pat:cd.paie_charge_pat||'664', net:cd.paie_du||'422',
+    cnps:cd.paie_cnps||'431', its:cd.paie_its||'447', avances:cd.paie_avances||'421',
+    retenues:cd.paie_retenues||'427', treso:cd.treso_banque||'521' };
+}
+function _paieMoisData(moisKey, dept){
+  var actifs=(DATA.employes||[]).filter(function(e){ return e.statut==='actif' && (!dept||e.dept===dept) && (typeof _lpPresent!=='function' || _lpPresent(e,moisKey)); });
+  return actifs.map(function(e){
+    var r=(typeof _lpDataEmp==='function'?_lpDataEmp(e,moisKey):{})||{};
+    if(r.itsNet==null) r.itsNet=r.its||0;
+    if(r.cnpsRetraiteSal==null) r.cnpsRetraiteSal=r.cnpsSal||0;
+    if(r.totalPatronal==null) r.totalPatronal=r.cnpsPat||0;
+    if(r.brutTotal==null) r.brutTotal=r.brut||0;
+    return { emp:e, brut:r.brutTotal||0, net:r.net||0, cnpsSal:r.cnpsRetraiteSal||0,
+      its:(r.itsNet||0)+(r.cmuSal||0), avances:r.avances||0, retenues:r.retenuesDiv||0, patronal:r.totalPatronal||0 };
+  });
+}
+function _sumAgg(list){ return list.reduce(function(a,x){ a.brut+=x.brut;a.net+=x.net;a.cnpsSal+=x.cnpsSal;a.its+=x.its;a.avances+=x.avances;a.retenues+=x.retenues;a.patronal+=x.patronal;return a; }, {brut:0,net:0,cnpsSal:0,its:0,avances:0,retenues:0,patronal:0}); }
+function _paieLignes(agg, C){
+  var l=[];
+  if(agg.brut>0) l.push({compte:C.brut,sens:'D',montant:Math.round(agg.brut),libelle:'Rémunérations brutes'});
+  if(agg.patronal>0) l.push({compte:C.pat,sens:'D',montant:Math.round(agg.patronal),libelle:'Charges sociales patronales'});
+  if(agg.net>0) l.push({compte:C.net,sens:'C',montant:Math.round(agg.net),libelle:'Net à payer'});
+  var cnps=Math.round(agg.cnpsSal+agg.patronal);
+  if(cnps>0) l.push({compte:C.cnps,sens:'C',montant:cnps,libelle:'CNPS à payer (sal.+pat.)'});
+  if(agg.its>0) l.push({compte:C.its,sens:'C',montant:Math.round(agg.its),libelle:'ITS + CMU retenus'});
+  if(agg.avances>0) l.push({compte:C.avances,sens:'C',montant:Math.round(agg.avances),libelle:'Avances récupérées'});
+  if(agg.retenues>0) l.push({compte:C.retenues,sens:'C',montant:Math.round(agg.retenues),libelle:'Retenues diverses'});
+  return l;
+}
+function _paieDernierJour(moisKey){ var p=moisKey.split('-'); var d=new Date(parseInt(p[0]),parseInt(p[1]),0); return moisKey+'-'+String(d.getDate()).padStart(2,'0'); }
+async function _ecrUpsert(e){
+  var idx=DATA.ecritures.findIndex(function(x){return x.id===e.id;});
+  if(idx>=0) DATA.ecritures[idx]=e; else DATA.ecritures.push(e);
+  await dbPut('ecritures', e);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', e);
+}
+async function comptabiliserPaie(moisKey, opts){
+  opts=opts||{}; var mode=opts.mode||'global', regl=opts.reglement!==false, dept=opts.dept||'';
+  var C=_paieComptes(), list=_paieMoisData(moisKey,dept);
+  if(!list.length) return {ok:false,msg:'Aucun employé actif pour ce mois.'};
+  var date=_paieDernierJour(moisKey);
+  var toDel=(DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;}).map(function(e){return e.id;});
+  for(var i=0;i<toDel.length;i++){ try{ await deleteRecord('ecritures', toDel[i], {skipIntegrity:true}); }catch(e){} }
+  var created=0;
+  if(mode==='detail'){
+    for(var j=0;j<list.length;j++){
+      var x=list[j], lg=_paieLignes(x,C); if(!lg.length) continue;
+      await _ecrUpsert({ id:'ecr_paie_'+x.emp.id+'_'+moisKey, ref:'PAIE-'+moisKey+'-'+(x.emp.matricule||''), date:date, piece:'OD-PAIE '+moisKey,
+        libelle:'Paie '+moisKey+' — '+x.emp.nom+' '+(x.emp.prenoms||''), lignes:lg, montant:Math.round(x.brut+x.patronal),
+        journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, created_at:today() }); created++;
+    }
+  } else {
+    var agg=_sumAgg(list), lg2=_paieLignes(agg,C);
+    await _ecrUpsert({ id:'ecr_paie_od_'+moisKey, ref:'PAIE-'+moisKey, date:date, piece:'OD-PAIE '+moisKey,
+      libelle:'OD de paie '+moisKey+' ('+list.length+' salarie-s)', lignes:lg2, montant:Math.round(agg.brut+agg.patronal),
+      journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, created_at:today() }); created++;
+  }
+  if(regl){
+    var a=_sumAgg(list), cnps=Math.round(a.cnpsSal+a.patronal), its=Math.round(a.its), net=Math.round(a.net), rl=[];
+    if(net>0) rl.push({compte:C.net,sens:'D',montant:net,libelle:'Reglement net salaires'});
+    if(cnps>0) rl.push({compte:C.cnps,sens:'D',montant:cnps,libelle:'Reversement CNPS'});
+    if(its>0) rl.push({compte:C.its,sens:'D',montant:its,libelle:'Reversement ITS+CMU'});
+    var tot=net+cnps+its;
+    if(tot>0){ rl.push({compte:C.treso,sens:'C',montant:tot,libelle:'Decaissement paie '+moisKey});
+      await _ecrUpsert({ id:'ecr_paie_regl_'+moisKey, ref:'REGL-PAIE-'+moisKey, date:date, piece:'REGL-PAIE '+moisKey,
+        libelle:'Reglement paie '+moisKey, lignes:rl, montant:tot, journal:'PA', type:'od', _auto:'paie_regl', _paie_mois:moisKey, created_at:today() }); created++; }
+  }
+  if(typeof buildBalance==='function') buildBalance();
+  if(typeof buildGrandLivre==='function') buildGrandLivre();
+  if(typeof buildBilan==='function') buildBilan();
+  return {ok:true, count:created, nb:list.length};
+}
+async function decomptabiliserPaie(moisKey){
+  var ids=(DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;}).map(function(e){return e.id;});
+  for(var i=0;i<ids.length;i++){ try{ await deleteRecord('ecritures', ids[i], {skipIntegrity:true}); }catch(e){} }
+  if(typeof buildBalance==='function') buildBalance();
+  if(typeof buildBilan==='function') buildBilan();
+  return ids.length;
+}
+function _lpMoisKeyJournal(){
+  var annee=(document.getElementById('lp-annee')||{}).value||new Date().getFullYear();
+  var mois=(document.getElementById('lp-mois-journal')||{}).value||'01';
+  return annee+'-'+mois;
+}
+function paieComptaStatut(moisKey){
+  var el=document.getElementById('lp-compta-status'); if(!el) return;
+  var n=(DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;}).length;
+  el.innerHTML = n ? '<span style="color:var(--vert);">✔ Comptabilise ('+n+' ecriture'+(n>1?'s':'')+') — journal PA</span>' : '<span style="color:var(--dim);">Non comptabilise</span>';
+}
+async function comptabiliserPaieUI(){
+  var moisKey=_lpMoisKeyJournal();
+  var mode=(document.getElementById('lp-compta-mode')||{}).value||'global';
+  var regl=(document.getElementById('lp-compta-reglement')||{}).checked;
+  var dept=(document.getElementById('lp-filter-dept-journal')||{}).value||'';
+  var exist=(DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;}).length;
+  if(exist && !confirm('La paie de '+moisKey+' est deja comptabilisee ('+exist+' ecritures). Regenerer ?')) return;
+  var r=await comptabiliserPaie(moisKey,{mode:mode,reglement:regl,dept:dept});
+  if(!r.ok){ toast(r.msg||'Echec.','error'); return; }
+  paieComptaStatut(moisKey);
+  toast('📒 Paie '+moisKey+' comptabilisee — '+r.count+' ecriture(s) au journal PA.','success');
+}
+async function decomptabiliserPaieUI(){
+  var moisKey=_lpMoisKeyJournal();
+  var n=(DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;}).length;
+  if(!n){ toast('Rien a annuler pour '+moisKey+'.','info'); return; }
+  if(!confirm('Supprimer les '+n+' ecriture(s) de paie de '+moisKey+' ?')) return;
+  var d=await decomptabiliserPaie(moisKey);
+  paieComptaStatut(moisKey);
+  toast(d+' ecriture(s) de paie supprimee(s).','info');
 }
 
 /* ── TAB 2 : Récapitulatif annuel (matrice employés × mois) ───────── */
@@ -29994,6 +30385,377 @@ function getCoords(adresse) {
   }
   // Default: random spread in Abidjan area
   return { x: 150 + Math.random() * 300, y: 120 + Math.random() * 200 };
+}
+
+// ══ MODULE SIG — Cartographie & Orthophotographie ═══════════════════════════
+var _sig = { map:null, fonds:{}, parcLayer:null, orthos:[], mesure:{on:false,pts:[],layer:null}, dessin:{on:false,pts:[],layer:null}, gpsMarker:null };
+var SIG_STATUT_COLORS = { prospection:'#94a3b8', disponible:'#22c55e', acquis:'#3b82f6', litige:'#ef4444', vendu:'#f59e0b', amenage:'#8b5cf6' };
+
+/* WGS84 → UTM (inverse de utm30ToLatLng) pour affichage + parcelles dessinées */
+function latLngToUtm(lat, lon, zone){
+  zone = zone || Math.floor((lon+180)/6)+1;
+  var a=6378137.0, f=1/298.257223563, k0=0.9996, e2=f*(2-f), ep2=e2/(1-e2);
+  var latR=lat*Math.PI/180, lonR=lon*Math.PI/180, lon0=(zone*6-183)*Math.PI/180;
+  var N=a/Math.sqrt(1-e2*Math.sin(latR)*Math.sin(latR));
+  var T=Math.tan(latR)*Math.tan(latR), C=ep2*Math.cos(latR)*Math.cos(latR), A=Math.cos(latR)*(lonR-lon0);
+  var M=a*((1-e2/4-3*e2*e2/64-5*e2*e2*e2/256)*latR
+    -(3*e2/8+3*e2*e2/32+45*e2*e2*e2/1024)*Math.sin(2*latR)
+    +(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*latR)
+    -(35*e2*e2*e2/3072)*Math.sin(6*latR));
+  var E=k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*ep2)*Math.pow(A,5)/120)+500000;
+  var Nn=k0*(M+N*Math.tan(latR)*(A*A/2+(5-T+9*C+4*C*C)*Math.pow(A,4)/24+(61-58*T+T*T+600*C-330*ep2)*Math.pow(A,6)/720));
+  if(lat<0) Nn+=10000000;
+  return { E:E, N:Nn, zone:zone };
+}
+
+function sigEnter(){
+  if(!window.L){ initLeafletMap ? _sigLoadLeaflet() : null; return; }
+  if(!_sig.map) _sigBuild(); else { _sig.map.invalidateSize(); sigRenderParcelles(); }
+}
+function _sigLoadLeaflet(){
+  if(!document.getElementById('leaflet-css')){ var c=document.createElement('link'); c.id='leaflet-css'; c.rel='stylesheet'; c.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(c); }
+  if(window.L){ _sigBuild(); return; }
+  var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  s.onload=function(){ _sigBuild(); }; s.onerror=function(){ toast('Leaflet inaccessible (hors ligne ?).','error'); };
+  document.head.appendChild(s);
+}
+function _sigBuild(){
+  var el=document.getElementById('sig-map'); if(!el||_sig.map) { if(_sig.map){_sig.map.invalidateSize(); sigRenderParcelles();} return; }
+  _sig.map=L.map('sig-map',{zoomControl:true}).setView([5.35,-4.02],11); /* Abidjan */
+  _sig.fonds.osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'});
+  _sig.fonds.sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'});
+  _sig.fonds.lbl=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',{maxZoom:19});
+  _sig.fonds.osm.addTo(_sig.map);
+  _sig.parcLayer=L.layerGroup().addTo(_sig.map);
+  _sig.map.on('mousemove',function(e){
+    var u=latLngToUtm(e.latlng.lat,e.latlng.lng);
+    var el2=document.getElementById('sig-coords');
+    if(el2) el2.textContent='Lat/Lng : '+e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5)+' · UTM '+u.zone+'N : E '+u.E.toFixed(1)+' / N '+u.N.toFixed(1);
+  });
+  _sig.map.on('click', _sigMapClick);
+  sigRenderParcelles(); sigRenderOrthoListe(); sigFitAll();
+}
+function sigSetFond(v){
+  ['osm','sat','lbl'].forEach(function(k){ if(_sig.fonds[k]&&_sig.map.hasLayer(_sig.fonds[k])) _sig.map.removeLayer(_sig.fonds[k]); });
+  if(v==='osm') _sig.fonds.osm.addTo(_sig.map);
+  else if(v==='sat') _sig.fonds.sat.addTo(_sig.map);
+  else { _sig.fonds.sat.addTo(_sig.map); _sig.fonds.lbl.addTo(_sig.map); }
+}
+function _sigParcellePath(p){
+  if(p.geo_polygon && p.geo_polygon.length>=3) return p.geo_polygon.map(function(pt){ return [pt[0],pt[1]]; });
+  if(p.bornes && p.bornes.length>=3) return p.bornes.filter(function(b){return b.x||b.y;}).map(function(b){ return utm30ToLatLng(b.x,b.y,p.utm_zone||30); });
+  return null;
+}
+function _sigStatut(p){
+  var s=(p.statut||'prospection').toLowerCase();
+  if(/litige/.test(s)) return 'litige';
+  if(/vendu/.test(s)) return 'vendu';
+  if(/amenag/.test(s)) return 'amenage';
+  if(/acquis/.test(s)) return 'acquis';
+  if(/dispo/.test(s)) return 'disponible';
+  return 'prospection';
+}
+function sigRenderParcelles(){
+  if(!_sig.map) return;
+  _sig.parcLayer.clearLayers();
+  var filtre=(document.getElementById('sig-filtre-statut')||{}).value||'';
+  var liste=document.getElementById('sig-parc-liste'), items='';
+  var nb=0, stats={};
+  (DATA.parcelles||[]).forEach(function(p){
+    var st=_sigStatut(p); stats[st]=(stats[st]||0)+1;
+    if(filtre && st!==filtre) return;
+    var path=_sigParcellePath(p);
+    var color=SIG_STATUT_COLORS[st]||'#94a3b8';
+    if(path){
+      nb++;
+      var poly=L.polygon(path,{color:color,weight:2,fillColor:color,fillOpacity:0.25}).addTo(_sig.parcLayer);
+      var sup=p.superficie?(p.superficie/10000).toFixed(4)+' ha':'—';
+      poly.bindPopup('<strong>'+escHtml(p.ref||p.id)+'</strong><br>'+escHtml(p.localisation||p.commune||'')+'<br>Statut : '+st+'<br>Superficie : '+sup+(p.systeme_geodesique?'<br>Réf. : '+escHtml(p.systeme_geodesique):''));
+      items+='<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid var(--bord);">'
+        +'<span style="width:10px;height:10px;border-radius:2px;background:'+color+';display:inline-block;cursor:pointer;" onclick="sigZoomParcelle(\''+p.id+'\')"></span>'
+        +'<div style="flex:1;min-width:0;cursor:pointer;" onclick="sigZoomParcelle(\''+p.id+'\')"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(p.ref||p.id)+'</div>'
+        +'<div style="font-size:10px;color:var(--blanc-dim);">'+sup+' · '+st+'</div></div>'
+        +'<button class="btn btn-secondary btn-sm btn-icon" title="Plan cadastral PDF" onclick="sigPlanCadastralPDF(\''+p.id+'\')">🖨️</button></div>';
+    } else if(p.geo_centroid && p.geo_centroid.lat){
+      nb++;
+      L.circleMarker([p.geo_centroid.lat,p.geo_centroid.lng],{radius:7,color:color,fillColor:color,fillOpacity:0.7}).addTo(_sig.parcLayer)
+        .bindPopup('<strong>'+escHtml(p.ref||p.id)+'</strong><br>(centroïde GPS — pas de polygone)');
+      items+='<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid var(--bord);"><span style="width:10px;height:10px;border-radius:50%;background:'+color+';"></span><div style="flex:1;">'+escHtml(p.ref||p.id)+' <span style="font-size:10px;color:var(--blanc-dim);">(point)</span></div></div>';
+    }
+  });
+  var cnt=document.getElementById('sig-parc-count'); if(cnt) cnt.textContent=nb;
+  if(liste) liste.innerHTML=items||'<span style="color:var(--blanc-dim);">Aucune parcelle géolocalisée. Importez des bornes (Portefeuille Foncier) ou dessinez.</span>';
+  var kp=document.getElementById('sig-kpis');
+  if(kp){
+    var tot=(DATA.parcelles||[]).length;
+    var geo=(DATA.parcelles||[]).filter(function(p){return _sigParcellePath(p)||(p.geo_centroid&&p.geo_centroid.lat);}).length;
+    var sup=(DATA.parcelles||[]).reduce(function(s,p){return s+(parseFloat(p.superficie)||0);},0);
+    kp.innerHTML=[
+      {l:'Parcelles',v:tot,c:'var(--bleu)'},
+      {l:'Géolocalisées',v:geo+' / '+tot,c:'var(--vert)'},
+      {l:'Superficie totale',v:(sup/10000).toFixed(2)+' ha',c:'var(--or)'},
+      {l:'Disponibles',v:stats.disponible||0,c:'#22c55e'},
+      {l:'En litige',v:stats.litige||0,c:'#ef4444'},
+      {l:'Vendues',v:stats.vendu||0,c:'#f59e0b'}
+    ].map(function(k){return '<div class="kpi-card" style="border-top:3px solid '+k.c+';"><div class="kpi-label">'+k.l+'</div><div class="kpi-value" style="font-size:16px;color:'+k.c+';">'+k.v+'</div></div>';}).join('');
+  }
+}
+function sigZoomParcelle(id){
+  var p=(DATA.parcelles||[]).find(function(x){return x.id===id;}); if(!p) return;
+  var path=_sigParcellePath(p);
+  if(path) _sig.map.fitBounds(L.latLngBounds(path),{padding:[30,30]});
+  else if(p.geo_centroid) _sig.map.setView([p.geo_centroid.lat,p.geo_centroid.lng],16);
+}
+function sigFitAll(){
+  if(!_sig.map) return;
+  var all=[];
+  (DATA.parcelles||[]).forEach(function(p){ var path=_sigParcellePath(p); if(path) all=all.concat(path); else if(p.geo_centroid&&p.geo_centroid.lat) all.push([p.geo_centroid.lat,p.geo_centroid.lng]); });
+  if(all.length) _sig.map.fitBounds(L.latLngBounds(all),{padding:[40,40]});
+}
+function sigGPS(){
+  if(!navigator.geolocation){ toast('GPS non disponible.','error'); return; }
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var ll=[pos.coords.latitude,pos.coords.longitude];
+    if(_sig.gpsMarker) _sig.map.removeLayer(_sig.gpsMarker);
+    _sig.gpsMarker=L.circleMarker(ll,{radius:8,color:'#2563eb',fillColor:'#3b82f6',fillOpacity:0.8}).addTo(_sig.map).bindPopup('📍 Ma position');
+    _sig.map.setView(ll,16);
+  },function(){ toast('Position introuvable (autorisation refusée ?).','error'); });
+}
+
+/* ── Mesure distance / superficie ── */
+function sigToggleMesure(){
+  _sig.mesure.on=!_sig.mesure.on; if(_sig.mesure.on) sigStopDessin();
+  _sig.mesure.pts=[]; if(_sig.mesure.layer){_sig.map.removeLayer(_sig.mesure.layer);_sig.mesure.layer=null;}
+  document.getElementById('sig-btn-mesure').className='btn btn-sm '+(_sig.mesure.on?'btn-primary':'btn-secondary');
+  document.getElementById('sig-mesure-info').textContent=_sig.mesure.on?'Cliquez les points · double-clic pour terminer':'';
+  if(!_sig.mesure.on) document.getElementById('sig-mesure-info').textContent='';
+}
+function _sigDistM(a,b){ return _sig.map.distance(a,b); }
+function _sigAreaM2(pts){ if(pts.length<3) return 0; var s=0; var u=pts.map(function(p){var q=latLngToUtm(p[0],p[1]);return [q.E,q.N];}); for(var i=0;i<u.length;i++){var A=u[i],B=u[(i+1)%u.length]; s+=A[0]*B[1]-B[0]*A[1];} return Math.abs(s/2); }
+function _sigMapClick(e){
+  if(_sig.mesure.on){
+    _sig.mesure.pts.push([e.latlng.lat,e.latlng.lng]);
+    if(_sig.mesure.layer)_sig.map.removeLayer(_sig.mesure.layer);
+    _sig.mesure.layer=L.polyline(_sig.mesure.pts,{color:'#f59e0b',weight:2,dashArray:'6,4'}).addTo(_sig.map);
+    var d=0; for(var i=1;i<_sig.mesure.pts.length;i++) d+=_sigDistM(_sig.mesure.pts[i-1],_sig.mesure.pts[i]);
+    var a=_sigAreaM2(_sig.mesure.pts);
+    document.getElementById('sig-mesure-info').textContent='Distance : '+(d>=1000?(d/1000).toFixed(2)+' km':d.toFixed(1)+' m')+(a>0?' · Surface : '+(a/10000).toFixed(4)+' ha ('+Math.round(a).toLocaleString('fr-FR')+' m²)':'');
+    return;
+  }
+  if(_sig.dessin.on){
+    _sig.dessin.pts.push([e.latlng.lat,e.latlng.lng]);
+    if(_sig.dessin.layer)_sig.map.removeLayer(_sig.dessin.layer);
+    _sig.dessin.layer=L.polygon(_sig.dessin.pts,{color:'#22c55e',weight:2,fillOpacity:0.2}).addTo(_sig.map);
+    var a2=_sigAreaM2(_sig.dessin.pts);
+    document.getElementById('sig-mesure-info').textContent='Sommets : '+_sig.dessin.pts.length+(a2>0?' · '+(a2/10000).toFixed(4)+' ha':'')+' — double-clic pour enregistrer';
+  }
+}
+function sigToggleDessin(){
+  _sig.dessin.on=!_sig.dessin.on; if(_sig.dessin.on){ _sig.mesure.on=false; document.getElementById('sig-btn-mesure').className='btn btn-sm btn-secondary'; }
+  _sig.dessin.pts=[]; if(_sig.dessin.layer){_sig.map.removeLayer(_sig.dessin.layer);_sig.dessin.layer=null;}
+  document.getElementById('sig-btn-dessin').className='btn btn-sm '+(_sig.dessin.on?'btn-primary':'btn-secondary');
+  document.getElementById('sig-mesure-info').textContent=_sig.dessin.on?'Cliquez les sommets de la parcelle · double-clic pour enregistrer':'';
+  if(_sig.dessin.on && _sig.map && !_sig._dblBound){ _sig._dblBound=true; _sig.map.on('dblclick', sigFinishAction); _sig.map.doubleClickZoom.disable(); }
+}
+function sigStopDessin(){ _sig.dessin.on=false; _sig.dessin.pts=[]; if(_sig.dessin.layer){_sig.map.removeLayer(_sig.dessin.layer);_sig.dessin.layer=null;} var b=document.getElementById('sig-btn-dessin'); if(b)b.className='btn btn-sm btn-secondary'; }
+async function sigFinishAction(){
+  if(_sig.mesure.on){ sigToggleMesure(); return; }
+  if(!_sig.dessin.on || _sig.dessin.pts.length<3) return;
+  var pts=_sig.dessin.pts.slice();
+  var ref=prompt('Référence de la nouvelle parcelle :','PARC-'+Date.now().toString().slice(-5));
+  if(ref===null){ sigStopDessin(); return; }
+  var a=_sigAreaM2(pts);
+  var zone=latLngToUtm(pts[0][0],pts[0][1]).zone;
+  var bornes=pts.map(function(p,i){ var u=latLngToUtm(p[0],p[1],zone); return {nom:'B'+(i+1),x:+u.E.toFixed(3),y:+u.N.toFixed(3),z:0,angle:0,distance:0}; });
+  var parc={ id:uid(), ref:(ref||'').trim()||('PARC-'+Date.now().toString().slice(-5)), statut:'prospection',
+    superficie:Math.round(a), bornes:bornes, geo_polygon:pts, utm_zone:zone,
+    systeme_geodesique:'UTM'+zone+'N-WGS84 (dessin SIG)', created_at:today() };
+  DATA.parcelles=DATA.parcelles||[]; DATA.parcelles.push(parc);
+  try{ await dbPut('parcelles',parc); if(typeof syncToSupabase==='function') syncToSupabase('pi_parcelles',parc); }catch(e){}
+  sigStopDessin(); sigRenderParcelles();
+  if(typeof renderParcelles==='function') renderParcelles();
+  toast('Parcelle '+parc.ref+' créée — '+(a/10000).toFixed(4)+' ha.','success');
+}
+
+/* ── Orthophotos (imageOverlay géoréférencé par coins) ── */
+function sigOrthoTrigger(){ var i=document.getElementById('sig-ortho-file'); if(i){i.value='';i.click();} }
+function sigOrthoFile(input){
+  var f=input.files&&input.files[0]; if(!f) return;
+  if(f.size>15*1024*1024){ toast('Image trop lourde (max 15 Mo).','error'); return; }
+  var r=new FileReader();
+  r.onload=function(e){
+    var c=_sig.map?_sig.map.getCenter():{lat:5.35,lng:-4.02};
+    var no=prompt('Coin NORD-OUEST (lat,lng) :', (c.lat+0.005).toFixed(5)+','+(c.lng-0.005).toFixed(5));
+    if(no===null) return;
+    var se=prompt('Coin SUD-EST (lat,lng) :', (c.lat-0.005).toFixed(5)+','+(c.lng+0.005).toFixed(5));
+    if(se===null) return;
+    var p1=no.split(',').map(parseFloat), p2=se.split(',').map(parseFloat);
+    if(p1.length<2||p2.length<2||p1.some(isNaN)||p2.some(isNaN)){ toast('Coordonnées invalides.','error'); return; }
+    var bounds=[[p1[0],p1[1]],[p2[0],p2[1]]];
+    var ov=L.imageOverlay(e.target.result,bounds,{opacity:0.8}).addTo(_sig.map);
+    _sig.orthos.push({ id:uid(), name:f.name, overlay:ov, opacity:0.8, visible:true, bounds:bounds });
+    _sig.map.fitBounds(bounds);
+    sigRenderOrthoListe();
+    toast('Orthophoto superposée. Ajustez l\'opacité pour comparer avant/après.','success');
+  };
+  r.readAsDataURL(f);
+}
+function sigRenderOrthoListe(){
+  var box=document.getElementById('sig-ortho-liste'); if(!box) return;
+  if(!_sig.orthos.length){ box.innerHTML='<span style="color:var(--blanc-dim);">Aucune orthophoto chargée (session).</span>'; return; }
+  box.innerHTML=_sig.orthos.map(function(o){
+    return '<div style="border:1px solid var(--bord);border-radius:6px;padding:6px 8px;margin-bottom:6px;">'
+      +'<div style="display:flex;align-items:center;gap:6px;"><span>🖼️</span><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">'+escHtml(o.name)+'</div>'
+      +'<button class="btn btn-secondary btn-sm btn-icon" onclick="sigOrthoToggle(\''+o.id+'\')">'+(o.visible?'👁️':'🚫')+'</button>'
+      +'<button class="btn btn-danger btn-sm btn-icon" onclick="sigOrthoDel(\''+o.id+'\')">🗑</button></div>'
+      +'<input type="range" min="0" max="100" value="'+Math.round(o.opacity*100)+'" style="width:100%;" oninput="sigOrthoOpacity(\''+o.id+'\',this.value)">'
+      +'</div>';
+  }).join('');
+}
+function sigOrthoToggle(id){ var o=_sig.orthos.find(function(x){return x.id===id;}); if(!o)return; o.visible=!o.visible; if(o.visible)o.overlay.addTo(_sig.map); else _sig.map.removeLayer(o.overlay); sigRenderOrthoListe(); }
+function sigOrthoOpacity(id,v){ var o=_sig.orthos.find(function(x){return x.id===id;}); if(o){o.opacity=v/100;o.overlay.setOpacity(o.opacity);} }
+function sigOrthoDel(id){ var o=_sig.orthos.find(function(x){return x.id===id;}); if(o){_sig.map.removeLayer(o.overlay);} _sig.orthos=_sig.orthos.filter(function(x){return x.id!==id;}); sigRenderOrthoListe(); }
+
+/* ── Import GeoJSON / KML → parcelles ── */
+function sigImportTrigger(){ var i=document.getElementById('sig-import-file'); if(i){i.value='';i.click();} }
+function sigImportFile(input){
+  var f=input.files&&input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=async function(e){
+    try{
+      var polys=[];
+      if(/\.kml$/i.test(f.name)){
+        var doc=new DOMParser().parseFromString(e.target.result,'text/xml');
+        var pms=doc.getElementsByTagName('Placemark');
+        for(var i2=0;i2<pms.length;i2++){
+          var nameEl=pms[i2].getElementsByTagName('name')[0];
+          var coordsEls=pms[i2].getElementsByTagName('coordinates');
+          for(var c2=0;c2<coordsEls.length;c2++){
+            var pts=coordsEls[c2].textContent.trim().split(/\s+/).map(function(t){var p=t.split(',');return [parseFloat(p[1]),parseFloat(p[0])];}).filter(function(p){return !isNaN(p[0])&&!isNaN(p[1]);});
+            if(pts.length>=3) polys.push({name:nameEl?nameEl.textContent:'KML-'+(polys.length+1),pts:pts});
+          }
+        }
+      } else {
+        var gj=JSON.parse(e.target.result);
+        var feats=gj.type==='FeatureCollection'?gj.features:(gj.type==='Feature'?[gj]:[]);
+        feats.forEach(function(ft,fi){
+          var g=ft.geometry; if(!g)return;
+          var rings=g.type==='Polygon'?[g.coordinates[0]]:(g.type==='MultiPolygon'?g.coordinates.map(function(mp){return mp[0];}):[]);
+          rings.forEach(function(ring){
+            var pts=ring.map(function(c3){return [c3[1],c3[0]];});
+            if(pts.length>=3) polys.push({name:(ft.properties&&(ft.properties.ref||ft.properties.name))||'GJ-'+(fi+1),pts:pts,props:ft.properties||{}});
+          });
+        });
+      }
+      if(!polys.length){ toast('Aucun polygone exploitable dans le fichier.','error'); return; }
+      var n=0;
+      for(var k=0;k<polys.length;k++){
+        var po=polys[k];
+        var a=_sigAreaM2(po.pts);
+        var zone=latLngToUtm(po.pts[0][0],po.pts[0][1]).zone;
+        var bornes=po.pts.map(function(p,ix){var u=latLngToUtm(p[0],p[1],zone);return {nom:'B'+(ix+1),x:+u.E.toFixed(3),y:+u.N.toFixed(3),z:0,angle:0,distance:0};});
+        var parc={ id:uid(), ref:String(po.name).trim(), statut:(po.props&&po.props.statut)||'prospection',
+          superficie:Math.round(a), bornes:bornes, geo_polygon:po.pts, utm_zone:zone,
+          systeme_geodesique:'UTM'+zone+'N-WGS84 (import '+(/\.kml$/i.test(f.name)?'KML':'GeoJSON')+')',
+          commune:(po.props&&po.props.commune)||'', localisation:(po.props&&po.props.localisation)||'', created_at:today() };
+        DATA.parcelles=DATA.parcelles||[]; DATA.parcelles.push(parc);
+        try{ await dbPut('parcelles',parc); if(typeof syncToSupabase==='function') syncToSupabase('pi_parcelles',parc); }catch(er){}
+        n++;
+      }
+      sigRenderParcelles(); sigFitAll();
+      if(typeof renderParcelles==='function') renderParcelles();
+      toast(n+' parcelle(s) importée(s).','success');
+    }catch(err){ toast('Import impossible : '+(err.message||err),'error'); }
+  };
+  r.readAsText(f);
+}
+
+/* ── PLAN CADASTRAL / PLAN DE BORNAGE PDF (jsPDF, vectoriel, offline) ──
+   Dessine le polygone à l'échelle depuis les bornes UTM + tableau des
+   coordonnées + cartouche. Aucune tuile → pas de problème CORS. */
+function _supHaAca(m2){ m2=Math.round(m2||0); var ha=Math.floor(m2/10000), r=m2%10000, a=Math.floor(r/100), ca=r%100; return ha+' ha '+a+' a '+ca+' ca'; }
+function sigPlanCadastralPDF(parcelleId){
+  if(!(window.jspdf && window.jspdf.jsPDF)){ toast('jsPDF indisponible (hors ligne ?).','error'); return; }
+  var p=(DATA.parcelles||[]).find(function(x){return x.id===parcelleId;}); if(!p){ toast('Parcelle introuvable.','error'); return; }
+  var zone=p.utm_zone||30;
+  var bornes=(p.bornes&&p.bornes.length>=3)?p.bornes.filter(function(b){return b.x||b.y;}):null;
+  if(!bornes && p.geo_polygon && p.geo_polygon.length>=3){
+    bornes=p.geo_polygon.map(function(pt,i){ var u=latLngToUtm(pt[0],pt[1],zone); return {nom:'B'+(i+1),x:u.E,y:u.N}; });
+  }
+  if(!bornes || bornes.length<3){ toast('Parcelle sans polygone (min. 3 bornes).','error'); return; }
+
+  var doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  var W=210, soc=((DATA.params||{}).societe)||'MENKO / ImmoSuite';
+  /* Cartouche */
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(String(soc),105,14,{align:'center'});
+  doc.setFontSize(15); doc.setDrawColor(40); doc.setLineWidth(0.6); doc.rect(60,18,90,9);
+  doc.text('PLAN DE BORNAGE',105,24.5,{align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  var infoY=34;
+  var infos=[
+    ['Référence', p.ref||p.id],
+    ['Localisation', (p.localisation||'')+(p.commune?' — '+p.commune:'')||'—'],
+    ['Sous-préfecture', p.sous_prefecture||'—'],
+    ['Système géodésique', p.systeme_geodesique||('UTM '+zone+'N')],
+    ['Statut', _sigStatut(p)],
+    ['Date', (typeof _frDate==='function') ? _frDate(today()) : today()]
+  ];
+  infos.forEach(function(r,i){ var col=i<3?0:1; var x=col?115:15, y=infoY+(i%3)*5; doc.setFont('helvetica','bold'); doc.text(r[0]+' :',x,y); doc.setFont('helvetica','normal'); doc.text(String(r[1]),x+32,y); });
+
+  /* Zone de dessin */
+  var box={x:15,y:52,w:180,h:150};
+  var xs=bornes.map(function(b){return b.x;}), ys=bornes.map(function(b){return b.y;});
+  var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys);
+  var dx=(maxX-minX)||1, dy=(maxY-minY)||1;
+  var scale=Math.min((box.w-20)/dx,(box.h-20)/dy);
+  var offX=box.x+(box.w-dx*scale)/2, offY=box.y+(box.h-dy*scale)/2;
+  var TX=function(x){ return offX+(x-minX)*scale; };
+  var TY=function(y){ return offY+(maxY-y)*scale; }; /* Y inversé (Nord en haut) */
+
+  doc.setDrawColor(180); doc.setLineWidth(0.2); doc.rect(box.x,box.y,box.w,box.h);
+  /* Polygone */
+  doc.setDrawColor(20,90,50); doc.setLineWidth(0.5);
+  for(var i=0;i<bornes.length;i++){ var a=bornes[i], b=bornes[(i+1)%bornes.length]; doc.line(TX(a.x),TY(a.y),TX(b.x),TY(b.y)); }
+  /* Bornes + labels */
+  doc.setFillColor(200,30,50); doc.setFontSize(7); doc.setTextColor(0);
+  bornes.forEach(function(b){ var px=TX(b.x),py=TY(b.y); doc.circle(px,py,0.8,'F'); doc.text(String(b.nom||''),px+1.5,py-1); });
+  /* Flèche Nord */
+  doc.setDrawColor(0); doc.setLineWidth(0.4); var nx=box.x+box.w-10, ny=box.y+12;
+  doc.line(nx,ny,nx,ny-8); doc.line(nx,ny-8,nx-2,ny-5); doc.line(nx,ny-8,nx+2,ny-5); doc.setFontSize(8); doc.text('N',nx-1.3,ny+4);
+  /* Barre d'échelle (100 m) */
+  var barM=100, barMM=barM*scale; if(barMM>60){ barM=50; barMM=barM*scale; }
+  var bx=box.x+6, by=box.y+box.h-6; doc.setLineWidth(0.4); doc.line(bx,by,bx+barMM,by); doc.line(bx,by-1.2,bx,by+1.2); doc.line(bx+barMM,by-1.2,bx+barMM,by+1.2);
+  doc.setFontSize(7); doc.text(barM+' m',bx+barMM/2,by-1.5,{align:'center'});
+
+  /* Superficie */
+  var area=0; for(var k=0;k<bornes.length;k++){ var A=bornes[k],B=bornes[(k+1)%bornes.length]; area+=A.x*B.y-B.x*A.y; } area=Math.abs(area/2);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Contenance : '+_supHaAca(area),105,box.y+box.h+8,{align:'center'});
+
+  /* Tableau des coordonnées */
+  var rows=bornes.map(function(b,i){ var n=bornes[(i+1)%bornes.length]; var d=Math.sqrt(Math.pow(n.x-b.x,2)+Math.pow(n.y-b.y,2)); return [b.nom||('B'+(i+1)), b.x.toFixed(3), b.y.toFixed(3), d.toFixed(2)]; });
+  doc.autoTable({ startY:box.y+box.h+13, head:[['Borne','X (Est)','Y (Nord)','Dist. suivant (m)']], body:rows,
+    styles:{fontSize:7,cellPadding:1}, headStyles:{fillColor:[184,115,51]}, theme:'grid', margin:{left:15,right:15} });
+  var yEnd=doc.lastAutoTable ? doc.lastAutoTable.finalY : box.y+box.h+40;
+  doc.setFont('helvetica','normal'); doc.setFontSize(8);
+  doc.text('Coordonnées en projection '+(p.systeme_geodesique||('UTM '+zone+'N (WGS84)'))+'. Document à valeur de repérage — un bornage contradictoire par géomètre agréé fait foi juridiquement.',15,yEnd+6,{maxWidth:180});
+
+  doc.save('plan_bornage_'+String(p.ref||p.id).replace(/[^\w.\-]+/g,'_')+'.pdf');
+  toast('Plan cadastral généré.','success');
+}
+
+/* ── Export GeoJSON du portefeuille ── */
+function sigExportGeoJSON(){
+  var feats=(DATA.parcelles||[]).map(function(p){
+    var path=_sigParcellePath(p); if(!path) return null;
+    var ring=path.map(function(pt){return [pt[1],pt[0]];}); ring.push(ring[0]);
+    return { type:'Feature', properties:{ ref:p.ref||p.id, statut:_sigStatut(p), superficie_m2:p.superficie||0, commune:p.commune||'', localisation:p.localisation||'', systeme:p.systeme_geodesique||'' },
+      geometry:{ type:'Polygon', coordinates:[ring] } };
+  }).filter(Boolean);
+  if(!feats.length){ toast('Aucune parcelle géolocalisée à exporter.','error'); return; }
+  var gj={ type:'FeatureCollection', features:feats };
+  var blob=new Blob([JSON.stringify(gj,null,1)],{type:'application/geo+json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='portefeuille_foncier_'+today()+'.geojson'; a.click();
+  toast(feats.length+' parcelle(s) exportée(s) en GeoJSON.','success');
 }
 
 // ══ CARTE COMMERCIALE — Leaflet.js ════════════════════════════════════════════
@@ -34063,6 +34825,211 @@ async function rouvrirExercice(annee) {
 function exerciceEstClos(date) {
   var an = new Date(date).getFullYear();
   return (DATA.params||{})['cloture_'+an] === true;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BILAN D'OUVERTURE — saisie manuelle des soldes de départ
+   (reprise d'une comptabilité existante au démarrage du logiciel)
+   Génère, par compte, une écriture D compte/C 890 (ou l'inverse)
+   dans le journal AN, référencée BO-<année> — idempotent (ré-enregistrer
+   remplace intégralement le bilan d'ouverture précédent de l'exercice).
+   ═══════════════════════════════════════════════════════════════════ */
+var _boLignes = [];
+
+function _boCompteOptionsHtml(selected) {
+  var html = '<option value="">— Compte de bilan —</option>';
+  var classes = {};
+  (APP.planComptable || []).filter(function(c){ return ['1','2','3','4','5'].indexOf(c.classe) >= 0; })
+    .forEach(function(c){ (classes[c.classe] = classes[c.classe] || []).push(c); });
+  var labels = { '1':'Classe 1 — Ressources durables','2':'Classe 2 — Actif immobilisé','3':'Classe 3 — Stocks','4':'Classe 4 — Tiers','5':'Classe 5 — Trésorerie' };
+  Object.keys(classes).sort().forEach(function(cl){
+    html += '<optgroup label="' + labels[cl] + '">';
+    classes[cl].forEach(function(c){
+      html += '<option value="' + c.code + '"' + (c.code === selected ? ' selected' : '') + '>' + c.code + ' — ' + c.label + '</option>';
+    });
+    html += '</optgroup>';
+  });
+  return html;
+}
+
+function boAjouterLigne(compte, sens, montant) {
+  _boLignes.push({ compte: compte || '', sens: sens || 'D', montant: montant || '' });
+  boRenderLignes();
+}
+
+function boSupprimerLigne(i) {
+  if (_boLignes.length <= 1) { toast('Au moins 1 ligne requise.', 'error'); return; }
+  _boLignes.splice(i, 1);
+  boRenderLignes();
+}
+
+function boUpdateLigne(i, field, val) {
+  if (!_boLignes[i]) return;
+  _boLignes[i][field] = val;
+  boCheckEquilibre();
+}
+
+function boRenderLignes() {
+  var wrap = document.getElementById('bo-lignes-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = _boLignes.map(function(l, i) {
+    return '<div style="display:grid;grid-template-columns:2.3fr 110px 160px 34px;gap:6px;margin-bottom:6px;align-items:center;">'
+      + '<select class="form-control" onchange="boUpdateLigne(' + i + ',\'compte\',this.value)" style="font-size:12px;">' + _boCompteOptionsHtml(l.compte) + '</select>'
+      + '<select class="form-control" onchange="boUpdateLigne(' + i + ',\'sens\',this.value)" style="font-size:12px;font-weight:700;color:' + (l.sens==='D'?'var(--rouge)':'var(--vert)') + ';">'
+      + '<option value="D"' + (l.sens==='D'?' selected':'') + '>Débiteur</option>'
+      + '<option value="C"' + (l.sens==='C'?' selected':'') + '>Créditeur</option></select>'
+      + '<input type="number" class="form-control" value="' + (l.montant||'') + '" placeholder="Solde (FCFA)" oninput="boUpdateLigne(' + i + ',\'montant\',parseFloat(this.value)||0)" style="font-size:12px;">'
+      + '<button type="button" class="btn btn-danger btn-sm btn-icon" onclick="boSupprimerLigne(' + i + ')">🗑</button>'
+      + '</div>';
+  }).join('');
+  boCheckEquilibre();
+}
+
+function boCheckEquilibre() {
+  var box = document.getElementById('bo-equilibre-check');
+  if (!box) return;
+  var lignesValides = _boLignes.filter(function(l){ return l.compte && parseFloat(l.montant) > 0; });
+  var totD = lignesValides.filter(function(l){ return l.sens==='D'; }).reduce(function(s,l){ return s+parseFloat(l.montant); }, 0);
+  var totC = lignesValides.filter(function(l){ return l.sens==='C'; }).reduce(function(s,l){ return s+parseFloat(l.montant); }, 0);
+  if (!lignesValides.length) { box.style.display = 'none'; return { ok:false, totD:0, totC:0 }; }
+  box.style.display = 'block';
+  var ok = Math.abs(totD - totC) < 1;
+  box.style.background = ok ? 'rgba(82,196,122,0.1)' : 'rgba(224,82,82,0.1)';
+  box.style.border = '1px solid ' + (ok ? 'rgba(82,196,122,0.3)' : 'rgba(224,82,82,0.3)');
+  box.style.color = ok ? 'var(--vert)' : 'var(--rouge)';
+  box.textContent = ok
+    ? '✔ Bilan équilibré — Actif (débiteur) ' + fmtF(totD) + ' FCFA = Passif (créditeur) ' + fmtF(totC) + ' FCFA (' + lignesValides.length + ' compte(s))'
+    : '⚠ Déséquilibre — Débiteur ' + fmtF(totD) + ' ≠ Créditeur ' + fmtF(totC) + ' (écart ' + fmtF(Math.abs(totD-totC)) + ' FCFA). Vérifiez vos soldes avant d\'enregistrer.';
+  return { ok: ok, totD: totD, totC: totC };
+}
+
+/** Recharge le formulaire pour l'exercice sélectionné : préremplit si un bilan d'ouverture existe déjà */
+function renderBilanOuverture() {
+  initPlanComptable();
+  var selAnnee = document.getElementById('bo-annee');
+  if (selAnnee && !selAnnee.options.length) {
+    var currentYear = new Date().getFullYear();
+    for (var y = currentYear - 3; y <= currentYear + 1; y++) {
+      var o = document.createElement('option'); o.value = y; o.textContent = y;
+      if (y === currentYear) o.selected = true;
+      selAnnee.appendChild(o);
+    }
+  }
+  var annee = parseInt((selAnnee||{}).value) || new Date().getFullYear();
+
+  /* Alerte si des à-nouveaux automatiques (issus d'une clôture) existent déjà pour cet exercice */
+  var alertEl = document.getElementById('bo-alert-wrap');
+  var anAuto = (DATA.ecritures||[]).some(function(e){ return e.reference === 'AN-' + annee; });
+  if (alertEl) {
+    alertEl.innerHTML = anAuto
+      ? '<div class="alert alert-warn" style="margin-bottom:12px;font-size:12px;">⚠️ L\'exercice ' + annee + ' possède déjà des <strong>à-nouveaux générés automatiquement</strong> par la clôture de l\'exercice précédent (onglet 🔒 Clôture & FEC). La saisie manuelle ci-dessous est réservée au tout premier exercice utilisé dans le logiciel — évitez de cumuler les deux pour ne pas fausser les soldes.</div>'
+      : '';
+  }
+
+  var existantes = (DATA.ecritures||[]).filter(function(e){ return e.reference === 'BO-' + annee; });
+  var btnSuppr = document.getElementById('bo-btn-suppr');
+  if (btnSuppr) btnSuppr.style.display = existantes.length ? 'inline-flex' : 'none';
+
+  var dateEl = document.getElementById('bo-date');
+  var noteEl = document.getElementById('bo-note');
+  if (existantes.length) {
+    if (dateEl) dateEl.value = existantes[0].date || (annee + '-01-01');
+    if (noteEl) noteEl.value = existantes[0].notes || '';
+    _boLignes = existantes.map(function(e) {
+      var surCompte = e.compte_debit !== '890';
+      return { compte: surCompte ? e.compte_debit : e.compte_credit, sens: surCompte ? 'D' : 'C', montant: e.montant };
+    });
+  } else {
+    if (dateEl) dateEl.value = annee + '-01-01';
+    if (noteEl) noteEl.value = '';
+    _boLignes = [{ compte:'', sens:'D', montant:'' }, { compte:'', sens:'C', montant:'' }];
+  }
+  boRenderLignes();
+}
+
+async function saveBilanOuverture() {
+  var selAnnee = document.getElementById('bo-annee');
+  var annee = parseInt((selAnnee||{}).value) || new Date().getFullYear();
+  var date = (document.getElementById('bo-date')||{}).value;
+  var note = (document.getElementById('bo-note')||{}).value || '';
+  if (!date) { toast('La date du bilan d\'ouverture est obligatoire.', 'error'); return; }
+
+  if (exerciceEstClos(date)) { toast('🔒 Exercice ' + new Date(date).getFullYear() + ' clôturé — modification impossible.', 'error'); return; }
+
+  var lignesValides = _boLignes.filter(function(l){ return l.compte && parseFloat(l.montant) > 0; });
+  if (!lignesValides.length) { toast('Saisissez au moins un compte avec un solde.', 'error'); return; }
+
+  /* Fusionner les doublons de compte (même compte saisi 2x) */
+  var fusion = {};
+  lignesValides.forEach(function(l) {
+    var m = parseFloat(l.montant) * (l.sens === 'D' ? 1 : -1);
+    fusion[l.compte] = (fusion[l.compte] || 0) + m;
+  });
+
+  var eq = boCheckEquilibre();
+  if (!eq.ok) {
+    if (!confirm('⚠️ Le bilan saisi est déséquilibré (écart ' + fmtF(Math.abs(eq.totD-eq.totC)) + ' FCFA). Le compte de liaison 890 portera cet écart. Enregistrer quand même ?')) return;
+  }
+
+  /* Supprimer un éventuel bilan d'ouverture précédent pour cet exercice (idempotent) */
+  var anciennes = (DATA.ecritures||[]).filter(function(e){ return e.reference === 'BO-' + annee; });
+  for (var k = 0; k < anciennes.length; k++) {
+    await deleteRecord('ecritures', anciennes[k].id, { skipIntegrity: true, forceCloture: true });
+  }
+  DATA.ecritures = DATA.ecritures.filter(function(e){ return e.reference !== 'BO-' + annee; });
+
+  var ref = 'BO-' + annee;
+  var nb = 0;
+  for (var cpt in fusion) {
+    var solde = fusion[cpt];
+    if (Math.abs(solde) < 1) continue;
+    var cInfo = APP.planComptable.find(function(c){ return c.code === cpt; });
+    var ecr = {
+      id: 'ecr_bo_' + annee + '_' + cpt,
+      date: date,
+      ref: ref,
+      reference: ref,
+      piece: ref,
+      libelle: 'Bilan d\'ouverture ' + annee + ' — ' + cpt + (cInfo ? ' ' + cInfo.label : '') + (note ? ' (' + note + ')' : ''),
+      montant: Math.abs(solde),
+      compte_debit:  solde > 0 ? cpt : '890',
+      compte_credit: solde > 0 ? '890' : cpt,
+      type: 'a_nouveau',
+      journal: 'AN',
+      notes: note,
+      _auto: 'bilan_ouverture',
+      created_at: today()
+    };
+    DATA.ecritures.push(ecr);
+    await dbPut('ecritures', ecr);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', ecr);
+    nb++;
+  }
+
+  toast('✅ Bilan d\'ouverture ' + annee + ' enregistré — ' + nb + ' compte(s).', 'success');
+  renderBilanOuverture();
+  if (typeof filterEcritures === 'function') filterEcritures();
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildBilan === 'function') buildBilan();
+  if (typeof buildTresorerie === 'function') buildTresorerie();
+}
+
+async function supprimerBilanOuverture() {
+  var selAnnee = document.getElementById('bo-annee');
+  var annee = parseInt((selAnnee||{}).value) || new Date().getFullYear();
+  if (!confirm('🗑 Supprimer le bilan d\'ouverture ' + annee + ' ?\n\nToutes les écritures d\'à-nouveaux saisies manuellement pour cet exercice seront supprimées.')) return;
+
+  var toDelete = (DATA.ecritures||[]).filter(function(e){ return e.reference === 'BO-' + annee; });
+  for (var i = 0; i < toDelete.length; i++) {
+    await deleteRecord('ecritures', toDelete[i].id, { skipIntegrity: true, forceCloture: true });
+  }
+  DATA.ecritures = DATA.ecritures.filter(function(e){ return e.reference !== 'BO-' + annee; });
+
+  toast('Bilan d\'ouverture ' + annee + ' supprimé (' + toDelete.length + ' écriture(s)).', 'info');
+  renderBilanOuverture();
+  if (typeof filterEcritures === 'function') filterEcritures();
+  if (typeof buildBalance === 'function') buildBalance();
+  if (typeof buildBilan === 'function') buildBilan();
 }
 
 function buildTiersKPIs() {
@@ -51330,6 +52297,7 @@ var PAGE_MODULE_MAP = {
   'filiere':            'Filiere Fonciere',
   'bilan-promotion':    'Bilan de Promotion',
   'foncierops':         'Acquisition & Amenagement Foncier',
+  'sig':                'Acquisition & Amenagement Foncier',
   'debourse':           'Etude de Prix & Debourse',
   'achats':             'Achats & Commandes',
   'stock':              'Stock Materiaux',
