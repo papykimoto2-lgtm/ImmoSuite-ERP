@@ -3007,6 +3007,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn active" onclick="switchTab('compta','journal')">📓 Journal</button>
           <button class="tab-btn" onclick="switchTab('compta','versements');renderComptaVersements()">💳 Versements</button>
           <button class="tab-btn" onclick="switchTab('compta','balance')">⚖️ Balance</button>
+          <button class="tab-btn" onclick="switchTab('compta','analytique');buildAnalytique()">🧮 Analytique</button>
           <button class="tab-btn" onclick="switchTab('compta','tiers')">👥 Comptes Tiers</button>
           <button class="tab-btn" onclick="switchTab('compta','amortissements')">📉 Amortissements</button>
           <button class="tab-btn" onclick="switchTab('compta','bilan')">🏛️ Bilan</button>
@@ -3100,6 +3101,25 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
         </div>
 
+        <!-- Comptabilité analytique -->
+        <div class="tab-pane" id="tab-compta-analytique">
+          <div class="filters-bar">
+            <select class="filter-select" id="ana-axe" onchange="buildAnalytique()">
+              <option value="programme">Axe : Programme immobilier</option>
+              <option value="section">Axe : Section analytique</option>
+            </select>
+            <select class="filter-select" id="ana-nature" onchange="buildAnalytique()">
+              <option value="">Charges + Produits (résultat)</option>
+              <option value="6">Charges seules (classe 6)</option>
+              <option value="7">Produits seuls (classe 7)</option>
+            </select>
+            <input class="filter-select" id="ana-sections" placeholder="Sections (séparées par ;)" style="min-width:260px;" title="Liste des sections analytiques proposées à la saisie des écritures">
+            <button class="btn btn-secondary btn-sm" onclick="saveSectionsAnalytiques()">💾 Sections</button>
+          </div>
+          <div class="card" id="analytique-box"><div style="color:var(--blanc-dim);font-size:13px;">Chargement…</div></div>
+          <div id="analytique-detail-box" style="margin-top:12px;"></div>
+        </div>
+
         <!-- Balance des comptes -->
         <div class="tab-pane" id="tab-compta-balance">
           <div class="filters-bar">
@@ -3109,6 +3129,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               <option value="3">Classe 3</option><option value="4">Classe 4</option>
               <option value="5">Classe 5</option><option value="6">Classe 6</option>
               <option value="7">Classe 7</option>
+            </select>
+            <select class="filter-select" id="filter-balance-niveau" onchange="buildBalance()">
+              <option value="detail">Détail (tous les comptes)</option>
+              <option value="soustotaux" selected>Détail + totaux de regroupement</option>
+              <option value="2">Synthèse — 2 chiffres</option>
+              <option value="3">Synthèse — 3 chiffres</option>
+              <option value="4">Synthèse — 4 chiffres</option>
             </select>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--blanc-dim);">
               <input type="checkbox" id="balance-mouvements" onchange="buildBalance()" style="accent-color:var(--or);"> Comptes mouvementés uniquement
@@ -3542,6 +3569,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <select class="filter-select" id="filter-gl-compte" onchange="buildGrandLivre()">
               <option value="">— Sélectionner un compte —</option>
             </select>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--blanc-dim);">
+              <input type="checkbox" id="gl-inclure-sous" checked onchange="buildGrandLivre()" style="accent-color:var(--or);"> Inclure les sous-comptes (312 → 312XXXX…)
+            </label>
             <button class="btn btn-secondary btn-sm" onclick="etatGrandLivre()">🖨️ Grand livre PDF</button>
           </div>
           <div class="filters-bar" style="margin-top:-6px;align-items:flex-end;">
@@ -6005,7 +6035,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="modal-body">
             <input type="hidden" id="cpm-code-original">
             <div class="form-grid" style="grid-template-columns:1fr 1fr;">
-              <div class="form-group"><label>Code compte *</label><input class="form-control" id="cpm-code" placeholder="Ex : 4419"></div>
+              <div class="form-group"><label>Code compte *</label><input class="form-control" id="cpm-code" placeholder="Ex : 4419 ou 3121001" oninput="cpmAutoHeriter()"><div id="cpm-parent-hint" style="font-size:10px;color:var(--blanc-dim);margin-top:3px;"></div></div>
               <div class="form-group"><label>Classe *</label>
                 <select class="form-control" id="cpm-classe">
                   <option value="1">Classe 1 — Ressources durables</option>
@@ -13009,8 +13039,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
       <div class="form-grid" style="margin-top:12px;">
         <div class="form-group">
-          <label>Programme immobilier</label>
+          <label>Programme immobilier <span style="font-size:10px;color:var(--blanc-dim);">(axe analytique 1)</span></label>
           <select class="form-control" id="e-programme"><option value="">Général / Siège</option></select>
+        </div>
+        <div class="form-group">
+          <label>Section analytique <span style="font-size:10px;color:var(--blanc-dim);">(axe 2)</span></label>
+          <select class="form-control" id="e-section"><option value="">Non affecté</option></select>
         </div>
         <div class="form-group">
           <label>Mode de règlement</label>
@@ -23933,10 +23967,10 @@ function initPlanComptable() {
   // Alimenter le select grand livre
   var glSel = document.getElementById('filter-gl-compte');
   if (glSel && glSel.options.length <= 1) {
-    APP.planComptable.forEach(function(c) {
+    APP.planComptable.slice().sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); }).forEach(function(c) {
       var o = document.createElement('option');
       o.value = c.code;
-      o.textContent = c.code + ' — ' + c.label;
+      o.textContent = c.code + ' — ' + c.label + (compteEstParent(c.code) ? '  [regroupement]' : '');
       glSel.appendChild(o);
     });
   }
@@ -24213,6 +24247,25 @@ function openCompteParamModal(code) {
   openModal('modal-compte-param');
 }
 
+/* Sous-compte de détail : hérite automatiquement de la classe (1er chiffre)
+   et de la nature du compte parent le plus proche (ex : 3121001 → parent 312). */
+function cpmAutoHeriter(){
+  var code = (document.getElementById('cpm-code')||{}).value || '';
+  var hint = document.getElementById('cpm-parent-hint');
+  code = code.trim();
+  if (!code) { if(hint) hint.textContent=''; return; }
+  var cl = document.getElementById('cpm-classe');
+  if (cl && /^[1-9]/.test(code)) cl.value = code.charAt(0);
+  var parent = compteParentDe(code);
+  if (parent) {
+    var nat = document.getElementById('cpm-nature');
+    if (nat && parent.nature) nat.value = parent.nature;
+    var lbl = document.getElementById('cpm-label');
+    if (lbl && !lbl.value.trim()) lbl.placeholder = parent.label + ' — détail…';
+    if (hint) hint.innerHTML = '↳ Sous-compte de <strong style="color:var(--or);">' + parent.code + ' — ' + escHtml(parent.label) + '</strong> (classe et nature héritées). Le compte ' + parent.code + ' deviendra un total de regroupement, non imputable.';
+  } else if (hint) hint.textContent = '';
+}
+
 function saveCompteParamModal() {
   var original = document.getElementById('cpm-code-original').value;
   var code = document.getElementById('cpm-code').value.trim();
@@ -24362,6 +24415,39 @@ function _ecrEquilibre(ok, totD, totC) { return { ok:ok, totD:totD, totC:totC };
 
 /* Normalise n'importe quelle écriture (legacy 2-lignes ou multi-lignes) en tableau de lignes.
    Source de vérité unique pour balance, bilan, compte de résultat, grand livre. */
+
+/* ═══ HIÉRARCHIE DU PLAN COMPTABLE — comptes de regroupement (totaux)
+   vs comptes de détail (imputables). Un compte est un « regroupement »
+   dès qu'un autre compte du plan commence par son code (ex : 312 est
+   le total de 3121001, 3121002…). Seuls les comptes de détail reçoivent
+   des écritures ; les totaux sont calculés par cumul de préfixe. ═══ */
+function compteEstParent(code){
+  if(!code) return false;
+  code = String(code);
+  return (APP.planComptable||[]).some(function(c){ return c.code !== code && String(c.code).indexOf(code) === 0; });
+}
+function compteParentDe(code){
+  code = String(code||'');
+  var best = null;
+  (APP.planComptable||[]).forEach(function(c){
+    if(c.code !== code && code.indexOf(c.code) === 0){ if(!best || c.code.length > best.code.length) best = c; }
+  });
+  return best;
+}
+/* Cumul débit/crédit d'un préfixe (compte + tous ses sous-comptes) */
+function rollupMvt(comptesMvt, prefix){
+  var d=0, c=0;
+  Object.keys(comptesMvt).forEach(function(k){
+    if(String(k).indexOf(prefix)===0){ d+=comptesMvt[k].debit; c+=comptesMvt[k].credit; }
+  });
+  return { debit:d, credit:c };
+}
+/* Sections analytiques paramétrables (axe 2 — l'axe 1 est le programme) */
+function sectionsAnalytiques(){
+  var raw = (DATA.params && DATA.params.sections_analytiques) || 'Chantier;Commercial;Administratif;Location';
+  return String(raw).split(';').map(function(x){ return x.trim(); }).filter(Boolean);
+}
+
 function ecrLignes(e) {
   if (e && Array.isArray(e.lignes) && e.lignes.length) return e.lignes;
   if (!e) return [];
@@ -24370,6 +24456,127 @@ function ecrLignes(e) {
   if (cd) out.push({ compte:cd, sens:'D', montant:m, libelle:e.libelle });
   if (cc) out.push({ compte:cc, sens:'C', montant:m, libelle:e.libelle });
   return out;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPTABILITÉ ANALYTIQUE — 2 axes au niveau de l'écriture :
+   axe 1 = programme immobilier (programme_id, déjà porté par toutes les
+   écritures automatiques : versements, chantier, foncier) ;
+   axe 2 = section analytique libre (section_analytique, paramétrable).
+   Montants : lignes classe 6 (charges, sens réel D−C) et classe 7
+   (produits, sens réel C−D). Résultat analytique = produits − charges.
+   L'AUDCIF ne norme pas l'analytique : tableaux de gestion, aucune
+   écriture classe 9 générée, la balance générale reste intacte.
+═══════════════════════════════════════════════════════════════════ */
+function saveSectionsAnalytiques(){
+  var v = (document.getElementById('ana-sections')||{}).value || '';
+  DATA.params = DATA.params || {};
+  DATA.params.sections_analytiques = v.split(';').map(function(x){ return x.trim(); }).filter(Boolean).join(';');
+  dbPut('params', DATA.params);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  toast('✅ Sections analytiques enregistrées : ' + (DATA.params.sections_analytiques || '(aucune)'), 'success');
+  buildAnalytique();
+}
+
+function _anaCollecte(year){
+  /* → { axeKey : { charges, produits, parCompte:{code:{charges,produits}} } } pour chaque axe */
+  var prog = {}, sect = {};
+  var progNoms = {};
+  (DATA.programmes||[]).forEach(function(p){ progNoms[p.id] = p.nom || p.libelle || p.id; });
+  (DATA.ecritures||[]).forEach(function(e){
+    if (year && !(e.date && String(e.date).startsWith(String(year)))) return;
+    var kP = e.programme_id || '';
+    var kS = e.section_analytique || '';
+    ecrLignes(e).forEach(function(l){
+      var cl = String(l.compte||'').charAt(0);
+      if (cl !== '6' && cl !== '7') return;
+      var m = parseFloat(l.montant)||0;
+      var ch = cl === '6' ? (l.sens==='D' ? m : -m) : 0;
+      var pr = cl === '7' ? (l.sens==='C' ? m : -m) : 0;
+      [[prog,kP],[sect,kS]].forEach(function(ax){
+        var reg = ax[0], k = ax[1];
+        if (!reg[k]) reg[k] = { charges:0, produits:0, parCompte:{} };
+        reg[k].charges += ch; reg[k].produits += pr;
+        if (!reg[k].parCompte[l.compte]) reg[k].parCompte[l.compte] = { charges:0, produits:0 };
+        reg[k].parCompte[l.compte].charges += ch;
+        reg[k].parCompte[l.compte].produits += pr;
+      });
+    });
+  });
+  return { programme: prog, section: sect, progNoms: progNoms };
+}
+
+function buildAnalytique(){
+  var box = document.getElementById('analytique-box');
+  if (!box) return;
+  var inp = document.getElementById('ana-sections');
+  if (inp && !inp.value) inp.value = (DATA.params && DATA.params.sections_analytiques) || sectionsAnalytiques().join(';');
+  var year = (document.getElementById('filter-annee-compta')||{}).value || new Date().getFullYear();
+  var axe = (document.getElementById('ana-axe')||{}).value || 'programme';
+  var nat = (document.getElementById('ana-nature')||{}).value || '';
+  var data = _anaCollecte(year);
+  var reg = data[axe] || {};
+  var keys = Object.keys(reg).sort(function(a,b){
+    return (reg[b].charges + reg[b].produits) - (reg[a].charges + reg[a].produits);
+  });
+  var labelDe = function(k){
+    if (axe === 'programme') return k ? (data.progNoms[k] || ('Programme ' + k)) : 'Général / Siège';
+    return k || 'Non affecté';
+  };
+  if (!keys.length) { box.innerHTML = '<div style="color:var(--blanc-dim);font-size:13px;">Aucune écriture de classe 6/7 sur l\'exercice ' + year + '.</div>'; var db0=document.getElementById('analytique-detail-box'); if(db0) db0.innerHTML=''; return; }
+  var tCh=0, tPr=0;
+  var rows = keys.map(function(k){
+    var r = reg[k]; tCh += r.charges; tPr += r.produits;
+    var res = r.produits - r.charges;
+    var marge = r.produits > 0 ? (res / r.produits * 100) : null;
+    var cols = '';
+    if (nat === '6')      cols = '<td style="text-align:right;color:var(--rouge);font-weight:600;">' + fmtF(r.charges) + '</td>';
+    else if (nat === '7') cols = '<td style="text-align:right;color:var(--vert);font-weight:600;">' + fmtF(r.produits) + '</td>';
+    else cols = '<td style="text-align:right;color:var(--rouge);">' + fmtF(r.charges) + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + fmtF(r.produits) + '</td>'
+      + '<td style="text-align:right;font-weight:700;color:' + (res>=0?'var(--vert)':'var(--rouge)') + ';">' + fmtF(res) + '</td>'
+      + '<td style="text-align:right;color:var(--blanc-dim);">' + (marge===null?'—':(marge.toFixed(1)+' %')) + '</td>';
+    return '<tr style="cursor:pointer;" onclick="analytiqueDetail(\'' + axe + '\',\'' + String(k).replace(/'/g,"\\'") + '\')">'
+      + '<td style="font-weight:600;">' + escHtml(labelDe(k)) + '</td>' + cols
+      + '<td style="text-align:right;"><span class="btn btn-secondary btn-sm">🔍 Détail</span></td></tr>';
+  }).join('');
+  var head = (nat === '6') ? '<th style="text-align:right;color:var(--rouge);">Charges (cl. 6)</th>'
+    : (nat === '7') ? '<th style="text-align:right;color:var(--vert);">Produits (cl. 7)</th>'
+    : '<th style="text-align:right;color:var(--rouge);">Charges (cl. 6)</th><th style="text-align:right;color:var(--vert);">Produits (cl. 7)</th><th style="text-align:right;">Résultat</th><th style="text-align:right;">Marge</th>';
+  var totCols = (nat === '6') ? '<td style="text-align:right;color:var(--rouge);">' + fmtF(tCh) + '</td>'
+    : (nat === '7') ? '<td style="text-align:right;color:var(--vert);">' + fmtF(tPr) + '</td>'
+    : '<td style="text-align:right;color:var(--rouge);">' + fmtF(tCh) + '</td><td style="text-align:right;color:var(--vert);">' + fmtF(tPr) + '</td><td style="text-align:right;">' + fmtF(tPr - tCh) + '</td><td></td>';
+  box.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Résultat analytique par ' + (axe==='programme'?'programme immobilier':'section analytique') + ' — Exercice ' + year + ' — cliquez une ligne pour le détail par compte.</div>'
+    + '<div class="table-wrap"><table><thead><tr><th>' + (axe==='programme'?'Programme':'Section') + '</th>' + head + '<th></th></tr></thead><tbody>'
+    + rows
+    + '<tr style="font-weight:700;background:rgba(184,115,51,0.08);border-top:2px solid var(--or);"><td>TOTAL</td>' + totCols + '<td></td></tr>'
+    + '</tbody></table></div>';
+  var db = document.getElementById('analytique-detail-box'); if (db) db.innerHTML = '';
+}
+
+function analytiqueDetail(axe, key){
+  var box = document.getElementById('analytique-detail-box');
+  if (!box) return;
+  var year = (document.getElementById('filter-annee-compta')||{}).value || new Date().getFullYear();
+  var data = _anaCollecte(year);
+  var reg = (data[axe]||{})[key];
+  if (!reg) { box.innerHTML = ''; return; }
+  var label = axe === 'programme' ? (key ? (data.progNoms[key] || key) : 'Général / Siège') : (key || 'Non affecté');
+  var codes = Object.keys(reg.parCompte).sort();
+  var rows = codes.map(function(code){
+    var v = reg.parCompte[code];
+    var pl = APP.planComptable.find(function(c){ return c.code === code; });
+    return '<tr><td style="font-weight:600;color:var(--or);">' + code + '</td>'
+      + '<td style="font-size:12px;">' + (pl ? pl.label : '—') + '</td>'
+      + '<td style="text-align:right;color:var(--rouge);">' + (v.charges ? fmtF(v.charges) : '—') + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + (v.produits ? fmtF(v.produits) : '—') + '</td></tr>';
+  }).join('');
+  box.innerHTML = '<div class="card">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+    + '<div style="font-weight:700;color:var(--or);">🔍 Détail par compte — ' + escHtml(label) + ' (exercice ' + year + ')</div>'
+    + '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'analytique-detail-box\').innerHTML=\'\'">✕ Fermer</button></div>'
+    + '<div class="table-wrap"><table><thead><tr><th>Compte</th><th>Intitulé</th><th style="text-align:right;color:var(--rouge);">Charges</th><th style="text-align:right;color:var(--vert);">Produits</th></tr></thead><tbody>'
+    + rows + '</tbody></table></div></div>';
 }
 
 /* ── CHARGEMENT COMPTABILITÉ ──────────────────────────── */
@@ -24390,6 +24597,7 @@ function loadComptabilite() {
   buildBilan();
   buildCompteResultat();
   buildTresorerie();
+  try { buildAnalytique(); } catch(e){}
 }
 
 /* ── updateCompteSuggestions (compatibilité) ──────────── */
@@ -24403,6 +24611,8 @@ function openEcritureModal(id) {
   initPlanComptable();
   populateProgrammeSelects();
   populateJournauxSelects();
+  var _selSec = document.getElementById('e-section');
+  if (_selSec) _selSec.innerHTML = '<option value="">Non affecté</option>' + sectionsAnalytiques().map(function(sx){ return '<option value="'+escHtml(sx)+'">'+escHtml(sx)+'</option>'; }).join('');
   _ecrLignes = [];
   if (id) {
     var e = DATA.ecritures.find(function(x) { return x.id === id; });
@@ -24415,6 +24625,7 @@ function openEcritureModal(id) {
       document.getElementById('e-type').value = e.type || 'charge';
       setSelectValue('e-mode', e.mode);
       setSelectValue('e-programme', e.programme_id);
+      setSelectValue('e-section', e.section_analytique || '');
       setSelectValue('e-journal', e.journal || 'auto');
       APP._ecrBaseModifie = e._modifie || null;
       _ecrLignes = ecrLignes(e).map(function(l){ return { compte:l.compte, sens:l.sens, montant:l.montant, libelle:l.libelle||'' }; });
@@ -24446,6 +24657,15 @@ async function saveEcriture() {
   var hasD = lignesValides.some(function(l){ return l.sens==='D'; });
   var hasC = lignesValides.some(function(l){ return l.sens==='C'; });
   if (!hasD || !hasC) { toast('Au moins 1 ligne débit et 1 ligne crédit requis.', 'error'); return; }
+
+  var regroupements = lignesValides.map(function(l){ return l.compte; })
+    .filter(function(c,i,a){ return a.indexOf(c)===i; })
+    .filter(function(c){ return compteEstParent(c); });
+  if (regroupements.length) {
+    toast('⛔ Compte(s) de regroupement non imputable(s) : ' + regroupements.join(', ') + ' — imputez un sous-compte de détail (ex : ' + regroupements[0] + '100).', 'error');
+    return;
+  }
+
   var totD = lignesValides.filter(function(l){ return l.sens==='D'; }).reduce(function(s,l){ return s+parseFloat(l.montant); }, 0);
   var totC = lignesValides.filter(function(l){ return l.sens==='C'; }).reduce(function(s,l){ return s+parseFloat(l.montant); }, 0);
   if (Math.abs(totD - totC) >= 1) { toast('Écriture déséquilibrée : Débit ' + fmtF(totD) + ' ≠ Crédit ' + fmtF(totC) + '.', 'error'); return; }
@@ -24488,6 +24708,7 @@ async function saveEcriture() {
     montant: totD,
     mode: document.getElementById('e-mode').value,
     programme_id: document.getElementById('e-programme').value,
+    section_analytique: (document.getElementById('e-section')||{}).value || '',
     notes: document.getElementById('e-notes').value,
     _baseModifie: APP.editingId ? (APP._ecrBaseModifie || null) : null,
     created_at: APP.editingId ? undefined : today()
@@ -24639,23 +24860,89 @@ function buildBalance() {
     });
   });
 
+  var niveau = (document.getElementById('filter-balance-niveau') || {}).value || 'soustotaux';
+
+  /* ── Mode synthèse N chiffres : cumul des mouvements par préfixe ── */
+  if (niveau === '2' || niveau === '3' || niveau === '4') {
+    var n = parseInt(niveau, 10);
+    var agg = {};
+    Object.keys(comptesMvt).forEach(function(code){
+      var pfx = String(code).slice(0, n);
+      if (classeF && pfx.charAt(0) !== classeF) return;
+      if (!agg[pfx]) agg[pfx] = { debit:0, credit:0 };
+      agg[pfx].debit += comptesMvt[code].debit;
+      agg[pfx].credit += comptesMvt[code].credit;
+    });
+    var codes = Object.keys(agg).sort();
+    var tD=0, tC=0, tSD=0, tSC=0;
+    var rowsN = codes.map(function(code){
+      var m = agg[code];
+      var sD = Math.max(0, m.debit - m.credit), sC = Math.max(0, m.credit - m.debit);
+      tD+=m.debit; tC+=m.credit; tSD+=sD; tSC+=sC;
+      var pl = APP.planComptable.find(function(c){ return c.code === code; });
+      var lbl = pl ? pl.label : ((compteParentDe(code)||{}).label ? 'Regroupement — ' + compteParentDe(code).label : 'Regroupement');
+      return '<tr style="font-weight:600;">'
+        + '<td style="color:var(--or);">' + code + '</td>'
+        + '<td style="font-size:12px;">' + lbl + '</td>'
+        + '<td style="font-size:10px;color:var(--blanc-dim);">Cl.' + code.charAt(0) + '</td>'
+        + '<td style="text-align:right;color:var(--rouge);">' + (m.debit?fmtF(m.debit):'—') + '</td>'
+        + '<td style="text-align:right;color:var(--vert);">' + (m.credit?fmtF(m.credit):'—') + '</td>'
+        + '<td style="text-align:right;color:var(--rouge);">' + (sD?fmtF(sD):'—') + '</td>'
+        + '<td style="text-align:right;color:var(--vert);">' + (sC?fmtF(sC):'—') + '</td>'
+        + '</tr>';
+    }).join('');
+    var perLbl = (d1 || d2) ? ('Période du ' + (d1?dateShort(d1):'…') + ' au ' + (d2?dateShort(d2):'…')) : ('Exercice ' + year);
+    box.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Balance de synthèse — comptes à ' + n + ' chiffres — ' + perLbl + ' — ' + codes.length + ' regroupement(s)</div>'
+      + '<div class="table-wrap"><table><thead><tr>'
+      + '<th>N° Compte</th><th>Intitulé</th><th>Classe</th>'
+      + '<th style="text-align:right;color:var(--rouge);">Mvts Débit</th>'
+      + '<th style="text-align:right;color:var(--vert);">Mvts Crédit</th>'
+      + '<th style="text-align:right;color:var(--rouge);">Solde Débiteur</th>'
+      + '<th style="text-align:right;color:var(--vert);">Solde Créditeur</th>'
+      + '</tr></thead><tbody>' + rowsN
+      + '<tr style="font-weight:700;background:rgba(184,115,51,0.08);border-top:2px solid var(--or);">'
+      + '<td colspan="3">TOTAUX</td>'
+      + '<td style="text-align:right;color:var(--rouge);">' + fmtF(tD) + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + fmtF(tC) + '</td>'
+      + '<td style="text-align:right;color:var(--rouge);">' + fmtF(tSD) + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + fmtF(tSC) + '</td>'
+      + '</tr></tbody></table></div>'
+      + (Math.abs(tD - tC) < 1 && tD > 0 ? '<div class="alert alert-success" style="margin-top:12px;">✔ Balance équilibrée — Débit = Crédit = ' + fmtF(tD) + ' FCFA</div>' : '');
+    return;
+  }
+
   var filteredPlan = APP.planComptable.filter(function(c) {
     if (classeF && c.classe !== classeF) return false;
-    if (mvtOnly && !comptesMvt[c.code]) return false;
+    if (mvtOnly && !comptesMvt[c.code] && !(niveau==='soustotaux' && compteEstParent(c.code) && (rollupMvt(comptesMvt, c.code).debit || rollupMvt(comptesMvt, c.code).credit))) return false;
     return true;
-  });
+  }).sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); });
 
   var totMvtD = 0, totMvtC = 0, totSoldeD = 0, totSoldeC = 0;
   var rows = filteredPlan.map(function(c) {
-    var mvt = comptesMvt[c.code] || { debit: 0, credit: 0 };
+    var estParent = (niveau==='soustotaux') && compteEstParent(c.code);
+    var mvt = estParent ? rollupMvt(comptesMvt, c.code) : (comptesMvt[c.code] || { debit: 0, credit: 0 });
     var soldeD = Math.max(0, mvt.debit - mvt.credit);
     var soldeC = Math.max(0, mvt.credit - mvt.debit);
-    totMvtD += mvt.debit; totMvtC += mvt.credit;
-    totSoldeD += soldeD; totSoldeC += soldeC;
+    if (!estParent) { /* seuls les comptes de détail alimentent les totaux généraux (pas de double comptage) */
+      totMvtD += mvt.debit; totMvtC += mvt.credit;
+      totSoldeD += soldeD; totSoldeC += soldeC;
+    }
     var hasMvt = mvt.debit > 0 || mvt.credit > 0;
+    var prof = compteParentDe(c.code) ? 1 : 0;
+    if (estParent) {
+      return '<tr style="font-weight:700;background:rgba(184,115,51,0.06);' + (hasMvt ? '' : 'opacity:0.5;') + '">'
+        + '<td style="color:var(--or);">' + c.code + '</td>'
+        + '<td style="font-size:12px;">' + c.label + ' <span style="font-size:9px;color:var(--blanc-dim);">TOTAL</span></td>'
+        + '<td style="font-size:10px;color:var(--blanc-dim);">Cl.' + c.classe + '</td>'
+        + '<td style="text-align:right;color:var(--rouge);">' + (mvt.debit ? fmtF(mvt.debit) : '—') + '</td>'
+        + '<td style="text-align:right;color:var(--vert);">' + (mvt.credit ? fmtF(mvt.credit) : '—') + '</td>'
+        + '<td style="text-align:right;color:var(--rouge);">' + (soldeD ? fmtF(soldeD) : '—') + '</td>'
+        + '<td style="text-align:right;color:var(--vert);">' + (soldeC ? fmtF(soldeC) : '—') + '</td>'
+        + '</tr>';
+    }
     return '<tr style="' + (hasMvt ? '' : 'opacity:0.5;') + '">'
-      + '<td style="font-weight:600;color:var(--or);">' + c.code + '</td>'
-      + '<td style="font-size:12px;">' + c.label + '</td>'
+      + '<td style="font-weight:600;color:var(--or);' + (prof?'padding-left:18px;':'') + '">' + c.code + '</td>'
+      + '<td style="font-size:12px;' + (prof?'padding-left:10px;':'') + '">' + c.label + '</td>'
       + '<td style="font-size:10px;color:var(--blanc-dim);">Cl.' + c.classe + '</td>'
       + '<td style="text-align:right;' + (mvt.debit?'color:var(--rouge);font-weight:600;':'color:var(--blanc-dim);') + '">' + (mvt.debit ? fmtF(mvt.debit) : '—') + '</td>'
       + '<td style="text-align:right;' + (mvt.credit?'color:var(--vert);font-weight:600;':'color:var(--blanc-dim);') + '">' + (mvt.credit ? fmtF(mvt.credit) : '—') + '</td>'
@@ -25205,12 +25492,14 @@ function buildGrandLivre() {
   var periodeActive = !!(d1 || d2);
 
   var planEntry = APP.planComptable.find(function(c){ return c.code === compte; });
+  var inclSous = (document.getElementById('gl-inclure-sous')||{}).checked !== false;
+  var matchCpt = function(l){ return l.compte === compte || (inclSous && String(l.compte||'').indexOf(compte) === 0); };
 
   /* Solde d'ouverture = tous les mouvements antérieurs à la date de début (report à-nouveau implicite) */
   var soldeOuverture = 0;
   if (periodeActive && d1) {
     DATA.ecritures.filter(function(e){ return e.date && e.date < d1; }).forEach(function(e){
-      ecrLignes(e).filter(function(l){ return l.compte === compte; }).forEach(function(l){
+      ecrLignes(e).filter(matchCpt).forEach(function(l){
         soldeOuverture += (l.sens === 'D' ? 1 : -1) * (parseFloat(l.montant)||0);
       });
     });
@@ -25222,11 +25511,12 @@ function buildGrandLivre() {
     return !year || (e.date && e.date.startsWith(year));
   }).forEach(function(e){
     var lignes = ecrLignes(e);
-    var ligneCompte = lignes.filter(function(l){ return l.compte === compte; });
+    var ligneCompte = lignes.filter(matchCpt);
     if (!ligneCompte.length) return;
-    var contreparties = lignes.filter(function(l){ return l.compte !== compte; }).map(function(l){ return l.compte; }).join(', ');
+    var contreparties = lignes.filter(function(l){ return !matchCpt(l); }).map(function(l){ return l.compte; }).join(', ');
     ligneCompte.forEach(function(l){
-      mvts.push({ date:e.date, ref:e.ref, libelle:l.libelle||e.libelle, contrepartie:contreparties, sens:l.sens, montant:parseFloat(l.montant)||0, multi: lignes.length>2 });
+      var lib = (l.libelle||e.libelle) + (inclSous && l.compte !== compte ? ' <span style="font-size:9px;color:var(--or);">['+l.compte+']</span>' : '');
+      mvts.push({ date:e.date, ref:e.ref, libelle:lib, contrepartie:contreparties, sens:l.sens, montant:parseFloat(l.montant)||0, multi: lignes.length>2 });
     });
   });
   mvts.sort(function(a,b){ return new Date(a.date) - new Date(b.date); });
@@ -25252,7 +25542,7 @@ function buildGrandLivre() {
 
   var periodeLabel = periodeActive ? ('Période du ' + (d1?dateShort(d1):'…') + ' au ' + (d2?dateShort(d2):'…')) : ('Exercice ' + year);
   box.innerHTML = '<div style="margin-bottom:14px;">'
-    + '<div style="font-size:16px;font-weight:700;color:var(--or);">Compte ' + compte + ' — ' + (planEntry ? planEntry.label : '') + '</div>'
+    + '<div style="font-size:16px;font-weight:700;color:var(--or);">Compte ' + compte + ' — ' + (planEntry ? planEntry.label : '') + (inclSous && compteEstParent(compte) ? ' <span style="font-size:11px;color:var(--blanc-dim);">(regroupement — sous-comptes inclus)</span>' : '') + '</div>'
     + '<div style="font-size:12px;color:var(--blanc-dim);">Grand Livre — ' + periodeLabel + ' — ' + mvts.length + ' mouvement(s)</div>'
     + '</div>'
     + '<div class="table-wrap"><table><thead><tr>'
