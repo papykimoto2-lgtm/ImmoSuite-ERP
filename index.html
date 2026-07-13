@@ -16482,8 +16482,23 @@ var APP = {
     { code:'902', label:'Coût de revient — Programme 2', classe:'9', nature:'analytique' },
     { code:'903', label:'Coût de revient — Programme 3', classe:'9', nature:'analytique' },
     { code:'931', label:'Centre de profit — Commercial', classe:'9', nature:'analytique' },
-    { code:'932', label:'Centre de profit — Location', classe:'9', nature:'analytique' },
-  ],
+    { code:'932', label:'Centre de profit — Location', classe:'9', nature:'analytique' },,
+      /* ── Comptes requis par les écritures automatiques du logiciel ──
+         (stock/compta, TVA-AIRSI achats, conventions constructeurs,
+         financement programme, caisse, souscriptions) */
+      { code: '31',   label: 'Stocks de marchandises',                          classe: '3', nature: 'actif' },
+      { code: '4011', label: 'Fournisseurs — dettes en compte',                 classe: '4', nature: 'passif' },
+      { code: '4452', label: 'État, TVA récupérable sur achats',                classe: '4', nature: 'variable' },
+      { code: '4471', label: 'État, impôts retenus à la source (AIRSI)',        classe: '4', nature: 'passif' },
+      { code: '4651', label: 'Financeurs — apports reçus sur programmes',       classe: '4', nature: 'passif' },
+      { code: '6031', label: 'Variation des stocks de marchandises',            classe: '6', nature: 'charge' },
+      { code: '6111', label: 'Sous-traitance travaux (situations constructeurs)', classe: '6', nature: 'charge' },
+      { code: '658',  label: 'Charges diverses (écarts, pertes sur stocks)',    classe: '6', nature: 'charge' },
+      { code: '705',  label: 'Travaux facturés',                                classe: '7', nature: 'produit' },
+      { code: '7078', label: 'Pénalités contractuelles perçues',                classe: '7', nature: 'produit' },
+      { code: '7088', label: 'Autres produits accessoires (frais de souscription)', classe: '7', nature: 'produit' },
+      { code: '758',  label: 'Produits divers (excédents de caisse)',           classe: '7', nature: 'produit' }
+    ],
   // Groupes pour l\'interface de saisie rapide
   comptes: {
     charge: [],  // rempli dynamiquement depuis planComptable
@@ -23976,6 +23991,34 @@ function rebuildPlanComptable() {
     .filter(function(c){ return supprimes.indexOf(c.code) === -1; })
     .map(function(c){ return modifs[c.code] ? Object.assign({}, c, modifs[c.code]) : c; })
     .concat(ajouts);
+
+  /* ── GARDE-FOU AUDITABILITÉ : tout compte mouvementé dans les écritures
+     mais absent du plan est réintégré dynamiquement (nature déduite de la
+     classe). Sans cela, ses mouvements disparaissaient de la balance, du
+     bilan et du compte de résultat → états faux en silence. Ces comptes
+     apparaissent marqués « hors plan » : créez-les proprement au
+     Paramétrage pour leur donner un vrai libellé. ── */
+  try {
+    var connus = {};
+    APP.planComptable.forEach(function(c){ connus[c.code] = true; });
+    var orphelins = {};
+    (DATA.ecritures || []).forEach(function(e){
+      ecrLignes(e).forEach(function(l){
+        var cc = String(l.compte || '').trim();
+        if (cc && !connus[cc] && !orphelins[cc]) orphelins[cc] = true;
+      });
+    });
+    var listeOrph = Object.keys(orphelins).filter(function(cc){ return supprimes.indexOf(cc) === -1; }).sort();
+    listeOrph.forEach(function(cc){
+      APP.planComptable.push({
+        code: cc, classe: cc.charAt(0),
+        label: '⚠️ Compte hors plan — à créer au Paramétrage',
+        nature: (typeof _natureParClasse === 'function') ? _natureParClasse(cc) : 'variable',
+        _horsPlan: true
+      });
+    });
+    APP._comptesHorsPlan = listeOrph;
+  } catch(e) { APP._comptesHorsPlan = []; }
 }
 
 /* ── INITIALISATION DU PLAN COMPTABLE ─────────────────── */
@@ -24650,6 +24693,17 @@ function loadComptabilite() {
   buildCompteResultat();
   buildTresorerie();
   try { buildAnalytique(); } catch(e){}
+  try {
+    var zA = document.getElementById('compta-alerte-horsplan');
+    if (!zA) {
+      var pg = document.getElementById('page-comptabilite');
+      var anc = pg ? pg.querySelector('.tabs') : null;
+      if (anc) { zA = document.createElement('div'); zA.id = 'compta-alerte-horsplan'; anc.parentNode.insertBefore(zA, anc); }
+    }
+    if (zA) zA.innerHTML = (APP._comptesHorsPlan && APP._comptesHorsPlan.length)
+      ? '<div class="alert alert-warning" style="margin-bottom:10px;">⚠️ ' + APP._comptesHorsPlan.length + ' compte(s) mouvementé(s) absent(s) du plan comptable : <strong>' + APP._comptesHorsPlan.slice(0,8).join(', ') + (APP._comptesHorsPlan.length>8?'…':'') + '</strong> — réintégrés d\'office dans les états (nature déduite). Créez-les au Paramétrage → Plan comptable pour un libellé propre.</div>'
+      : '';
+  } catch(e){}
 }
 
 /* ── updateCompteSuggestions (compatibilité) ──────────── */
