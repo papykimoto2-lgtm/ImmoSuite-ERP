@@ -3105,7 +3105,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="tab-pane" id="tab-compta-analytique">
           <div class="filters-bar">
             <select class="filter-select" id="ana-axe" onchange="buildAnalytique()">
-              <option value="programme">Axe : Programme immobilier</option>
+              <option value="programme">Axe : Programme / Opération foncière</option>
               <option value="section">Axe : Section analytique</option>
             </select>
             <select class="filter-select" id="ana-nature" onchange="buildAnalytique()">
@@ -24479,13 +24479,32 @@ function saveSectionsAnalytiques(){
 }
 
 function _anaCollecte(year){
-  /* → { axeKey : { charges, produits, parCompte:{code:{charges,produits}} } } pour chaque axe */
+  /* → { axeKey : { charges, produits, parCompte:{code:{charges,produits}} } } pour chaque axe.
+     Axe 1 unifié « centres de profit » : programmes immobiliers (P:) ET
+     opérations d'aménagement foncier (AF:). Les écritures foncières
+     (cession, sortie stock, encaissement, recouvrement) ne portent pas de
+     programme_id mais toutes portent cession_id → résolution :
+     cession → source_key (parcelle) → operation_id → opération foncière.
+     Couvre aussi tout l'historique déjà comptabilisé. */
   var prog = {}, sect = {};
   var progNoms = {};
   (DATA.programmes||[]).forEach(function(p){ progNoms[p.id] = p.nom || p.libelle || p.id; });
+  var afNoms = {};
+  (DATA.af_operations||[]).forEach(function(o){ afNoms[o.id] = o.nom || o.libelle || o.designation || o.id; });
+  var cesOp = {};
+  (DATA.cessions_foncieres||[]).forEach(function(c){
+    var op = '';
+    if (c.source_key && String(c.source_key).indexOf('parcelle:') === 0) {
+      var pc = (DATA.parcelles||[]).find(function(x){ return x.id === String(c.source_key).slice(9); });
+      if (pc && pc.operation_id) op = pc.operation_id;
+    }
+    cesOp[c.id] = op;
+  });
   (DATA.ecritures||[]).forEach(function(e){
     if (year && !(e.date && String(e.date).startsWith(String(year)))) return;
-    var kP = e.programme_id || '';
+    var kP = '';
+    if (e.programme_id) kP = 'P:' + e.programme_id;
+    else if (e.cession_id) kP = cesOp[e.cession_id] ? ('AF:' + cesOp[e.cession_id]) : 'AF:_divers';
     var kS = e.section_analytique || '';
     ecrLignes(e).forEach(function(l){
       var cl = String(l.compte||'').charAt(0);
@@ -24503,7 +24522,7 @@ function _anaCollecte(year){
       });
     });
   });
-  return { programme: prog, section: sect, progNoms: progNoms };
+  return { programme: prog, section: sect, progNoms: progNoms, afNoms: afNoms };
 }
 
 function buildAnalytique(){
@@ -24520,7 +24539,13 @@ function buildAnalytique(){
     return (reg[b].charges + reg[b].produits) - (reg[a].charges + reg[a].produits);
   });
   var labelDe = function(k){
-    if (axe === 'programme') return k ? (data.progNoms[k] || ('Programme ' + k)) : 'Général / Siège';
+    if (axe === 'programme') {
+      if (!k) return 'Général / Siège';
+      if (k === 'AF:_divers') return '🗺️ Foncier (divers)';
+      if (String(k).indexOf('AF:') === 0) return '🗺️ ' + (data.afNoms[k.slice(3)] || ('Opération ' + k.slice(3)));
+      if (String(k).indexOf('P:') === 0) return '🏘️ ' + (data.progNoms[k.slice(2)] || ('Programme ' + k.slice(2)));
+      return data.progNoms[k] || k;
+    }
     return k || 'Non affecté';
   };
   if (!keys.length) { box.innerHTML = '<div style="color:var(--blanc-dim);font-size:13px;">Aucune écriture de classe 6/7 sur l\'exercice ' + year + '.</div>'; var db0=document.getElementById('analytique-detail-box'); if(db0) db0.innerHTML=''; return; }
@@ -24546,8 +24571,8 @@ function buildAnalytique(){
   var totCols = (nat === '6') ? '<td style="text-align:right;color:var(--rouge);">' + fmtF(tCh) + '</td>'
     : (nat === '7') ? '<td style="text-align:right;color:var(--vert);">' + fmtF(tPr) + '</td>'
     : '<td style="text-align:right;color:var(--rouge);">' + fmtF(tCh) + '</td><td style="text-align:right;color:var(--vert);">' + fmtF(tPr) + '</td><td style="text-align:right;">' + fmtF(tPr - tCh) + '</td><td></td>';
-  box.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Résultat analytique par ' + (axe==='programme'?'programme immobilier':'section analytique') + ' — Exercice ' + year + ' — cliquez une ligne pour le détail par compte.</div>'
-    + '<div class="table-wrap"><table><thead><tr><th>' + (axe==='programme'?'Programme':'Section') + '</th>' + head + '<th></th></tr></thead><tbody>'
+  box.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Résultat analytique par ' + (axe==='programme'?'programme immobilier / opération foncière':'section analytique') + ' — Exercice ' + year + ' — cliquez une ligne pour le détail par compte.</div>'
+    + '<div class="table-wrap"><table><thead><tr><th>' + (axe==='programme'?'Programme / Opération':'Section') + '</th>' + head + '<th></th></tr></thead><tbody>'
     + rows
     + '<tr style="font-weight:700;background:rgba(184,115,51,0.08);border-top:2px solid var(--or);"><td>TOTAL</td>' + totCols + '<td></td></tr>'
     + '</tbody></table></div>';
@@ -24561,7 +24586,14 @@ function analytiqueDetail(axe, key){
   var data = _anaCollecte(year);
   var reg = (data[axe]||{})[key];
   if (!reg) { box.innerHTML = ''; return; }
-  var label = axe === 'programme' ? (key ? (data.progNoms[key] || key) : 'Général / Siège') : (key || 'Non affecté');
+  var label;
+  if (axe === 'programme') {
+    if (!key) label = 'Général / Siège';
+    else if (key === 'AF:_divers') label = '🗺️ Foncier (divers)';
+    else if (String(key).indexOf('AF:') === 0) label = '🗺️ ' + (data.afNoms[key.slice(3)] || key.slice(3));
+    else if (String(key).indexOf('P:') === 0) label = '🏘️ ' + (data.progNoms[key.slice(2)] || key.slice(2));
+    else label = data.progNoms[key] || key;
+  } else label = key || 'Non affecté';
   var codes = Object.keys(reg.parCompte).sort();
   var rows = codes.map(function(code){
     var v = reg.parCompte[code];
