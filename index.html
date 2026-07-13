@@ -16613,7 +16613,7 @@ var DATA = {
    INDEXEDDB
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
-var DB_VERSION = 139; /* v139: store 'sig_couches' (couches SIG digitalisées : voiries, réseaux, servitudes, zones à risque, espaces verts) */
+var DB_VERSION = 141; /* v141: store 'suppressions_sync' (tombstones partagés multi-postes — anti-réinjection des données supprimées) */
 var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
@@ -16693,7 +16693,9 @@ var ALL_STORES = [
   /* v136 — Module Caisse (ouverture/clôture, bons E/S, brouillard, ventilation) */
   'caisses','caisse_sessions','caisse_mouvements',
   /* v139 — Couches SIG digitalisées */
-  'sig_couches'
+  'sig_couches',
+  /* v141 — Tombstones partagés (anti-réinjection multi-postes) */
+  'suppressions_sync'
 ];
 
 function initDB() {
@@ -16876,7 +16878,9 @@ async function loadAllData() {
   /* v136 — Module Caisse */
   'caisses','caisse_sessions','caisse_mouvements',
   /* v139 — Couches SIG */
-  'sig_couches'
+  'sig_couches',
+  /* v141 — Tombstones partagés (anti-réinjection multi-postes) */
+  'suppressions_sync'
   ];
   for (var s = 0; s < allKeys.length; s++) {
     var store = allKeys[s];
@@ -17870,6 +17874,20 @@ async function deleteRecord(store, id, opts) {
     }
   }
   try { if (typeof tombAdd === 'function') tombAdd(store, id); } catch(e){}
+  /* Tombstone PARTAGÉ : répliqué à tous les postes via pi_suppressions.
+     Sans lui, un autre poste (ou ce navigateur après vidage du cache)
+     re-poussait sa copie → l'enregistrement supprimé réapparaissait
+     partout. Poussé par la tuyauterie standard (dirty + outbox). */
+  try {
+    if (store !== 'suppressions_sync') {
+      var _tsObj = { id: 'ts::' + store + '::' + String(id), store: store, record_id: String(id), date: new Date().toISOString() };
+      DATA.suppressions_sync = DATA.suppressions_sync || [];
+      if (!DATA.suppressions_sync.some(function(x){ return x.id === _tsObj.id; })) {
+        DATA.suppressions_sync.push(_tsObj);
+        await dbPut('suppressions_sync', _tsObj);
+      }
+    }
+  } catch(e){}
   /* 1. Retrait de la RAM */
   if (Array.isArray(DATA[store])) {
     DATA[store] = DATA[store].filter(function(x){ return x.id !== id; });
@@ -17938,6 +17956,7 @@ async function deleteFromSupabase(table, id) {
 
 /* Correspondance table Supabase ↔ store local (IndexedDB / DATA) */
 var SUPA_STORE_MAP = [
+  ['pi_suppressions',     'suppressions_sync'],
   ['pi_caisses',          'caisses'],
   ['pi_caisse_sessions',  'caisse_sessions'],
   ['pi_caisse_mouvements','caisse_mouvements'],
@@ -18060,6 +18079,7 @@ async function flushDirtySync() {
     var k = keys[i], sep = k.indexOf('|'), store = k.slice(0, sep), id = k.slice(sep + 1);
     var table = _SYNC_TABLE_BY_STORE[store];
     if (!table) { delete _dirtySync[k]; continue; }
+    if (typeof tombHas === 'function' && tombHas(store, id)) { delete _dirtySync[k]; continue; } // supprimé (ici ou ailleurs) → ne jamais re-pousser
     var rec = (DATA[store] || []).find(function(x){ return String(x.id) === String(id); });
     if (!rec) { delete _dirtySync[k]; continue; }   // supprimé localement → la suppression cloud est gérée ailleurs
     var ok = await syncToSupabase(table, rec);
@@ -18749,7 +18769,44 @@ async function pullFromCloudSilent() {
     console.log('[Sync] Pull post-login : ' + total + ' enregistrement(s) mis à jour.');
   }
   try { majDerniereSync('Récupération cloud'); } catch(e){}
+  try { _appliquerSuppressionsSync(); } catch(e){}
   try { if (typeof majNotificationsSidebar === 'function') majNotificationsSidebar(); if (typeof pmsgRender === 'function') pmsgRender(); } catch(e){}
+}
+
+/* ═══ TOMBSTONES PARTAGÉS — application post-pull ═══
+   Chaque suppression faite sur n'importe quel poste arrive ici via
+   pi_suppressions : on marque le registre local, on retire la ligne si
+   elle a été réinjectée, et on re-nettoie le cloud le cas échéant.
+   Purge automatique des tombstones de plus de 180 jours. */
+async function _appliquerSuppressionsSync(){
+  var lst = DATA.suppressions_sync || [];
+  if (!lst.length) return;
+  var limite = Date.now() - 180*24*3600*1000;
+  var garder = [];
+  for (var i = 0; i < lst.length; i++) {
+    var ts = lst[i];
+    if (!ts || !ts.store || !ts.record_id) continue;
+    var expire = ts.date && (new Date(ts.date).getTime() < limite);
+    if (expire) {
+      try { await dbDelete('suppressions_sync', ts.id); } catch(e){}
+      try { if (typeof deleteFromSupabase === 'function') deleteFromSupabase('pi_suppressions', ts.id); } catch(e){}
+      continue;
+    }
+    garder.push(ts);
+    try { if (typeof tombAdd === 'function') tombAdd(ts.store, ts.record_id); } catch(e){}
+    try { delete _dirtySync[ts.store + '|' + String(ts.record_id)]; } catch(e){}
+    if (Array.isArray(DATA[ts.store])) {
+      var avant = DATA[ts.store].length;
+      DATA[ts.store] = DATA[ts.store].filter(function(x){ return String(x.id) !== String(ts.record_id); });
+      if (DATA[ts.store].length !== avant) {
+        /* La ligne avait été réinjectée : purge locale + cloud */
+        try { await dbDelete(ts.store, ts.record_id); } catch(e){}
+        var ent = SUPA_STORE_MAP.find(function(x){ return x[1] === ts.store; });
+        try { if (ent && typeof deleteFromSupabase === 'function') deleteFromSupabase(ent[0], ts.record_id); } catch(e){}
+      }
+    }
+  }
+  DATA.suppressions_sync = garder;
 }
 
 /* Rejoue la file en respectant l'ordre. S'arrête au premier échec (réseau). */
@@ -41568,6 +41625,7 @@ async function portailPollNotifications(){
         for (var i=0;i<rows.length;i++){
           var m = _supaUnwrap('pi_portail_messages', rows[i]);
           if (!m || !m.id) continue;
+          if (typeof tombHas === 'function' && tombHas('portail_messages', m.id)) continue;
           var ex = byId[String(m.id)];
           if (!ex || _ts(m) >= _ts(ex)){ byId[String(m.id)]=m; try{ await dbPut('portail_messages', m); }catch(e){} }
           if (!premier && !window._portailNotifSeen['m'+m.id] && m.expediteur==='client' && !m.lu_staff){
@@ -41590,6 +41648,7 @@ async function portailPollNotifications(){
         for (var j=0;j<rows2.length;j++){
           var d = _supaUnwrap('pi_declarations_versement_foncier', rows2[j]);
           if (!d || !d.id) continue;
+          if (typeof tombHas === 'function' && tombHas('declarations_versement_foncier', d.id)) continue;
           var ex2 = byId2[String(d.id)];
           if (!ex2 || _ts(d) >= _ts(ex2)){ byId2[String(d.id)]=d; try{ await dbPut('declarations_versement_foncier', d); }catch(e){} }
           if (!premier && !window._portailNotifSeen['d'+d.id] && (d.statut||'en_attente')==='en_attente'){
