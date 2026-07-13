@@ -18299,8 +18299,11 @@ async function diagnostiquerCloud() {
   host.innerHTML = '<div style="font-size:12px;color:var(--blanc-dim)">🩺 Diagnostic en cours… test d\'accès table par table.</div>';
 
   var manquantes = [], sansDroits = [], ok = 0, autres = [];
-  for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
-    var table = SUPA_STORE_MAP[i][0];
+  /* Tables hors MAP mais requises : pi_params (marque blanche portail),
+     pi_sig_couches (digitalisation SIG). */
+  var _tablesDiag = SUPA_STORE_MAP.map(function(m){ return m[0]; }).concat(['pi_params','pi_sig_couches']);
+  for (var i = 0; i < _tablesDiag.length; i++) {
+    var table = _tablesDiag[i];
     window._lastSupaError = '';
     var r = await sbFetch(table + '?select=id&limit=1', 'GET');
     if (r !== null) { ok++; continue; }
