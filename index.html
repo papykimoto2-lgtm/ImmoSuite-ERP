@@ -6066,6 +6066,26 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-compte-param')">Annuler</button><button class="btn btn-primary" onclick="saveCompteParamModal()">💾 Enregistrer</button></div>
         </div>
       </div>
+      <div class="modal-overlay" id="modal-import-sage">
+        <div class="modal" style="max-width:760px;">
+          <div class="modal-header"><div class="modal-title">📋 Importer le plan comptable depuis Sage / Excel</div><button class="modal-close" onclick="closeModal('modal-import-sage')">✕</button></div>
+          <div class="modal-body">
+            <div class="alert alert-info" style="font-size:12px;">
+              Ouvrez l'export Sage dans Excel → <strong>Ctrl+A</strong> puis <strong>Ctrl+C</strong> → collez ci-dessous.
+              Format reconnu automatiquement : colonnes <strong>Type</strong> (Détail/Total), <strong>N°compte</strong>, <strong>Intitulé</strong>.
+              Les lignes de titre, © Sage et en-têtes sont ignorées. Les « Total » Sage deviennent des comptes de
+              regroupement (libellés conservés, *** retirés) ; les « Détail » deviennent des comptes imputables.
+              Les natures SYSCOHADA sont héritées automatiquement du plan de référence.
+            </div>
+            <textarea class="form-control" id="sage-paste" rows="12" style="font-family:monospace;font-size:11px;" placeholder="Détail&#9;10100000&#9;Capital&#9;Capitaux&#10;Total&#9;101&#9;*** CAPITAL SOCIAL&#9;Aucune&#10;…" oninput="sageApercu()"></textarea>
+            <div id="sage-apercu" style="margin-top:10px;font-size:12px;color:var(--blanc-dim);"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-import-sage')">Annuler</button>
+            <button class="btn btn-primary" onclick="validerImportSage()">📥 Importer les comptes</button>
+          </div>
+        </div>
+      </div>
       <div class="page" id="page-rh-cockpit">
         <div class="page-header">
           <div>
@@ -35768,6 +35788,7 @@ function renderImportPage() {
                 +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
                 +'<button class="btn btn-secondary btn-sm" onclick="telechargerTemplateCSV(\''+m.id+'\')">⬇ Modèle CSV</button>'
                 +'<button class="btn btn-primary btn-sm" onclick="declencherImport(\''+m.id+'\')" style="flex:1;">📥 Importer</button>'
+                +(m.id==='plan_comptable' ? '<button class="btn btn-secondary btn-sm" onclick="ouvrirImportSage()" style="flex:1;" title="Collez directement la liste des comptes exportée de Sage (Excel)">📋 Coller depuis Sage</button>' : '')
                 +'</div>'
                 +'<input type="file" id="import-file-'+m.id+'" accept=".csv,.txt" style="display:none;" onchange="previewCSV(this,\''+m.id+'\')">'
                 +'</div>';
@@ -36239,6 +36260,79 @@ async function _importBornesGrouped(rows, strategy, mod) {
    (plan_comptable_custom). La stratégie de doublon choisie dans l'aperçu
    (ignorer / mettre à jour / remplacer) s'applique aux comptes déjà
    présents dans le plan.                                              */
+/* ═══ IMPORT PLAN COMPTABLE FORMAT SAGE (Sage 100 / Saari — collage Excel) ═══
+   Export Sage « Liste des comptes » : Type (Détail/Total) · N°compte · Intitulé
+   · Raccourci · Nature Sage. Le collage Excel arrive en TSV avec cellules
+   vides (fusions) : on filtre. Natures Sage (Capitaux, Résultat-Bilan…)
+   ignorées : la nature SYSCOHADA est héritée du compte de référence du plan
+   de base dont le code est le plus long préfixe, sinon heuristique de classe. */
+function _natureParClasse(code){
+  var c1 = String(code).charAt(0), c2 = String(code).slice(0,2);
+  if (c1==='1') return 'passif';
+  if (c1==='2') return (c2==='28'||c2==='29') ? 'actif_contra' : 'actif';
+  if (c1==='3') return (c2==='39') ? 'actif_contra' : 'actif';
+  if (c1==='4') return 'variable';
+  if (c1==='5') return (c2==='59') ? 'actif_contra' : 'tresorerie';
+  if (c1==='6') return 'charge';
+  if (c1==='7') return 'produit';
+  return 'variable';
+}
+function _natureHeritee(code){
+  var base = _BASE_PLAN_COMPTABLE || APP.planComptable || [];
+  var best = null;
+  base.forEach(function(c){
+    if (String(code).indexOf(c.code) === 0 && (!best || c.code.length > best.code.length)) best = c;
+  });
+  return (best && best.nature) ? best.nature : _natureParClasse(code);
+}
+function sagePlanParse(txt){
+  var rows = [], ignorees = 0;
+  String(txt||'').split(/\r?\n/).forEach(function(line){
+    if (!line.trim()) return;
+    var cells = line.split('\t').map(function(x){ return x.trim(); }).filter(function(x){ return x !== ''; });
+    if (cells.length < 3) { ignorees++; return; }
+    var type = cells[0].toLowerCase();
+    if (type !== 'détail' && type !== 'detail' && type !== 'total') { ignorees++; return; }
+    var code = cells[1].replace(/\s/g,'');
+    if (!/^[1-9][0-9]*$/.test(code)) { ignorees++; return; }
+    var label = cells[2].replace(/^\*+\s*/,'').trim();
+    if (!label) { ignorees++; return; }
+    /* Libellés Sage « TOUT EN MAJUSCULES » des totaux : Capitalisation lisible */
+    if (type === 'total' && label === label.toUpperCase()) {
+      label = label.charAt(0) + label.slice(1).toLowerCase();
+    }
+    rows.push({ code:code, label:label, classe:code.charAt(0), nature:_natureHeritee(code), _type:type });
+  });
+  /* Dédoublonnage (dernier gagne) */
+  var vus = {}; var uniques = [];
+  rows.forEach(function(r){ if (vus[r.code] !== undefined) uniques[vus[r.code]] = r; else { vus[r.code] = uniques.length; uniques.push(r); } });
+  return { rows: uniques, ignorees: ignorees };
+}
+function ouvrirImportSage(){
+  var t = document.getElementById('sage-paste'); if (t) t.value = '';
+  var a = document.getElementById('sage-apercu'); if (a) a.innerHTML = '';
+  openModal('modal-import-sage');
+}
+function sageApercu(){
+  var a = document.getElementById('sage-apercu'); if (!a) return;
+  var r = sagePlanParse((document.getElementById('sage-paste')||{}).value);
+  if (!r.rows.length) { a.innerHTML = '<span style="color:var(--rouge);">Aucun compte reconnu — vérifiez le collage (colonnes Type / N°compte / Intitulé).</span>'; return; }
+  var det = r.rows.filter(function(x){ return x._type !== 'total'; }).length;
+  var tot = r.rows.length - det;
+  var nouveaux = r.rows.filter(function(x){ return !APP.planComptable.some(function(c){ return c.code === x.code; }); }).length;
+  a.innerHTML = '✔ <strong>' + r.rows.length + '</strong> compte(s) reconnus — ' + det + ' détail · ' + tot + ' regroupements — '
+    + '<strong style="color:var(--vert);">' + nouveaux + ' nouveaux</strong>, ' + (r.rows.length - nouveaux) + ' mises à jour de libellés'
+    + (r.ignorees ? ' — ' + r.ignorees + ' ligne(s) de bruit ignorée(s)' : '')
+    + '<br>Exemples : ' + r.rows.slice(0,3).map(function(x){ return x.code + ' « ' + escHtml(x.label) + ' » (' + x.nature + ')'; }).join(' · ');
+}
+async function validerImportSage(){
+  var r = sagePlanParse((document.getElementById('sage-paste')||{}).value);
+  if (!r.rows.length) { toast('Aucun compte reconnu dans le texte collé.', 'error'); return; }
+  var mod = IMPORT_MODULES.find(function(m){ return m.id === 'plan_comptable'; });
+  closeModal('modal-import-sage');
+  await _importPlanComptable(r.rows.map(function(x){ return { code:x.code, label:x.label, classe:x.classe, nature:x.nature }; }), 'merge', mod);
+}
+
 async function _importPlanComptable(rows, strategy, mod) {
   DATA.params = DATA.params || {};
   DATA.params.plan_comptable_custom = DATA.params.plan_comptable_custom || [];
