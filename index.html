@@ -44687,7 +44687,18 @@ startApp = async function() {
 };
 
 // ══ Lancement
-init();
+// FIX (crash "X is not defined" au démarrage, ex. crecReste) :
+// init() appelle startApp() → goTo('dashboard') → des fonctions définies
+// PLUS BAS dans le fichier, dans un <script> ultérieur (ex. crecReste()).
+// Lancer init() en plein milieu du parsing HTML expose à une "ReferenceError"
+// si ce bloc <script> plus bas n'a pas encore été exécuté. On attend donc que
+// le document ENTIER (tous les <script>) soit chargé avant de démarrer l'app :
+// DOMContentLoaded ne se déclenche qu'une fois TOUT le HTML/JS inline parsé.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 function mergePreload() {
   if (!DATA_PRELOAD) return;
@@ -44716,6 +44727,59 @@ async function savePreloadToDB() {
   }
   if (DATA.params) await dbPut('params', DATA.params);
   DATA_PRELOAD = null; // éviter de re-sauvegarder à chaque démarrage
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FIX RÉINJECTION DE DONNÉES — anti-résurrection des suppressions/modifications
+   ─────────────────────────────────────────────────────────────────────────
+   BUG CORRIGÉ : DATA_PRELOAD est une variable JS (littéral figé dans le
+   fichier). Elle est donc recréée à l'IDENTIQUE à CHAQUE rechargement de
+   page. L'ancien code appelait systématiquement mergePreload() +
+   savePreloadToDB() à chaque démarrage — y compris après le tout premier —
+   ce qui écrasait DATA[store] avec les données de préchargement d'origine
+   PUIS les réécrivait (dbPut, un par un) dans IndexedDB. Résultat :
+     • un client/employé/lot supprimé réapparaissait après un simple F5,
+     • une modification (ex. salaire d'un employé) était écrasée et revenait
+       à sa valeur d'origine du fichier,
+     • dbPut marque en plus l'enregistrement "dirty" pour la synchronisation
+       cloud (_dirtySync) → l'enregistrement ressuscité était repoussé vers
+       Supabase et donc RÉPERCUTÉ CHEZ TOUS LES AUTRES UTILISATEURS
+       (aggravation en mode multi-poste).
+   CORRECTIF : le semis des données de préchargement ne doit avoir lieu
+   qu'UNE SEULE FOIS, à la toute première installation sur cet appareil
+   (base IndexedDB réellement vierge). Un verrou permanent (localStorage,
+   qui survit aux rechargements contrairement à la variable JS DATA_PRELOAD)
+   + une vérification directe du contenu réel d'IndexedDB empêchent
+   désormais tout nouveau semis tant que l'un ou l'autre indique que
+   l'application a déjà servi.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var PRELOAD_SEEDED_FLAG = 'pici_preload_seeded_v1';
+
+async function maybeSeedPreload() {
+  try {
+    if (localStorage.getItem(PRELOAD_SEEDED_FLAG) === '1') { DATA_PRELOAD = null; return; }
+  } catch (e) {}
+
+  // Vérité terrain : si l'un de ces stores contient déjà des enregistrements,
+  // c'est que cet appareil a déjà servi (premier démarrage déjà effectué,
+  // ou usage réel en cours) → ne JAMAIS réinjecter les données figées du fichier.
+  var canaries = ['users', 'employes', 'clients', 'programmes', 'lots', 'terrains', 'divisions'];
+  for (var i = 0; i < canaries.length; i++) {
+    try {
+      var rows = await dbGetAll(canaries[i]);
+      if (rows && rows.length > 0) {
+        try { localStorage.setItem(PRELOAD_SEEDED_FLAG, '1'); } catch (e) {}
+        DATA_PRELOAD = null;
+        return;
+      }
+    } catch (e) {}
+  }
+
+  // Base réellement vierge (premier lancement, ou IndexedDB tout juste vidée
+  // volontairement par l'utilisateur) → semis unique des données de préchargement.
+  mergePreload();
+  await savePreloadToDB();
+  try { localStorage.setItem(PRELOAD_SEEDED_FLAG, '1'); } catch (e) {}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -45143,8 +45207,7 @@ document.addEventListener('keydown', function(e){
 
 async function startApp() {
   await initDB();
-  mergePreload();
-  await savePreloadToDB();
+  await maybeSeedPreload();
   await loadAllData();
 
   // ── RESET MOT DE PASSE (one-shot) — KESSIE / Azerty@2026 ──────────────
