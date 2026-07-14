@@ -72142,6 +72142,59 @@ function _cdDonut(ok, ko){
     + '</svg>';
 }
 
+function _cdParCaisse(b){
+  return caissesVisibles().map(function(c){
+    var mvtsC = (DATA.caisse_mouvements||[]).filter(function(m){
+      var jour=(m.date||'').slice(0,10);
+      return m.caisse_id===c.id && jour>=b.deb && jour<=b.fin;
+    });
+    var entreesC = mvtsC.filter(function(m){ return m.type==='entree'; });
+    var sortiesC = mvtsC.filter(function(m){ return m.type==='sortie'; });
+    var totEC = entreesC.reduce(function(s,m){ return s+(parseFloat(m.montant)||0); },0);
+    var totDC = sortiesC.reduce(function(s,m){ return s+(parseFloat(m.montant)||0); },0);
+
+    var clotC = (DATA.caisse_mouvements||[]).filter(function(m){
+      if (m.caisse_id!==c.id) return false;
+      var s=(DATA.caisse_sessions||[]).find(function(x){return x.id===m.session_id;});
+      return s && s.statut==='cloturee';
+    });
+    var aVentilerC = clotC.filter(function(m){ return m.statut!=='ventile'; });
+    var montantAVentilerC = aVentilerC.reduce(function(s,m){ return s+(parseFloat(m.montant)||0); },0);
+
+    var ecartC = (DATA.caisse_sessions||[]).filter(function(s){
+      var j=(s.date||'').slice(0,10);
+      return s.caisse_id===c.id && s.statut==='cloturee' && j>=b.deb && j<=b.fin;
+    }).reduce(function(s,x){ return s+(parseFloat(x.ecart)||0); },0);
+
+    var session = caisseGetSessionOuverte(c.id);
+    var solde = session ? caisseSoldeSession(session) : null;
+
+    return { c:c, session:session, solde:solde, totE:totEC, totD:totDC, nbE:entreesC.length, nbD:sortiesC.length,
+              aVentiler:aVentilerC.length, montantAVentiler:montantAVentilerC, ecart:ecartC };
+  });
+}
+
+function _cdCaisseCard(x){
+  var c=x.c, ouverte=!!x.session;
+  var badge = ouverte
+    ? '<span style="background:var(--vert);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:9px;">OUVERTE</span>'
+    : '<span style="background:var(--dim);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:9px;">FERMÉE</span>';
+  var net = x.totE - x.totD;
+  return '<div class="card" style="padding:14px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+      + '<div style="font-weight:800;font-size:13px;">'+escHtml(c.nom)+'</div>' + badge
+    + '</div>'
+    + (ouverte ? '<div style="font-size:19px;font-weight:800;color:var(--or,#B87333);margin-bottom:6px;">'+fmtF(x.solde)+' <span style="font-size:11px;font-weight:600;color:var(--blanc-dim);">FCFA en caisse</span></div>' : '<div style="font-size:11px;color:var(--blanc-dim);margin-bottom:6px;">Caisse fermée</div>')
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">'
+      + '<div>📥 Entrées <strong style="color:var(--vert);">'+fmtF(x.totE)+'</strong> <span style="color:var(--blanc-dim);">('+x.nbE+')</span></div>'
+      + '<div>📤 Sorties <strong style="color:var(--rouge);">'+fmtF(x.totD)+'</strong> <span style="color:var(--blanc-dim);">('+x.nbD+')</span></div>'
+      + '<div>⚖️ Flux net <strong style="color:'+(net>=0?'var(--vert)':'var(--rouge)')+';">'+(net>=0?'+':'')+fmtF(net)+'</strong></div>'
+      + '<div>🧾 À ventiler <strong style="color:'+(x.aVentiler?'var(--rouge)':'var(--vert)')+';">'+x.aVentiler+'</strong> <span style="color:var(--blanc-dim);">('+fmtF(x.montantAVentiler)+')</span></div>'
+      + '<div style="grid-column:1/-1;">📐 Écart cumulé période : <strong style="color:'+(x.ecart===0?'var(--vert)':'var(--rouge)')+';">'+(x.ecart>=0?'+':'')+fmtF(x.ecart)+' FCFA</strong></div>'
+    + '</div>'
+  + '</div>';
+}
+
 function caisseRenderDashboard(){
   var box = document.getElementById('caisse-dashboard-box');
   if (!box) return;
@@ -72233,7 +72286,17 @@ function caisseRenderDashboard(){
               + '<div style="height:6px;background:var(--card2);border-radius:4px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:var(--or,#B87333);"></div></div>'
             + '</div>';
           }).join('')
-      + '</div>' : '');
+      + '</div>' : '')
+    + (function(){
+        var parCaisse = _cdParCaisse(b);
+        if (!parCaisse.length) return '';
+        return '<div style="margin-top:18px;">'
+          + '<div style="font-weight:700;font-size:13px;margin-bottom:10px;">🗂️ Détail par caisse <span style="color:var(--blanc-dim);font-weight:400;">('+parCaisse.length+' caisse(s) créée(s))</span></div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;">'
+            + parCaisse.map(_cdCaisseCard).join('')
+          + '</div>'
+        + '</div>';
+      })();
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
