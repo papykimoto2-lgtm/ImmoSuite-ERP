@@ -71242,7 +71242,15 @@ function caisseGenererPdfEtat(session) {
      (U+202F) n'existent pas dans la police jsPDF → glyphes parasites et
      coupures. On les remplace par des espaces standard, et les largeurs
      de colonnes fixes garantissent l'absence de retour à la ligne. */
-  var fmtP = function(n){ return fmtF(n).replace(/[\u202F\u00A0]/g, ' '); };
+  /* Format monétaire 100 % ASCII pour PDF : indépendant de la locale du
+     navigateur (toLocaleString produit un espace insécable U+202F que la
+     police jsPDF rend en « / » et casse l'espacement des caractères). */
+  var fmtP = function(n){
+    n = Math.round(parseFloat(n) || 0);
+    var neg = n < 0; n = Math.abs(n);
+    var t = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return (neg ? '-' : '') + t;
+  };
   doc.setFontSize(14); doc.text(String(p.societe || 'ImmoSuite ERP'), 14, 16);
   if (p.adresse) { doc.setFontSize(9); doc.setTextColor(120); doc.text(String(p.adresse), 14, 21); doc.setTextColor(0); }
   doc.setFontSize(15); doc.text('Brouillard journalier de caisse', 14, 30);
