@@ -71064,10 +71064,10 @@ function caisseImprimerBrouillard() {
   var rows = '';
   mvts.forEach(function(m) {
     solde += m.type === 'entree' ? (parseFloat(m.montant)||0) : -(parseFloat(m.montant)||0);
-    rows += '<tr><td>' + (m.date||'').slice(11,16) + '</td><td>' + escHtml(m.numero||'') + '</td><td>' + escHtml(m.motif||'') + '</td>'
-      + '<td style="text-align:right;">' + (m.type==='entree'?fmtF(m.montant):'') + '</td>'
-      + '<td style="text-align:right;">' + (m.type==='sortie'?fmtF(m.montant):'') + '</td>'
-      + '<td style="text-align:right;">' + fmtF(solde) + '</td></tr>';
+    rows += '<tr><td style="white-space:nowrap;">' + (m.date||'').slice(11,16) + '</td><td style="white-space:nowrap;">' + escHtml(m.numero||'') + '</td><td>' + escHtml(m.motif||'') + '</td>'
+      + '<td style="text-align:right;white-space:nowrap;">' + (m.type==='entree'?fmtF(m.montant):'') + '</td>'
+      + '<td style="text-align:right;white-space:nowrap;">' + (m.type==='sortie'?fmtF(m.montant):'') + '</td>'
+      + '<td style="text-align:right;white-space:nowrap;">' + fmtF(solde) + '</td></tr>';
   });
   var totalEntrees = mvts.filter(function(m){ return m.type==='entree'; }).reduce(function(s,m){ return s+(parseFloat(m.montant)||0); }, 0);
   var totalSorties = mvts.filter(function(m){ return m.type==='sortie'; }).reduce(function(s,m){ return s+(parseFloat(m.montant)||0); }, 0);
@@ -71236,7 +71236,13 @@ function caisseGenererPdfEtat(session) {
   if (!(window.jspdf && window.jspdf.jsPDF)) return null;
   var c = (DATA.caisses || []).find(function(x){ return x.id === session.caisse_id; });
   var p = DATA.params || {};
-  var doc = new window.jspdf.jsPDF();
+  /* Paysage : le libellé respire et les colonnes montants ne coupent plus les chiffres. */
+  var doc = new window.jspdf.jsPDF({ orientation: 'landscape' });
+  /* Format monétaire pour PDF : les espaces insécables de toLocaleString
+     (U+202F) n'existent pas dans la police jsPDF → glyphes parasites et
+     coupures. On les remplace par des espaces standard, et les largeurs
+     de colonnes fixes garantissent l'absence de retour à la ligne. */
+  var fmtP = function(n){ return fmtF(n).replace(/[\u202F\u00A0]/g, ' '); };
   doc.setFontSize(14); doc.text(String(p.societe || 'ImmoSuite ERP'), 14, 16);
   if (p.adresse) { doc.setFontSize(9); doc.setTextColor(120); doc.text(String(p.adresse), 14, 21); doc.setTextColor(0); }
   doc.setFontSize(15); doc.text('Brouillard journalier de caisse', 14, 30);
@@ -71245,32 +71251,38 @@ function caisseGenererPdfEtat(session) {
   var mvts = (DATA.caisse_mouvements || []).filter(function(m){ return m.session_id === session.id; })
     .sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
   var solde = parseFloat(session.fond_ouverture) || 0;
-  var body = [['', 'Fond d\'ouverture', '', '', fmtF(solde)]];
+  var body = [['', 'Fond d\'ouverture', '', '', fmtP(solde)]];
   mvts.forEach(function(m){
     solde += m.type === 'entree' ? (parseFloat(m.montant)||0) : -(parseFloat(m.montant)||0);
     body.push([(m.date||'').slice(11,16), (m.numero||'') + ' — ' + (m.motif||'') + (m.beneficiaire?(' — '+m.beneficiaire):'') + (m.piece_ref?('  [pièce '+m.piece_ref+']'):''),
-      m.type==='entree'?fmtF(m.montant):'', m.type==='sortie'?fmtF(m.montant):'', fmtF(solde)]);
+      m.type==='entree'?fmtP(m.montant):'', m.type==='sortie'?fmtP(m.montant):'', fmtP(solde)]);
   });
   var totE = mvts.filter(function(m){return m.type==='entree';}).reduce(function(s,m){return s+(parseFloat(m.montant)||0);},0);
   var totS = mvts.filter(function(m){return m.type==='sortie';}).reduce(function(s,m){return s+(parseFloat(m.montant)||0);},0);
 
   doc.autoTable({
     startY: 42, head: [['Heure','Libellé','Entrée','Sortie','Solde']], body: body,
-    styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [184,115,51] },
-    columnStyles: { 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'} },
-    foot: [['', 'Totaux', fmtF(totE), fmtF(totS), fmtF(solde)]],
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' }, headStyles: { fillColor: [184,115,51] },
+    columnStyles: {
+      0: { cellWidth: 14 },
+      1: { cellWidth: 'auto' },
+      2: { halign: 'right', cellWidth: 27, overflow: 'visible' },
+      3: { halign: 'right', cellWidth: 27, overflow: 'visible' },
+      4: { halign: 'right', cellWidth: 30, overflow: 'visible' }
+    },
+    foot: [['', 'Totaux', fmtP(totE), fmtP(totS), fmtP(solde)]],
     footStyles: { fillColor: [240,240,240], textColor: 20, fontStyle: 'bold', halign: 'right' }
   });
   var y = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 60) + 8;
   doc.setFontSize(9);
   if (session.statut === 'cloturee') {
-    doc.text('Fond réel compté : ' + fmtF(session.fond_cloture_reel) + ' FCFA   ·   Écart : ' + fmtF(session.ecart||0) + ' FCFA', 14, y); y += 6;
+    doc.text('Fond réel compté : ' + fmtP(session.fond_cloture_reel) + ' FCFA   ·   Écart : ' + fmtP(session.ecart||0) + ' FCFA', 14, y); y += 6;
   } else { doc.text('(caisse encore ouverte)', 14, y); y += 6; }
   y += 18;
   doc.text('Caissière : ' + (session.ouverte_par||''), 14, y);
-  doc.text('Vérifié par (Comptabilité) :', 120, y);
+  doc.text('Vérifié par (Comptabilité) :', 180, y);
   doc.text('_______________________', 14, y+6);
-  doc.text('_______________________', 120, y+6);
+  doc.text('_______________________', 180, y+6);
 
   var safe = ((c?c.nom:'caisse') + '-' + session.date).replace(/[^\w\-]+/g, '_');
   return { doc: doc, base64: doc.output('datauristring'), blob: doc.output('blob'), filename: 'Etat-caisse-' + safe + '.pdf' };
