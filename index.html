@@ -71260,17 +71260,34 @@ function caisseGenererPdfEtat(session) {
   var totE = mvts.filter(function(m){return m.type==='entree';}).reduce(function(s,m){return s+(parseFloat(m.montant)||0);},0);
   var totS = mvts.filter(function(m){return m.type==='sortie';}).reduce(function(s,m){return s+(parseFloat(m.montant)||0);},0);
 
+  /* Largeur des colonnes montants ADAPTÉE au plus long chiffre réellement
+     présent (mesure du texte avec la police du tableau + marge cellule).
+     Un montant ne se coupe jamais, et on ne gaspille pas de place. */
+  var footRow = ['', 'Totaux', fmtP(totE), fmtP(totS), fmtP(solde)];
+  var wCol = function(idx, entete){
+    var w = 0;
+    doc.setFontSize(8);
+    body.concat([footRow]).forEach(function(r){
+      var t = String(r[idx] || '');
+      if (t) w = Math.max(w, doc.getTextWidth(t));
+    });
+    doc.setFont(undefined, 'bold');
+    w = Math.max(w, doc.getTextWidth(entete));
+    doc.setFont(undefined, 'normal');
+    return Math.max(20, Math.ceil(w) + 7); /* + marges cellule */
+  };
+  var wE = wCol(2, 'Entrée'), wS = wCol(3, 'Sortie'), wSo = wCol(4, 'Solde');
   doc.autoTable({
     startY: 42, head: [['Heure','Libellé','Entrée','Sortie','Solde']], body: body,
     styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' }, headStyles: { fillColor: [184,115,51] },
     columnStyles: {
       0: { cellWidth: 14 },
       1: { cellWidth: 'auto' },
-      2: { halign: 'right', cellWidth: 27, overflow: 'visible' },
-      3: { halign: 'right', cellWidth: 27, overflow: 'visible' },
-      4: { halign: 'right', cellWidth: 30, overflow: 'visible' }
+      2: { halign: 'right', cellWidth: wE, overflow: 'visible' },
+      3: { halign: 'right', cellWidth: wS, overflow: 'visible' },
+      4: { halign: 'right', cellWidth: wSo, overflow: 'visible' }
     },
-    foot: [['', 'Totaux', fmtP(totE), fmtP(totS), fmtP(solde)]],
+    foot: [footRow],
     footStyles: { fillColor: [240,240,240], textColor: 20, fontStyle: 'bold', halign: 'right' }
   });
   var y = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 60) + 8;
