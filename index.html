@@ -3998,10 +3998,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
             <button type="button" class="btn btn-primary btn-sm" onclick="pmOuvrirPhotos()">📷 Ajouter des photos</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="pmOuvrirVideo()">🎬 Ajouter une vidéo</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="pmOuvrirVideo()">🔗 Vidéo par lien (YouTube/Vimeo/URL)</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="pmOuvrirVideoFichier()">📤 Téléverser une vidéo (fichier)</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="pmOuvrirDocument()">📄 Ajouter un document (PDF)</button>
             <input type="file" id="pm-input-photos" accept="image/*" multiple style="display:none;" onchange="pmAjouterPhotos(this)">
             <input type="file" id="pm-input-doc" accept="application/pdf,image/*" style="display:none;" onchange="pmAjouterDocument(this)">
+            <input type="file" id="pm-input-video" accept="video/mp4,video/webm,video/ogg,video/quicktime" style="display:none;" onchange="pmAjouterVideoFichier(this)">
           </div>
           <div id="pm-video-form" style="display:none;margin-top:12px;padding:12px;border:1px dashed #B87333;border-radius:10px;">
             <div class="form-group">
@@ -4012,7 +4014,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <button type="button" class="btn btn-primary btn-sm" onclick="pmAjouterVideo()">✅ Publier la vidéo</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('pm-video-form').style.display='none'">Annuler</button>
           </div>
-          <div style="font-size:11px;color:#6B6B9A;margin-top:8px;">Les photos sont compressées automatiquement. Documents : PDF recommandé (max ~4 Mo).</div>
+          <div style="font-size:11px;color:#6B6B9A;margin-top:8px;">Les photos sont compressées automatiquement. Documents : PDF recommandé (max ~4 Mo). Vidéo téléversée : fichier stocké directement dans l'application (max 25 Mo, formats MP4/WebM/OGG/MOV) — pour des vidéos plus longues ou plus lourdes, préférez le lien YouTube/Vimeo.</div>
         </div>
 
         <div class="card">
@@ -13506,10 +13508,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 <div class="modal-overlay" id="modal-mobilite">
   <div class="modal modal-lg">
     <div class="modal-header">
-      <h3>🔀 Nouvelle mutation / promotion</h3>
+      <h3 id="mob-modal-title">🔀 Nouvelle mutation / promotion</h3>
       <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-mobilite')">✕</button>
     </div>
     <div class="modal-body">
+      <input type="hidden" id="mob-edit-id" value="">
+      <div id="mob-edit-notice" style="display:none;background:rgba(74,148,224,0.1);border-left:3px solid var(--bleu);border-radius:4px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--bleu);">
+        ✏️ Modification d'un enregistrement existant — la situation « avant » reste figée telle qu'enregistrée à l'origine. Seule la nouvelle situation, le type, la date d'effet et les informations complémentaires peuvent être modifiés.
+      </div>
       <div class="form-grid">
         <div class="form-group span-2"><label>Employé concerné *</label>
           <select class="form-control" id="mob-employe" onchange="onMobiliteEmployeChange()">
@@ -13570,7 +13576,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modal-mobilite')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveMobilite()">💾 Enregistrer la mutation</button>
+      <button class="btn btn-primary" id="mob-save-btn" onclick="saveMobilite()">💾 Enregistrer la mutation</button>
     </div>
   </div>
 </div>
@@ -13688,8 +13694,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group"><label>Statut</label>
             <select class="form-control" id="emp-statut">
               <option value="actif">Actif</option>
-              <option value="inactif">Inactif</option>
               <option value="suspendu">Suspendu</option>
+              <option value="inactif">Inactif ❌</option>
+              <option value="resilie">Résilié ❌</option>
               <option value="parti">Parti ❌</option>
             </select>
           </div>
@@ -17735,7 +17742,16 @@ function _outboxRead() {
   catch(e) { return []; }
 }
 function _outboxWrite(q) {
-  try { localStorage.setItem(_SYNC_OUTBOX_KEY, JSON.stringify(q)); } catch(e) {}
+  try { localStorage.setItem(_SYNC_OUTBOX_KEY, JSON.stringify(q)); return true; }
+  catch(e) {
+    /* Quota localStorage dépassé (grosse session hors-ligne, objets volumineux) :
+       ne JAMAIS échouer en silence — l'opération resterait perdue. On alerte ;
+       les enregistrements restent dans IndexedDB et marqués _dirtySync, donc le
+       cycle 30 s les re-poussera dès le retour du réseau même sans la file. */
+    console.error('[SYNC] File d\'attente saturée (localStorage) :', e && e.name);
+    try { if (typeof toast === 'function') toast('⚠️ File de synchro saturée — les modifications restent locales et seront repoussées automatiquement au retour du réseau.', 'error'); } catch(_){}
+    return false;
+  }
 }
 function _outboxEnqueue(entry) {
   /* Réparation/refus des entrées invalides : une écriture sans id provoque un
@@ -17782,12 +17798,38 @@ function _supaRow(table, obj) {
 }
 function _supaUnwrap(table, row) { return (table === 'pi_users') ? row : (row && row.data ? row.data : row); }
 
+/* Le distant remplace-t-il le local ? Strictement plus récent uniquement.
+   À timestamps égaux (ou absents des deux côtés), le LOCAL est conservé :
+   écraser « à égalité » était un vecteur de réinjection de vieilles lignes
+   cloud sans horodatage sur des lignes locales plus fraîches. */
+function _remoteWins(remote, local) {
+  if (!local) return true;
+  var tr = _ts(remote), tl = _ts(local);
+  return tr > tl;
+}
+
 /* Date de modification d'un enregistrement (pour « le plus récent gagne ») */
 function _ts(x) {
   if (!x) return 0;
   var v = x._modifie || x.updated_at;
   var t = v ? Date.parse(v) : 0;
   return isNaN(t) ? 0 : t;
+}
+
+/* Sérialisation stable (clés triées) pour comparer deux enregistrements sans
+   dépendre de l'ordre des clés. */
+function _stableStr(v) {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v);
+  if (Array.isArray(v)) return '[' + v.map(_stableStr).join(',') + ']';
+  return '{' + Object.keys(v).sort().map(function(k){ return JSON.stringify(k) + ':' + _stableStr(v[k]); }).join(',') + '}';
+}
+/* Deux enregistrements ont-ils le même CONTENU métier (hors champs volatils de
+   synchro) ? Sert à écarter les faux conflits : un horodatage distant plus
+   récent mais un contenu identique à ce qu'on écrit n'est pas un conflit. */
+function _memeContenu(a, b) {
+  var META = { _modifie:1, _baseModifie:1, _forceCloture:1, _dirty:1, updated_at:1 };
+  function strip(o){ var r={}; Object.keys(o||{}).forEach(function(k){ if(!META[k]) r[k]=o[k]; }); return r; }
+  return _stableStr(strip(a)) === _stableStr(strip(b));
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -17941,15 +17983,24 @@ async function syncToSupabase(table, obj) {
       var remote = await sbFetch(table + '?id=eq.' + obj.id + '&select=id,m:data->>_modifie', 'GET');
       var remoteModifie = remote && remote.length ? remote[0].m : null;
       if (remote && remote.length && remoteModifie && remoteModifie > obj._baseModifie) {
-        var _storeLocal = (SUPA_STORE_MAP.find(function(x){ return x[0]===table; })||[])[1] || table.replace('pi_','');
-        console.warn('[CONFLIT SYNC] Enregistrement modifié ailleurs depuis chargement local:', table, obj.id);
-        if (!DATA.conflits_sync) DATA.conflits_sync = [];
-        var _c = { id: uid(), store:_storeLocal, record_id: obj.id, detecte_le: new Date().toISOString(),
-          local_snapshot: JSON.parse(JSON.stringify(obj)), resolu: false };
-        DATA.conflits_sync.push(_c);
-        try { await dbPut('conflits_sync', _c); } catch(e){}
-        try { if (typeof toast === 'function') toast('⚠️ Conflit détecté (' + _storeLocal + ') — modifié ailleurs entre-temps. Voir Paramètres → Conflits de synchronisation.', 'error'); } catch(e){}
-        return false;
+        /* L'horodatage distant a avancé depuis notre chargement. Avant d'alerter,
+           on vérifie le CONTENU réel : si le distant est identique à ce que nous
+           écrivons (re-tampon automatique, ou même valeurs saisies ailleurs),
+           il n'y a rien à protéger → on laisse passer. Conflit réel uniquement
+           si le contenu distant diffère de notre version. */
+        var _full = await sbFetch(table + '?id=eq.' + obj.id + '&select=*', 'GET');
+        var _remoteRow = _full && _full.length ? _supaUnwrap(table, _full[0]) : null;
+        if (!_remoteRow || !_memeContenu(_remoteRow, obj)) {
+          var _storeLocal = (SUPA_STORE_MAP.find(function(x){ return x[0]===table; })||[])[1] || table.replace('pi_','');
+          console.warn('[CONFLIT SYNC] Enregistrement modifié ailleurs depuis chargement local:', table, obj.id);
+          if (!DATA.conflits_sync) DATA.conflits_sync = [];
+          var _c = { id: uid(), store:_storeLocal, record_id: obj.id, detecte_le: new Date().toISOString(),
+            local_snapshot: JSON.parse(JSON.stringify(obj)), resolu: false };
+          DATA.conflits_sync.push(_c);
+          try { await dbPut('conflits_sync', _c); } catch(e){}
+          try { if (typeof toast === 'function') toast('⚠️ Conflit détecté (' + _storeLocal + ') — modifié ailleurs entre-temps. Voir Paramètres → Conflits de synchronisation.', 'error'); } catch(e){}
+          return false;
+        }
       }
     } catch(e) { /* vérif réseau indisponible → on procède normalement, mieux que bloquer tout */ }
   }
@@ -18292,7 +18343,7 @@ async function syncPullStore(store){
   for (var i=0;i<rows.length;i++){
     var r = _supaUnwrap(table, rows[i]); if (!r || !r.id) continue;
     var ex = byId[r.id];
-    if (!ex || _ts(r) >= _ts(ex)) { byId[r.id]=r; try{ await dbPut(store, r); }catch(_){ } n++; }
+    if (_remoteWins(r, ex)) { byId[r.id]=r; try{ await dbPut(store, r); }catch(_){ } n++; }
   }
   DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
   try { majDerniereSync('Récupération cloud'); } catch(_){}
@@ -18742,8 +18793,30 @@ async function pullFromCloudSilent() {
   _pulling = true;   // empêche dbPut de marquer ces enregistrements "dirty"
   var total = 0;
   try {
+    /* ── PHASE 0 — Tombstones d'abord ────────────────────────────────────
+       Tirer pi_suppressions AVANT toutes les tables métier et armer le
+       registre local. Sans cette phase, une ligne supprimée sur un autre
+       poste était d'abord réinjectée par le pull de sa table, puis
+       re-supprimée par _appliquerSuppressionsSync() en fin de cycle :
+       fenêtre de réapparition à l'écran, et risque de re-push si le poste
+       la marquait « dirty » entre-temps. */
+    try {
+      var supRows = await sbFetch('pi_suppressions?select=*', 'GET');
+      if (supRows && supRows.length) {
+        if (!DATA.suppressions_sync) DATA.suppressions_sync = [];
+        var supIds = {}; DATA.suppressions_sync.forEach(function(x){ if (x && x.id) supIds[x.id] = true; });
+        for (var s0 = 0; s0 < supRows.length; s0++) {
+          var ts0 = _supaUnwrap('pi_suppressions', supRows[s0]);
+          if (!ts0 || !ts0.id || !ts0.store || !ts0.record_id) continue;
+          if (!supIds[ts0.id]) { DATA.suppressions_sync.push(ts0); try { await dbPut('suppressions_sync', ts0); } catch(e){} }
+          try { if (typeof tombAdd === 'function') tombAdd(ts0.store, ts0.record_id); } catch(e){}
+        }
+      }
+    } catch(e) { /* suppressions inaccessibles → le filet de fin de cycle reste actif */ }
+
     for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
       var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
+      if (store === 'suppressions_sync') continue; /* déjà traité en phase 0 */
       try {
         var rows = await sbFetch(table + '?select=*', 'GET');
         if (!rows || !rows.length) continue;
@@ -18755,7 +18828,7 @@ async function pullFromCloudSilent() {
           if (!r || r.id === undefined) continue;
           if (typeof tombHas === 'function' && tombHas(store, r.id)) { try { if (typeof deleteFromSupabase === 'function') deleteFromSupabase(table, r.id); } catch(e){} continue; }
           var ex = byId[String(r.id)];
-          if (!ex || _ts(r) >= _ts(ex)) {
+          if (_remoteWins(r, ex)) {
             byId[String(r.id)] = r;
             try { await dbPut(store, r); } catch(e) {}   // _pulling=true → pas marqué dirty
             total++;
@@ -28613,6 +28686,23 @@ function openEmployeModal(id) {
         var el = document.getElementById('emp-' + f);
         if (el) el.checked = !!e[f.replace(/-/g,'_')];
       });
+      /* Aller-retour robuste du statut : si la valeur enregistrée (ex: 'resilie',
+         ou tout statut hérité/importé) n'existe pas comme <option>, l'ajouter à
+         la volée. Sans cela, l'affectation el.value échoue silencieusement, le
+         select retombe sur 'actif', et l'enregistrement réinjecte l'employé
+         sorti dans la liste des actifs. */
+      var _stSel = document.getElementById('emp-statut');
+      if (_stSel && e.statut) {
+        _stSel.value = e.statut;
+        if (_stSel.value !== e.statut) {
+          var _lbl = { actif:'Actif', suspendu:'Suspendu', inactif:'Inactif ❌', resilie:'Résilié ❌', parti:'Parti ❌' };
+          var _o = document.createElement('option');
+          _o.value = e.statut;
+          _o.textContent = _lbl[e.statut] || e.statut;
+          _stSel.appendChild(_o);
+          _stSel.value = e.statut;
+        }
+      }
       var banner = document.getElementById('depart-info-banner');
       if (banner) banner.style.display = e.date_depart ? 'none' : 'block';
       var _mr=document.getElementById('emp-mode-remun'); if(_mr) _mr.value = e.mode_remuneration || 'mensuel';
@@ -28681,7 +28771,11 @@ async function saveEmploye() {
   var division = document.getElementById('emp-division').value;
   if (!nom || !matricule) { toast('Nom et matricule obligatoires.', 'error'); return; }
   if (DATA.divisions.length && !division) { toast('Veuillez rattacher l\'employé à une division.', 'error'); return; }
-  var emp = {
+  /* Enregistrement existant (mode édition) : on part de sa version complète pour ne perdre
+     aucun champ non couvert par ce formulaire (ex: métadonnées de synchronisation, ancien
+     historique...) et pour préserver sa date de création d'origine. */
+  var existing = APP.editingId ? DATA.employes.find(function(x) { return x.id === APP.editingId; }) : null;
+  var champs = {
     id: APP.editingId || 'emp_' + Date.now(),
     matricule: matricule,
     nom: nom,
@@ -28728,8 +28822,25 @@ async function saveEmploye() {
     inc_preavis: document.getElementById('emp-inc-preavis').checked,
     inc_licenciement: document.getElementById('emp-inc-licenciement').checked,
     inc_13mois: document.getElementById('emp-inc-13mois').checked,
-    created_at: APP.editingId ? undefined : new Date().toISOString()
+    created_at: (existing && existing.created_at) || new Date().toISOString(),
+    /* ── Horodatage de modification : INDISPENSABLE pour la synchro cloud ──
+       Sans ce champ, un pull ou un événement realtime arrivant après ce
+       changement (ex: passage du statut à "Parti ❌") ne peut pas savoir que
+       cette version locale est la plus récente : il réinjecte alors une
+       ancienne version (encore "actif") venue du cloud, et le départ de
+       l'employé est silencieusement annulé. _ts() compare ce champ pour
+       décider quelle version garder — il doit donc toujours être à jour. */
+    _modifie: new Date().toISOString()
   };
+  /* Cohérence départ ⇄ statut : si une date de départ (passée ou du jour) est
+     renseignée alors que le statut est resté « actif/suspendu », on force le
+     statut « parti ». Sans cela l'employé sorti reste dans la liste des actifs
+     (et dans la paie), et un simple pull cloud peut le « réinjecter ». */
+  if (champs.date_depart && String(champs.date_depart).slice(0,10) <= today()
+      && EMP_STATUTS_SORTIS.indexOf(champs.statut) === -1) {
+    champs.statut = 'parti';
+  }
+  var emp = existing ? Object.assign({}, existing, champs) : champs;
   if (APP.editingId) {
     var idx = DATA.employes.findIndex(function(x) { return x.id === APP.editingId; });
     if (idx >= 0) DATA.employes[idx] = emp;
@@ -28748,6 +28859,16 @@ async function saveEmploye() {
 }
 
 var EMP_STATUTS_SORTIS = ['parti', 'inactif', 'resilie'];
+/* Un employé est « sorti » si son statut est sorti OU si une date de départ
+   passée (ou du jour) est renseignée. La date de départ prime : même si un
+   statut « actif » réapparaît (ancienne fiche, ou réinjection par une synchro
+   d'un autre poste), l'employé reste classé parmi les ex-employés. */
+function empEstSorti(e) {
+  if (!e) return false;
+  if (EMP_STATUTS_SORTIS.indexOf(e.statut) !== -1) return true;
+  var d = e.date_depart ? String(e.date_depart).slice(0, 10) : '';
+  return !!(d && d <= today());
+}
 var _modeExEmployes = false;
 
 function toggleExEmployes() {
@@ -28780,7 +28901,7 @@ function renderEmployes() {
     var matchDept = !dept || e.dept === dept;
     var matchContrat = !contrat || e.contrat === contrat;
     var matchDivision = !divisionF || e.division === divisionF;
-    var matchSortie = _modeExEmployes ? EMP_STATUTS_SORTIS.indexOf(e.statut) !== -1 : EMP_STATUTS_SORTIS.indexOf(e.statut) === -1;
+    var matchSortie = _modeExEmployes ? empEstSorti(e) : !empEstSorti(e);
     return match && matchDept && matchContrat && matchDivision && matchSortie;
   });
   if (!list.length) {
@@ -29392,6 +29513,11 @@ function populateMobiliteSelects() {
 /* Ouvre le modal de mutation. Si empId fourni, pré-sélectionne l'employé (depuis la fiche employé ou la page liste) */
 function openMobiliteModal(empId) {
   populateMobiliteSelects();
+  document.getElementById('mob-edit-id').value = '';
+  document.getElementById('mob-edit-notice').style.display = 'none';
+  document.getElementById('mob-modal-title').textContent = '🔀 Nouvelle mutation / promotion';
+  document.getElementById('mob-save-btn').textContent = '💾 Enregistrer la mutation';
+  document.getElementById('mob-employe').disabled = false;
   document.getElementById('mob-type').value = 'mutation';
   document.getElementById('mob-date-effet').value = new Date().toISOString().slice(0,10);
   document.getElementById('mob-ref-decision').value = '';
@@ -29409,6 +29535,51 @@ function openMobiliteModal(empId) {
     document.getElementById('mob-employe').value = empId;
     onMobiliteEmployeChange();
   }
+  document.getElementById('modal-mobilite').classList.add('open');
+}
+
+/* Ouvre le modal en mode ÉDITION d'un enregistrement de mobilité existant.
+   L'employé et la situation "avant" (snapshot d'origine) restent figés ;
+   seuls le type, la date d'effet et la "nouvelle situation" sont modifiables. */
+function openMobiliteEditModal(id) {
+  var m = (DATA.mobilites_rh || []).find(function(x){ return x.id === id; });
+  if (!m) { toast('Enregistrement de mobilité introuvable.', 'error'); return; }
+  populateMobiliteSelects();
+  document.getElementById('mob-edit-id').value = m.id;
+  document.getElementById('mob-edit-notice').style.display = 'block';
+  document.getElementById('mob-modal-title').textContent = '✏️ Modifier la mutation / promotion';
+  document.getElementById('mob-save-btn').textContent = '💾 Enregistrer les modifications';
+
+  var selEmp = document.getElementById('mob-employe');
+  selEmp.value = m.employe_id;
+  selEmp.disabled = true; // l'employé concerné ne se change pas sur un enregistrement existant
+
+  // Affiche la situation "avant" telle que figée à l'origine (pas la situation actuelle de l'employé)
+  var box = document.getElementById('mob-situation-actuelle');
+  box.style.display = 'block';
+  document.getElementById('mob-situation-actuelle-txt').innerHTML =
+    '<strong>Poste :</strong> ' + escHtml(m.ancien_poste || '—') +
+    ' &nbsp;·&nbsp; <strong>Département :</strong> ' + escHtml(_labelDeptRH(m.ancien_dept)) +
+    ' &nbsp;·&nbsp; <strong>Division :</strong> ' + escHtml(m.ancienne_division ? _nomDivision(m.ancienne_division) : '—') +
+    '<br><strong>Catégorie :</strong> ' + escHtml(m.ancienne_categorie || '—') +
+    ' &nbsp;·&nbsp; <strong>Salaire de base :</strong> ' + fmtF(m.ancien_salaire || 0) + ' FCFA';
+
+  document.getElementById('mob-type').value = m.type || 'mutation';
+  document.getElementById('mob-date-effet').value = m.date_effet || '';
+  document.getElementById('mob-ref-decision').value = m.ref_decision || '';
+  document.getElementById('mob-nouveau-poste').value = m.nouveau_poste || '';
+  document.getElementById('mob-nouveau-dept').value = m.nouveau_dept || '';
+  document.getElementById('mob-nouvelle-division').value = m.nouvelle_division || '';
+  document.getElementById('mob-nouveau-service').value = m.nouveau_service || '';
+  document.getElementById('mob-nouvelle-categorie').innerHTML = buildGrilleOptions(
+    (DATA.employes.find(function(x){ return x.id === m.employe_id; }) || {}).secteur || 'btp',
+    m.nouvelle_categorie || ''
+  );
+  document.getElementById('mob-nouveau-salaire').value = m.nouveau_salaire || 0;
+  document.getElementById('mob-motif').value = m.motif || '';
+  document.getElementById('mob-decide-par').value = m.decide_par || '';
+  document.getElementById('mob-observations').value = m.observations || '';
+
   document.getElementById('modal-mobilite').classList.add('open');
 }
 
@@ -29445,6 +29616,7 @@ function appliquerGrilleMobilite() {
 }
 
 async function saveMobilite() {
+  var editId = document.getElementById('mob-edit-id').value;
   var empId = document.getElementById('mob-employe').value;
   var e = DATA.employes.find(function(x){ return x.id === empId; });
   if (!e) { toast('Veuillez sélectionner un employé.', 'error'); return; }
@@ -29459,21 +29631,10 @@ async function saveMobilite() {
   var nouvelleCategorie = document.getElementById('mob-nouvelle-categorie').value;
   var nouveauSalaire = parseFloat(document.getElementById('mob-nouveau-salaire').value) || e.salaire_base;
 
-  var m = {
-    id: 'mob_' + Date.now(),
-    employe_id: e.id,
-    employe_nom: e.nom + ' ' + e.prenoms,
-    employe_matricule: e.matricule,
+  var champsApres = {
     type: document.getElementById('mob-type').value,
     date_effet: dateEffet,
     ref_decision: document.getElementById('mob-ref-decision').value.trim(),
-    // situation avant (snapshot au moment de la mutation)
-    ancien_poste: e.poste || '',
-    ancien_dept: e.dept || '',
-    ancienne_division: e.division || '',
-    ancienne_categorie: e.categorie || '',
-    ancien_salaire: e.salaire_base || 0,
-    // situation après
     nouveau_poste: nouveauPoste,
     nouveau_dept: nouveauDept,
     nouvelle_division: nouvelleDivision,
@@ -29482,20 +29643,59 @@ async function saveMobilite() {
     nouveau_salaire: nouveauSalaire,
     motif: motif,
     decide_par: document.getElementById('mob-decide-par').value.trim(),
-    observations: document.getElementById('mob-observations').value.trim(),
-    created_at: new Date().toISOString()
+    observations: document.getElementById('mob-observations').value.trim()
   };
-  DATA.mobilites_rh = DATA.mobilites_rh || [];
-  DATA.mobilites_rh.push(m);
+
+  var m;
+  var isEdit = !!editId;
+
+  if (isEdit) {
+    // ── Modification d'un enregistrement existant ──
+    m = (DATA.mobilites_rh || []).find(function(x){ return x.id === editId; });
+    if (!m) { toast('Enregistrement de mobilité introuvable.', 'error'); return; }
+    // La situation "avant" (snapshot d'origine) n'est jamais modifiée ici, seule la "nouvelle situation" l'est
+    Object.assign(m, champsApres);
+    m.updated_at = new Date().toISOString();
+  } else {
+    // ── Création d'un nouvel enregistrement ──
+    m = Object.assign({
+      id: 'mob_' + Date.now(),
+      employe_id: e.id,
+      employe_nom: e.nom + ' ' + e.prenoms,
+      employe_matricule: e.matricule,
+      // situation avant (snapshot au moment de la mutation)
+      ancien_poste: e.poste || '',
+      ancien_dept: e.dept || '',
+      ancienne_division: e.division || '',
+      ancienne_categorie: e.categorie || '',
+      ancien_salaire: e.salaire_base || 0,
+      created_at: new Date().toISOString()
+    }, champsApres);
+    DATA.mobilites_rh = DATA.mobilites_rh || [];
+    DATA.mobilites_rh.push(m);
+  }
   await dbPut('mobilites_rh', m);
 
-  // Appliquer immédiatement la nouvelle situation sur la fiche employé
-  e.poste = nouveauPoste;
-  e.dept = nouveauDept;
-  e.division = nouvelleDivision;
-  if (nouvelleCategorie) e.categorie = nouvelleCategorie;
-  e.salaire_base = nouveauSalaire;
-  await dbPut('employes', e);
+  // Détermine si cet enregistrement est le mouvement le plus récent de l'employé
+  // (celui qui doit refléter l'état courant de la fiche employé)
+  var mvtsEmp = (DATA.mobilites_rh || []).filter(function(x){ return x.employe_id === e.id; });
+  var dernier = mvtsEmp.slice().sort(function(a,b){
+    var d = (a.date_effet||'').localeCompare(b.date_effet||'');
+    if (d !== 0) return d;
+    return (a.created_at||'').localeCompare(b.created_at||'');
+  }).pop();
+  var estLeDernier = dernier && dernier.id === m.id;
+
+  if (estLeDernier) {
+    // Appliquer la nouvelle situation sur la fiche employé
+    e.poste = nouveauPoste;
+    e.dept = nouveauDept;
+    e.division = nouvelleDivision;
+    if (nouvelleCategorie) e.categorie = nouvelleCategorie;
+    e.salaire_base = nouveauSalaire;
+    e._modifie = new Date().toISOString(); // horodatage requis pour la synchro (voir saveEmploye)
+    await dbPut('employes', e);
+  }
 
   closeModal('modal-mobilite');
   renderEmployes();
@@ -29503,7 +29703,12 @@ async function saveMobilite() {
   if (typeof populateDivisionSelects === 'function') populateDivisionSelects();
   if (document.getElementById('page-rh-mobilite') && document.getElementById('page-rh-mobilite').classList.contains('active')) renderMobilite();
   if (APP.editingId === e.id && document.getElementById('tab-modal-emp-mobilite')) renderMobiliteEmploye();
-  toast('Mutation enregistrée et appliquée à la fiche employé.', 'success');
+
+  if (isEdit) {
+    toast(estLeDernier ? 'Mutation modifiée et fiche employé mise à jour.' : 'Mutation modifiée. (Ce n\'est pas le mouvement le plus récent : la fiche employé actuelle n\'a pas été changée.)', 'success');
+  } else {
+    toast('Mutation enregistrée et appliquée à la fiche employé.', 'success');
+  }
 }
 
 /* Résumé textuel court "avant" ou "après" pour l'affichage en tableau */
@@ -29555,8 +29760,9 @@ function renderMobilite() {
         + '<td style="max-width:180px;font-size:12px;">' + escHtml(m.motif || '—') + '</td>'
         + '<td style="font-size:12px;">' + escHtml(m.ref_decision || '—') + '</td>'
         + '<td>'
+        + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openMobiliteEditModal(\'' + m.id + '\')" title="Modifier">✏️</button> '
         + '<button class="btn btn-secondary btn-sm btn-icon" onclick="imprimerDecisionMutation(\'' + m.id + '\')" title="Imprimer la décision">🖨️</button> '
-        + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteMobilite(\'' + m.id + '\')">🗑</button>'
+        + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteMobilite(\'' + m.id + '\')" title="Supprimer">🗑</button>'
         + '</td></tr>';
     }).join('');
   }
@@ -29596,7 +29802,11 @@ function renderMobiliteEmploye() {
       + '<td>' + _mobSituationTxt(m, 'après') + '</td>'
       + '<td>' + _mobVariationSalaireTxt(m) + '</td>'
       + '<td style="font-size:12px;">' + escHtml(m.motif || '—') + '</td>'
-      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="imprimerDecisionMutation(\'' + m.id + '\')" title="Imprimer la décision">🖨️</button></td>'
+      + '<td>'
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openMobiliteEditModal(\'' + m.id + '\')" title="Modifier">✏️</button> '
+      + '<button class="btn btn-secondary btn-sm btn-icon" onclick="imprimerDecisionMutation(\'' + m.id + '\')" title="Imprimer la décision">🖨️</button> '
+      + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteMobilite(\'' + m.id + '\')" title="Supprimer">🗑</button>'
+      + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -41518,6 +41728,32 @@ async function pmAjouterVideo(){
 }
 function pmOuvrirPhotos(){ var i=document.getElementById('pm-input-photos'); if(i){ i.value=''; i.click(); } }
 function pmOuvrirDocument(){ var i=document.getElementById('pm-input-doc'); if(i){ i.value=''; i.click(); } }
+function pmOuvrirVideoFichier(){ var i=document.getElementById('pm-input-video'); if(i){ i.value=''; i.click(); } }
+var PM_VIDEO_MAX_MO = 25;
+async function pmAjouterVideoFichier(input){
+  if (!hasRole('admin') && !hasRole('manager')) { toast('⛔ Réservé à l\'administrateur.','error'); input.value=''; return; }
+  var f = (input.files||[])[0];
+  if(!f){ return; }
+  if (f.type.indexOf('video/')!==0){ toast('❌ Fichier non reconnu comme vidéo.','error'); input.value=''; return; }
+  if (f.size > PM_VIDEO_MAX_MO*1024*1024){ toast('❌ Vidéo trop lourde (max '+PM_VIDEO_MAX_MO+' Mo). Utilisez plutôt un lien YouTube/Vimeo pour les vidéos plus longues.','error'); input.value=''; return; }
+  var cat = (document.getElementById('pm-categorie')||{}).value || 'eden';
+  if (cat === 'document') cat = 'eden';
+  var titre = (document.getElementById('pm-titre')||{}).value || '';
+  var commentaire = (document.getElementById('pm-commentaire')||{}).value || '';
+  toast('⏳ Téléversement de la vidéo…','info');
+  var dataUrl;
+  try {
+    dataUrl = await new Promise(function(res, rej){ var r=new FileReader(); r.onload=function(e){res(e.target.result);}; r.onerror=function(){rej(new Error('read failed'));}; r.readAsDataURL(f); });
+  } catch(e){ toast('❌ Échec de lecture du fichier vidéo.','error'); input.value=''; return; }
+  var media = Object.assign({ id: uid(), type:'video', categorie:cat, titre: titre || f.name.replace(/\.[^.]+$/,''), commentaire:commentaire }, pmRefCourant(),
+    { provider:'upload', video_id:'', url:'', data:dataUrl, mime:f.type||'video/mp4', nom:f.name, taille:f.size, visible:true, date:new Date().toISOString() });
+  DATA.portail_medias.push(media);
+  await dbPut('portail_medias', media);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_portail_medias', media);
+  input.value='';
+  toast('✅ Vidéo téléversée et publiée au portail.','success');
+  pmRender();
+}
 function _pmLabelCat(c){ return ({eden:'Programme',chantier:'Chantier',catalogue:'Catalogue',document:'Document'})[c]||c; }
 
 async function pmAjouterPhotos(input){
@@ -41602,13 +41838,15 @@ function pmRender(){
     if (m.type==='photo') thumb = '<img src="'+escHtml(m.data)+'" style="width:100%;height:120px;object-fit:cover;border-radius:8px;">';
     else if (m.type==='video') thumb = (m.provider==='youtube' && m.video_id)
       ? '<div style="position:relative;"><img src="https://img.youtube.com/vi/'+escHtml(m.video_id)+'/hqdefault.jpg" style="width:100%;height:120px;object-fit:cover;border-radius:8px;"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;text-shadow:0 2px 8px rgba(0,0,0,.6);">▶️</div></div>'
-      : '<div style="height:120px;display:flex;align-items:center;justify-content:center;background:#0f172a;border-radius:8px;font-size:36px;">🎬</div>';
+      : (m.provider==='upload' && m.data)
+        ? '<video src="'+escHtml(m.data)+'" controls preload="metadata" style="width:100%;height:120px;object-fit:cover;border-radius:8px;background:#0f172a;"></video>'
+        : '<div style="height:120px;display:flex;align-items:center;justify-content:center;background:#0f172a;border-radius:8px;font-size:36px;">🎬</div>';
     else thumb = '<div style="height:120px;display:flex;align-items:center;justify-content:center;background:#F1F5F9;border-radius:8px;font-size:36px;">📄</div>';
     return '<div style="border:1px solid #E0E0EA;border-radius:10px;padding:8px;'+(vis?'':'opacity:.5;')+'">'
       + thumb
       + '<div style="font-size:12px;font-weight:600;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(m.titre||'—')+'</div>'
       + (m.commentaire ? '<div style="font-size:10px;color:#6B6B9A;margin-top:2px;max-height:28px;overflow:hidden;">'+escHtml(m.commentaire)+'</div>' : '')
-      + '<div style="font-size:10px;color:#6B6B9A;">'+_pmLabelCat(m.categorie)+(m.type==='video'?' · 🎬 '+escHtml(m.provider||''):'')+'</div>'
+      + '<div style="font-size:10px;color:#6B6B9A;">'+_pmLabelCat(m.categorie)+(m.type==='video'?' · 🎬 '+escHtml(m.provider==='upload'?'Fichier téléversé':(m.provider||'')):'')+'</div>'
       + '<div style="display:flex;gap:6px;margin-top:6px;">'
       +   '<button type="button" class="btn btn-secondary btn-sm" style="flex:1;" onclick="pmToggleVisible(\''+m.id+'\')">'+(vis?'👁️':'🚫')+'</button>'
       +   '<button type="button" class="btn btn-secondary btn-sm" onclick="pmEditerCommentaire(\''+m.id+'\')">✏️</button>'
@@ -44508,7 +44746,7 @@ function _rtTableStore(){
 /* Marque une écriture propre pour l'ignorer en retour Realtime */
 function _rtMarkMyWrite(id){
   _RT.myWrites[id] = Date.now();
-  setTimeout(function(){ delete _RT.myWrites[id]; }, 8000);
+  setTimeout(function(){ delete _RT.myWrites[id]; }, 30000); /* réseau CI lent : le rebond realtime peut dépasser 8 s */
 }
 
 /* Patch syncToSupabase pour marquer les écritures propres */
@@ -44566,7 +44804,7 @@ async function _rtApply(table, eventType, newRow, oldRow){
     var idx = DATA[store].findIndex(function(x){ return x.id === incoming.id; });
     if (idx >= 0) {
       var existing = DATA[store][idx];
-      if (_ts(incoming) >= _ts(existing)) {
+      if (_remoteWins(incoming, existing)) {
         DATA[store][idx] = incoming;
         try { _pulling=true; await dbPut(store, incoming); _pulling=false; } catch(e){ _pulling=false; }
         _rtNotify('🔄', store, id, incoming);
@@ -44662,12 +44900,17 @@ async function startRealtime(){
   });
   _RT._badge('','⬤ RT…');
 
-  /* Écouter TOUTES les tables pi_* en un seul canal (filtre schema=public) */
+  /* Écouter tout le schéma public : le filtre serveur « table=like.pi_% »
+     n'est PAS supporté par postgres_changes (Realtime v2) — avec lui le canal
+     ne délivre aucun événement. On s'abonne donc sans filtre et on filtre
+     côté client dans _rtApply (les tables inconnues du mapping pi_*→store
+     sont ignorées dès la première ligne). */
   _RT.channel = _RT.client
     .channel('immo_rt_global', { config:{ broadcast:{ self:false } } })
     .on('postgres_changes',
-        { event:'*', schema:'public', filter:'table=like.pi_%' },
+        { event:'*', schema:'public' },
         function(payload){
+          if (!payload.table || payload.table.indexOf('pi_') !== 0) return;
           _rtApply(payload.table, payload.eventType, payload.new, payload.old).catch(function(){});
         })
     .subscribe(function(status){
@@ -70846,10 +71089,21 @@ function caisseOuvrirBonModal(caisseId, type) {
   document.getElementById('cb-piece').value = '';
   document.getElementById('cb-motif').value = '';
   document.getElementById('cb-beneficiaire').value = '';
+  _cbAppliquerLibelleTiers(type);
   document.getElementById('cb-edit-warn').style.display = 'none';
   document.getElementById('cb-solde-actuel').textContent = 'Solde actuel de la caisse « ' + (c?c.nom:'') + ' » : ' + fmtF(caisseSoldeSession(session)) + ' FCFA';
   cbResetDocs();
   openModal('modal-caisse-bon');
+}
+
+/* Libellé contextuel du tiers : « Déposant » pour une entrée (qui apporte
+   l'argent), « Bénéficiaire » pour une sortie (qui reçoit l'argent). */
+function _cbAppliquerLibelleTiers(type) {
+  var estEntree = type === 'entree';
+  var lab = document.getElementById('cb-benef-label');
+  var inp = document.getElementById('cb-beneficiaire');
+  if (lab) lab.textContent = (estEntree ? 'Déposant' : 'Bénéficiaire') + ' *';
+  if (inp) inp.placeholder = estEntree ? 'Nom du déposant (qui apporte l\'argent)' : 'Nom du bénéficiaire (qui reçoit l\'argent)';
 }
 
 /* Qui peut modifier un mouvement ?
@@ -70879,6 +71133,7 @@ function caisseEditBonModal(mvtId) {
   document.getElementById('cb-piece').value = m.piece_ref || '';
   document.getElementById('cb-motif').value = m.motif || '';
   document.getElementById('cb-beneficiaire').value = m.beneficiaire || '';
+  _cbAppliquerLibelleTiers(m.type);
   var warn = document.getElementById('cb-edit-warn');
   if (m.statut === 'ventile') {
     warn.style.display = '';
@@ -70902,6 +71157,7 @@ async function caisseSaveBon() {
 
   if (montant <= 0) { toast('Le montant doit être supérieur à zéro.', 'error'); return; }
   if (!motif) { toast('Le motif est obligatoire.', 'error'); return; }
+  if (!beneficiaire) { toast((type === 'entree' ? 'Le déposant' : 'Le bénéficiaire') + ' est obligatoire.', 'error'); return; }
 
   var c = (DATA.caisses || []).find(function(x){ return x.id === caisseId; });
 
@@ -71159,12 +71415,12 @@ function caisseImprimerBon(mvtId) {
     + '<tr><td style="padding:6px 0;color:#666;">Caisse</td><td style="padding:6px 0;">' + escHtml(c ? c.nom : '') + ' (compte ' + escHtml(c ? c.compte : '') + ')</td></tr>'
     + '<tr><td style="padding:6px 0;color:#666;">Date</td><td style="padding:6px 0;">' + (m.date||'').replace('T',' ').slice(0,16) + '</td></tr>'
     + '<tr><td style="padding:6px 0;color:#666;">Motif</td><td style="padding:6px 0;">' + escHtml(m.motif) + '</td></tr>'
-    + '<tr><td style="padding:6px 0;color:#666;">Bénéficiaire</td><td style="padding:6px 0;">' + escHtml(m.beneficiaire||'—') + '</td></tr>'
+    + '<tr><td style="padding:6px 0;color:#666;">' + (m.type === 'entree' ? 'Déposant' : 'Bénéficiaire') + '</td><td style="padding:6px 0;">' + escHtml(m.beneficiaire||'—') + '</td></tr>'
     + '<tr><td style="padding:6px 0;color:#666;">Montant</td><td style="padding:10px 0;font-size:20px;font-weight:800;">' + fmtF(m.montant) + ' FCFA</td></tr>'
     + '</table>'
     + '<div style="display:flex;justify-content:space-between;margin-top:60px;font-size:12px;">'
     + '<div>Caissière<br><br><br>___________________<br>' + escHtml(m.created_by||'') + '</div>'
-    + '<div>Bénéficiaire / Reçu par<br><br><br>___________________</div>'
+    + '<div>' + (m.type === 'entree' ? 'Déposant / Versé par' : 'Bénéficiaire / Reçu par') + '<br><br><br>___________________</div>'
     + '</div>'
     + '</div>';
   openPrintPreview(html, titre + ' — ' + m.numero);
@@ -72405,7 +72661,7 @@ function caisseEcartNonRegularise(){
         <div class="form-group"><label>Montant (FCFA) *</label><input type="number" class="form-control" id="cb-montant" value="0"></div>
         <div class="form-group span-2"><label>N° de pièce justificative (facture, reçu…)</label><input class="form-control" id="cb-piece" placeholder="Ex : FAC-2026-0148, reçu n°037"></div>
         <div class="form-group span-2"><label>Motif / libellé *</label><input class="form-control" id="cb-motif" placeholder="Achat fournitures bureau, remboursement transport..."></div>
-        <div class="form-group span-2"><label>Bénéficiaire / tiers (optionnel)</label><input class="form-control" id="cb-beneficiaire" placeholder="Nom du bénéficiaire ou du fournisseur"></div>
+        <div class="form-group span-2"><label id="cb-benef-label">Bénéficiaire *</label><input class="form-control" id="cb-beneficiaire" placeholder="Nom du bénéficiaire"></div>
         <div class="form-group span-2">
           <label style="display:flex;justify-content:space-between;align-items:center;">
             <span>📎 Pièces justificatives</span>
