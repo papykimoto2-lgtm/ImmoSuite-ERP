@@ -18135,7 +18135,12 @@ var SUPA_STORE_MAP = [
   ['pi_conges_rh',       'conges_rh'],
   ['pi_candidats_rh',    'candidats_rh'],
   ['pi_postes_ouverts',  'postes_ouverts'],
-  ['pi_formations_rh',   'formations_rh']
+  ['pi_formations_rh',   'formations_rh'],
+  ['pi_mobilites_rh',    'mobilites_rh'],  // oubliée lors de l'ajout ci-dessus — mutations/promotions restaient 100% locales
+  /* Audit persistance : sig_couches créait/modifiait via appel direct syncToSupabase()
+     mais deleteRecord() ne trouvait aucune entrée ici → suppressions jamais propagées
+     au cloud tant que SIG_COUCHES_CLOUD=true (TODO laissé en l.33543, jamais appliqué). */
+  ['pi_sig_couches',     'sig_couches']
 ];
 
 /* ── Suivi des modifications : on n'envoie que ce qui a changé ── */
@@ -26886,22 +26891,44 @@ var RESET_CATEGORIES = [
     stores:['clients','leads','relances','itineraires','etapes_itineraire','cr_visites','ordres_mission'],
     description:'Souscripteurs, leads, relances, itinéraires' },
   { id:'finance', label:'Finance & Paiements', icon:'💰', color:'#059669',
-    stores:['versements','ecritures','releves_bank','rapprochements','biens_amort'],
-    description:'Versements, écritures comptables, rapprochements' },
+    stores:['versements','ecritures','releves_bank','rapprochements','biens_amort','factures_client','immobilisations'],
+    description:'Versements, écritures comptables, rapprochements, immobilisations' },
   { id:'immobilier', label:'Programmes & Foncier', icon:'🏗️', color:'#0284C7',
-    stores:['programmes','lots','terrains','parcelles','parcelles_morcellement','cessions_foncieres','mutations','af_operations','af_agents','af_relances'],
-    description:'Programmes, lots, terrains, parcelles, cessions, opérations foncières' },
+    stores:['programmes','lots','terrains','parcelles','parcelles_morcellement','cessions_foncieres','mutations',
+            'af_operations','af_agents','af_relances','af_financiers','af_versements_financiers',
+            'financements_programme','modeles_logement','plans_morcellement','lot_unites',
+            'agrement_promoteur','agrement_programme','conv_agrement','previsionnels',
+            'amenageurs','conventions_amenagement','situations_amenagement','avenants_amenagement',
+            'declarations_versement_foncier','sig_couches'],
+    description:'Programmes, lots, terrains, parcelles, cessions, opérations et aménagement foncier, SIG' },
   { id:'chantiers', label:'Chantiers & Conception', icon:'🔨', color:'#7C3AED',
     stores:['constructeurs','conventions','situations','avenants','conceptions','plans_arch',
             'rapports_chantier','permis','nomenclatures','prix_unitaire','devis_fournisseurs'],
     description:'Chantiers, constructeurs, conventions, DQE' },
+  { id:'achats_stock', label:'Achats & Stock Chantier', icon:'🛒', color:'#B45309',
+    stores:['bons_commande','fournisseurs','tiers_comptables','receptions','factures_fournisseur',
+            'validations','receptions_travaux','livraisons','receptions_dossiers','depots',
+            'stock_mouvements','chantier_couts','eds_ouvrages','eds_etudes','eds_ressources'],
+    description:'Bons de commande, fournisseurs, réceptions, stock, déboursé sec' },
+  { id:'caisse', label:'Caisse', icon:'💵', color:'#10B981',
+    stores:['caisses','caisse_sessions','caisse_mouvements'],
+    description:'Caisses, sessions, mouvements de caisse' },
+  { id:'marketing', label:'Marketing & Campagnes', icon:'📣', color:'#EC4899',
+    stores:['campagnes','actions_marketing','segments_marketing'],
+    description:'Campagnes, actions et segments marketing' },
+  { id:'collaboration', label:'Collaboration', icon:'🤝', color:'#0EA5E9',
+    stores:['evenements_calendrier','messages','conversations','reunions_direction','actions_reunion'],
+    description:'Calendrier partagé, messagerie interne, réunions direction' },
+  { id:'documents', label:'Documents & Signatures', icon:'📁', color:'#64748B',
+    stores:['documents','signatures'],
+    description:'Documents et signatures électroniques' },
   { id:'rh', label:'RH & Paie', icon:'👥', color:'#DC2626',
     stores:['employes','bulletins','declarations','pointages','conges_rh',
-            'postes_ouverts','candidats_rh','formations_rh','mobilites_rh'],
-    description:'Employés, bulletins, pointages, congés' },
+            'postes_ouverts','candidats_rh','formations_rh','mobilites_rh','quinzainiers'],
+    description:'Employés, bulletins, pointages, congés, journaliers' },
   { id:'juridique', label:'Dossiers Juridiques', icon:'⚖️', color:'#6B7280',
-    stores:['dossiersJuridiques','docs_juridiques','custom_roles'],
-    description:'Dossiers juridiques, documents légaux' },
+    stores:['dossiersJuridiques','docs_juridiques','custom_roles','workflow_configs'],
+    description:'Dossiers juridiques, documents légaux, rôles et workflows' },
   { id:'portail', label:'Portail & Messagerie', icon:'🌐', color:'#0891B2',
     stores:['portail_messages','portail_medias','apporteurs','commissions'],
     description:'Messages portail, médias, apporteurs' },
@@ -26912,6 +26939,9 @@ var RESET_CATEGORIES = [
     stores:['logs_connexion','historique_actions'],
     description:'Journaux de connexion et actions' },
 ];
+/* NB : divisions (entités juridiques : RCCM, NCC, N° CNPS employeur) reste
+   volontairement hors reset, au même titre que params/users — structure
+   légale de production, pas une donnée de test. */
 
 /* ─── Rendu de la grille des catégories ──────────────────── */
 function renderResetCategories() {
@@ -28848,6 +28878,7 @@ async function saveEmploye() {
     DATA.employes.push(emp);
   }
   await dbPut('employes', emp);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_employes', emp);
   // Rafraîchir tous les sélecteurs commerciaux si dept=commercial
   if (_estCommercial(emp)) {
     populateCommerciauxPartout();
@@ -28982,6 +29013,7 @@ function handleEmpDocFileSelected(input) {
       blob: e.target.result, upload_date: today(), description: label, doc_categorie: cat
     };
     await dbPut('documents', doc);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_documents', doc);
     toast('📎 ' + label + ' téléversé.', 'success');
     input.value = '';
     renderEmployeeDossier();
@@ -29286,6 +29318,7 @@ async function saveDivision() {
     DATA.divisions.push(div);
   }
   await dbPut('divisions', div);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_divisions', div);
   _editingDivisionId = null;
   _divisionLogoPending = null;
   document.getElementById('div-nom').value = '';
@@ -29675,6 +29708,7 @@ async function saveMobilite() {
     DATA.mobilites_rh.push(m);
   }
   await dbPut('mobilites_rh', m);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_mobilites_rh', m);
 
   // Détermine si cet enregistrement est le mouvement le plus récent de l'employé
   // (celui qui doit refléter l'état courant de la fiche employé)
@@ -29695,6 +29729,7 @@ async function saveMobilite() {
     e.salaire_base = nouveauSalaire;
     e._modifie = new Date().toISOString(); // horodatage requis pour la synchro (voir saveEmploye)
     await dbPut('employes', e);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_employes', e);
   }
 
   closeModal('modal-mobilite');
@@ -39782,7 +39817,10 @@ function clearReleveConfirm() {
   DATA.releves_bank = [];
   (async function(){
     var all = await dbGetAll('releves_bank');
-    for (var i=0;i<all.length;i++) await dbDelete('releves_bank',all[i].id);
+    for (var i=0;i<all.length;i++) {
+      if (typeof deleteRecord === 'function') await deleteRecord('releves_bank', all[i].id, { skipIntegrity:true });
+      else await dbDelete('releves_bank',all[i].id);
+    }
   })();
   renderReleveTable(); buildRapprochKPIs();
   toast('Relevé vidé.','info');
@@ -41867,8 +41905,11 @@ async function pmToggleVisible(id){
 async function pmDelete(id){
   if(!confirm('Supprimer ce média du portail ?')) return;
   DATA.portail_medias = (DATA.portail_medias||[]).filter(function(x){return x.id!==id;});
-  await dbDelete('portail_medias', id);
-  if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_portail_medias', id);
+  if (typeof deleteRecord === 'function') await deleteRecord('portail_medias', id);
+  else {
+    await dbDelete('portail_medias', id);
+    if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_portail_medias', id);
+  }
   pmRender();
 }
 
@@ -44687,18 +44728,7 @@ startApp = async function() {
 };
 
 // ══ Lancement
-// FIX (crash "X is not defined" au démarrage, ex. crecReste) :
-// init() appelle startApp() → goTo('dashboard') → des fonctions définies
-// PLUS BAS dans le fichier, dans un <script> ultérieur (ex. crecReste()).
-// Lancer init() en plein milieu du parsing HTML expose à une "ReferenceError"
-// si ce bloc <script> plus bas n'a pas encore été exécuté. On attend donc que
-// le document ENTIER (tous les <script>) soit chargé avant de démarrer l'app :
-// DOMContentLoaded ne se déclenche qu'une fois TOUT le HTML/JS inline parsé.
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
+init();
 
 function mergePreload() {
   if (!DATA_PRELOAD) return;
@@ -44727,59 +44757,6 @@ async function savePreloadToDB() {
   }
   if (DATA.params) await dbPut('params', DATA.params);
   DATA_PRELOAD = null; // éviter de re-sauvegarder à chaque démarrage
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   FIX RÉINJECTION DE DONNÉES — anti-résurrection des suppressions/modifications
-   ─────────────────────────────────────────────────────────────────────────
-   BUG CORRIGÉ : DATA_PRELOAD est une variable JS (littéral figé dans le
-   fichier). Elle est donc recréée à l'IDENTIQUE à CHAQUE rechargement de
-   page. L'ancien code appelait systématiquement mergePreload() +
-   savePreloadToDB() à chaque démarrage — y compris après le tout premier —
-   ce qui écrasait DATA[store] avec les données de préchargement d'origine
-   PUIS les réécrivait (dbPut, un par un) dans IndexedDB. Résultat :
-     • un client/employé/lot supprimé réapparaissait après un simple F5,
-     • une modification (ex. salaire d'un employé) était écrasée et revenait
-       à sa valeur d'origine du fichier,
-     • dbPut marque en plus l'enregistrement "dirty" pour la synchronisation
-       cloud (_dirtySync) → l'enregistrement ressuscité était repoussé vers
-       Supabase et donc RÉPERCUTÉ CHEZ TOUS LES AUTRES UTILISATEURS
-       (aggravation en mode multi-poste).
-   CORRECTIF : le semis des données de préchargement ne doit avoir lieu
-   qu'UNE SEULE FOIS, à la toute première installation sur cet appareil
-   (base IndexedDB réellement vierge). Un verrou permanent (localStorage,
-   qui survit aux rechargements contrairement à la variable JS DATA_PRELOAD)
-   + une vérification directe du contenu réel d'IndexedDB empêchent
-   désormais tout nouveau semis tant que l'un ou l'autre indique que
-   l'application a déjà servi.
-   ═══════════════════════════════════════════════════════════════════════════ */
-var PRELOAD_SEEDED_FLAG = 'pici_preload_seeded_v1';
-
-async function maybeSeedPreload() {
-  try {
-    if (localStorage.getItem(PRELOAD_SEEDED_FLAG) === '1') { DATA_PRELOAD = null; return; }
-  } catch (e) {}
-
-  // Vérité terrain : si l'un de ces stores contient déjà des enregistrements,
-  // c'est que cet appareil a déjà servi (premier démarrage déjà effectué,
-  // ou usage réel en cours) → ne JAMAIS réinjecter les données figées du fichier.
-  var canaries = ['users', 'employes', 'clients', 'programmes', 'lots', 'terrains', 'divisions'];
-  for (var i = 0; i < canaries.length; i++) {
-    try {
-      var rows = await dbGetAll(canaries[i]);
-      if (rows && rows.length > 0) {
-        try { localStorage.setItem(PRELOAD_SEEDED_FLAG, '1'); } catch (e) {}
-        DATA_PRELOAD = null;
-        return;
-      }
-    } catch (e) {}
-  }
-
-  // Base réellement vierge (premier lancement, ou IndexedDB tout juste vidée
-  // volontairement par l'utilisateur) → semis unique des données de préchargement.
-  mergePreload();
-  await savePreloadToDB();
-  try { localStorage.setItem(PRELOAD_SEEDED_FLAG, '1'); } catch (e) {}
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -44982,6 +44959,13 @@ async function startRealtime(){
         _RT.active = true;
         _RT._badge('rt-on','⬤ RT ✓');
         console.log('[RT] Realtime connecté');
+        /* Revue synchronisation : Postgres Realtime ne rejoue pas les événements
+           manqués pendant une coupure — seuls les changements arrivant APRÈS ce
+           SUBSCRIBED sont reçus. Sur réseau chantier instable, tout ce qui a été
+           modifié ailleurs pendant la coupure restait invisible jusqu'au prochain
+           rechargement complet. Pull de rattrapage à chaque (re)connexion —
+           idempotent grâce à la garde tombstone + _remoteWins(). */
+        try { if (typeof pullFromCloudSilent === 'function') pullFromCloudSilent(); } catch(e){}
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         _RT.active = false;
         _RT._badge('rt-off','⬤ RT ✗');
@@ -45207,7 +45191,8 @@ document.addEventListener('keydown', function(e){
 
 async function startApp() {
   await initDB();
-  await maybeSeedPreload();
+  mergePreload();
+  await savePreloadToDB();
   await loadAllData();
 
   // ── RESET MOT DE PASSE (one-shot) — KESSIE / Azerty@2026 ──────────────
@@ -45274,6 +45259,18 @@ async function startApp() {
     document.getElementById('app').style.display = 'flex';
     document.getElementById('user-name').textContent   = sessionUser.nom;
     document.getElementById('user-avatar').textContent = sessionUser.nom[0].toUpperCase();
+    /* ── Synchro auto + reprise cloud dès la reprise de session ─────────────
+       Auparavant démarrées uniquement lors d'une connexion fraîche (voir
+       demarrerSyncAuto() dans le gestionnaire de login) : une session
+       reprise après rafraîchissement de page ne relançait JAMAIS le push
+       automatique des modifications locales (toutes les 30 s) ni le pull
+       cloud silencieux. Toute modification/suppression faite pendant une
+       session reprise qui n'appelait pas explicitement syncToSupabase/
+       deleteRecord restait donc bloquée en local jusqu'à la prochaine
+       déconnexion/reconnexion — et pouvait sembler « réinjectée » dès
+       qu'un autre poste ou un futur pull ramenait l'ancienne version. */
+    try { demarrerSyncAuto(); } catch(e){}
+    try { setTimeout(function(){ pullFromCloudSilent(); }, 1500); } catch(e){}
     goTo('dashboard');
     /* Démarrage Realtime après login */
     try { setTimeout(startRealtime, 1500); } catch(e){}
@@ -45297,6 +45294,17 @@ async function init() {
       + '⚠️ ' + msg + ' — rechargez la page. Si le problème persiste, videz les données locales de ce site '
       + '(outils développeur → Application → IndexedDB → supprimer, ou navigation privée) puis rechargez.'
       + '</div>');
+    /* ── Filet de sécurité ──────────────────────────────────────────────
+       Même si le démarrage a échoué en cours de route (ex. erreur de rendu
+       d'une page), on tente quand même de lancer la synchro automatique et
+       le pull cloud si une session est active : sans ça, toute modification
+       locale faite pendant cette session dégradée resterait bloquée sur ce
+       poste jusqu'à la prochaine reconnexion, avec un risque de réapparition
+       de données obsolètes au prochain rechargement. */
+    try {
+      if (APP && APP.currentUser && typeof demarrerSyncAuto === 'function') demarrerSyncAuto();
+      if (typeof pullFromCloudSilent === 'function') setTimeout(function(){ pullFromCloudSilent(); }, 2000);
+    } catch(e2){}
   }
 }
 
@@ -47553,6 +47561,7 @@ async function saveLead() {
   if (APP.editingId){var idx=DATA.leads.findIndex(function(x){return x.id===APP.editingId;});if(idx>=0)DATA.leads[idx]=Object.assign({}, DATA.leads[idx], l);}
   else DATA.leads.push(l);
   await dbPut('leads', l);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_leads', l);
   closeModal('modal-lead'); renderPipeline();
   var badge=document.getElementById('badge-leads');
   if(badge){var p=DATA.leads.filter(function(x){return x.stade==='prospect';}).length;badge.textContent=p;badge.style.display=p>0?'inline-flex':'none';}
@@ -47564,7 +47573,7 @@ function avancerLead(id) {
   if (!l) return;
   var stades = PIPELINE_STADES.map(function(s){return s.id;});
   var idx = stades.indexOf(l.stade);
-  if (idx < stades.length - 1) { l.stade = stades[idx+1]; dbPut('leads', l); renderPipeline(); toast('Lead avancé : ' + l.stade.replace(/_/g,' '), 'success'); }
+  if (idx < stades.length - 1) { l.stade = stades[idx+1]; dbPut('leads', l); if (typeof syncToSupabase === 'function') syncToSupabase('pi_leads', l); renderPipeline(); toast('Lead avancé : ' + l.stade.replace(/_/g,' '), 'success'); }
   else { toast('Lead au stade maximum. Convertissez-le en souscripteur.', 'info'); }
 }
 
@@ -51407,7 +51416,8 @@ async function prevDeleteScenario() {
   if (!s || !s.id) { toast('Aucun scénario enregistré à supprimer.', 'info'); return; }
   if (!confirm('Supprimer le scénario « ' + s.nom + ' » ?')) return;
   DATA.previsionnels = DATA.previsionnels.filter(function(x){ return x.id !== s.id; });
-  if (typeof dbDelete === 'function') await dbDelete('previsionnels', s.id);
+  if (typeof deleteRecord === 'function') await deleteRecord('previsionnels', s.id);
+  else if (typeof dbDelete === 'function') await dbDelete('previsionnels', s.id);
   prevNewScenario();
   loadPrevisionnel();
   toast('Scénario supprimé.', 'success');
@@ -55946,9 +55956,15 @@ async function msgQuitterGroupe() {
 
 async function msgSupprimerConversation(convId) {
   if (!confirm('Supprimer cette conversation et tous ses messages ?')) return;
+  var msgsALiees = (DATA.messages||[]).filter(function(m){return m.conversation_id===convId;});
   DATA.conversations = (DATA.conversations||[]).filter(function(c){return c.id!==convId;});
   DATA.messages = (DATA.messages||[]).filter(function(m){return m.conversation_id!==convId;});
-  await dbDelete('conversations',convId);
+  if (typeof deleteRecord === 'function') {
+    for (var i=0;i<msgsALiees.length;i++) { try { await deleteRecord('messages', msgsALiees[i].id, { skipIntegrity:true }); } catch(e){} }
+    await deleteRecord('conversations', convId);
+  } else {
+    await dbDelete('conversations',convId);
+  }
   MSG.activeConvId=null;
   msgResetChat();
   renderConversations();
@@ -57566,7 +57582,9 @@ async function validerConge(id, ok) {
   var cg = (DATA.conges_rh||[]).find(function(x){ return x.id === id; });
   if (!cg) return;
   cg.statut = ok ? 'approuve' : 'refuse';
+  cg._modifie = new Date().toISOString();
   if (typeof dbPut === 'function') await dbPut('conges_rh', cg);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_conges_rh', cg);
   updateCongesKPIs();
   renderCongesDemandes();
   toast(ok ? 'Congé approuvé.' : 'Congé refusé.', ok ? 'success' : 'info');
@@ -57869,6 +57887,7 @@ async function savePoste() {
     DATA.postes_ouverts.push(p);
   }
   if (typeof dbPut === 'function') await dbPut('postes_ouverts', p);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_postes_ouverts', p);
   closeModal('modal-poste');
   updateRecrutementKPIs();
   renderPostes();
@@ -57964,6 +57983,7 @@ async function saveCandidat() {
     DATA.candidats_rh.push(c);
   }
   if (typeof dbPut === 'function') await dbPut('candidats_rh', c);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_candidats_rh', c);
   closeModal('modal-candidat');
   updateRecrutementKPIs();
   renderPostes();
@@ -57985,6 +58005,7 @@ async function avancerCandidatStage(id, newStage) {
   if (!c) return;
   c.statut = newStage;
   if (typeof dbPut === 'function') await dbPut('candidats_rh', c);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_candidats_rh', c);
   updateRecrutementKPIs();
   renderPipelineRec();
   renderTousCandidats();
@@ -58164,6 +58185,7 @@ async function saveFormation() {
     DATA.formations_rh.push(frm);
   }
   if (typeof dbPut === 'function') await dbPut('formations_rh', frm);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_formations_rh', frm);
   closeModal('modal-formation');
   updateFormationsKPIs();
   renderFormations();
@@ -61371,12 +61393,13 @@ async function afDeleteOperation(){
   if(!_afOp || !confirm('Supprimer cette opération foncière ?')) return;
   var _opId = _afOp.id;
   DATA.af_operations=DATA.af_operations.filter(function(x){return x.id!==_opId;});
-  await dbDelete('af_operations',_opId);
+  if (typeof deleteRecord === 'function') await deleteRecord('af_operations', _opId);
+  else await dbDelete('af_operations',_opId);
   /* purge des pièces jointes liées aux étapes */
   try {
     var docs = await dbGetAll('documents');
     var liees = (docs||[]).filter(function(d){ return d.entity_type==='af_operation' && d.entity_id===_opId; });
-    for (var i=0;i<liees.length;i++){ try{ await deleteRecord('documents', liees[i].id, { skipIntegrity:true }); }catch(e){ try{ await dbDelete('documents', liees[i].id); }catch(_){} } }
+    for (var i=0;i<liees.length;i++){ try{ await deleteRecord('documents', liees[i].id, { skipIntegrity:true }); }catch(e){ try{ await dbDelete('documents', liees[i].id); if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_documents', liees[i].id); }catch(_){} } }
   } catch(e){}
   closeModal('modal-af-operation');
   afRenderPipeline(); afRenderDashboard();
@@ -63355,6 +63378,7 @@ async function edsSaveRes() {
   r.pu = parseFloat(document.getElementById('eds-res-pu').value) || 0;
   r.maj = today();
   await dbPut('eds_ressources', r);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_eds_ressources', r);
   closeModal('modal-eds-res');
   edsRenderRes(); edsRenderBib(); if(typeof chargerPrix==='function') chargerPrix();
   toast('Ressource enregistrée — ouvrages recalculés', 'success');
@@ -63365,7 +63389,8 @@ async function edsDeleteRes(id) {
   if (!used && !confirm('Supprimer cette ressource ?')) return;
   (DATA.eds_ouvrages||[]).forEach(function(o){ (o.composants||[]).forEach(function(c){ if(c.res_id===id){ c.res_id=null; } }); });
   DATA.eds_ressources = DATA.eds_ressources.filter(function(x){return x.id!==id;});
-  await dbDelete('eds_ressources', id);
+  if (typeof deleteRecord === 'function') await deleteRecord('eds_ressources', id);
+  else await dbDelete('eds_ressources', id);
   edsRenderRes(); edsRenderBib(); if(typeof chargerPrix==='function') chargerPrix();
 }
 /* Indexation : applique un % à tous les prix (inflation) */
@@ -63379,6 +63404,7 @@ async function edsIndexerPrix() {
     r.pu = Math.round((r.pu||0) * (1 + pct/100));
     r.maj = today();
     await dbPut('eds_ressources', r);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_eds_ressources', r);
   }
   edsRenderRes(); edsRenderBib(); if(typeof chargerPrix==='function') chargerPrix();
   toast('Prix indexés de ' + (pct>0?'+':'') + pct + '% — tous les ouvrages recalculés', 'success');
@@ -66437,10 +66463,10 @@ async function finDelete() {
   var versements = finVersements(_finId);
   for (var i=0;i<versements.length;i++) {
     DATA['af_versements_financiers'] = (DATA['af_versements_financiers']||[]).filter(function(v){return v.id!==versements[i].id;});
-    try { await dbDelete('af_versements_financiers', versements[i].id); } catch(e){}
+    try { if (typeof deleteRecord==='function') await deleteRecord('af_versements_financiers', versements[i].id, { skipIntegrity:true }); else await dbDelete('af_versements_financiers', versements[i].id); } catch(e){}
   }
   DATA['af_financiers'] = DATA['af_financiers'].filter(function(x){return x.id!==_finId;});
-  try { await dbDelete('af_financiers', _finId); } catch(e){}
+  try { if (typeof deleteRecord==='function') await deleteRecord('af_financiers', _finId, { skipIntegrity:true }); else await dbDelete('af_financiers', _finId); } catch(e){}
   closeModal('modal-financier');
   finRender();
   toast('Financier supprimé.','info');
@@ -66551,7 +66577,7 @@ async function finvSave() {
 async function finvDelete(vid) {
   if (!confirm('Supprimer ce versement ?')) return;
   DATA['af_versements_financiers'] = (DATA['af_versements_financiers']||[]).filter(function(v){return v.id!==vid;});
-  try { await dbDelete('af_versements_financiers', vid); } catch(e){}
+  try { if (typeof deleteRecord==='function') await deleteRecord('af_versements_financiers', vid); else await dbDelete('af_versements_financiers', vid); } catch(e){}
   var f = finGetAll().find(function(x){return x.id===_finvFinancierId;});
   finvRender(f);
   finRender();
