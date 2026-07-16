@@ -74753,6 +74753,69 @@ function _caisseCompteOptionsHtml(selected) {
   }).join('');
 }
 
+/* ── Saisie intuitive « compte principal → sous-compte » ────────────────
+   Le comptable présaisit le n° du compte principal (compte de regroupement
+   ou compte de détail sans sous-comptes) ; le logiciel déroule alors
+   automatiquement les seuls sous-comptes rattachés à ce compte (mêmes
+   comptes que compteEstParent/compteParentDe utilisés dans le reste du
+   plan comptable), et l'utilisateur choisit celui concerné par le
+   mouvement. S'il n'existe aucun sous-compte, le compte principal saisi
+   est retenu directement, sans étape supplémentaire. */
+function caisseSousComptesDe(code) {
+  code = String(code || '');
+  if (!code) return [];
+  return (APP.planComptable || []).filter(function(c){ return c.code !== code && String(c.code).indexOf(code) === 0; });
+}
+
+function _caissePrincipalDatalistHtml() {
+  return (APP.planComptable || []).slice()
+    .sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); })
+    .map(function(c){ return '<option value="' + c.code + '">' + c.code + ' — ' + escHtml(c.label) + '</option>'; })
+    .join('');
+}
+
+/* principalInputId : champ où le comptable tape/choisit le compte principal
+   compteSelectId    : <select> caché qui portera in fine la valeur retenue
+                       (sous-compte choisi, ou compte principal si aucun
+                       sous-compte n'y est rattaché) — c'est ce select que
+                       lisent caisseVentilerLigne() / caisseAddVentilationRule()
+   infoId            : (optionnel) zone de texte d'aide contextuelle */
+function caisseAppliquerPrincipal(principalInputId, compteSelectId, infoId) {
+  var inp = document.getElementById(principalInputId);
+  var sel = document.getElementById(compteSelectId);
+  var info = infoId ? document.getElementById(infoId) : null;
+  if (!inp || !sel) return;
+  var raw = inp.value.trim();
+  var code = (raw.match(/^(\S+)/) || [null, ''])[1];
+  var cpt = code ? (APP.planComptable || []).find(function(c){ return c.code === code; }) : null;
+
+  if (!cpt) {
+    sel.innerHTML = '';
+    sel.style.display = 'none';
+    sel.value = '';
+    if (info) info.textContent = raw ? '⚠️ Compte inconnu — vérifiez le numéro de compte principal saisi.' : '';
+    return;
+  }
+
+  var subs = caisseSousComptesDe(cpt.code).sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); });
+
+  if (subs.length) {
+    /* Compte principal = regroupement → on ne propose que ses sous-comptes,
+       le compte de regroupement lui-même n'étant pas imputable directement. */
+    sel.innerHTML = '<option value="">— choisir le sous-compte —</option>'
+      + subs.map(function(s){ return '<option value="' + s.code + '">' + s.code + ' — ' + escHtml(s.label) + '</option>'; }).join('');
+    sel.value = '';
+    sel.style.display = '';
+    if (info) info.textContent = subs.length + ' sous-compte(s) rattaché(s) à ' + cpt.code + ' — ' + escHtml(cpt.label) + '. Choisissez celui concerné par le mouvement.';
+  } else {
+    /* Aucun sous-compte : le compte principal saisi est retenu directement. */
+    sel.innerHTML = '<option value="' + cpt.code + '" selected>' + cpt.code + ' — ' + escHtml(cpt.label) + '</option>';
+    sel.value = cpt.code;
+    sel.style.display = 'none';
+    if (info) info.textContent = '✔ Aucun sous-compte rattaché — imputation directe sur ' + cpt.code + ' — ' + escHtml(cpt.label) + '.';
+  }
+}
+
 function caisseRenderVentilation() {
   var box = document.getElementById('caisse-ventilation-box');
   if (!box) return;
@@ -74794,7 +74857,12 @@ function caisseRenderVentilation() {
         + '<td>' + (m.type === 'entree' ? '<span style="color:var(--vert);">Entrée</span>' : '<span style="color:var(--rouge);">Sortie</span>') + '</td>'
         + '<td>' + escHtml(m.motif||'') + (m.beneficiaire ? ' — ' + escHtml(m.beneficiaire) : '') + '</td>'
         + '<td style="text-align:right;">' + fmtF(m.montant) + '</td>'
-        + '<td><select class="form-control" id="cv-compte-' + m.id + '" style="min-width:220px;"><option value="">— choisir —</option>' + _caisseCompteOptionsHtml('') + '</select></td>'
+        + '<td style="min-width:250px;">'
+        + '<input type="text" class="form-control" id="cv-principal-' + m.id + '" list="cv-principal-list-' + m.id + '" placeholder="Compte principal (n°)" autocomplete="off" style="margin-bottom:4px;" oninput="caisseAppliquerPrincipal(\'cv-principal-' + m.id + '\',\'cv-compte-' + m.id + '\',\'cv-info-' + m.id + '\')">'
+        + '<datalist id="cv-principal-list-' + m.id + '">' + _caissePrincipalDatalistHtml() + '</datalist>'
+        + '<select class="form-control" id="cv-compte-' + m.id + '" style="display:none;margin-bottom:2px;" onchange="var i=document.getElementById(\'cv-info-' + m.id + '\'); if(i) i.textContent = this.value ? (\'Sous-compte retenu : \' + this.options[this.selectedIndex].text) : \'\';"></select>'
+        + '<div id="cv-info-' + m.id + '" style="font-size:10px;color:var(--blanc-dim);"></div>'
+        + '</td>'
         + '<td><button class="btn btn-secondary btn-sm btn-icon" title="Imprimer le bon" onclick="caisseImprimerBon(\'' + m.id + '\')">🖨️</button> '
         + '<button class="btn ' + (caisseDocCount(m.id) ? 'btn-primary' : 'btn-secondary') + ' btn-sm" title="Pièces justificatives" onclick="caisseViewDocs(\'' + m.id + '\')">📎' + (caisseDocCount(m.id) ? ' ' + caisseDocCount(m.id) : '') + '</button> '
         + '<button class="btn btn-secondary btn-sm btn-icon" title="Modifier avant ventilation" onclick="caisseEditBonModal(\'' + m.id + '\')">✏️</button> <button class="btn btn-primary btn-sm" onclick="caisseVentilerLigne(\'' + m.id + '\')">✅ Ventiler</button></td>'
@@ -74849,8 +74917,12 @@ async function caisseVentilerLigne(mvtId) {
    Accessible via le bouton "⚙️ Configurer les règles" de la section Ventilation. */
 function caisseOpenVentilationConfig() {
   if (!caisseRoleAdminLike()) { toast('Accès réservé au comptable / manager / admin.', 'error'); return; }
+  var dl = document.getElementById('cvc-principal-list');
+  if (dl) dl.innerHTML = _caissePrincipalDatalistHtml();
+  var principal = document.getElementById('cvc-principal'); if (principal) principal.value = '';
   var sel = document.getElementById('cvc-compte');
-  if (sel) sel.innerHTML = '<option value="">— choisir un compte —</option>' + _caisseCompteOptionsHtml('');
+  if (sel) { sel.innerHTML = ''; sel.style.display = 'none'; sel.value = ''; }
+  var info = document.getElementById('cvc-info'); if (info) info.textContent = '';
   var mot = document.getElementById('cvc-motcle'); if (mot) mot.value = '';
   caisseRenderVentilationConfigList();
   openModal('modal-caisse-ventilation-config');
@@ -74891,7 +74963,9 @@ async function caisseAddVentilationRule() {
   DATA.params.id = 'main';
   await dbPut('params', DATA.params);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
-  motEl.value = ''; cptEl.value = '';
+  motEl.value = ''; cptEl.value = ''; cptEl.innerHTML = ''; cptEl.style.display = 'none';
+  var principal = document.getElementById('cvc-principal'); if (principal) principal.value = '';
+  var info = document.getElementById('cvc-info'); if (info) info.textContent = '';
   caisseRenderVentilationConfigList();
   toast('✅ Règle ajoutée.', 'success');
 }
@@ -75686,7 +75760,8 @@ function caisseEcartNonRegularise(){
       <div style="font-size:12px;color:var(--blanc-dim);margin-bottom:14px;">Quand un mot-clé ci-dessous est présent dans le motif d'un mouvement de caisse en attente, le compte associé est proposé automatiquement lors de la "⚡ Ventilation automatique". Les mouvements sans correspondance restent à ventiler manuellement.</div>
       <div class="form-grid" style="margin-bottom:14px;">
         <div class="form-group"><label>Mot-clé (recherché dans le motif)</label><input class="form-control" id="cvc-motcle" placeholder="Ex : carburant, transport, fournitures..."></div>
-        <div class="form-group"><label>Compte de contrepartie</label><select class="form-control" id="cvc-compte"></select></div>
+        <div class="form-group"><label>Compte principal</label><input class="form-control" id="cvc-principal" list="cvc-principal-list" placeholder="N° du compte principal" autocomplete="off" oninput="caisseAppliquerPrincipal('cvc-principal','cvc-compte','cvc-info')"><datalist id="cvc-principal-list"></datalist></div>
+        <div class="form-group"><label>Sous-compte / compte de contrepartie</label><select class="form-control" id="cvc-compte" style="display:none;" onchange="var i=document.getElementById('cvc-info'); if(i) i.textContent = this.value ? ('Sous-compte retenu : ' + this.options[this.selectedIndex].text) : '';"></select><div id="cvc-info" style="font-size:11px;color:var(--blanc-dim);margin-top:4px;"></div></div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="caisseAddVentilationRule()">➕ Ajouter la règle</button>
       <div id="cvc-liste" style="margin-top:16px;overflow-x:auto;"></div>
