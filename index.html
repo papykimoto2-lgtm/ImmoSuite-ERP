@@ -57,6 +57,7 @@ window.IMMOSUITE_VERSION = 'v21.0 · 2026-06-11';
   --blanc:     #1C1C2E;
   --dim:       #6B6B9A;
   --dim2:      #4A4A7A;
+  --blanc-dim: #6B6B9A; /* CORRECTIF : variable référencée 718× dans le fichier mais jamais déclarée avant ce patch. Sans elle, tout "color:var(--blanc-dim)" hérite la couleur du texte normal — c'est la 1re cause du manque de contraste compte/sous-compte. */
   --rouge:     #E05252;
   --vert:      #4AC47A;
   --bleu:      #4A94E0;
@@ -138,6 +139,24 @@ select.filter-select { background: #FFFFFF; border-color: #D1D9E0; color: #00000
 .login-box { background: #FFFFFF; border-color: #D1D9E0; }
 #login-screen { background: linear-gradient(160deg, #1E2A3A 0%, #2563EB 100%); }
 .form-section-title { color: #B87333; border-bottom-color: rgba(184,115,51,0.2); }
+#table-plan-comptable.pc-hide-solde #pc-th-solde,
+#table-plan-comptable.pc-hide-solde .pc-td-solde { display: none; }
+.pc-rail { font-family: 'Courier New', monospace; color: var(--dim2); letter-spacing: 0; user-select: none; }
+.pc-code-groupe { color: var(--or); font-weight: 700; font-size: 13.5px; }
+.pc-code-detail { color: var(--dim2); font-weight: 500; }
+.pc-icon-groupe { color: var(--or); font-size: 13px; }
+.pc-icon-detail { color: var(--blanc-dim); font-size: 10px; }
+/* ── Renforts ajoutés : différenciation portée aussi sur le LIBELLÉ (avant, seul
+   le code du compte changeait de couleur — l'œil lit d'abord le libellé) et sur
+   le fond de ligne, qui était réglé en blanc translucide (rgba(255,255,255,.03))
+   pensé pour un thème sombre : invisible sur le fond clair réellement utilisé ici. */
+.pc-label-groupe { color: var(--blanc); font-weight: 700; }
+.pc-label-detail { color: var(--dim2); font-weight: 400; }
+tr.pc-row-groupe { background: var(--or-glow); cursor: pointer; }
+tr.pc-row-groupe td:first-child { border-left: 3px solid var(--or); }
+tr.pc-row-groupe:hover td { background: rgba(184,115,51,0.22); }
+tr.pc-row-detail td:first-child { border-left: 3px solid transparent; }
+tr.pc-row-detail:hover td { background: rgba(184,115,51,0.05); }
 .card-title { color: #5A6475; }
 .pointage-card { background: #FFFFFF; border-color: #D1D9E0; }
 .lot-card { background: #FFFFFF; border-color: #D1D9E0; }
@@ -2420,8 +2439,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="nav-item" onclick="goTo('portail-apporteur')" data-page="portail-apporteur">
         <span class="nav-icon">🤝</span><span>Portail Apporteur</span>
       </div>
-          <div class="nav-item" onclick="goTo('archives-docs')" data-page="archives-docs">
-        <span class="nav-icon">📁</span><span>Archives documentaires</span>
+          <div class="nav-item" onclick="goTo('archives-docs')" data-page="archives-docs" title="GED — Archivage numérique">
+        <span class="nav-icon">📁</span><span>GED — Archivage numérique</span>
       </div>
         </div>
       </div>
@@ -6022,6 +6041,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="page-header" style="margin:0 0 12px;">
             <div></div>
             <div class="spacer"></div>
+            <button class="btn btn-secondary" onclick="genererComptesOrphelinsManquants()" title="Détecte les sous-comptes sans compte principal (ex: 44520000 sans 445) et génère le compte manquant">🧬 Générer comptes orphelins</button>
             <button class="btn btn-primary" onclick="openCompteParamModal()">➕ Ajouter un compte</button>
           </div>
           <div class="filters-bar">
@@ -6040,11 +6060,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             </select>
             <button class="btn btn-secondary btn-sm" onclick="plancptToutDeplier(true)">⊞ Tout déplier</button>
             <button class="btn btn-secondary btn-sm" onclick="plancptToutDeplier(false)">⊟ Tout replier</button>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;margin-left:6px;">
+              <input type="checkbox" id="pc-afficher-soldes" onchange="renderPlanComptableParam()" style="accent-color:var(--or,#B87333);">
+              💰 Afficher les soldes cumulés
+            </label>
+            <select class="filter-select" id="pc-solde-periode" onchange="renderPlanComptableParam()" style="display:none;">
+              <option value="tous">Cumul général (tous exercices)</option>
+            </select>
           </div>
           <div class="card">
             <div class="table-wrap">
-              <table>
-                <thead><tr><th>Code</th><th>Libellé</th><th>Classe</th><th>Nature</th><th>Origine</th><th style="text-align:right;">Actions</th></tr></thead>
+              <table id="table-plan-comptable">
+                <thead><tr><th>Code</th><th>Libellé</th><th>Classe</th><th>Nature</th><th>Origine</th><th id="pc-th-solde" style="text-align:right;">💰 Solde cumulé</th><th style="text-align:right;">Actions</th></tr></thead>
                 <tbody id="tbody-plan-comptable-param"></tbody>
               </table>
             </div>
@@ -10412,19 +10439,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="page" id="page-archives-docs">
         <div class="page-header">
           <div>
-            <div class="page-title">Archives documentaires</div>
-            <div class="page-subtitle">Documents téléversés · Signatures électroniques · Toutes entités</div>
+            <div class="page-title">📁 GED — Archivage numérique</div>
+            <div class="page-subtitle">Consultation de toutes les données téléversées ou jointes, par département et service</div>
           </div>
           <div class="spacer"></div>
-          <select class="filter-select" id="filter-doc-entity" onchange="renderDocumentsGlobaux()">
-            <option value="">Toutes entités</option>
-            <option value="client">Souscripteurs</option>
-            <option value="programme">Programmes</option>
-            <option value="convention">Conventions</option>
-            <option value="employe">Employés</option>
-            <option value="foncier">Foncier</option>
+          <select class="filter-select" id="filter-ged-module" onchange="gedFiltrer()">
+            <option value="">Tous les modules</option>
           </select>
-          <input type="text" class="search-input" id="search-docs-global" placeholder="🔍 Nom, description..." oninput="_debInput('renderDocumentsGlobaux')" style="max-width:200px;">
+          <select class="filter-select" id="filter-ged-division" onchange="gedFiltrer()">
+            <option value="">Toutes les divisions</option>
+          </select>
+          <input type="text" class="search-input" id="search-docs-global" placeholder="🔍 Nom, description..." oninput="_debInput('gedFiltrer')" style="max-width:200px;">
           <button class="btn btn-secondary btn-sm" onclick="exportDocumentsListe()">⬇ Export CSV</button>
           <button class="btn btn-primary btn-sm" onclick="ouvrirUploadGlobal()">📁 Téléverser</button>
         </div>
@@ -10434,7 +10459,56 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <button class="tab-btn" onclick="switchArchiveTab('signatures', event)">✍️ Signatures électroniques</button>
         </div>
 
-        <div id="archive-kpi" class="kpi-grid" style="margin-bottom:16px;"></div>
+        <style>
+          .ged-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;}
+          .ged-kpi-card{background:var(--card,#161625);border:1px solid var(--bord,#26263c);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:14px;}
+          .ged-kpi-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+          .ged-kpi-txt{min-width:0;}
+          .ged-kpi-val{font-size:26px;font-weight:800;color:var(--blanc,#fff);line-height:1.1;}
+          .ged-kpi-lbl{font-size:12.5px;color:var(--blanc-dim,#9a9ab8);margin-top:3px;font-weight:600;}
+          .ged-dash-grid{display:grid;grid-template-columns:1.3fr 1.3fr 1fr;gap:14px;margin-bottom:18px;}
+          @media (max-width:980px){.ged-dash-grid{grid-template-columns:1fr;}}
+          .ged-panel{background:var(--card,#161625);border:1px solid var(--bord,#26263c);border-radius:14px;padding:18px 20px;}
+          .ged-panel-title{font-size:14px;font-weight:700;color:var(--blanc,#fff);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;}
+          .ged-panel-sub{font-size:11.5px;color:var(--blanc-dim,#9a9ab8);margin-bottom:14px;}
+          .ged-clear-chip{font-size:11px;background:var(--or,#B87333);color:#fff;padding:3px 10px;border-radius:20px;cursor:pointer;font-weight:700;}
+          .ged-bar-row{cursor:pointer;padding:8px 0;border-radius:8px;transition:background .15s;}
+          .ged-bar-row:hover{background:rgba(184,115,51,0.08);}
+          .ged-bar-row.active{background:rgba(184,115,51,0.16);}
+          .ged-bar-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;padding:0 4px;}
+          .ged-bar-name{font-size:13.5px;font-weight:700;color:var(--blanc,#fff);}
+          .ged-bar-count{font-size:12.5px;font-weight:700;color:var(--or,#B87333);white-space:nowrap;margin-left:10px;}
+          .ged-bar-track{height:12px;border-radius:6px;background:rgba(255,255,255,0.06);overflow:hidden;margin:0 4px;}
+          .ged-bar-fill{height:100%;border-radius:6px;transition:width .4s ease;}
+          .ged-empty{font-size:13px;color:var(--blanc-dim,#9a9ab8);padding:12px 4px;}
+          .ged-donut-wrap{display:flex;align-items:center;gap:18px;}
+          .ged-donut{width:120px;height:120px;border-radius:50%;flex-shrink:0;}
+          .ged-legend{font-size:12.5px;display:flex;flex-direction:column;gap:9px;min-width:0;}
+          .ged-legend-item{display:flex;align-items:center;gap:8px;}
+          .ged-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+          .ged-legend-lbl{color:var(--blanc,#fff);font-weight:600;flex:1;}
+          .ged-legend-val{color:var(--blanc-dim,#9a9ab8);font-weight:700;}
+        </style>
+
+        <div id="archive-kpi" class="ged-kpi-grid"></div>
+
+        <div class="ged-dash-grid" id="archive-dashboard-charts">
+          <div class="ged-panel">
+            <div class="ged-panel-title">🗂️ Par module <span class="ged-clear-chip" id="ged-clear-module" style="display:none;" onclick="gedResetFiltre('module')">✕ Effacer</span></div>
+            <div class="ged-panel-sub">Cliquez sur une ligne pour filtrer</div>
+            <div id="ged-chart-dept"></div>
+          </div>
+          <div class="ged-panel">
+            <div class="ged-panel-title">🏢 Par division <span class="ged-clear-chip" id="ged-clear-division" style="display:none;" onclick="gedResetFiltre('division')">✕ Effacer</span></div>
+            <div class="ged-panel-sub">Cliquez sur une ligne pour filtrer</div>
+            <div id="ged-chart-service"></div>
+          </div>
+          <div class="ged-panel">
+            <div class="ged-panel-title">📁 Types de fichiers</div>
+            <div class="ged-panel-sub">Répartition par format</div>
+            <div id="ged-chart-formats"></div>
+          </div>
+        </div>
 
         <div id="archive-documents-list"></div>
         <div id="archive-signatures-list" style="display:none;"></div>
@@ -14230,6 +14304,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
             <button class="btn btn-danger btn-sm" id="div-logo-clear-btn" onclick="clearDivisionLogo()" style="display:none;margin-left:6px;">🗑 Retirer</button>
             <input type="file" id="div-logo-file-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none;" onchange="handleDivisionLogoUpload(event)">
             <div id="div-logo-file-name" style="font-size:11px;color:#6B6B9A;margin-top:6px;">PNG, JPG, SVG ou WEBP — 2 Mo max</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section-title">📎 Documents joints (statuts, RCCM, attestations, agréments…)</div>
+      <div class="form-grid" style="margin-bottom:14px;">
+        <div class="form-group span-2">
+          <div id="division-doc-hint" style="font-size:12px;color:#6B6B9A;margin-bottom:8px;">Enregistrez d'abord la division pour pouvoir joindre des documents.</div>
+          <div id="division-doc-zone" style="display:none;">
+            <input type="file" id="division-doc-upload" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" style="display:none;" onchange="uploadDocumentForEntity('division', _editingDivisionId, this.files[0])">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('division-doc-upload').click()">📁 Joindre un document</button>
+            <div id="division-doc-list" style="margin-top:10px;"></div>
           </div>
         </div>
       </div>
@@ -18948,7 +19034,7 @@ async function deleteRecord(store, id, opts) {
   if (entry) deleteFromSupabase(entry[0], id);
 }
 
-async function syncToSupabase(table, obj) {
+async function syncToSupabase(table, obj, opts) {
   if (table === 'pi_ecritures' && obj && obj.date && !_pulling && !obj._forceCloture
       && typeof exerciceEstClos === 'function' && exerciceEstClos(obj.date)) {
     console.warn('[VERROU CLOTURE] Sync cloud bloquée — exercice clos:', obj);
@@ -18988,6 +19074,59 @@ async function syncToSupabase(table, obj) {
       }
     } catch(e) { /* vérif réseau indisponible → on procède normalement, mieux que bloquer tout */ }
   }
+  /* ── PROTECTION SINGLETON pi_params : ne jamais faire régresser le plan
+     comptable (ni les personnalisations) d'un autre poste plus à jour.
+     pi_params est modifié pour des raisons variées (n'importe quel réglage),
+     et chaque écriture repousse l'objet ENTIER. Sans garde-fou, un poste
+     dont la copie locale est encore ancienne peut, en sauvegardant un
+     réglage sans rapport, écraser côté cloud un remplacement de plan
+     comptable fait entre-temps par un autre poste. On relit donc le cloud
+     juste avant de pousser et on protège/fusionne les champs
+     plan_comptable_* au lieu de les envoyer tels quels. ── */
+  if (table === 'pi_params' && obj && (obj.id === 'main' || !obj.id) && navigator.onLine && !(opts && opts.skipPlanComptableMerge)) {
+    try {
+      var _remoteRows = await sbFetch('pi_params?id=eq.main&select=*', 'GET');
+      var _remoteParams = (_remoteRows && _remoteRows.length) ? _supaUnwrap('pi_params', _remoteRows[0]) : null;
+      if (_remoteParams) {
+        var _remoteDate = _remoteParams.plan_comptable_remplace ? (_remoteParams.plan_comptable_remplace_date || '') : '';
+        var _localDate  = obj.plan_comptable_remplace ? (obj.plan_comptable_remplace_date || '') : '';
+        if (_remoteParams.plan_comptable_remplace && Array.isArray(_remoteParams.plan_comptable_base) && _remoteParams.plan_comptable_base.length
+            && (!obj.plan_comptable_remplace || (_remoteDate && _remoteDate > _localDate))) {
+          /* Le cloud a un remplacement plus récent (ou absent en local) → on le
+             préserve au lieu de l'écraser avec notre snapshot local périmé,
+             et on répercute immédiatement en local pour rester cohérent. */
+          obj.plan_comptable_remplace = true;
+          obj.plan_comptable_base = _remoteParams.plan_comptable_base;
+          obj.plan_comptable_remplace_date = _remoteParams.plan_comptable_remplace_date;
+          try {
+            DATA.params = Object.assign(DATA.params || {}, {
+              plan_comptable_remplace: true,
+              plan_comptable_base: _remoteParams.plan_comptable_base,
+              plan_comptable_remplace_date: _remoteParams.plan_comptable_remplace_date
+            });
+            await dbPut('params', DATA.params);
+            if (typeof rebuildPlanComptable === 'function') rebuildPlanComptable();
+            if (typeof renderPlanComptableParam === 'function') renderPlanComptableParam();
+          } catch(e){}
+        }
+        /* Union défensive des suppressions/ajouts/modifs (même logique que le
+           pull dédié) : une personnalisation faite sur un autre poste ne doit
+           jamais disparaître parce qu'on pousse depuis celui-ci.
+           ATTENTION : ne s'applique QUE si l'appelant n'a pas explicitement
+           demandé de sauter cette fusion (opts.skipPlanComptableMerge) — un
+           remplacement complet ('replace') vide volontairement ces trois
+           champs et ne doit surtout pas se les faire réinjecter ici. */
+        var _suppFusion = Array.from(new Set((obj.plan_comptable_supprimes||[]).concat(_remoteParams.plan_comptable_supprimes||[])));
+        var _ajoutsMap = {};
+        (_remoteParams.plan_comptable_custom||[]).forEach(function(c){ if (c && c.code) _ajoutsMap[c.code] = c; });
+        (obj.plan_comptable_custom||[]).forEach(function(c){ if (c && c.code) _ajoutsMap[c.code] = c; });
+        obj.plan_comptable_supprimes = _suppFusion;
+        obj.plan_comptable_custom    = Object.keys(_ajoutsMap).map(function(k){ return _ajoutsMap[k]; });
+        obj.plan_comptable_modifs    = Object.assign({}, _remoteParams.plan_comptable_modifs||{}, obj.plan_comptable_modifs||{});
+      }
+    } catch(e) { /* offline/erreur réseau → on pousse tel quel, le pull dédié rattrapera au prochain cycle */ }
+  }
+
   if (table !== 'pi_users' && obj && typeof obj === 'object') { obj._modifie = new Date().toISOString(); }
   try {
     /* Upsert (merge sur la clé id) → plus de conflit 409 "duplicate key". */
@@ -19788,27 +19927,48 @@ async function syncFromSupabase() {
   if (!confirm('Récupérer les données depuis le Cloud ? Les enregistrements distants seront fusionnés dans ce poste.')) return;
   var out = document.getElementById('sync-result');
   var total = 0, tablesVides = 0;
-  for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
-    var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
-    if (out) out.textContent = '⬇️ ' + store + '…';
-    var rows = await sbFetch(table + '?select=*', 'GET');
-    if (!rows || !rows.length) { tablesVides++; continue; }
-    if (!DATA[store]) DATA[store] = [];
-    var byId = {};
-    DATA[store].forEach(function(x){ byId[x.id] = x; });
-    for (var j = 0; j < rows.length; j++) {
-      var r = _supaUnwrap(table, rows[j]);
-      if (!r || !r.id) continue;
-      var ex = byId[r.id];
-      /* Le plus récent gagne : on n'écrase le local que si le cloud est plus récent
-         (ou si l'enregistrement n'existe pas encore en local). */
-      if (!ex || _ts(r) >= _ts(ex)) {
-        byId[r.id] = r;
-        try { await dbPut(store, r); } catch(e) {}
-        total++;
+  /* ── _pulling=true : empêche dbPut() de marquer ces enregistrements
+     "dirty" — sans ça, flushDirtySync() les repousserait inutilement au
+     cycle suivant, juste après qu'on vienne de les récupérer.
+     Alignement avec pullFromCloudSilent() (même garde, try/finally). ── */
+  _pulling = true;
+  try {
+    for (var i = 0; i < SUPA_STORE_MAP.length; i++) {
+      var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
+      if (out) out.textContent = '⬇️ ' + store + '…';
+      var rows = await sbFetch(table + '?select=*', 'GET');
+      if (!rows || !rows.length) { tablesVides++; continue; }
+      if (!DATA[store]) DATA[store] = [];
+      var byId = {};
+      DATA[store].forEach(function(x){ byId[x.id] = x; });
+      for (var j = 0; j < rows.length; j++) {
+        var r = _supaUnwrap(table, rows[j]);
+        if (!r || !r.id) continue;
+        /* ── GARDE TOMBSTONE ────────────────────────────────────────────
+           Sans ce check, un enregistrement supprimé sur un autre poste
+           (ou ici, avant reconnexion) est ressuscité par ce pull manuel.
+           Même garde que pullFromCloudSilent()/_rtApply() : on ignore la
+           ligne et on renvoie une suppression au cloud pour purger la
+           ligne fantôme au lieu de la laisser revenir en boucle. ── */
+        if (typeof tombHas === 'function' && tombHas(store, r.id)) {
+          try { if (typeof deleteFromSupabase === 'function') deleteFromSupabase(table, r.id); } catch(e){}
+          continue;
+        }
+        var ex = byId[r.id];
+        /* _remoteWins() : le plus récent gagne, STRICTEMENT — à timestamps
+           égaux (ou absents des deux côtés), le local est conservé. Évite
+           qu'un pull manuel écrase une modification locale plus fraîche
+           dont l'horodatage est identique par coïncidence. */
+        if (_remoteWins(r, ex)) {
+          byId[r.id] = r;
+          try { await dbPut(store, r); } catch(e) {}
+          total++;
+        }
       }
+      DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
     }
-    DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
+  } finally {
+    _pulling = false;
   }
   if (out) out.innerHTML = '<span style="color:var(--vert);">✅ ' + total + ' enregistrement(s) récupéré(s)</span>';
   /* Rafraîchir les vues principales */
@@ -19824,6 +19984,74 @@ async function syncFromSupabase() {
    et sans inonder l'interface de toasts.  Met à jour l'interface en fond.
    Stratégie "newest wins" : le cloud écrase le local seulement si plus récent.
 ─────────────────────────────────────────────────────────────────────────── */
+/* ── PULL DÉDIÉ : plan comptable (pi_params) — fusion par UNION, jamais un écrasement ──
+   pi_params est un singleton (id='main') absent de SUPA_STORE_MAP, donc invisible
+   au pull générique. Fusionne suppressions/ajouts/modifs de tous les postes pour
+   qu'aucune personnalisation ne soit jamais perdue ni réinjectée. */
+async function _pullPlanComptableCloud() {
+  if (!navigator.onLine) return;
+  getSBConfig();
+  if (!SB.url || !SB.key) return;
+  try {
+    var rows = await sbFetch('pi_params?id=eq.main&select=*', 'GET');
+    if (!rows || !rows.length) return;
+    var remote = _supaUnwrap('pi_params', rows[0]);
+    if (!remote) return;
+    DATA.params = DATA.params || {};
+    var loc = DATA.params;
+
+    /* Suppressions : union — une suppression faite sur un poste reste valable partout */
+    var suppLoc = loc.plan_comptable_supprimes || [];
+    var suppRem = remote.plan_comptable_supprimes || [];
+    var suppFusion = [...new Set(suppLoc.concat(suppRem))];
+
+    /* Ajouts : union par code — le local prévaut en cas de conflit sur le même code */
+    var ajoutsMap = {};
+    (remote.plan_comptable_custom || []).forEach(function(c){ if (c && c.code) ajoutsMap[c.code] = c; });
+    (loc.plan_comptable_custom || []).forEach(function(c){ if (c && c.code) ajoutsMap[c.code] = c; });
+    var ajoutsFusion = Object.keys(ajoutsMap).map(function(k){ return ajoutsMap[k]; });
+
+    /* Modifications : fusion clé à clé — le local prévaut en cas de conflit */
+    var modifsFusion = Object.assign({}, remote.plan_comptable_modifs || {}, loc.plan_comptable_modifs || {});
+
+    var changed = suppFusion.length !== suppLoc.length
+      || ajoutsFusion.length !== (loc.plan_comptable_custom||[]).length
+      || Object.keys(modifsFusion).length !== Object.keys(loc.plan_comptable_modifs||{}).length;
+
+    loc.plan_comptable_supprimes = suppFusion;
+    loc.plan_comptable_custom    = ajoutsFusion;
+    loc.plan_comptable_modifs    = modifsFusion;
+
+    /* Socle remplacé ailleurs : on l'adopte si ce poste n'a encore jamais
+       remplacé son socle, OU si le remplacement distant est postérieur au
+       nôtre (comparaison par date, pas juste par booléen). Sans la
+       comparaison de date, un poste ayant déjà fait SON PROPRE remplacement
+       ignorait à jamais tout remplacement ultérieur fait sur un autre poste,
+       ce qui pouvait laisser le cloud régresser sans que personne ne s'en
+       aperçoive au prochain pull. */
+    var _remoteRemplaceDate = remote.plan_comptable_remplace ? (remote.plan_comptable_remplace_date || '') : '';
+    var _locRemplaceDate    = loc.plan_comptable_remplace ? (loc.plan_comptable_remplace_date || '') : '';
+    if (remote.plan_comptable_remplace && Array.isArray(remote.plan_comptable_base) && remote.plan_comptable_base.length
+        && (!loc.plan_comptable_remplace || (_remoteRemplaceDate && _remoteRemplaceDate > _locRemplaceDate))) {
+      loc.plan_comptable_remplace = true;
+      loc.plan_comptable_base = remote.plan_comptable_base;
+      loc.plan_comptable_remplace_date = remote.plan_comptable_remplace_date;
+      changed = true;
+    }
+
+    if (changed) {
+      loc.id = 'main';
+      _pulling = true;
+      try { await dbPut('params', loc); } finally { _pulling = false; }
+      if (typeof rebuildPlanComptable === 'function') { try { rebuildPlanComptable(); } catch(e){} }
+      if (typeof renderPlanComptableParam === 'function') { try { renderPlanComptableParam(); } catch(e){} }
+      /* Repropage l'état fusionné pour que tous les postes convergent */
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', loc);
+      toast('📘 Plan comptable synchronisé (fusion multi-poste).', 'info', 2500);
+    }
+  } catch(e) { /* échec silencieux — le prochain cycle de sync réessaiera */ }
+}
+
 async function pullFromCloudSilent() {
   if (!navigator.onLine) return;
   getSBConfig();
@@ -19883,6 +20111,13 @@ async function pullFromCloudSilent() {
   } finally {
     _pulling = false;
   }
+
+  /* pi_params (plan comptable personnalisé) est un singleton HORS SUPA_STORE_MAP :
+     la boucle ci-dessus ne le récupère jamais. Sans ce pull dédié, un poste qui
+     n'a pas la même personnalisation locale repousse un DATA.params incomplet et
+     écrase côté cloud les ajouts/modifs/suppressions faits ailleurs — l'ancien
+     plan comptable réapparaît. Fusion par UNION (jamais un écrasement). */
+  try { await _pullPlanComptableCloud(); } catch(e){}
 
   if (total > 0) {
     /* Rafraîchir les vues actives sans bruit */
@@ -25647,8 +25882,49 @@ function _buildPlanTree(liste) {
   var nbEnfants = {};
   liste.forEach(function(c){ if (c._parentCode) nbEnfants[c._parentCode] = (nbEnfants[c._parentCode]||0)+1; });
   liste.forEach(function(c){ c._nbEnfants = nbEnfants[c.code] || 0; });
+  _pcMarquerDernierEnfant(liste);
   return liste;
 }
+/* Marque, pour chaque compte, s'il est le DERNIER enfant parmi ses frères
+   (même parent, même profondeur). Nécessaire pour dessiner correctement les
+   connecteurs graphiques de l'arborescence : un coin "└" quand c'est le
+   dernier, un embranchement "├" sinon — et pour savoir, colonne par colonne,
+   si le trait vertical d'un ancêtre doit continuer ou s'arrêter.
+   Recherche directe (pas de passe unique) : le volume du plan comptable
+   reste modeste (quelques centaines à ~2000 comptes), donc négligeable ici,
+   contrairement à un calcul répété par écriture (voir _importPlanComptable). */
+function _pcMarquerDernierEnfant(liste) {
+  for (var i = 0; i < liste.length; i++) {
+    var d = liste[i]._depth;
+    var estDernier = true;
+    for (var j = i + 1; j < liste.length; j++) {
+      var d2 = liste[j]._depth;
+      if (d2 > d) continue; /* descendant du nœud i : on continue de chercher au-delà */
+      estDernier = (d2 !== d); /* un frère (même profondeur) suit → pas le dernier */
+      break;
+    }
+    liste[i]._isLast = estDernier;
+  }
+}
+/* Construit le préfixe graphique de l'arborescence (traits de connexion façon
+   explorateur de fichiers) pour un compte donné. Un segment par ancêtre :
+   "│  " si cet ancêtre a encore un frère plus bas (le trait doit continuer),
+   "   " (blanc) s'il est lui-même le dernier de sa fratrie (rien à relier).
+   Puis un connecteur final "├─ " ou "└─ " selon que le compte lui-même est
+   ou non le dernier enfant de son parent. Caractères Unicode dessin de
+   boîtes, rendus en police à chasse fixe pour un alignement pixel-parfait
+   d'une ligne à l'autre (pas besoin de traits CSS étirés sur la hauteur de
+   ligne, qui posent problème dès que les lignes n'ont pas toutes la même
+   hauteur). */
+function _pcRailHtml(c, index) {
+  var chain = [];
+  var p = c._parentCode;
+  while (p && index[p]) { chain.unshift(index[p]); p = index[p]._parentCode; }
+  var segs = chain.map(function(anc){ return anc._isLast ? '\u00A0\u00A0\u00A0' : '│\u00A0\u00A0'; }).join('');
+  var connecteur = c._depth > 0 ? (c._isLast ? '└─\u00A0' : '├─\u00A0') : '';
+  return '<span class="pc-rail">' + segs + connecteur + '</span>';
+}
+
 function togglePlanCptNode(code) {
   _pcExpanded[code] = !_pcExpanded[code];
   renderPlanComptableParam();
@@ -25715,6 +25991,40 @@ function renderDashboardPlanComptable(){
   }
 }
 
+/* ── Soldes cumulés dans l'arborescence du plan comptable (Paramétrage) ──
+   Réutilise le même principe que buildBalance()/rollupMvt() : les comptes
+   de détail reçoivent les mouvements réels, un compte de regroupement
+   affiche le cumul de tous ses sous-comptes (rollup par préfixe de code).
+   Fonction dédiée (indépendante du sélecteur d'exercice de la page
+   Comptabilité) pour que cet écran de paramétrage reste utilisable même si
+   l'utilisateur n'a jamais ouvert l'onglet Comptabilité dans la session. */
+function _pcComptesMvt(periode) {
+  var mvt = {};
+  (DATA.ecritures || []).forEach(function(e) {
+    if (periode && periode !== 'tous' && !(e.date && e.date.indexOf(String(periode)) === 0)) return;
+    ecrLignes(e).forEach(function(l) {
+      if (!l.compte) return;
+      if (!mvt[l.compte]) mvt[l.compte] = { debit: 0, credit: 0 };
+      if (l.sens === 'D') mvt[l.compte].debit += (parseFloat(l.montant) || 0);
+      else mvt[l.compte].credit += (parseFloat(l.montant) || 0);
+    });
+  });
+  return mvt;
+}
+/* Peuple le sélecteur de période (une fois) : cumul général + les 4 dernières
+   années glissantes, même logique que loadComptabilite() pour filter-annee-compta. */
+function _pcPeuplerSelecteurPeriode() {
+  var sel = document.getElementById('pc-solde-periode');
+  if (!sel || sel.options.length > 1) return;
+  var currentYear = new Date().getFullYear();
+  for (var y = currentYear - 2; y <= currentYear + 1; y++) {
+    var opt = document.createElement('option');
+    opt.value = String(y); opt.textContent = 'Exercice ' + y;
+    if (y === currentYear) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
 function renderPlanComptableParam() {
   var tbody = document.getElementById('tbody-plan-comptable-param');
   renderDashboardPlanComptable();
@@ -25724,7 +26034,31 @@ function renderPlanComptableParam() {
   var ajoutsCodes = ((DATA.params && DATA.params.plan_comptable_custom) || []).map(function(c){ return c.code; });
   var modifs = (DATA.params && DATA.params.plan_comptable_modifs) || {};
 
-  var complet = APP.planComptable.slice().sort(function(a,b){ return a.code.localeCompare(b.code, undefined, {numeric:true}); });
+  /* Soldes cumulés (compte + sous-comptes) — activés à la demande car le
+     parcours de toutes les écritures a un coût, inutile tant que l'utilisateur
+     ne l'a pas demandé. */
+  var afficherSoldes = !!(document.getElementById('pc-afficher-soldes') || {}).checked;
+  var selPeriode = document.getElementById('pc-solde-periode');
+  if (selPeriode) selPeriode.style.display = afficherSoldes ? '' : 'none';
+  var table = document.getElementById('table-plan-comptable');
+  if (table) table.classList.toggle('pc-hide-solde', !afficherSoldes);
+  var comptesMvt = null;
+  if (afficherSoldes) {
+    _pcPeuplerSelecteurPeriode();
+    comptesMvt = _pcComptesMvt(selPeriode ? selPeriode.value : 'tous');
+  }
+
+  /* Tri lexicographique STRICT (pas de {numeric:true}) : un code doit toujours
+     être trié juste après son préfixe, quelle que soit la longueur de l'écart
+     (ex: 401 → 40110000 → 40190000 → 402). Un tri "numeric" comparerait les
+     codes comme des valeurs brutes (402 < 40110000) et éclaterait la lignée :
+     tous les comptes courts se retrouveraient groupés avant tous les comptes
+     longs, cassant la pile de _buildPlanTree et faisant apparaître les
+     sous-comptes à 8 chiffres au même niveau que les comptes principaux. */
+  var complet = APP.planComptable.slice().sort(function(a,b){
+    var ca = String(a.code), cb = String(b.code);
+    return ca < cb ? -1 : ca > cb ? 1 : 0;
+  });
   _buildPlanTree(complet); /* profondeur/parenté calculées sur l'ensemble, pas sur le filtre */
   var index = {}; complet.forEach(function(c){ index[c.code] = c; });
 
@@ -25766,18 +26100,50 @@ function renderPlanComptableParam() {
                 : '<span style="color:var(--blanc-dim);">Standard</span>';
     var estGroupe = c._nbEnfants > 0;
     var ouvert = enRecherche ? true : !!_pcExpanded[c.code];
-    var toggle = estGroupe
-      ? '<span onclick="togglePlanCptNode(\'' + c.code + '\')" style="cursor:pointer;display:inline-block;width:16px;color:var(--blanc-dim);">' + (ouvert ? '▼' : '▶') + '</span>'
-      : '<span style="display:inline-block;width:16px;"></span>';
-    var badgeEnfants = estGroupe ? ' <span style="font-size:10px;background:rgba(255,255,255,.08);color:var(--blanc-dim);padding:1px 6px;border-radius:8px;">' + c._nbEnfants + ' sous-compte(s)</span>' : '';
+    var rail = _pcRailHtml(c, index);
+    /* Icône + code : un dossier 📁 (ouvert/fermé) cliquable pour un compte de
+       regroupement, un simple marqueur ▪ pour un compte de détail imputable —
+       c'est ce repère, absent auparavant (les sous-comptes n'avaient qu'un
+       décalage de marge, sans aucun symbole), qui doit permettre de les
+       distinguer d'un coup d'œil, même sans suivre les traits de l'arbre. */
+    var icone = estGroupe
+      ? '<span class="pc-icon-groupe" onclick="togglePlanCptNode(\'' + c.code + '\');event.stopPropagation();" style="cursor:pointer;" title="' + (ouvert ? 'Replier' : 'Déplier') + '">' + (ouvert ? '📂' : '📁') + '</span>'
+      : '<span class="pc-icon-detail" title="Compte de détail (imputable)">▪</span>';
+    var codeCls = estGroupe ? 'pc-code-groupe' : 'pc-code-detail';
+    /* Le libellé (texte lu en premier par l'œil) porte désormais lui aussi la
+       distinction groupe/détail — avant ce patch, seul le code numérique
+       changeait de couleur, ce qui rendait la hiérarchie peu visible tant
+       qu'on ne regardait pas spécifiquement la colonne Code. */
+    var labelCls = estGroupe ? 'pc-label-groupe' : 'pc-label-detail';
+    var badgeEnfants = estGroupe ? ' <span style="font-size:10px;background:var(--or-glow);color:var(--or-dark);font-weight:600;padding:1px 6px;border-radius:8px;">' + c._nbEnfants + ' sous-compte(s)</span>' : '';
     var libGroupe = estGroupe ? ' <span title="Compte de regroupement — non imputable directement si des sous-comptes existent" style="font-size:10px;color:var(--or);">🔗 regroupement</span>' : '';
-    return '<tr style="' + (estGroupe ? 'background:rgba(255,255,255,.03);' : '') + '">'
-      + '<td style="white-space:nowrap;"><span style="padding-left:' + (c._depth*18) + 'px;display:inline-flex;align-items:center;gap:4px;">' + toggle + '<strong>' + c.code + '</strong></span></td>'
-      + '<td>' + c.label + badgeEnfants + libGroupe + '</td>'
+    /* Retrait réel en pixels, cumulé au rail de traits Unicode : garantit un
+       décalage visible d'un niveau à l'autre même si le rendu des caractères
+       ├/└ varie légèrement selon la police du navigateur. */
+    var indentPx = 6 + (c._depth * 20);
+    var soldeTd = '';
+    if (afficherSoldes) {
+      /* Compte de regroupement → cumul de tout le sous-arbre (lui + descendants,
+         via préfixe de code, comme rollupMvt()) ; compte de détail → ses propres
+         mouvements uniquement. Évite tout double comptage pour les parents. */
+      var mvt = estGroupe ? rollupMvt(comptesMvt, c.code) : (comptesMvt[c.code] || { debit: 0, credit: 0 });
+      var soldeD = Math.max(0, mvt.debit - mvt.credit);
+      var soldeC = Math.max(0, mvt.credit - mvt.debit);
+      var soldeContenu = soldeD ? ('<span style="color:var(--rouge);' + (estGroupe?'font-weight:700;':'') + '">' + fmtF(soldeD) + ' D</span>')
+                       : soldeC ? ('<span style="color:var(--vert);' + (estGroupe?'font-weight:700;':'') + '">' + fmtF(soldeC) + ' C</span>')
+                       : '<span style="color:var(--blanc-dim);">—</span>';
+      soldeTd = '<td class="pc-td-solde" style="text-align:right;white-space:nowrap;">' + soldeContenu + '</td>';
+    }
+    var rowCls = estGroupe ? 'pc-row-groupe' : 'pc-row-detail';
+    var rowClick = estGroupe ? ' onclick="togglePlanCptNode(\'' + c.code + '\')" title="Cliquer pour ' + (ouvert ? 'replier' : 'déplier') + '"' : '';
+    return '<tr class="' + rowCls + '"' + rowClick + '>'
+      + '<td style="white-space:nowrap;padding-left:' + indentPx + 'px;"><span style="display:inline-flex;align-items:center;gap:5px;">' + rail + icone + '<strong class="' + codeCls + '">' + c.code + '</strong></span></td>'
+      + '<td><span class="' + labelCls + '">' + c.label + '</span>' + badgeEnfants + libGroupe + '</td>'
       + '<td>Classe ' + c.classe + '</td>'
       + '<td>' + (NATURE_LABELS_CPT[c.nature] || c.nature) + '</td>'
       + '<td>' + origine + '</td>'
-      + '<td style="text-align:right;white-space:nowrap;">'
+      + soldeTd
+      + '<td style="text-align:right;white-space:nowrap;" onclick="event.stopPropagation();">'
       +   '<button class="btn btn-secondary btn-sm" onclick="openCompteParamModal(\'' + c.code + '\')">✎</button> '
       +   '<button class="btn btn-secondary btn-sm" style="color:var(--rouge);" onclick="deleteCompteParam(\'' + c.code + '\')">🗑️</button>'
       + '</td>'
@@ -25982,6 +26348,91 @@ function compteParentDe(code){
     if(c.code !== code && code.indexOf(c.code) === 0){ if(!best || c.code.length > best.code.length) best = c; }
   });
   return best;
+}
+
+/* ═══ SOUS-COMPTES ORPHELINS — détection et génération automatique du
+   compte principal manquant ═══
+   Un sous-compte (code > 3 chiffres, ex: 44520000, 41130000, souvent créé
+   automatiquement depuis les champs « Comptes par défaut » ou saisi
+   librement) est « orphelin » si AUCUN compte du plan n'est un préfixe réel
+   de son code : il n'a alors aucun ancêtre sur lequel s'accrocher et se
+   retrouve affiché à la racine, au même niveau que les vrais comptes
+   principaux SYSCOHADA (bug visible dans la table plan comptable).
+   La convention SYSCOHADA retient le compte principal comme les 3 premiers
+   chiffres du code (ex: 44520000 → 445). C'est ce compte à 3 chiffres que
+   l'on génère quand il manque. */
+function _pcTrouverOrphelins(){
+  var comptes = (APP.planComptable||[]).filter(function(c){ return !c._horsPlan; });
+  var codes = comptes.map(function(c){ return String(c.code); });
+  var orphelins = [];
+  comptes.forEach(function(c){
+    var code = String(c.code);
+    if (!/^[1-9]\d*$/.test(code)) return; /* code non numérique / malformé : hors périmètre, comme _autoCreerCompteDefaut */
+    if (code.length <= 3) return; /* déjà un compte principal ou plus court, rien à rattacher */
+    var aUnAncetre = codes.some(function(other){ return other !== code && code.indexOf(other) === 0; });
+    if (!aUnAncetre) orphelins.push(c);
+  });
+  return orphelins;
+}
+
+function genererComptesOrphelinsManquants(){
+  var orphelins = _pcTrouverOrphelins();
+  if (!orphelins.length) { toast('✅ Aucun sous-compte orphelin : tous les comptes ont un ancêtre dans le plan.', 'success'); return; }
+
+  DATA.params = DATA.params || {};
+  DATA.params.plan_comptable_custom = DATA.params.plan_comptable_custom || [];
+
+  /* Regroupe les orphelins par compte principal (3 premiers chiffres) à
+     générer — plusieurs sous-comptes peuvent partager le même parent manquant
+     (ex: 44520000 et 44530000 → un seul compte 445 à créer).
+     Note : par construction, _pcTrouverOrphelins() ne renvoie que des comptes
+     sans AUCUN préfixe existant dans le plan, donc leur "principal" (3
+     premiers chiffres) est nécessairement absent lui aussi — pas besoin de
+     re-vérifier son existence ici. */
+  var aCreer = {}; /* code principal → sous-comptes (code+libellé) qui en dépendent */
+  orphelins.forEach(function(c){
+    var code = String(c.code);
+    var principal = code.slice(0, 3);
+    aCreer[principal] = aCreer[principal] || [];
+    aCreer[principal].push(code + (c.label ? ' (' + c.label + ')' : ''));
+  });
+
+  var codesACreer = Object.keys(aCreer).sort();
+
+  /* Un compte principal manquant peut avoir été supprimé volontairement par
+     l'utilisateur (plan_comptable_supprimes) — rebuildPlanComptable() ne
+     filtre que le socle de base, pas les ajouts custom : si on le recrée sans
+     retirer la suppression, il réapparaîtra quand même via plan_comptable_custom,
+     court-circuitant silencieusement une suppression voulue. On le signale. */
+  var supprimes = (DATA.params.plan_comptable_supprimes || []);
+  var reactives = codesACreer.filter(function(code){ return supprimes.indexOf(code) !== -1; });
+
+  var confirmMsg = codesACreer.length + ' compte(s) principal/principaux manquant(s) détecté(s) — à créer :\n\n'
+    + codesACreer.map(function(code){
+        return '• ' + code + '  (rattache ' + aCreer[code].length + ' sous-compte(s) : ' + aCreer[code].slice(0,3).join(', ') + (aCreer[code].length > 3 ? '…' : '') + ')'
+          + (reactives.indexOf(code) !== -1 ? '  ⚠️ précédemment supprimé — sera réactivé' : '');
+      }).join('\n')
+    + '\n\nGénérer ces comptes de regroupement maintenant ?';
+  if (!confirm(confirmMsg)) return;
+
+  if (reactives.length) {
+    DATA.params.plan_comptable_supprimes = supprimes.filter(function(code){ return reactives.indexOf(code) === -1; });
+  }
+
+  codesACreer.forEach(function(code){
+    DATA.params.plan_comptable_custom.push({
+      code: code,
+      classe: code.charAt(0),
+      nature: (typeof _natureParClasse === 'function') ? _natureParClasse(code) : 'variable',
+      label: '🧬 Compte principal ' + code + ' (généré automatiquement — regroupement de ' + aCreer[code].length + ' sous-compte(s), à renommer)'
+    });
+  });
+
+  rebuildPlanComptable();
+  if (typeof populateDatalistPlanComptable === 'function') populateDatalistPlanComptable();
+  renderPlanComptableParam();
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  toast('✅ ' + codesACreer.length + ' compte(s) principal/principaux créé(s) : ' + codesACreer.join(', ') + '. Pensez à en affiner le libellé.', 'success');
 }
 /* Cumul débit/crédit d'un préfixe (compte + tous ses sous-comptes) */
 function rollupMvt(comptesMvt, prefix){
@@ -30669,6 +31120,9 @@ function openDivisionsModal() {
   document.getElementById('div-teledeclarant-cnps').value = '';
   showDivisionLogoPreview('');
   document.getElementById('btn-save-division').textContent = '+ Ajouter la division';
+  document.getElementById('division-doc-hint').style.display = 'block';
+  document.getElementById('division-doc-zone').style.display = 'none';
+  document.getElementById('division-doc-list').innerHTML = '';
   renderDivisions();
   document.getElementById('modal-divisions').classList.add('open');
 }
@@ -30708,28 +31162,15 @@ async function saveDivision() {
   }
   await dbPut('divisions', div);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_divisions', div);
-  _editingDivisionId = null;
-  _divisionLogoPending = null;
-  document.getElementById('div-nom').value = '';
-  document.getElementById('div-responsable').value = '';
-  document.getElementById('div-description').value = '';
-  document.getElementById('div-secteur').value = 'btp';
-  document.getElementById('div-raison-sociale').value = '';
-  document.getElementById('div-forme-juridique').value = 'SARL';
-  document.getElementById('div-rccm').value = '';
-  document.getElementById('div-ncc').value = '';
-  document.getElementById('div-capital-social').value = '';
-  document.getElementById('div-regime-fiscal').value = '';
-  document.getElementById('div-siege-social').value = '';
-  document.getElementById('div-tel').value = '';
-  document.getElementById('div-email').value = '';
-  document.getElementById('div-cnps-employeur').value = '';
-  document.getElementById('div-teledeclarant-cnps').value = '';
-  showDivisionLogoPreview('');
-  document.getElementById('btn-save-division').textContent = '+ Ajouter la division';
+  var _venaitDetreCreee = !_editingDivisionId;
   renderDivisions();
   populateDivisionSelects();
   toast('Division enregistrée.', 'success');
+  if (_venaitDetreCreee) {
+    editDivision(div.id); /* Bascule en édition : permet de joindre les documents immédiatement */
+  } else {
+    refreshDocumentsForEntity('division', div.id);
+  }
 }
 
 function editDivision(id) {
@@ -30754,6 +31195,9 @@ function editDivision(id) {
   document.getElementById('div-teledeclarant-cnps').value = d.teledeclarantCnps || '';
   showDivisionLogoPreview(d.logo || '');
   document.getElementById('btn-save-division').textContent = '✓ Modifier la division';
+  document.getElementById('division-doc-hint').style.display = 'none';
+  document.getElementById('division-doc-zone').style.display = 'block';
+  refreshDocumentsForEntity('division', id);
   document.getElementById('modal-divisions').scrollTop = 0;
 }
 
@@ -32719,21 +33163,46 @@ async function comptabiliserPaie(moisKey, opts){
   var C=_paieComptes(), list=_paieMoisData(moisKey,dept);
   if(!list.length) return {ok:false,msg:'Aucun employé actif pour ce mois.'};
   var date=_paieDernierJour(moisKey);
-  var toDel=(DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;}).map(function(e){return e.id;});
+  var deptTag = dept || '__TOUS__';
+  var existantes = (DATA.ecritures||[]).filter(function(e){return e._paie_mois===moisKey;});
+
+  /* ── GARDE MULTI-DÉPARTEMENT ────────────────────────────────────────
+     Un run "global" (dept='') couvre tout le monde : il peut toujours
+     tout remplacer. Un run scindé par département (dept=X) ne doit
+     JAMAIS effacer les écritures d'un autre département ou d'un run
+     global précédent — sinon la comptabilisation du département B
+     fait disparaître silencieusement celle du département A déjà
+     passée. On bloque plutôt que de corrompre le mois en silence. */
+  if (dept) {
+    var conflit = existantes.some(function(e){ return e._paie_dept && e._paie_dept !== deptTag; });
+    var venaitDeGlobal = existantes.some(function(e){ return e._paie_dept === '__TOUS__'; });
+    if (venaitDeGlobal) {
+      return {ok:false, msg:'La paie de '+moisKey+' est déjà comptabilisée en mode global (tous départements). Décomptabilisez-la d\'abord avant de comptabiliser par département.'};
+    }
+    if (conflit) {
+      /* Un autre département a déjà des écritures pour ce mois : on ne
+         touche qu'aux siennes, on laisse les autres intactes. */
+    }
+  }
+
+  var toDel = dept
+    ? existantes.filter(function(e){ return e._paie_dept === deptTag; }).map(function(e){return e.id;})
+    : existantes.map(function(e){return e.id;}); /* run global : remplace tout, y compris d'anciens runs par département */
   for(var i=0;i<toDel.length;i++){ try{ await deleteRecord('ecritures', toDel[i], {skipIntegrity:true}); }catch(e){} }
+  var suffixe = dept ? '_'+dept : '';
   var created=0;
   if(mode==='detail'){
     for(var j=0;j<list.length;j++){
       var x=list[j], lg=_paieLignes(x,C); if(!lg.length) continue;
       await _ecrUpsert({ id:'ecr_paie_'+x.emp.id+'_'+moisKey, ref:'PAIE-'+moisKey+'-'+(x.emp.matricule||''), date:date, piece:'OD-PAIE '+moisKey,
         libelle:'Paie '+moisKey+' — '+x.emp.nom+' '+(x.emp.prenoms||''), lignes:lg, montant:Math.round(x.brut+x.patronal),
-        journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, created_at:today() }); created++;
+        journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, _paie_dept:deptTag, created_at:today() }); created++;
     }
   } else {
     var agg=_sumAgg(list), lg2=_paieLignes(agg,C);
-    await _ecrUpsert({ id:'ecr_paie_od_'+moisKey, ref:'PAIE-'+moisKey, date:date, piece:'OD-PAIE '+moisKey,
-      libelle:'OD de paie '+moisKey+' ('+list.length+' salarie-s)', lignes:lg2, montant:Math.round(agg.brut+agg.patronal),
-      journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, created_at:today() }); created++;
+    await _ecrUpsert({ id:'ecr_paie_od_'+moisKey+suffixe, ref:'PAIE-'+moisKey+(dept?'-'+dept:''), date:date, piece:'OD-PAIE '+moisKey,
+      libelle:'OD de paie '+moisKey+(dept?' — '+dept:'')+' ('+list.length+' salarie-s)', lignes:lg2, montant:Math.round(agg.brut+agg.patronal),
+      journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, _paie_dept:deptTag, created_at:today() }); created++;
   }
   if(regl){
     var a=_sumAgg(list), cnps=Math.round(a.cnpsSal+a.patronal), its=Math.round(a.its), net=Math.round(a.net), rl=[];
@@ -32742,8 +33211,8 @@ async function comptabiliserPaie(moisKey, opts){
     if(its>0) rl.push({compte:C.its,sens:'D',montant:its,libelle:'Reversement ITS+CMU'});
     var tot=net+cnps+its;
     if(tot>0){ rl.push({compte:C.treso,sens:'C',montant:tot,libelle:'Decaissement paie '+moisKey});
-      await _ecrUpsert({ id:'ecr_paie_regl_'+moisKey, ref:'REGL-PAIE-'+moisKey, date:date, piece:'REGL-PAIE '+moisKey,
-        libelle:'Reglement paie '+moisKey, lignes:rl, montant:tot, journal:'PA', type:'od', _auto:'paie_regl', _paie_mois:moisKey, created_at:today() }); created++; }
+      await _ecrUpsert({ id:'ecr_paie_regl_'+moisKey+suffixe, ref:'REGL-PAIE-'+moisKey+(dept?'-'+dept:''), date:date, piece:'REGL-PAIE '+moisKey,
+        libelle:'Reglement paie '+moisKey+(dept?' — '+dept:''), lignes:rl, montant:tot, journal:'PA', type:'od', _auto:'paie_regl', _paie_mois:moisKey, _paie_dept:deptTag, created_at:today() }); created++; }
   }
   if(typeof buildBalance==='function') buildBalance();
   if(typeof buildGrandLivre==='function') buildGrandLivre();
@@ -38102,12 +38571,14 @@ async function confirmerImport() {
     }
   }
 
-  /* Enregistrer dans l'historique */
-  _importHistory.unshift({
-    date: now, module: mod.label, icon: mod.icon,
+  /* Enregistrer dans l'historique + générer le rapport d'importation */
+  var _stratLabel = {skip:'Ignorer les doublons', update:'Mettre à jour', replace:'Remplacer'}[strategy] || strategy;
+  var rapport = {
+    date: now, module: mod.label, icon: mod.icon, strategy: _stratLabel,
     total: rows.length, new: nbNew, updated: nbUpdated, skipped: nbSkipped, errors: nbErr,
     errDetail: errDetail.slice(0,50)
-  });
+  };
+  _importHistory.unshift(rapport);
   localStorage.setItem('import_history', JSON.stringify(_importHistory.slice(0,20)));
 
   fermerPreview();
@@ -38118,6 +38589,7 @@ async function confirmerImport() {
   if (nbSkipped) msg += ', '+nbSkipped+' ignoré(s)';
   if (nbErr) msg += ', '+nbErr+' erreur(s)';
   toast(msg, nbErr>0?'warning':'success');
+  afficherRapportImport(rapport);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -38213,11 +38685,14 @@ async function _importBornesGrouped(rows, strategy, mod) {
   await dbPutBatch('parcelles', aEcrire);
   syncToSupabaseBatch('pi_parcelles', aEcrire);
 
-  /* Historique */
-  _importHistory.unshift({
-    date: now, module: mod.label, icon: mod.icon,
-    total: rows.length, new: pCreated, updated: pUpdated, skipped: pSkipped, errors: 0
-  });
+  /* Historique + rapport d'importation */
+  var _stratLabel = {skip:'Ignorer les doublons', update:'Mettre à jour', replace:'Remplacer'}[strategy] || strategy;
+  var rapport = {
+    date: now, module: mod.label, icon: mod.icon, strategy: _stratLabel,
+    total: rows.length, new: pCreated, updated: pUpdated, skipped: pSkipped, errors: 0,
+    warns: warns, extra: [{ label:'Bornes importées', value: bTotal }]
+  };
+  _importHistory.unshift(rapport);
   try { localStorage.setItem('import_history', JSON.stringify(_importHistory.slice(0,20))); } catch(e){}
 
   fermerPreview();
@@ -38228,7 +38703,7 @@ async function _importBornesGrouped(rows, strategy, mod) {
   if (pUpdated) msg += ', '+pUpdated+' mise(s) à jour';
   if (pSkipped) msg += ', '+pSkipped+' ignorée(s)';
   toast(msg, warns.length?'warning':'success');
-  if (warns.length) setTimeout(function(){ toast('⚠️ '+warns.length+' contrôle(s) : '+warns.slice(0,3).join(' · ')+(warns.length>3?'…':''), 'warning'); }, 900);
+  afficherRapportImport(rapport);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -38439,12 +38914,22 @@ async function _importPlanComptable(rows, strategy, mod) {
     if (typeof renderPlanComptableParam === 'function') renderPlanComptableParam();
     return;
   }
-  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  if (typeof syncToSupabase === 'function') {
+    /* En 'replace', plan_comptable_custom/modifs/supprimes ont été vidés
+       volontairement (voir plus haut) : on saute la fusion défensive du
+       garde-fou pi_params pour ne pas se les faire réinjecter depuis le
+       cloud. Pour 'skip'/'update' (overlay incrémental), la fusion reste
+       active — elle est même utile pour ne rien perdre d'un autre poste. */
+    syncToSupabase('pi_params', DATA.params, strategy === 'replace' ? { skipPlanComptableMerge: true } : undefined);
+  }
 
-  _importHistory.unshift({
-    date: new Date().toISOString(), module: mod.label, icon: mod.icon,
-    total: rows.length, new: nbNew, updated: nbUpdated, skipped: nbSkipped, errors: nbErr
-  });
+  var _stratLabel = {skip:'Ignorer les doublons', update:'Mettre à jour', replace:'Remplacer (base intégrale)', merge:'Fusion (collage Sage)'}[strategy] || strategy;
+  var rapport = {
+    date: new Date().toISOString(), module: mod.label, icon: mod.icon, strategy: _stratLabel,
+    total: rows.length, new: nbNew, updated: nbUpdated, skipped: nbSkipped, errors: nbErr,
+    warns: warns, extra: nbSupprimes ? [{ label:'Comptes retirés (hors fichier importé)', value: nbSupprimes }] : []
+  };
+  _importHistory.unshift(rapport);
   try { localStorage.setItem('import_history', JSON.stringify(_importHistory.slice(0,20))); } catch(e){}
 
   fermerPreview();
@@ -38457,7 +38942,7 @@ async function _importPlanComptable(rows, strategy, mod) {
   if (nbSkipped) msg += ', '+nbSkipped+' ignoré(s)';
   if (nbErr) msg += ', '+nbErr+' erreur(s)';
   toast(msg, (nbErr>0||warns.length)?'warning':'success');
-  if (warns.length) setTimeout(function(){ toast('⚠️ '+warns.length+' contrôle(s) : '+warns.slice(0,3).join(' · ')+(warns.length>3?'…':''), 'warning'); }, 900);
+  afficherRapportImport(rapport);
 }
 
 /* ── Utilitaires de parsing pour les connecteurs comptables externes ── */
@@ -38610,10 +39095,13 @@ async function _importEcrituresGrouped(rows, strategy, mod) {
     }
   }
 
-  _importHistory.unshift({
-    date: now, module: mod.label, icon: mod.icon,
-    total: rows.length, new: nbNew, updated: nbUpdated, skipped: nbSkipped, errors: nbErr
-  });
+  var _stratLabel = {skip:'Ignorer les doublons', update:'Mettre à jour', replace:'Remplacer'}[strategy] || strategy;
+  var rapport = {
+    date: now, module: mod.label, icon: mod.icon, strategy: _stratLabel,
+    total: rows.length, new: nbNew, updated: nbUpdated, skipped: nbSkipped, errors: nbErr,
+    warns: warns
+  };
+  _importHistory.unshift(rapport);
   try { localStorage.setItem('import_history', JSON.stringify(_importHistory.slice(0,20))); } catch(e){}
 
   fermerPreview();
@@ -38629,7 +39117,7 @@ async function _importEcrituresGrouped(rows, strategy, mod) {
   if (nbSkipped) msg += ', '+nbSkipped+' ignorée(s)';
   if (nbErr) msg += ', '+nbErr+' rejetée(s)';
   toast(msg, (nbErr>0||warns.length) ? 'warning' : 'success');
-  if (warns.length) setTimeout(function(){ toast('⚠️ '+warns.length+' contrôle(s) : '+warns.slice(0,3).join(' · ')+(warns.length>3?'…':''), 'warning'); }, 900);
+  afficherRapportImport(rapport);
 }
 
 function fermerPreview() {
@@ -38638,18 +39126,130 @@ function fermerPreview() {
   _importState = { moduleId:null, raw:null, headers:[], rows:[], parsedRows:[] };
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   RAPPORT D'IMPORTATION — généré et affiché automatiquement à la fin
+   de chaque import (générique, bornes, plan comptable, écritures FEC).
+   Auparavant, seul un toast éphémère (quelques secondes) résumait le
+   résultat ; les erreurs de lignes et les contrôles métier (warns)
+   n'étaient jamais montrés en détail ni conservables. Le rapport ici
+   reprend le même objet que celui poussé dans _importHistory (mêmes
+   clés : date/module/icon/total/new/updated/skipped/errors), complété
+   par errDetail / warns / strategy / extra — donc rejouable à tout
+   moment depuis l'Historique (voir voirHistoriqueImport ci-dessous).
+   ══════════════════════════════════════════════════════════════════ */
+var _dernierRapportImport = null; /* pour réimpression depuis le bouton du modal ou l'historique */
+
+function _construireBlocsRapportImport(r) {
+  var kpis = [
+    { label:'Lignes traitées', val:r.total||0,     color:'var(--blanc)' },
+    { label:'Ajoutés',         val:r.new||0,        color:'var(--vert)' },
+    { label:'Mis à jour',      val:r.updated||0,    color:'var(--bleu)' },
+    { label:'Ignorés',         val:r.skipped||0,    color:'var(--blanc-dim)' },
+    { label:'Erreurs',         val:r.errors||0,     color:'var(--rouge)' }
+  ];
+  var kpiHtml = kpis.map(function(k){
+    return '<div style="text-align:center;flex:1;min-width:80px;padding:10px 6px;">'
+      + '<div style="font-size:22px;font-weight:700;color:'+k.color+';">'+k.val+'</div>'
+      + '<div style="font-size:10.5px;color:var(--blanc-dim);">'+k.label+'</div></div>';
+  }).join('');
+  var extraHtml = (r.extra && r.extra.length)
+    ? '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--blanc-dim);margin:10px 0 4px;">'
+      + r.extra.map(function(e){ return '<span>'+escHtml(e.label)+' : <strong style="color:var(--blanc);">'+e.value+'</strong></span>'; }).join('')
+      + '</div>'
+    : '';
+  var errHtml = (r.errDetail && r.errDetail.length)
+    ? '<div style="margin-top:16px;"><div style="font-weight:700;color:var(--rouge);font-size:12.5px;margin-bottom:6px;">✗ Lignes en erreur ('+r.errDetail.length+')</div>'
+      + '<div style="max-height:220px;overflow-y:auto;border:1px solid var(--bord);border-radius:8px;">'
+      + '<table style="width:100%;font-size:11.5px;border-collapse:collapse;"><thead><tr>'
+      + '<th style="text-align:left;padding:5px 8px;border-bottom:1px solid var(--bord);background:var(--bord2);">Ligne</th>'
+      + '<th style="text-align:left;padding:5px 8px;border-bottom:1px solid var(--bord);background:var(--bord2);">Erreur</th></tr></thead><tbody>'
+      + r.errDetail.map(function(e){ return '<tr><td style="padding:5px 8px;border-bottom:1px solid var(--bord);white-space:nowrap;">'+(e.ligne!==undefined?e.ligne:'—')+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--bord);color:var(--rouge);">'+escHtml(e.erreur||'')+'</td></tr>'; }).join('')
+      + '</tbody></table></div></div>'
+    : '';
+  var warnHtml = (r.warns && r.warns.length)
+    ? '<div style="margin-top:16px;"><div style="font-weight:700;color:var(--or);font-size:12.5px;margin-bottom:6px;">⚠️ Contrôles / avertissements ('+r.warns.length+')</div>'
+      + '<ul style="margin:0;padding-left:18px;font-size:11.5px;color:var(--blanc-dim);max-height:180px;overflow-y:auto;">'
+      + r.warns.map(function(w){ return '<li style="margin-bottom:3px;">'+escHtml(w)+'</li>'; }).join('')
+      + '</ul></div>'
+    : '';
+  return { kpiHtml: kpiHtml, extraHtml: extraHtml, errHtml: errHtml, warnHtml: warnHtml };
+}
+
+function afficherRapportImport(r) {
+  if (!r) return;
+  _dernierRapportImport = r;
+  var b = _construireBlocsRapportImport(r);
+  var ancien = document.getElementById('overlay-rapport-import');
+  if (ancien) ancien.remove();
+  var statutTxt = r.errors ? '⚠️ Import terminé avec erreurs — voir le détail ci-dessous'
+                : (r.warns && r.warns.length) ? '⚠️ Import terminé — contrôles à vérifier'
+                : '✅ Import terminé avec succès';
+  var statutCouleur = r.errors ? 'var(--rouge)' : ((r.warns && r.warns.length) ? 'var(--or)' : 'var(--vert)');
+  var overlay = document.createElement('div');
+  overlay.id = 'overlay-rapport-import';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML =
+      '<div style="background:var(--card,#fff);border-radius:16px;padding:22px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:var(--sh);">'
+    +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:4px;">'
+    +     '<div><div style="font-weight:700;font-size:16px;">'+r.icon+' Rapport d\'importation — '+escHtml(r.module)+'</div>'
+    +     '<div style="font-size:11.5px;color:var(--blanc-dim);margin-top:2px;">'+new Date(r.date).toLocaleString('fr-CI')+(r.strategy?' · Stratégie doublons : '+escHtml(r.strategy):'')+'</div></div>'
+    +     '<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'overlay-rapport-import\').remove()">✕</button>'
+    +   '</div>'
+    +   '<div style="font-size:13px;font-weight:600;margin:10px 0 8px;color:'+statutCouleur+';">'+statutTxt+'</div>'
+    +   '<div style="display:flex;background:var(--card2,#f4f4f8);border-radius:10px;overflow:hidden;">'+b.kpiHtml+'</div>'
+    +   b.extraHtml + b.errHtml + b.warnHtml
+    +   '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">'
+    +     '<button class="btn btn-secondary btn-sm" onclick="imprimerRapportImport()">🖨️ Imprimer</button>'
+    +     '<button class="btn btn-primary btn-sm" onclick="document.getElementById(\'overlay-rapport-import\').remove()">OK</button>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+}
+
+/* Impression : même mécanisme que les autres documents de l'app (fenêtre
+   popup + docStamp pour le tampon/QR + window.print()). Réutilisable
+   depuis le bouton du modal (rapport du jour) ou depuis l'historique
+   (r fourni explicitement, ex : réimpression d'un ancien import). */
+function imprimerRapportImport(r) {
+  r = r || _dernierRapportImport; if (!r) return;
+  var b = _construireBlocsRapportImport(r);
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rapport d\'importation — '+escHtml(r.module)+'</title>'
+    + '<style>body{font-family:Georgia,serif;padding:32px;font-size:13px;color:#1C1C2E;}'
+    + 'h1{font-size:18px;border-bottom:2px solid #B87333;padding-bottom:8px;}'
+    + 'table{width:100%;border-collapse:collapse;margin-top:8px;}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;}th{background:#f5f0e0;}'
+    + '.kpis{display:flex;gap:0;margin:16px 0;}.kpi{flex:1;text-align:center;padding:10px;border:1px solid #ddd;}'
+    + '.kpi b{font-size:18px;display:block;}</style></head><body>'
+    + '<h1>'+r.icon+' Rapport d\'importation — '+escHtml(r.module)+'</h1>'
+    + '<div style="font-size:12px;color:#666;">'+new Date(r.date).toLocaleString('fr-CI')+(r.strategy?' · Stratégie doublons : '+escHtml(r.strategy):'')+'</div>'
+    + '<div class="kpis">'
+    +   '<div class="kpi"><b>'+(r.total||0)+'</b>Lignes traitées</div>'
+    +   '<div class="kpi"><b>'+(r.new||0)+'</b>Ajoutés</div>'
+    +   '<div class="kpi"><b>'+(r.updated||0)+'</b>Mis à jour</div>'
+    +   '<div class="kpi"><b>'+(r.skipped||0)+'</b>Ignorés</div>'
+    +   '<div class="kpi"><b>'+(r.errors||0)+'</b>Erreurs</div>'
+    + '</div>'
+    + b.extraHtml + b.errHtml + b.warnHtml
+    + '</body></html>';
+  var win = window.open('', '_blank');
+  win.document.write(typeof docStamp === 'function' ? docStamp(html, 'RAPPORT-IMPORT') : html);
+  win.document.close();
+  setTimeout(function(){ win.print(); }, 400);
+}
+
 function voirHistoriqueImport() {
   try { _importHistory = JSON.parse(localStorage.getItem('import_history')||'[]'); } catch(e) {}
   var html = _importHistory.length
-    ? _importHistory.map(function(h) {
+    ? _importHistory.map(function(h, i) {
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bord2);border-radius:8px;margin-bottom:6px;">'
           +'<div><span style="font-size:16px;margin-right:8px;">'+h.icon+'</span><strong>'+escHtml(h.module)+'</strong>'
           +'<div style="font-size:11px;color:var(--blanc-dim);">'+new Date(h.date).toLocaleString('fr-CI')+' — '+h.total+' lignes traitées</div></div>'
-          +'<div style="font-size:11px;text-align:right;">'
-          +'<span style="color:var(--vert);">+'+h.new+' </span>'
+          +'<div style="font-size:11px;text-align:right;display:flex;align-items:center;gap:8px;">'
+          +'<span><span style="color:var(--vert);">+'+h.new+' </span>'
           +(h.updated?'<span style="color:var(--bleu);">↻'+h.updated+' </span>':'')
           +(h.skipped?'<span style="color:var(--blanc-dim);">⊘'+h.skipped+' </span>':'')
           +(h.errors?'<span style="color:var(--rouge);">✗'+h.errors+'</span>':'')
+          +'</span>'
+          +'<button class="btn btn-secondary btn-sm" title="Voir le rapport détaillé" onclick="afficherRapportImport(_importHistory['+i+'])">📄</button>'
           +'</div></div>';
       }).join('')
     : '<div style="text-align:center;color:var(--blanc-dim);padding:20px;">Aucun import effectué</div>';
@@ -38657,7 +39257,7 @@ function voirHistoriqueImport() {
   /* Afficher dans un overlay simple */
   var overlay = document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  overlay.innerHTML='<div style="background:var(--surface);border-radius:16px;padding:24px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;">'
+  overlay.innerHTML='<div style="background:var(--card,#fff);border-radius:16px;padding:24px;max-width:560px;width:90%;max-height:80vh;overflow-y:auto;">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
     +'<strong style="font-size:15px;">📋 Historique des imports</strong>'
     +'<button class="btn btn-secondary btn-sm" onclick="this.closest(\'[style*=fixed]\').remove()">✕</button>'
@@ -39296,8 +39896,6 @@ function exportImpactPaieCSV() {
 }
 
 // Extend loadAllData for new stores
-/* Personnel MENKO importé depuis MENCO.txt (54 employés, 4 sociétés) — chargé au premier démarrage puis persisté en base (voir savePreloadToDB). */
-var DATA_PRELOAD = {};
 // Sécurisation du module Apporteur d'affaire
 function safeOpenApporteurModal(id) {
   // 1. Vérifier que le modal existe dans le DOM
@@ -45494,7 +46092,7 @@ async function supprimerDocument(docId, entity_type, entity_id) {
   if(!confirm('Supprimer ce document ?'))return;
   if(await deleteRecord('documents',docId)===false)return;
   if(typeof renderDocuments==='function') renderDocuments(entity_type,entity_id);
-  renderDocumentsGlobaux();
+  if (typeof gedFiltrer==='function') gedFiltrer();
   toast('Document supprimé.','info');
 }
 
@@ -45502,43 +46100,218 @@ async function supprimerDocument(docId, entity_type, entity_id) {
 function switchArchiveTab(tab, evt) {
   var docPane = document.getElementById('archive-documents-list');
   var sigPane = document.getElementById('archive-signatures-list');
+  var charts = document.getElementById('archive-dashboard-charts');
   if (tab === 'documents') {
     if (docPane) docPane.style.display = 'block';
     if (sigPane) sigPane.style.display = 'none';
-    renderDocumentsGlobaux();
+    if (charts) charts.style.display = 'grid';
+    gedFiltrer();
   } else {
     if (docPane) docPane.style.display = 'none';
     if (sigPane) sigPane.style.display = 'block';
+    if (charts) charts.style.display = 'none';
     renderSignaturesGlobaux();
   }
   document.querySelectorAll('#page-archives-docs .tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
   if (evt && evt.target) evt.target.classList.add('active');
 }
 
-async function buildArchiveKPI() {
-  var kpiEl = document.getElementById('archive-kpi');
-  if (!kpiEl) return;
-  var docs = await dbGetAll('documents');
-  var sigs = await dbGetAll('signatures');
-  var totalSize = docs.reduce(function(s,d){ return s+(d.size||0); }, 0);
-  kpiEl.innerHTML = [
-    {l:'Documents téléversés', v:docs.length,                                  i:'📄', c:'kpi-blue'},
-    {l:'Signatures électroniques',v:sigs.length,                               i:'✍️', c:'kpi-green'},
-    {l:'Espace utilisé',        v:(totalSize/1024/1024).toFixed(2)+' MB',       i:'💾', c:''},
-    {l:'Entités couvertes',     v:[...new Set(docs.map(function(d){return d.entity_type;}))].length, i:'🗂️', c:''},
-  ].map(function(k){
-    return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div><div class="kpi-value or" style="font-size:17px;">'+k.v+'</div></div>';
+/* ══════════════════════════════════════════════════════
+   GED — ARCHIVAGE NUMÉRIQUE : tri par MODULE précis + DIVISION réelle
+   Unifie documents · docs_juridiques · portail_medias
+══════════════════════════════════════════════════════ */
+var GED_MAP = {
+  client:           'Souscripteurs (CRM)',
+  programme:        'Programmes',
+  convention:       'Conventions (sous-traitance)',
+  employe:          'RH — Employés',
+  foncier:          'Foncier — Terrains',
+  partenaire_lot:   'Lotissement — Partenaires',
+  af_operation:     'Acquisition foncière',
+  caisse_mouvement: 'Caisse',
+  division:         'Entreprises — Holding & Divisions',
+  autre:            'Autre / Non classé'
+};
+var GED_CAT_PORTAIL = {
+  eden:      'Portail — Programme',
+  chantier:  'Portail — Chantier',
+  catalogue: 'Portail — Catalogue',
+  document:  'Portail — Documents'
+};
+function gedModule(entity_type) { return GED_MAP[entity_type] || GED_MAP.autre; }
+
+/* Résolution best-effort de la division réelle à partir de l'entité liée */
+function gedDivisionDoc(entity_type, entity_id) {
+  var progDivId = function(progId) {
+    var p = (DATA.programmes||[]).find(function(x){ return x.id === progId; });
+    return p ? p.division_id : '';
+  };
+  var divId = '';
+  if (entity_type === 'division') {
+    divId = entity_id;
+  } else if (entity_type === 'programme') {
+    divId = progDivId(entity_id);
+  } else if (entity_type === 'client') {
+    var cli = (DATA.clients||[]).find(function(x){ return x.id === entity_id; });
+    divId = cli ? progDivId(cli.programme_id) : '';
+  } else if (entity_type === 'convention') {
+    var conv = (DATA.conventions||[]).find(function(x){ return x.id === entity_id; });
+    divId = conv ? progDivId(conv.programme_id) : '';
+  } else if (entity_type === 'foncier') {
+    var ter = (DATA.terrains||[]).find(function(x){ return x.id === entity_id; });
+    divId = ter ? progDivId(ter.programme_id) : '';
+  } else if (entity_type === 'employe') {
+    var emp = (DATA.employes||[]).find(function(x){ return x.id === entity_id; });
+    divId = emp ? emp.division : '';
+  } else if (entity_type === 'caisse_mouvement') {
+    var mvt = (DATA.caisse_mouvements||[]).find(function(x){ return x.id === entity_id; });
+    var caisse = mvt ? (DATA.caisses||[]).find(function(x){ return x.id === mvt.caisse_id; }) : null;
+    divId = caisse ? caisse.division_id : '';
+  }
+  return divId ? _nomDivision(divId) : 'Non affecté';
+}
+
+async function gedCollecter() {
+  var out = [];
+  (await dbGetAll('documents')).forEach(function(d) {
+    out.push({ id:d.id, store:'documents', name:d.name, mime:d.type, size:d.size||0, date:d.upload_date, module:gedModule(d.entity_type), division:gedDivisionDoc(d.entity_type, d.entity_id), description:d.description||'' });
+  });
+  var dossiers = DATA.dossiersJuridiques || [];
+  (await dbGetAll('docs_juridiques')).forEach(function(d) {
+    var dos = dossiers.find(function(x){ return x.id === d.dossier_id; });
+    out.push({ id:d.id, store:'docs_juridiques', name:d.name, mime:d.type, size:d.size||0, date:d.date, module:'Juridique — Dossiers', division:'Non affecté', description: dos ? ('Dossier '+(dos.numero||dos.reference||'')) : '' });
+  });
+  (await dbGetAll('portail_medias')).forEach(function(d) {
+    if (!d.data) return; /* liens vidéo externes YouTube/Vimeo — non archivés en blob */
+    var module = GED_CAT_PORTAIL[d.categorie] || GED_CAT_PORTAIL.document;
+    out.push({ id:d.id, store:'portail_medias', name:d.nom||d.titre||('media-'+d.id), mime:d.mime||'image/jpeg', size:d.taille||0, date:(d.date||'').slice(0,10), module:module, division:'Non affecté', description:d.titre||'' });
+  });
+  return out;
+}
+
+function _gedBlobField(rec) { return rec.blob!==undefined ? 'blob' : 'data'; }
+async function _gedGetRecord(store, id) {
+  var arr = await dbGetAll(store);
+  return arr.find(function(x){ return x.id === id; });
+}
+
+function gedPopulerFiltres(all) {
+  var modSel = document.getElementById('filter-ged-module');
+  var divSel = document.getElementById('filter-ged-division');
+  if (!modSel || !divSel) return;
+  var modules = [...new Set(all.map(function(d){ return d.module; }))].sort();
+  var divisions = [...new Set(all.map(function(d){ return d.division; }))].sort();
+  var curMod = modSel.value, curDiv = divSel.value;
+  modSel.innerHTML = '<option value="">Tous les modules</option>' + modules.map(function(m){ return '<option value="'+m+'">'+m+'</option>'; }).join('');
+  divSel.innerHTML = '<option value="">Toutes les divisions</option>' + divisions.map(function(dv){ return '<option value="'+dv+'">'+dv+'</option>'; }).join('');
+  modSel.value = modules.includes(curMod) ? curMod : '';
+  divSel.value = divisions.includes(curDiv) ? curDiv : '';
+}
+
+var GED_PALETTE = ['#B87333','#2563EB','#16A34A','#DC2626','#9333EA','#0EA5E9','#EA580C','#0891B2','#CA8A04','#4F46E5'];
+var _gedActiveModule = '', _gedActiveDivision = '';
+
+function gedToggleFiltre(kind, valeur) {
+  if (kind === 'module') { _gedActiveModule = (_gedActiveModule === valeur) ? '' : valeur; document.getElementById('filter-ged-module').value = _gedActiveModule; }
+  else { _gedActiveDivision = (_gedActiveDivision === valeur) ? '' : valeur; document.getElementById('filter-ged-division').value = _gedActiveDivision; }
+  gedFiltrer();
+}
+function gedResetFiltre(kind) {
+  if (kind === 'module') { _gedActiveModule = ''; document.getElementById('filter-ged-module').value = ''; }
+  else { _gedActiveDivision = ''; document.getElementById('filter-ged-division').value = ''; }
+  gedFiltrer();
+}
+
+function gedBarList(counts, kind) {
+  var entries = Object.keys(counts).map(function(k){ return [k, counts[k]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  if (!entries.length) return '<div class="ged-empty">Aucune donnée.</div>';
+  var max = Math.max.apply(null, entries.map(function(e){ return e[1]; })) || 1;
+  var actif = kind === 'module' ? _gedActiveModule : _gedActiveDivision;
+  return entries.map(function(e, i) {
+    var pct = Math.max(4, Math.round(e[1]/max*100));
+    var color = GED_PALETTE[i % GED_PALETTE.length];
+    var isActive = actif === e[0];
+    var safe = e[0].replace(/'/g, "\\'");
+    return '<div class="ged-bar-row'+(isActive?' active':'')+'" onclick="gedToggleFiltre(\''+kind+'\',\''+safe+'\')">'
+      +'<div class="ged-bar-top"><span class="ged-bar-name">'+e[0]+'</span><span class="ged-bar-count">'+e[1]+'</span></div>'
+      +'<div class="ged-bar-track"><div class="ged-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div>'
+    +'</div>';
   }).join('');
 }
 
-async function renderDocumentsGlobaux() {
-  buildArchiveKPI();
-  var docs = await dbGetAll('documents');
-  var filter = (document.getElementById('filter-doc-entity')||{}).value || '';
+function gedFormatCategorie(mime) {
+  mime = mime || '';
+  if (mime === 'application/pdf') return 'PDF';
+  if (mime.indexOf('image/') === 0) return 'Images';
+  if (mime.indexOf('word') !== -1 || mime.indexOf('document') !== -1) return 'Word';
+  if (mime.indexOf('sheet') !== -1 || mime.indexOf('excel') !== -1) return 'Excel';
+  return 'Autres';
+}
+
+function gedDonutFormats(all) {
+  var counts = {};
+  all.forEach(function(d){ var c = gedFormatCategorie(d.mime); counts[c] = (counts[c]||0)+1; });
+  var entries = Object.keys(counts).map(function(k){ return [k, counts[k]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  var total = all.length || 1;
+  if (!entries.length) return '<div class="ged-empty">Aucune donnée.</div>';
+  var acc = 0, stops = [];
+  entries.forEach(function(e, i) {
+    var color = GED_PALETTE[i % GED_PALETTE.length];
+    var deg = e[1]/total*360;
+    stops.push(color+' '+acc+'deg '+(acc+deg)+'deg');
+    acc += deg;
+  });
+  var donutStyle = 'background:conic-gradient(' + stops.join(',') + ');';
+  var legend = entries.map(function(e, i) {
+    var color = GED_PALETTE[i % GED_PALETTE.length];
+    var pct = Math.round(e[1]/total*100);
+    return '<div class="ged-legend-item"><span class="ged-legend-dot" style="background:'+color+';"></span><span class="ged-legend-lbl">'+e[0]+'</span><span class="ged-legend-val">'+e[1]+' · '+pct+'%</span></div>';
+  }).join('');
+  return '<div class="ged-donut-wrap"><div class="ged-donut" style="'+donutStyle+'"></div><div class="ged-legend">'+legend+'</div></div>';
+}
+
+var GED_CACHE = [];
+async function gedBuildDashboard() {
+  var kpiEl = document.getElementById('archive-kpi');
+  var all = await gedCollecter();
+  GED_CACHE = all;
+  var sigs = await dbGetAll('signatures');
+  var totalSize = all.reduce(function(s,d){ return s+(d.size||0); }, 0);
+  if (kpiEl) {
+    kpiEl.innerHTML = [
+      {l:'Documents & fichiers joints', v:all.length,                                            i:'📄', bg:'rgba(37,99,235,0.15)'},
+      {l:'Signatures électroniques',    v:sigs.length,                                            i:'✍️', bg:'rgba(22,163,74,0.15)'},
+      {l:'Espace utilisé',              v:(totalSize/1024/1024).toFixed(2)+' MB',                  i:'💾', bg:'rgba(184,115,51,0.15)'},
+      {l:'Modules couverts',            v:[...new Set(all.map(function(d){return d.module;}))].length, i:'🗂️', bg:'rgba(147,51,234,0.15)'},
+    ].map(function(k){
+      return '<div class="ged-kpi-card"><div class="ged-kpi-icon" style="background:'+k.bg+';">'+k.i+'</div><div class="ged-kpi-txt"><div class="ged-kpi-val">'+k.v+'</div><div class="ged-kpi-lbl">'+k.l+'</div></div></div>';
+    }).join('');
+  }
+  var byModule = {}, byDivision = {};
+  all.forEach(function(d){ byModule[d.module] = (byModule[d.module]||0)+1; byDivision[d.division] = (byDivision[d.division]||0)+1; });
+  var chMod = document.getElementById('ged-chart-dept');
+  var chDiv = document.getElementById('ged-chart-service');
+  var chFmt = document.getElementById('ged-chart-formats');
+  if (chMod) chMod.innerHTML = gedBarList(byModule, 'module');
+  if (chDiv) chDiv.innerHTML = gedBarList(byDivision, 'division');
+  if (chFmt) chFmt.innerHTML = gedDonutFormats(all);
+  var clrMod = document.getElementById('ged-clear-module');
+  var clrDiv = document.getElementById('ged-clear-division');
+  if (clrMod) clrMod.style.display = _gedActiveModule ? 'inline-block' : 'none';
+  if (clrDiv) clrDiv.style.display = _gedActiveDivision ? 'inline-block' : 'none';
+  gedPopulerFiltres(all);
+}
+
+async function gedFiltrer() {
+  var mod = (document.getElementById('filter-ged-module')||{}).value || '';
+  var div = (document.getElementById('filter-ged-division')||{}).value || '';
+  _gedActiveModule = mod;
+  _gedActiveDivision = div;
+  await gedBuildDashboard();
   var q = ((document.getElementById('search-docs-global')||{}).value||'').toLowerCase();
-  var filtered = docs.filter(function(d){
-    return (!filter || d.entity_type === filter) && (!q || (d.name+' '+(d.description||'')).toLowerCase().includes(q));
-  }).sort(function(a,b){ return (b.upload_date||'').localeCompare(a.upload_date||''); });
+  var filtered = GED_CACHE.filter(function(d) {
+    return (!mod || d.module===mod) && (!div || d.division===div) && (!q || (d.name+' '+(d.description||'')).toLowerCase().includes(q));
+  }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
 
   var container = document.getElementById('archive-documents-list');
   if (!container) return;
@@ -45548,45 +46321,62 @@ async function renderDocumentsGlobaux() {
     return;
   }
 
-  var typeIcon={'application/pdf':'📄','image/jpeg':'🖼️','image/png':'🖼️','image/jpg':'🖼️'};
-  var entityLabel={client:'👥 Client',programme:'🏗️ Programme',convention:'📋 Convention',employe:'👤 Employé',foncier:'🌍 Foncier',partenaire_lot:'🤝 Partenaire Lotissement',autre:'📌 Autre'};
+  var typeIcon = {'application/pdf':'📄','image/jpeg':'🖼️','image/png':'🖼️','image/jpg':'🖼️','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'📝','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'📊'};
 
   container.innerHTML = filtered.map(function(doc) {
-    var icon = typeIcon[doc.type] || '📎';
-    // Résoudre le nom de l'entité
-    var entityName = '';
-    if (doc.entity_type === 'client') {
-      var cli = DATA.clients.find(function(c){ return c.id===doc.entity_id; });
-      if (cli) entityName = cli.nom+' '+cli.prenoms;
-    } else if (doc.entity_type === 'programme') {
-      var prog = DATA.programmes.find(function(p){ return p.id===doc.entity_id; });
-      if (prog) entityName = prog.nom;
-    } else if (doc.entity_type === 'convention') {
-      var conv = DATA.conventions.find(function(c){ return c.id===doc.entity_id; });
-      if (conv) entityName = conv.numero;
-    }
+    var icon = typeIcon[doc.mime] || '📎';
     return '<div class="card" style="margin-bottom:10px;">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
         +'<div style="flex:1;">'
           +'<div style="font-size:14px;font-weight:700;">'+icon+' '+doc.name+'</div>'
           +'<div style="font-size:11px;color:var(--blanc-dim);margin-top:3px;">'
-            +(entityLabel[doc.entity_type]||doc.entity_type)+' '+(entityName?'<strong style="color:var(--bleu);">'+entityName+'</strong>':'')
-            +' · '+dateShort(doc.upload_date)+' · '+(doc.size/1024).toFixed(1)+' KB'
+            +'<strong style="color:var(--or);">'+doc.module+'</strong> · 🏢 '+doc.division
+            +' · '+dateShort(doc.date)+' · '+((doc.size||0)/1024).toFixed(1)+' KB'
           +'</div>'
           +(doc.description?'<div style="font-size:12px;color:var(--blanc-dim);margin-top:2px;">'+doc.description+'</div>':'')
         +'</div>'
         +'<div style="display:flex;gap:6px;">'
-          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="apercuDocument(\''+doc.id+'\')" title="Aperçu">👁️</button>'
-          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="telechargerDocument(\''+doc.id+'\')" title="Télécharger">⬇</button>'
-          +'<button class="btn btn-danger btn-sm btn-icon" onclick="supprimerDocument(\''+doc.id+'\')">🗑</button>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="gedApercu(\''+doc.store+'\',\''+doc.id+'\')" title="Aperçu">👁️</button>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" onclick="gedTelecharger(\''+doc.store+'\',\''+doc.id+'\')" title="Télécharger">⬇</button>'
+          +'<button class="btn btn-danger btn-sm btn-icon" onclick="gedSupprimer(\''+doc.store+'\',\''+doc.id+'\')" title="Supprimer">🗑</button>'
         +'</div>'
       +'</div>'
     +'</div>';
   }).join('');
 }
 
+async function gedApercu(store, id) {
+  var rec = await _gedGetRecord(store, id);
+  if (!rec) return;
+  var blob = rec[_gedBlobField(rec)];
+  var mime = rec.type || rec.mime || '';
+  var name = rec.name || rec.nom || rec.titre || 'document';
+  var win = window.open('', '', 'width=900,height=700');
+  if (mime.indexOf('image/') === 0) {
+    win.document.write('<html><head><title>'+name+'</title></head><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="'+blob+'" style="max-width:100%;max-height:100vh;object-fit:contain;" alt="'+name+'"></body></html>');
+  } else {
+    win.document.write('<html><head><title>'+name+'</title></head><body style="margin:0;"><iframe src="'+blob+'" width="100%" height="100%" style="border:none;position:absolute;top:0;left:0;width:100%;height:100%;"></iframe></body></html>');
+  }
+}
+
+async function gedTelecharger(store, id) {
+  var rec = await _gedGetRecord(store, id);
+  if (!rec) return;
+  var a = document.createElement('a');
+  a.href = rec[_gedBlobField(rec)];
+  a.download = rec.name || rec.nom || rec.titre || 'document';
+  a.click();
+}
+
+async function gedSupprimer(store, id) {
+  if (!confirm('Supprimer ce document ?')) return;
+  if (await deleteRecord(store, id) === false) return;
+  toast('Document supprimé.', 'info');
+  gedFiltrer();
+}
+
 async function renderSignaturesGlobaux() {
-  buildArchiveKPI();
+  gedBuildDashboard();
   var sigs = await dbGetAll('signatures');
   var container = document.getElementById('archive-signatures-list');
   if (!container) return;
@@ -45633,12 +46423,12 @@ async function supprimerSignature(sigId) {
 }
 
 async function exportDocumentsListe() {
-  var docs = await dbGetAll('documents');
-  var rows = ['Nom,Type,Taille (KB),Entité,Entité ID,Date,Description'];
-  docs.forEach(function(d){ rows.push([d.name,d.type,(d.size/1024).toFixed(1),d.entity_type,d.entity_id,d.upload_date,d.description||''].join(',')); });
+  var all = await gedCollecter();
+  var rows = ['Nom,Type,Taille (KB),Module,Division,Date,Description'];
+  all.forEach(function(d){ rows.push([d.name,d.mime,((d.size||0)/1024).toFixed(1),d.module,d.division,d.date,(d.description||'').replace(/,/g,';')].join(',')); });
   var b = new Blob([rows.join('\n')],{type:'text/csv'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'archives_docs_'+today()+'.csv'; a.click();
-  toast('Export documents CSV.','success');
+  var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'ged_archivage_'+today()+'.csv'; a.click();
+  toast('Export GED CSV.','success');
 }
 
 /* ─── Upload global (modal) ────────────────────────────── */
@@ -45664,7 +46454,7 @@ async function confirmerUploadGlobal() {
     await dbPut('documents', doc);
     closeModal('modal-upload-doc');
     toast('📎 '+file.name+' téléversé.','success');
-    renderDocumentsGlobaux();
+    gedFiltrer();
   };
   reader.readAsDataURL(file);
 }
@@ -45772,7 +46562,7 @@ var _origGoToArchives = goTo;
 goTo = function(page) {
   if (page === 'archives-docs') {
     _origGoToArchives(page);
-    setTimeout(function(){ renderDocumentsGlobaux(); buildArchiveKPI(); }, 80);
+    setTimeout(function(){ gedFiltrer(); }, 80);
   } else {
     _origGoToArchives(page);
   }
@@ -46457,38 +47247,8 @@ startApp = async function() {
 // ══ Lancement
 init();
 
-function mergePreload() {
-  if (!DATA_PRELOAD) return;
-  /* Garde-fou définitif : jamais réinjecté après le 1er démarrage.
-     Protège contre résurrection après mise à zéro production. */
-  if (localStorage.getItem('pici_preload_done_v1')) return;
-  var stores = ['programmes','lots','clients','versements','relances','terrains','ecritures',
-    'employes','bulletins','declarations','parcelles','dossiersJuridiques',
-    'constructeurs','conventions','situations','avenants','conceptions','leads'];
-  stores.forEach(function(s) {
-    if (DATA_PRELOAD[s] && DATA_PRELOAD[s].length > 0) {
-      DATA[s] = DATA_PRELOAD[s];
-    }
-  });
-  if (DATA_PRELOAD.params) DATA.params = DATA_PRELOAD.params;
-  localStorage.setItem('pici_preload_done_v1', '1');
-}
 
 
-async function savePreloadToDB() {
-  if (!DATA_PRELOAD) return;
-  var stores = ['programmes','lots','clients','versements','relances','terrains','ecritures','employes','divisions'];
-  for (var s = 0; s < stores.length; s++) {
-    var store = stores[s];
-    if (DATA[store] && DATA[store].length > 0) {
-      for (var i = 0; i < DATA[store].length; i++) {
-        await dbPut(store, DATA[store][i]);
-      }
-    }
-  }
-  if (DATA.params) await dbPut('params', DATA.params);
-  DATA_PRELOAD = null; // éviter de re-sauvegarder à chaque démarrage
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SANIX IMMO — Moteur Realtime multi-utilisateurs (Supabase Realtime v2)
@@ -46922,8 +47682,6 @@ document.addEventListener('keydown', function(e){
 
 async function startApp() {
   await initDB();
-  mergePreload();
-  await savePreloadToDB();
   await loadAllData();
 
   // Rejouer les écritures de sync en attente (reprise après hors ligne)
