@@ -2217,7 +2217,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div style="text-align:center;margin-bottom:14px;font-size:13px;color:var(--or);font-weight:600;">Première utilisation — Créez le compte administrateur</div>
       <div class="login-field">
         <label>Nom complet</label>
-        <input type="text" id="setup-nom" placeholder="Ex. Cyrille Kessié">
+        <input type="text" id="setup-nom" placeholder="Ex. Nom Prénoms">
       </div>
       <div class="login-field">
         <label>Identifiant</label>
@@ -2585,6 +2585,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         ">
           <button id="dtab-vue"          onclick="switchDashTab('vue')"          class="dash-tab active">📊 Vue générale</button>
           <button id="dtab-finance"       onclick="switchDashTab('finance')"       class="dash-tab">💰 Finance</button>
+          <button id="dtab-compta"        onclick="switchDashTab('compta')"        class="dash-tab">📒 Compta &amp; Trésorerie</button>
           <button id="dtab-commercial"    onclick="switchDashTab('commercial')"    class="dash-tab">🎯 Commercial</button>
           <button id="dtab-travaux"       onclick="switchDashTab('travaux')"       class="dash-tab">🏗️ Travaux</button>
           <button id="dtab-rh"            onclick="switchDashTab('rh')"            class="dash-tab">👥 RH</button>
@@ -2888,6 +2889,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="card">
             <div class="card-title">🔴 Clients en retard de paiement</div>
             <div id="dash-retardataires"></div>
+          </div>
+        </div>
+
+        <div id="dpane-compta" style="display:none;">
+          <div class="kpi-grid" id="dash-compta-kpi" style="margin-bottom:16px;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card"><div class="card-title">💧 Trésorerie, TVA & résultat</div><div id="dash-compta-treso"></div></div>
+            <div class="card"><div class="card-title">📅 Dettes court terme</div><div id="dash-compta-dettes"></div></div>
           </div>
         </div>
 
@@ -5112,7 +5121,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
               </div>
               <div class="form-group">
                 <label>Programme — localisation</label>
-                <input type="text" id="param-portail-programme-localisation" class="form-control" placeholder="Ex : YAOU, axe Grand-Bassam – Bonoua">
+                <input type="text" id="param-portail-programme-localisation" class="form-control" placeholder="Ex : localité, axe routier">
               </div>
               <div class="form-group span-2">
                 <label>Programme — description</label>
@@ -14999,9 +15008,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           <div class="form-group"><label>Morcellement du TF</label><input type="text" class="form-control" id="parc-morcellement" placeholder="4726"></div>
           <div class="form-group"><label>Livre Foncier de</label><input type="text" class="form-control" id="parc-livre-foncier" placeholder="Bassam"></div>
           <div class="form-group"><label>Cédant</label><input type="text" class="form-control" id="parc-cedant" placeholder="ÉTAT-CI"></div>
-          <div class="form-group"><label>Demandeur</label><input type="text" class="form-control" id="parc-demandeur" placeholder="LGI-BTP"></div>
-          <div class="form-group"><label>Contenance (ha a ca)</label><input type="text" class="form-control" id="parc-contenance" placeholder="14 ha 39 a 25 ca"></div>
-          <div class="form-group"><label>Géomètre-Expert Agréé</label><input type="text" class="form-control" id="parc-geometre" placeholder="SORO NANGA DIDIER"></div>
+          <div class="form-group"><label>Demandeur</label><input type="text" class="form-control" id="parc-demandeur" placeholder="Nom du demandeur"></div>
+          <div class="form-group"><label>Contenance (ha a ca)</label><input type="text" class="form-control" id="parc-contenance" placeholder="00 ha 00 a 00 ca"></div>
+          <div class="form-group"><label>Géomètre-Expert Agréé</label><input type="text" class="form-control" id="parc-geometre" placeholder="Nom du géomètre-expert"></div>
           <div class="form-group"><label>Date du plan</label><input type="date" class="form-control" id="parc-date-plan"></div>
           <div class="form-group"><label>Échelle</label><input type="text" class="form-control" id="parc-echelle" placeholder="1/7000"></div>
         </div>
@@ -16991,7 +17000,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
       <div class="form-grid">
         <div class="form-group span-2">
           <label>Nom du terrain / projet *</label>
-          <input type="text" id="pld-nom" class="form-control" placeholder="Ex: Terrain YAOU 5 Ha">
+          <input type="text" id="pld-nom" class="form-control" placeholder="Ex: Terrain 5 Ha">
         </div>
         <div class="form-group">
           <label>Localisation</label>
@@ -17736,7 +17745,6 @@ var DATA = {
 ────────────────────────────────────────────────────── */
 var DB_NAME = 'ImmoSuiteDB';
 var DB_VERSION = 141; /* v141: store 'suppressions_sync' (tombstones partagés multi-postes — anti-réinjection des données supprimées) */
-var DEMO_DATA = false; /* PRODUCTION : aucune donnée de démonstration. Mettre true uniquement pour une démo. */
 var db = null;
 
 /* Liste COMPLÈTE et définitive de tous les stores */
@@ -21110,7 +21118,7 @@ var _currentDashTab = 'vue';
 
 function switchDashTab(tab) {
   _currentDashTab = tab;
-  var tabs  = ['vue','finance','commercial','travaux','rh','stock','foncier','juridique','direction','alertes'];
+  var tabs  = ['vue','finance','compta','commercial','travaux','rh','stock','foncier','juridique','direction','alertes'];
   tabs.forEach(function(t) {
     var btn  = document.getElementById('dtab-' + t);
     var pane = document.getElementById('dpane-' + t);
@@ -21120,8 +21128,64 @@ function switchDashTab(tab) {
   refreshDashboard();
 }
 
-function buildDashTabFinance() {
-  var cessions      = DATA.cessions_foncieres || [];
+function _cRow(label,val,color){
+  return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bord);font-size:13px;">'
+    +'<span>'+label+'</span><span style="font-weight:600;color:'+(color||'var(--blanc)')+';">'+fmtF(Math.round(val))+' F</span></div>';
+}
+
+function buildDashTabCompta() {
+  /* Exercice paramétrable (DATA.params.exercice_annee) — à défaut, année civile en cours. */
+  var year = String((DATA.params && DATA.params.exercice_annee) || new Date().getFullYear());
+  var endExcl = (parseInt(year)+1)+'-01-01';
+  /* Bilan (Cl.4/5, TVA) = cumulatif (à-nouveaux + antérieurs) ; Résultat (Cl.6/7)
+     = mouvements de l'exercice courant (remis à zéro à la clôture). */
+  var soldes = {}, soldesAnnee = {};
+  (DATA.ecritures||[]).forEach(function(e){
+    var d = e.date || ''; if (!d || d >= endExcl) return;
+    var inYear = d.slice(0,4) === year;
+    ecrLignes(e).forEach(function(l){
+      if(!l.compte) return;
+      var v = (l.sens==='D'?1:-1)*(parseFloat(l.montant)||0);
+      soldes[l.compte] = (soldes[l.compte]||0) + v;
+      if (inYear) soldesAnnee[l.compte] = (soldesAnnee[l.compte]||0) + v;
+    });
+  });
+  function _sum(map,codes){ var t=0; (APP.planComptable||[]).forEach(function(c){ if(codes.some(function(p){return c.code.indexOf(p)===0;})) t+=map[c.code]||0; }); return t; }
+  function S(codes){ return _sum(soldes,codes); }        /* cumulatif → bilan */
+  function SA(codes){ return _sum(soldesAnnee,codes); }   /* exercice → résultat */
+  var produits=-SA(['7']), charges=SA(['6']), resultat=produits-charges;
+  var tvaColl=-S(['443']), tvaDed=S(['445']), tvaDue=tvaColl-tvaDed;
+  var treso=S(['51','52','53','55','57']);
+  var dFourn=Math.abs(S(['401','402','408'])), dSoc=Math.abs(S(['431','447','448'])), dPers=Math.abs(S(['422']));
+
+  var cards=[
+    {l:'Résultat '+year,v:fmtF(Math.round(resultat))+' F',c:resultat>=0?'kpi-green':'kpi-red',d:(resultat>=0?'Bénéfice':'Perte')+' · produits '+fmtF(Math.round(produits))},
+    {l:'Charges '+year,v:fmtF(Math.round(charges))+' F',c:'',d:'Classe 6'},
+    {l:'TVA nette due',v:fmtF(Math.round(Math.abs(tvaDue)))+' F',c:tvaDue>0?'kpi-red':'kpi-green',d:tvaDue>0?'À reverser':'Crédit de TVA'},
+    {l:'Trésorerie nette',v:fmtF(Math.round(treso))+' F',c:treso>=0?'kpi-green':'kpi-red',d:'Banques + caisses + MoMo (Cl.5)'},
+  ];
+  var kpi=document.getElementById('dash-compta-kpi');
+  if(kpi) kpi.innerHTML=cards.map(function(k){return '<div class="kpi-card '+k.c+'"><div class="kpi-label">'+k.l+'</div><div class="kpi-value or" style="font-size:16px;">'+k.v+'</div><div class="kpi-delta '+(k.c==='kpi-red'?'negative':k.c==='kpi-green'?'positive':'')+'">'+k.d+'</div></div>';}).join('');
+
+  var tv=document.getElementById('dash-compta-treso');
+  if(tv) tv.innerHTML=_cRow('TVA collectée (443)',tvaColl)+_cRow('TVA déductible (445)',tvaDed)
+    +_cRow('<strong>TVA nette due</strong>',tvaDue,tvaDue>0?'var(--rouge)':'var(--vert)')
+    +'<div style="height:8px"></div>'
+    +_cRow('Produits (Cl.7)',produits)+_cRow('Charges (Cl.6)',charges)
+    +_cRow('<strong>Résultat</strong>',resultat,resultat>=0?'var(--vert)':'var(--rouge)')
+    +'<div style="height:8px"></div>'
+    +_cRow('Trésorerie nette (Cl.5)',treso,treso>=0?'var(--vert)':'var(--rouge)');
+
+  var dt=document.getElementById('dash-compta-dettes');
+  if(dt) dt.innerHTML=_cRow('Fournisseurs (401/402/408)',dFourn,'var(--or)')
+    +_cRow('Dettes sociales & fiscales (431/447/448)',dSoc,'var(--or)')
+    +_cRow('Personnel — net à payer (422)',dPers,'var(--or)')
+    +'<div style="height:8px"></div>'
+    +_cRow('<strong>Total dettes court terme</strong>',dFourn+dSoc+dPers,'var(--rouge)')
+    +'<div style="margin-top:10px;font-size:11px;color:var(--blanc-dim);">Soldes '+year+' issus du journal. Détail par échéance : Comptabilité → Balance âgée.</div>';
+}
+
+function buildDashTabFinance() {  var cessions      = DATA.cessions_foncieres || [];
   var _core         = dashFinanceCore(null);
   var totalVerse    = _core.encaisse; /* CA global = lots (encaissé sur prix) + cessions foncières */
   var totalVerseCes = _core.encCes;
@@ -22101,6 +22165,7 @@ function refreshDashboard() {
   var _tab = _currentDashTab || 'vue';
   if (_tab === 'vue')        buildDashTabVue();
   if (_tab === 'finance')    { buildDashTabFinance(); buildBarChart(); buildDonut(); buildRecentPayments(); }
+  if (_tab === 'compta')     buildDashTabCompta();
   if (_tab === 'commercial') buildDashTabCommercial();
   if (_tab === 'travaux')    buildDashTabTravaux();
   if (_tab === 'rh')         buildDashTabRH();
@@ -22769,7 +22834,8 @@ async function saveClient() {
     apport: parseFloat(document.getElementById('c-apport').value) || 0,
     duree: parseInt(document.getElementById('c-duree').value) || 60,
     date_debut: document.getElementById('c-date-debut').value,
-    statut: 'actif',
+    /* Conserve le statut existant (ex. 'resilie') lors d'une modification ; 'actif' uniquement à la création. */
+    statut: (function(){ if (!APP.editingId) return 'actif'; var ex = DATA.clients.find(function(c){ return c.id === id; }); return (ex && ex.statut) || 'actif'; })(),
     dossier: _dossier,
     _baseModifie: APP.editingId ? (APP._clientBaseModifie || null) : null,
     commercial_id: document.getElementById('c-commercial') ? document.getElementById('c-commercial').value : '',
@@ -22967,7 +23033,7 @@ function renderClients() {
     else if (filterCA.indexOf('ap:') === 0) ca = (c.apporteur_id === filterCA.slice(3));
     var isRetard = !!retardSet[c.id];
     var verse = versementsParClient[c.id] || 0;
-    var statut = verse >= c.montant_total ? 'solde' : (isRetard ? 'retard' : c.statut || 'actif');
+    var statut = c.statut === 'resilie' ? 'resilie' : (verse >= c.montant_total ? 'solde' : (isRetard ? 'retard' : c.statut || 'actif'));
     var filtStat = !filterStat || statut === filterStat;
     return match && prog && stand && filtStat && ca;
   });
@@ -22983,7 +23049,7 @@ function renderClients() {
     var reste = Math.max(0, (c.montant_total || 0) - verse);
     var pct = c.montant_total > 0 ? Math.round((verse / c.montant_total) * 100) : 0;
     var isRetard = !!retardSet[c.id];
-    var statut = verse >= c.montant_total && c.montant_total > 0 ? 'solde' : (isRetard ? 'retard' : c.statut || 'actif');
+    var statut = c.statut === 'resilie' ? 'resilie' : (verse >= c.montant_total && c.montant_total > 0 ? 'solde' : (isRetard ? 'retard' : c.statut || 'actif'));
     var badgeMap = { solde: 'badge-vert', retard: 'badge-rouge', actif: 'badge-bleu', resilie: 'badge-violet' };
     var labelMap = { solde: 'Soldé', retard: 'En retard', actif: 'Actif', resilie: 'Résilié' };
 
@@ -23019,6 +23085,9 @@ function renderClients() {
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openClientModal(\'' + c.id + '\')" title="Modifier">✏️</button> '
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openPaiementModal(\'' + c.id + '\')" title="Versement">💳</button> '
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="genererCodeAcces(\'' + c.id + '\')" title="Code acces portail" style="background:#E0E8FF;color:#1D4ED8;border-color:#93C5FD;">🔑</button> '
+      + (statut === 'resilie'
+          ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="reactiverClient(\'' + c.id + '\')" title="Réactiver le contrat" style="background:#DCFCE7;color:#15803D;border-color:#86EFAC;">↩️</button> '
+          : '<button class="btn btn-secondary btn-sm btn-icon" onclick="resilierClient(\'' + c.id + '\')" title="Résilier le contrat" style="background:#FEF3C7;color:#B45309;border-color:#FCD34D;">⛔</button> ')
       + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteClient(\'' + c.id + '\')" title="Supprimer">🗑</button>'
       + '</td></tr>';
   }).join('');
@@ -23049,11 +23118,53 @@ async function deleteClient(id) {
   toast('Souscripteur supprimé, lot libéré.', 'info');
 }
 
+/* ── Résiliation / Réactivation d'un souscripteur ──────────────────────────
+   Corrige un manque : le filtre "Résilié" existait dans l'écran Souscripteurs
+   mais aucune action ne permettait de placer réellement un client dans cet
+   état (ni de revenir en arrière). ── */
+async function resilierClient(id) {
+  var c = DATA.clients.find(function(x){ return x.id === id; });
+  if (!c) return;
+  if (c.statut === 'resilie') { toast('Ce souscripteur est déjà résilié.', 'info'); return; }
+  if (!confirm('Résilier le contrat de ' + c.nom + ' ' + (c.prenoms||'') + ' ?\n\nLe lot sera remis en « disponible ». Les versements déjà encaissés sont conservés (historique).')) return;
+
+  c.statut = 'resilie';
+  await dbPut('clients', c);
+  syncToSupabase('pi_clients', c);
+
+  /* Libérer le lot rattaché : un contrat résilié ne doit plus bloquer le lot */
+  if (c.lot_id) {
+    var lot = DATA.lots.find(function(l){ return l.id === c.lot_id; });
+    if (lot) {
+      lot.statut = 'disponible'; lot.client_id = null;
+      await dbPut('lots', lot);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
+    }
+  }
+  renderClients();
+  refreshDashboard();
+  toast('Contrat résilié, lot libéré.', 'success');
+}
+
+async function reactiverClient(id) {
+  var c = DATA.clients.find(function(x){ return x.id === id; });
+  if (!c) return;
+  if (c.statut !== 'resilie') return;
+  if (!confirm('Réactiver le contrat de ' + c.nom + ' ' + (c.prenoms||'') + ' ?\n\nPensez à vérifier que le lot est toujours disponible avant de le réassigner.')) return;
+  c.statut = 'actif';
+  await dbPut('clients', c);
+  syncToSupabase('pi_clients', c);
+  renderClients();
+  refreshDashboard();
+  toast('Contrat réactivé.', 'success');
+}
+
 function getRetardataires() {
   var now = new Date();
   var result = [];
   DATA.clients.forEach(function(c) {
     if (!c.date_debut || !c.montant_total) return;
+    if (c.statut === 'resilie') return; // contrat résilié : ne pas compter comme "en retard"
     var versements = DATA.versements.filter(function(v) { return v.client_id === c.id && _versementSurPrix(v); });
     var verse = versements.reduce(function(a, v) { return a + (parseFloat(v.montant) || 0); }, 0);
     if (verse >= c.montant_total) return; // soldé
@@ -23790,9 +23901,7 @@ async function comptabiliserVenteTerrain(lot) {
   var cd = (DATA.params && DATA.params.comptes_defaut) || {};
   var cClient  = requireCompteDefaut('client_lots');
   var cProduit = requireCompteDefaut('terrain_produit');
-  var cTva     = requireCompteDefaut('terrain_tva_collectee');
   var cStock   = cd.terrain_stock || '';
-  var cVar     = requireCompteDefaut('terrain_variation');
   var taux     = (cd.terrain_taux_tva != null ? cd.terrain_taux_tva : 18) / 100;
 
   var viab = !!lot.terrain_tva;
@@ -23807,10 +23916,11 @@ async function comptabiliserVenteTerrain(lot) {
   var lignes = [];
   lignes.push({ compte: cClient, sens: 'D', montant: ttc, libelle: lib });
   lignes.push({ compte: cProduit, sens: 'C', montant: ht, libelle: lib + (viab ? ' (HT)' : '') });
-  if (tva > 0) lignes.push({ compte: cTva, sens: 'C', montant: tva, libelle: 'TVA 18% — ' + lib });
+  if (tva > 0) lignes.push({ compte: requireCompteDefaut('terrain_tva_collectee'), sens: 'C', montant: tva, libelle: 'TVA ' + Math.round(taux*100) + '% — ' + lib });
 
   var cout = parseFloat(lot.cout_revient) || 0;
   if (cStock && cout > 0) {
+    var cVar = requireCompteDefaut('terrain_variation');
     lignes.push({ compte: cVar, sens: 'D', montant: cout, libelle: 'Déstockage — ' + lib });
     lignes.push({ compte: cStock, sens: 'C', montant: cout, libelle: 'Sortie stock terrain — ' + lib });
   }
@@ -24800,7 +24910,15 @@ async function saveParcelleMorcellement() {
   await dbPut('parcelles_morcellement', parc);
   clearParcelleForm();
   renderParcelleListe();
-  toast('✅ Parcelle ' + numero + ' enregistrée.', 'success');
+  /* Contrôle de conservation d'aire : Σ parcelles morcelées ≤ superficie du plan */
+  var _sumMrc = (DATA.parcelles_morcellement || []).filter(function(x){ return x.programme_id === progId; })
+    .reduce(function(s,x){ return s + (parseFloat(x.superficie)||0); }, 0);
+  var _planTot = plan ? (parseFloat(plan.superficie_totale)||0) : 0;
+  if (_planTot > 0 && _sumMrc > _planTot + 1) {
+    toast('⚠️ Total morcelé ' + Math.round(_sumMrc).toLocaleString('fr-FR') + ' m² > superficie du plan ' + Math.round(_planTot).toLocaleString('fr-FR') + ' m² (écart ' + Math.round(_sumMrc-_planTot).toLocaleString('fr-FR') + ' m²).', 'error');
+  } else {
+    toast('✅ Parcelle ' + numero + ' enregistrée.', 'success');
+  }
 }
 
 async function deleteParcelleMorcellement(id) {
@@ -25577,9 +25695,19 @@ async function saveLot() {
   } else {
     DATA.lots.push(lot);
   }
+  /* Date de vente : figée au passage « vendu », effacée sinon (conservée si déjà posée) */
+  lot.date_vente = (lot.statut === 'vendu')
+    ? ((APP.editingId && typeof existing !== 'undefined' && existing && existing.date_vente) || today())
+    : '';
   await dbPut('lots', lot);
   syncToSupabase('pi_lots', lot);
   if (lot.nature === 'terrain' && typeof comptabiliserEntreeStockTerrain === 'function') { await comptabiliserEntreeStockTerrain(lot); }
+  /* Comptabilisation de la vente au passage « vendu » (idempotent : ecr_vente_terrain_<id>).
+     N'échoue pas l'enregistrement du lot si les comptes de vente ne sont pas paramétrés. */
+  if (lot.nature === 'terrain' && lot.statut === 'vendu' && (parseFloat(lot.prix)||0) > 0 && typeof comptabiliserVenteTerrain === 'function') {
+    try { await comptabiliserVenteTerrain(lot); if (typeof buildBalance === 'function') buildBalance(); }
+    catch (e) { toast('Lot vendu enregistré — vente non comptabilisée : ' + (e && e.message ? e.message : 'comptes de vente à paramétrer') + '.', 'error'); }
+  }
   closeModal('modal-lot');
   toast('Lot enregistré.', 'success');
   renderLots();
@@ -30574,6 +30702,7 @@ var PAIE_CI = {
   fdfp: { taxeApprentissage: 0.004, formationContinue: 0.006, fcRegul: 0.006 },
   itsPatronal: 0.012,            /* ITS part patronale 1,20 % */
   cmuSalarial: 500, cmuPatronal: 500,
+  transportExoPlafond: 30000,     /* exonération prime transport plafonnée (excédent imposable + soumis CNPS) */
   transportDefaut: 30000         /* indemnité transport non imposable, si non saisie sur la fiche employé */
 };
 /* Alias rétrocompatibles (ancien code) */
@@ -30791,6 +30920,7 @@ function applyParamsPaie() {
   if (ov.cmuPatronal !== undefined) PAIE_CI.cmuPatronal = ov.cmuPatronal;
   if (ov.ricfParPart !== undefined) PAIE_CI.ricfParPart = ov.ricfParPart;
   if (ov.transportDefaut !== undefined) PAIE_CI.transportDefaut = ov.transportDefaut;
+  if (ov.transportExoPlafond !== undefined) PAIE_CI.transportExoPlafond = ov.transportExoPlafond;
   /* Alias rétrocompatibles CNPS/BAREME_ITS resynchronisés */
   CNPS.tauxSalarie = PAIE_CI.cnps.retraiteSalarial;
   CNPS.tauxPatronalRetraite = PAIE_CI.cnps.retraitePatronal;
@@ -30953,10 +31083,14 @@ function calcPaieCI(d) {
   var primesImpos = R((d.primesImpos || 0) * prorata);
   var logement    = R((d.logement || 0) * prorata);
   var heuresSupp  = R(d.heuresSupp || 0);
-  var brutImposable = categoriel + sursalaire + anciennete + primesImpos + logement + heuresSupp;
 
-  /* GAINS non imposables */
-  var transport = R((d.transport || 0) * prorata);
+  /* GAINS non imposables — transport exonéré plafonné ; excédent réintégré */
+  var transportBrut = R((d.transport || 0) * prorata);
+  var _exoMax = (PAIE_CI.transportExoPlafond != null) ? PAIE_CI.transportExoPlafond : transportBrut;
+  var transport = Math.min(transportBrut, _exoMax);      /* part exonérée */
+  var transportImpos = Math.max(0, transportBrut - transport); /* excédent imposable + CNPS */
+
+  var brutImposable = categoriel + sursalaire + anciennete + primesImpos + logement + heuresSupp + transportImpos;
 
   var brutTotal  = brutImposable + transport;  /* total gains (poste 20) */
   var brutSocial = brutImposable;              /* assiette CNPS */
@@ -31158,7 +31292,7 @@ function paieInputFromEmploye(e, moisArg) {
 
 /* Paie d'un employé : bulletin du mois si présent, sinon reconstruction depuis la fiche */
 function calcPaieEmploye(e, bull) {
-  return bull ? calcPaieCI(bull) : calcPaieCI(paieInputFromEmploye(e));
+  return bull ? calcNetAPayer(bull) : calcPaieCI(paieInputFromEmploye(e));
 }
 
 /* Masse salariale du mois (bulletins si présents, sinon estimation fiche) */
@@ -33782,8 +33916,9 @@ function renderLPJournal() {
    ══════════════════════════════════════════════════════════════════ */
 function _paieComptes(){
   var cd=(DATA.params&&DATA.params.comptes_defaut)||{};
+  var its=requireCompteDefaut('paie_its');
   return { brut:requireCompteDefaut('paie_charge'), pat:requireCompteDefaut('paie_charge_pat'), net:requireCompteDefaut('paie_du'),
-    cnps:requireCompteDefaut('paie_cnps'), its:requireCompteDefaut('paie_its'), avances:requireCompteDefaut('paie_avances'),
+    cnps:requireCompteDefaut('paie_cnps'), its:its, fdfp:(cd.paie_fdfp||its), avances:requireCompteDefaut('paie_avances'),
     retenues:requireCompteDefaut('paie_retenues'), treso:requireCompteDefaut('treso_banque') };
 }
 function _paieMoisData(moisKey, dept){
@@ -33795,20 +33930,38 @@ function _paieMoisData(moisKey, dept){
     if(r.totalPatronal==null) r.totalPatronal=r.cnpsPat||0;
     if(r.brutTotal==null) r.brutTotal=r.brut||0;
     return { emp:e, brut:r.brutTotal||0, net:r.net||0, cnpsSal:r.cnpsRetraiteSal||0,
+      itsSal:r.itsNet||0, itsPat:r.itsPat||0, cmuSal:r.cmuSal||0, cmuPat:r.cmuPat||0,
+      cnpsPatSocial:(r.cnpsRetraitePat||0)+(r.cnpsAT||0)+(r.cnpsPF||0),
+      fdfp:(r.fdfpTA||0)+(r.fdfpFC||0)+(r.fdfpRegul||0),
       its:(r.itsNet||0)+(r.cmuSal||0), avances:r.avances||0, retenues:r.retenuesDiv||0, patronal:r.totalPatronal||0 };
   });
 }
-function _sumAgg(list){ return list.reduce(function(a,x){ a.brut+=x.brut;a.net+=x.net;a.cnpsSal+=x.cnpsSal;a.its+=x.its;a.avances+=x.avances;a.retenues+=x.retenues;a.patronal+=x.patronal;return a; }, {brut:0,net:0,cnpsSal:0,its:0,avances:0,retenues:0,patronal:0}); }
+function _sumAgg(list){ return list.reduce(function(a,x){ a.brut+=x.brut;a.net+=x.net;a.cnpsSal+=x.cnpsSal;a.its+=x.its;a.avances+=x.avances;a.retenues+=x.retenues;a.patronal+=x.patronal;a.itsSal+=(x.itsSal||0);a.itsPat+=(x.itsPat||0);a.cmuSal+=(x.cmuSal||0);a.cmuPat+=(x.cmuPat||0);a.cnpsPatSocial+=(x.cnpsPatSocial||0);a.fdfp+=(x.fdfp||0);return a; }, {brut:0,net:0,cnpsSal:0,its:0,avances:0,retenues:0,patronal:0,itsSal:0,itsPat:0,cmuSal:0,cmuPat:0,cnpsPatSocial:0,fdfp:0}); }
 function _paieLignes(agg, C){
   var l=[];
   if(agg.brut>0) l.push({compte:C.brut,sens:'D',montant:Math.round(agg.brut),libelle:'Rémunérations brutes'});
   if(agg.patronal>0) l.push({compte:C.pat,sens:'D',montant:Math.round(agg.patronal),libelle:'Charges sociales patronales'});
   if(agg.net>0) l.push({compte:C.net,sens:'C',montant:Math.round(agg.net),libelle:'Net à payer'});
-  var cnps=Math.round(agg.cnpsSal+agg.patronal);
-  if(cnps>0) l.push({compte:C.cnps,sens:'C',montant:cnps,libelle:'CNPS à payer (sal.+pat.)'});
-  if(agg.its>0) l.push({compte:C.its,sens:'C',montant:Math.round(agg.its),libelle:'ITS + CMU retenus'});
+  var itsSal=(agg.itsSal!=null)?agg.itsSal:Math.max(0,(agg.its||0)-(agg.cmuSal||0));
+  var patCnps=agg.cnpsPatSocial||0, patIts=agg.itsPat||0, patFdfp=agg.fdfp||0, patCmu=agg.cmuPat||0;
+  /* Repli : si la ventilation patronale est absente (anciens agrégats), le
+     reliquat est reversé au CNPS pour garantir l'équilibre débit=crédit. */
+  var patReste=Math.round((agg.patronal||0)-(patCnps+patIts+patFdfp+patCmu));
+  var cnps=Math.round((agg.cnpsSal||0)+patCnps+(agg.cmuSal||0)+patCmu+(patReste>0?patReste:0));
+  if(cnps>0) l.push({compte:C.cnps,sens:'C',montant:cnps,libelle:'CNPS + CMU à payer (sal.+pat.)'});
+  var its=Math.round(itsSal+patIts+(patReste<0?patReste:0));
+  if(its>0) l.push({compte:C.its,sens:'C',montant:its,libelle:'ITS à reverser (sal.+pat.)'});
+  if(patFdfp>0) l.push({compte:C.fdfp,sens:'C',montant:Math.round(patFdfp),libelle:'FDFP (TA + FC)'});
   if(agg.avances>0) l.push({compte:C.avances,sens:'C',montant:Math.round(agg.avances),libelle:'Avances récupérées'});
   if(agg.retenues>0) l.push({compte:C.retenues,sens:'C',montant:Math.round(agg.retenues),libelle:'Retenues diverses'});
+  /* Filet SYSCOHADA : garantit l'équilibre à la pièce quel que soit l'agrégat
+     (arrondis, agrégats legacy sans ventilation). N'agit que si écart ≠ 0. */
+  var _tD=0,_tC=0; l.forEach(function(x){ if(x.sens==='D')_tD+=x.montant; else _tC+=x.montant; });
+  var _ec=_tD-_tC;
+  if(_ec!==0){
+    var _lc=l.find(function(x){ return x.sens==='C'&&x.compte===C.cnps; });
+    if(_lc) _lc.montant+=_ec; else l.push({compte:C.cnps,sens:'C',montant:_ec,libelle:'Régularisation cotisations'});
+  }
   return l;
 }
 function _paieDernierJour(moisKey){ var p=moisKey.split('-'); var d=new Date(parseInt(p[0]),parseInt(p[1]),0); return moisKey+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -33876,11 +34029,19 @@ async function comptabiliserPaie(moisKey, opts){
       journal:'PA', type:'od', _auto:'paie', _paie_mois:moisKey, _paie_dept:deptTag, created_at:today() }); created++;
   }
   if(regl){
-    var a=_sumAgg(list), cnps=Math.round(a.cnpsSal+a.patronal), its=Math.round(a.its), net=Math.round(a.net), rl=[];
+    var a=_sumAgg(list);
+    var net=Math.round(a.net);
+    var _patCnps=a.cnpsPatSocial||0,_patIts=a.itsPat||0,_patFdfp=a.fdfp||0,_patCmu=a.cmuPat||0;
+    var _patReste=Math.round((a.patronal||0)-(_patCnps+_patIts+_patFdfp+_patCmu));
+    var cnps=Math.round((a.cnpsSal||0)+_patCnps+(a.cmuSal||0)+_patCmu+(_patReste>0?_patReste:0));
+    var itsSal=(a.itsSal!=null)?a.itsSal:Math.max(0,(a.its||0)-(a.cmuSal||0));
+    var its=Math.round(itsSal+_patIts+(_patReste<0?_patReste:0));
+    var fdfp=Math.round(_patFdfp), rl=[];
     if(net>0) rl.push({compte:C.net,sens:'D',montant:net,libelle:'Reglement net salaires'});
-    if(cnps>0) rl.push({compte:C.cnps,sens:'D',montant:cnps,libelle:'Reversement CNPS'});
-    if(its>0) rl.push({compte:C.its,sens:'D',montant:its,libelle:'Reversement ITS+CMU'});
-    var tot=net+cnps+its;
+    if(cnps>0) rl.push({compte:C.cnps,sens:'D',montant:cnps,libelle:'Reversement CNPS + CMU'});
+    if(its>0) rl.push({compte:C.its,sens:'D',montant:its,libelle:'Reversement ITS'});
+    if(fdfp>0) rl.push({compte:C.fdfp,sens:'D',montant:fdfp,libelle:'Reversement FDFP'});
+    var tot=net+cnps+its+fdfp;
     if(tot>0){ rl.push({compte:C.treso,sens:'C',montant:tot,libelle:'Decaissement paie '+moisKey});
       await _ecrUpsert({ id:'ecr_paie_regl_'+moisKey+suffixe, ref:'REGL-PAIE-'+moisKey+(dept?'-'+dept:''), date:date, piece:'REGL-PAIE '+moisKey,
         libelle:'Reglement paie '+moisKey+(dept?' — '+dept:''), lignes:rl, montant:tot, journal:'PA', type:'od', _auto:'paie_regl', _paie_mois:moisKey, _paie_dept:deptTag, created_at:today() }); created++; }
@@ -33917,6 +34078,25 @@ async function comptabiliserPaieUI(){
   var r=await comptabiliserPaie(moisKey,{mode:mode,reglement:regl,dept:dept});
   if(!r.ok){ toast(r.msg||'Echec.','error'); return; }
   paieComptaStatut(moisKey);
+  /* Connexion messagerie : clôture paie → groupe compta (+ bulletins employés si activé) */
+  try {
+    if (typeof _paieMoisData === 'function' && typeof _sumAgg === 'function') {
+      var _lst = _paieMoisData(moisKey, dept) || [];
+      var _agg = _sumAgg(_lst);
+      var _txtP = '💰 Paie comptabilisée — ' + moisKey + (dept ? ' (' + dept + ')' : '') + '\n'
+        + _lst.length + ' salarié(s)\n'
+        + 'Brut total : ' + fmtF(Math.round(_agg.brut || 0)) + ' FCFA\n'
+        + 'Net à payer : ' + fmtF(Math.round(_agg.net || 0)) + ' FCFA\n'
+        + 'Charges patronales : ' + fmtF(Math.round(_agg.patronal || 0)) + ' FCFA\n'
+        + r.count + ' écriture(s) — journal PA';
+      await rhMsgPaieGroupe(_txtP);
+      if (DATA.params && DATA.params.paie_notif_employes) {
+        for (var _pi = 0; _pi < _lst.length; _pi++) {
+          try { await rhMsgDirectEmploye(_lst[_pi].emp, '💰 Votre bulletin ' + moisKey + '\nNet à payer : ' + fmtF(Math.round(_lst[_pi].net || 0)) + ' FCFA'); } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {}
   toast('📒 Paie '+moisKey+' comptabilisee — '+r.count+' ecriture(s) au journal PA.','success');
 }
 async function decomptabiliserPaieUI(){
@@ -34448,6 +34628,11 @@ function bpCompute(progId) {
   var situationsPayees = (DATA.situations || []).filter(function(s){
     return convIds.indexOf(s.convention_id) !== -1 && (s.statut === 'payee' || s.statut === 'validee');
   }).reduce(function(s,x){ return s + (parseFloat(x.montant_ht)||parseFloat(x.montant)||0); }, 0);
+  /* Situations réellement RÉGLÉES (décaissées) — pour la position de trésorerie.
+     « validée » = certifiée mais non payée : exclue du cash. */
+  var situationsReglees = (DATA.situations || []).filter(function(s){
+    return convIds.indexOf(s.convention_id) !== -1 && s.statut === 'payee';
+  }).reduce(function(s,x){ return s + (parseFloat(x.montant_ht)||parseFloat(x.montant)||0); }, 0);
 
   /* ── Coûts annexes de promotion (postes réels d'un bilan promoteur) ── */
   /* Honoraires techniques : études EDS liées + % configurable du coût travaux. */
@@ -34471,15 +34656,21 @@ function bpCompute(progId) {
   var coutsAnnexes = coutHonoTech + coutCommercial + coutFinancier + coutAleas;
 
   var produits = caLotsVendus + caCessions;
+  /* Couche RÉALISÉ (vendus signés uniquement) — distincte de l'engagé (vendu+réservé). */
+  var caLotsVendusReel = lots.filter(function(l){ return l.statut === 'vendu'; }).reduce(function(s,l){ return s + (parseFloat(l.prix)||0); }, 0);
+  var caLotsReserves = Math.max(0, caLotsVendus - caLotsVendusReel);
+  var produitsRealises = caLotsVendusReel + caCessions;
   var produitsPotentiel = caLotsPotentiel + caCessions;
   var couts = coutFoncier + coutTravaux + coutsAnnexes;
   var marge = produits - couts;
+  var margeRealisee = produitsRealises - couts;
+  var tauxMargeRealisee = produitsRealises > 0 ? (margeRealisee / produitsRealises * 100) : 0;
   var margePot = produitsPotentiel - couts;
   var tauxMarge = produits > 0 ? (marge / produits * 100) : 0;
   var tauxMargePot = produitsPotentiel > 0 ? (margePot / produitsPotentiel * 100) : 0;
   var resteEncaisser = produits - encaisse;
   var resteDecaisser = coutTravaux - situationsPayees;
-  var cashNet = encaisse - coutFoncier - situationsPayees;
+  var cashNet = encaisse - coutFoncier - situationsReglees;
 
   /* Seuil : nb lots à vendre pour couvrir coûts */
   var prixMoyenLot = lots.length ? caLotsPotentiel / lots.length : 0;
@@ -34503,8 +34694,9 @@ function bpCompute(progId) {
 
   return { prog:prog, lots:lots, lotsVendus:lotsVendus, caLotsVendus:caLotsVendus, caLotsPotentiel:caLotsPotentiel,
     cessions:cessions, caCessions:caCessions, encaisse:encaisse, coutFoncier:coutFoncier, coutTravaux:coutTravaux,
+    caLotsVendusReel:caLotsVendusReel, caLotsReserves:caLotsReserves, produitsRealises:produitsRealises, margeRealisee:margeRealisee, tauxMargeRealisee:tauxMargeRealisee,
     coutHonoTech:coutHonoTech, coutCommercial:coutCommercial, coutFinancier:coutFinancier, coutAleas:coutAleas, coutsAnnexes:coutsAnnexes,
-    situationsPayees:situationsPayees, produits:produits, produitsPotentiel:produitsPotentiel, couts:couts,
+    situationsPayees:situationsPayees, situationsReglees:situationsReglees, produits:produits, produitsPotentiel:produitsPotentiel, couts:couts,
     marge:marge, margePot:margePot, tauxMarge:tauxMarge, tauxMargePot:tauxMargePot, resteEncaisser:resteEncaisser, resteDecaisser:resteDecaisser,
     cashNet:cashNet, prixMoyenLot:prixMoyenLot, lotsSeuil:lotsSeuil, parcelle:parc,
     coutParLot:coutParLot, surfaceTotale:surfaceTotale, prixRevientM2:prixRevientM2, prixVenteM2:prixVenteM2,
@@ -34538,11 +34730,13 @@ function bpRender() {
   var row = function(l,v,col,bold){ return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bord);'+(bold?'font-weight:800;font-size:14px;':'')+'"><span>'+l+'</span><span style="color:'+(col||'var(--blanc)')+';">'+v+'</span></div>'; };
 
   document.getElementById('bp-produits').innerHTML =
-    row('Ventes lots (vendus/réservés)', fmtF(b.caLotsVendus)+' F', 'var(--vert)')
+    row('Ventes lots VENDUS (signés)', fmtF(b.caLotsVendusReel)+' F', 'var(--vert)')
     + row('Cessions foncières liées', fmtF(b.caCessions)+' F', 'var(--vert)')
-    + row('Produits engagés', fmtF(b.produits)+' F', 'var(--vert)', true)
+    + row('= Produits réalisés', fmtF(b.produitsRealises)+' F', 'var(--vert)', true)
+    + row('Réservations (engagées, non signées)', fmtF(b.caLotsReserves)+' F', 'var(--or)')
+    + row('= Produits engagés', fmtF(b.produits)+' F', 'var(--or)', true)
     + row('Stock lots restant ('+(b.lots.length-b.lotsVendus.length)+' lots)', fmtF(b.caLotsPotentiel-b.caLotsVendus)+' F', 'var(--dim)')
-    + row('Potentiel total', fmtF(b.produitsPotentiel)+' F', 'var(--bleu)', true);
+    + row('= Potentiel total', fmtF(b.produitsPotentiel)+' F', 'var(--bleu)', true);
 
   document.getElementById('bp-couts').innerHTML =
     row('Foncier (acquisition + frais)', fmtF(b.coutFoncier)+' F', 'var(--rouge)')
@@ -34558,9 +34752,11 @@ function bpRender() {
   var margeBar = b.produitsPotentiel > 0 ? Math.min(100, Math.max(0, b.couts / b.produitsPotentiel * 100)) : 0;
   document.getElementById('bp-resultat').innerHTML =
     '<div class="table-wrap"><table style="width:100%;font-size:12px;"><tbody>'
-    + '<tr><td>Produits engagés</td><td style="text-align:right;color:var(--vert);font-weight:700;">' + fmtF(b.produits) + ' F</td></tr>'
+    + '<tr><td>Produits réalisés (vendus signés)</td><td style="text-align:right;color:var(--vert);font-weight:700;">' + fmtF(b.produitsRealises) + ' F</td></tr>'
+    + '<tr><td>Marge réalisée</td><td style="text-align:right;color:' + (b.margeRealisee>=0?'var(--vert)':'var(--rouge)') + ';font-weight:700;">' + fmtF(b.margeRealisee) + ' F (' + b.tauxMargeRealisee.toFixed(1) + '%)</td></tr>'
+    + '<tr><td style="padding-top:6px;">Produits engagés (+ réservés)</td><td style="text-align:right;color:var(--or);font-weight:700;padding-top:6px;">' + fmtF(b.produits) + ' F</td></tr>'
     + '<tr><td>− Coûts opération</td><td style="text-align:right;color:var(--rouge);font-weight:700;">− ' + fmtF(b.couts) + ' F</td></tr>'
-    + '<tr style="border-top:2px solid var(--bord);"><td style="font-weight:800;font-size:14px;padding:8px 0;">= Marge de promotion</td><td style="text-align:right;font-weight:800;font-size:16px;color:' + (b.marge>=0?'var(--vert)':'var(--rouge)') + ';">' + fmtF(b.marge) + ' F</td></tr>'
+    + '<tr style="border-top:2px solid var(--bord);"><td style="font-weight:800;font-size:14px;padding:8px 0;">= Marge de promotion (engagée)</td><td style="text-align:right;font-weight:800;font-size:16px;color:' + (b.marge>=0?'var(--vert)':'var(--rouge)') + ';">' + fmtF(b.marge) + ' F</td></tr>'
     + '</tbody></table></div>'
     + '<div style="margin-top:10px;"><div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Coûts couverts par le potentiel : ' + margeBar.toFixed(0) + '%</div>'
     + '<div style="height:10px;background:var(--card2);border-radius:6px;overflow:hidden;"><div style="height:100%;width:' + margeBar + '%;background:' + (margeBar<80?'var(--vert)':(margeBar<100?'var(--or)':'var(--rouge)')) + ';"></div></div></div>';
@@ -34938,21 +35134,22 @@ function genererDeclarationCNPS() {
   var mois = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   var actifs = _declEmployesActifs(divId, true);
   if (!actifs.length) { toast('Aucun employé actif rattaché à cette division.', 'error'); return; }
-  var totBase = 0, totBrut = 0, totBaseATPF = 0;
+  /* Assiette et cotisations calculées PAR SALARIÉ via le moteur de paie
+     (plafonds retraite/AT/PF appliqués individuellement, CMU incluse) — même
+     source que le bordereau CNPS, pour éviter toute divergence de total. */
+  var A = { brut:0, sal:0, pat:0, at:0, pf:0, cmuS:0, cmuP:0 };
   actifs.forEach(function(e) {
     var b = DATA.bulletins.find(function(x){ return x.employe_id===e.id && x.mois===mois; });
-    var brutEmp = b ? (b.base+(b.primes||0)+(b.transport||0)+(b.logement||0)) : (e.salaire_base+(e.primes||0)+(e.transport||0)+(e.logement||0));
-    totBase += b ? b.base : e.salaire_base;
-    totBrut += brutEmp;
-    totBaseATPF += Math.min(brutEmp, PAIE_CI.cnps.plafondATPF); /* plafond AT/PF par salarié, pas sur la masse globale */
+    var r = b ? calcNetAPayer(b) : calcPaieEmploye(e);
+    A.brut += r.brutSocial; A.sal += r.cnpsRetraiteSal; A.pat += r.cnpsRetraitePat;
+    A.at += r.cnpsAT; A.pf += r.cnpsPF; A.cmuS += r.cmuSal; A.cmuP += r.cmuPat;
   });
-  var cnpsSal = Math.round(totBase * CNPS.tauxSalarie);
-  var cnpsPatRetraite = Math.round(Math.min(totBase, CNPS.plafondRetraite*actifs.length) * CNPS.tauxPatronalRetraite);
-  var cnpsAT = Math.round(totBaseATPF * CNPS.tauxAT);
-  var cnpsPF = Math.round(totBaseATPF * CNPS.tauxPF);
-  var total = cnpsSal + cnpsPatRetraite + cnpsAT + cnpsPF;
+  var cnpsSal = Math.round(A.sal), cnpsPatRetraite = Math.round(A.pat);
+  var cnpsAT = Math.round(A.at), cnpsPF = Math.round(A.pf);
+  var cmuTot = Math.round(A.cmuS + A.cmuP);
+  var total = cnpsSal + cnpsPatRetraite + cnpsAT + cnpsPF + cmuTot;
   var lim = new Date(now.getFullYear(), now.getMonth()+1, 15);
-  _declExtraFields = { montant_masse_brute: totBrut, cnps_salarie: cnpsSal, cnps_patronal: cnpsPatRetraite, cnps_at: cnpsAT, cnps_pf: cnpsPF, nb_employes: actifs.length };
+  _declExtraFields = { montant_masse_brute: Math.round(A.brut), cnps_salarie: cnpsSal, cnps_patronal: cnpsPatRetraite, cnps_at: cnpsAT, cnps_pf: cnpsPF, cmu: cmuTot, nb_employes: actifs.length };
   openDeclarationModal();
   document.getElementById('d-division').value = divId;
   document.getElementById('d-type').value = 'CNPS';
@@ -35088,7 +35285,7 @@ function exportDAS() {
     if(!moisAnnee.length) return;
     var a={brutSoc:0,brutImp:0,its:0,cnpsSal:0,cmuSal:0,net:0,cnpsPat:0,at:0,pf:0,itsPat:0,fdfp:0,cout:0};
     moisAnnee.forEach(function(b) {
-      var r = calcPaieCI(b);
+      var r = calcNetAPayer(b);
       a.brutSoc+=r.brutSocial; a.brutImp+=r.brutImposable; a.its+=r.itsNet; a.cnpsSal+=r.cnpsRetraiteSal;
       a.cmuSal+=r.cmuSal; a.net+=r.net; a.cnpsPat+=r.cnpsRetraitePat; a.at+=r.cnpsAT; a.pf+=r.cnpsPF;
       a.itsPat+=r.itsPat; a.fdfp+=(r.fdfpTA+r.fdfpFC+r.fdfpRegul); a.cout+=r.coutTotal;
@@ -35134,7 +35331,7 @@ function exportBordereauCNPS(mois){
   var actifs=(DATA.employes||[]).filter(function(e){return e.statut==='actif' && (!divId || e.division===divId);});
   actifs.forEach(function(e){
     var b=(DATA.bulletins||[]).find(function(x){return x.employe_id===e.id && x.mois===mois;});
-    var r=b?calcPaieCI(b):calcPaieEmploye(e);
+    var r=b?calcNetAPayer(b):calcPaieEmploye(e);
     var basePlaf=Math.min(r.brutSocial, PAIE_CI.cnps.plafondRetraite);
     var totLigne=r.cnpsRetraiteSal+r.cnpsRetraitePat+r.cnpsAT+r.cnpsPF+r.cmuSal+r.cmuPat;
     T.brut+=r.brutSocial;T.base+=basePlaf;T.rs+=r.cnpsRetraiteSal;T.rp+=r.cnpsRetraitePat;T.at+=r.cnpsAT;T.pf+=r.cnpsPF;T.cs+=r.cmuSal;T.cp+=r.cmuPat;T.tot+=totLigne;
@@ -35662,7 +35859,7 @@ function sigToggleMesure(){
   if(!_sig.mesure.on) document.getElementById('sig-mesure-info').textContent='';
 }
 function _sigDistM(a,b){ return _sig.map.distance(a,b); }
-function _sigAreaM2(pts){ if(pts.length<3) return 0; var s=0; var u=pts.map(function(p){var q=latLngToUtm(p[0],p[1]);return [q.E,q.N];}); for(var i=0;i<u.length;i++){var A=u[i],B=u[(i+1)%u.length]; s+=A[0]*B[1]-B[0]*A[1];} return Math.abs(s/2); }
+function _sigAreaM2(pts){ if(pts.length<3) return 0; var s=0; var z=latLngToUtm(pts[0][0],pts[0][1]).zone; var u=pts.map(function(p){var q=latLngToUtm(p[0],p[1],z);return [q.E,q.N];}); for(var i=0;i<u.length;i++){var A=u[i],B=u[(i+1)%u.length]; s+=A[0]*B[1]-B[0]*A[1];} return Math.abs(s/2); }
 function _sigMapClick(e){
   if(_sig.couche&&_sig.couche.on){ _sigCoucheClickDraw(e); return; }
   if(_sig.mesure.on){
@@ -36081,7 +36278,7 @@ function sigPlanCadastralPDF(parcelleId){
   if(!bornes || bornes.length<3){ toast('Parcelle sans polygone (min. 3 bornes).','error'); return; }
 
   var doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  var W=210, soc=((DATA.params||{}).societe)||'MENKO / ImmoSuite';
+  var W=210, soc=((DATA.params||{}).societe)||'ImmoSuite ERP';
   /* Cartouche */
   doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(String(soc),105,14,{align:'center'});
   doc.setFontSize(15); doc.setDrawColor(40); doc.setLineWidth(0.6); doc.rect(60,18,90,9);
@@ -36169,7 +36366,7 @@ function sigRapportParcellaire(){
   if(!parcs.length){ toast('Aucune parcelle au portefeuille.','error'); return; }
   var geoParcs=parcs.map(function(p){ return {p:p,path:_sigParcellePath(p)}; }).filter(function(x){return x.path;});
   var doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  var W=297,H=210, soc=((DATA.params||{}).societe)||'MENKO / ImmoSuite';
+  var W=297,H=210, soc=((DATA.params||{}).societe)||'ImmoSuite ERP';
 
   // ── En-tête ──
   doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text(String(soc),14,14);
@@ -36597,7 +36794,7 @@ function _sigSimuRenderMetrics(){
     ['Nombre de lots', m.nbLots],
     ['Densité', m.densite.toFixed(1)+' lots/ha'],
     ['Surface vendable', ha(m.supVend)+' ('+(m.tauxVend*100).toFixed(1)+'%)'],
-    ['Surface cessible (réserves + verts)', ha(m.supVert)],
+    ['Réserves & espaces verts (non cessibles)', ha(m.supVert)],
     ['Emprise voiries (VRD)', ha(m.supVoirie)],
     ['Surface constructible (COS '+m.params.cos+')', ha(m.constructible)],
     ['Prix lot moyen', fmtF(Math.round(m.prixLotMoyen))+' FCFA']
@@ -36632,7 +36829,7 @@ function sigSimuPDF(){
   if(!(window.jspdf&&window.jspdf.jsPDF)){ toast('jsPDF indisponible.','error'); return; }
   var p=(DATA.parcelles||[]).find(function(x){return x.id===m.parcelleId;})||{};
   var doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  var soc=((DATA.params||{}).societe)||'MENKO / ImmoSuite';
+  var soc=((DATA.params||{}).societe)||'ImmoSuite ERP';
   doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(String(soc),105,14,{align:'center'});
   doc.setFontSize(14); doc.rect(50,18,110,9); doc.text('SIMULATION D\'AMÉNAGEMENT',105,24.3,{align:'center'});
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
@@ -40571,10 +40768,18 @@ async function genererBulletinsDepuisPointage() {
       primes:primePresence,
       transport:e.transport||PAIE_CI.transportDefaut,
       logement:e.logement||0,
-      heuresSupp:hSupp>0?majHSup:0,
       retenues:retenueAbsence,
       avances:0,
       jours:joursBull,
+      /* Modèle neuf (assiette calcPaieCI) : salaireAjuste = gagné du mois, HS et
+         prime déjà inclus → primesImpos/sursalaire/heuresSupp neutralisés pour
+         éviter tout double comptage. Parts et CMU depuis la fiche pour un ITS juste. */
+      salaireCategoriel:salaireAjuste,
+      sursalaire:0,
+      primesImpos:0,
+      tauxAnciennete:0,
+      parts:(typeof calcPartsFiscales==='function')?calcPartsFiscales(e.matrimonial,e.enfants):1,
+      cmuPersonnes:1+(parseInt(e.enfants)||0)+(e.matrimonial==='marie'?1:0),
       mode_remuneration:mode,
       detail_calcul:detail,
       source_pointage:true,
@@ -44021,19 +44226,10 @@ async function deleteActionMarketing(id){
 }
 
 /* ─── SEGMENTS CIBLES ────────────────────────────────── */
-var SEGMENTS_DEFAUT=[
-  {id:'seg_fonct',nom:'Fonctionnaires civils',taille:8000,revenu:450000,type_logement:'f3',canal:'terrain',zone:'Grand Abidjan',message:'Accédez à la propriété grâce à votre salaire garanti — conditions spéciales fonctionnaires',couleur:'var(--bleu)'},
-  {id:'seg_militaire',nom:'Forces de défense & sécurité',taille:3000,revenu:380000,type_logement:'f3',canal:'parrainage',zone:'Abidjan / intérieur',message:'Logement sécurisé et valorisant pour les héros de la nation',couleur:'var(--rouge)'},
-  {id:'seg_diaspora',nom:'Diaspora ivoirienne',taille:15000,revenu:1500000,type_logement:'villa',canal:'social_media',zone:'France, USA, Canada',message:'Investissez en Côte d\'Ivoire — logement haut standing pour votre retour',couleur:'var(--or)'},
-  {id:'seg_commercial',nom:'Commerçants & PME',taille:5000,revenu:800000,type_logement:'f4',canal:'evenement',zone:'Plateau, Adjamé, Marcory',message:'Un patrimoine immobilier pour sécuriser votre réussite',couleur:'var(--vert)'},
-  {id:'seg_retraite',nom:'Cadres & Retraités',taille:4000,revenu:600000,type_logement:'f3',canal:'parrainage',zone:'Cocody, Riviera',message:'Un nid douillet pour votre retraite méritée',couleur:'var(--violet)'},
-];
-
 function renderSegments(){
   var grid=document.getElementById('segments-grid');if(!grid)return;
-  // Fusion défaut + personnalisés
-  var custom=DATA.segments_marketing||[];
-  var all=((typeof DEMO_DATA!=='undefined'&&DEMO_DATA)?SEGMENTS_DEFAUT:[]).concat(custom);
+  // Segments personnalisés
+  var all=(DATA.segments_marketing||[]);
   var typeLabel={f2:'F2',f3:'F3',f4:'F4',villa:'Villa'};
   var canalIcon={terrain:'🚶',whatsapp:'📱',evenement:'🎪',parrainage:'🤝',social_media:'📲'};
 
@@ -44226,7 +44422,6 @@ function renderPlans(){renderPlansFull();}
 
 function renderConceptionsFull(){
   var grid=document.getElementById('conceptions-grid');if(!grid)return;
-  if(typeof seedConceptionMilitaris==='function'){ seedConceptionMilitaris().then(function(created){ if(created) renderConceptionsFull(); }); }
   var q=((document.getElementById('search-conceptions')||{}).value||'').toLowerCase();
   var prog=(document.getElementById('filter-conc-programme')||{}).value||'';
   var phase=(document.getElementById('filter-conc-phase')||{}).value||'';
@@ -44614,11 +44809,12 @@ async function libererGarantie(convId,montant){
     if(!confirm('⚠️ La réception définitive n\'est pas prononcée pour cette convention.\n\nLa retenue de garantie se libère normalement après la réception définitive et l\'expiration du délai de garantie. Libérer quand même ?')) return;
   }
   if(!confirm('Libérer '+fmtF(montant)+' FCFA de retenue de garantie ?\nÉcriture : Débit 4017 (dette de retenue) / Crédit trésorerie.')) return;
+  if(DATA.ecritures.some(function(e){ return e.id==='ecr_gar_'+convId; })){ toast('Retenue déjà libérée pour cette convention.','info'); return; }
   var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'Constructeur'};
   var cd=(DATA.params&&DATA.params.comptes_defaut)||{};
   var cptRetenue=requireCompteDefaut('retenue_garantie');
   var cptTreso=requireCompteDefaut('treso_banque');
-  var ecr={id:'ecr_gar_'+convId+'_'+Date.now(),ref:'GAR-'+conv.numero,date:today(),piece:'GAR/'+conv.numero,libelle:'Libération retenue de garantie — '+constr.raison_sociale,compte:cptRetenue,compte_debit:cptRetenue,compte_credit:cptTreso,montant:montant,type:'passif',mode:'virement',source:'garantie',convention_id:convId,created_at:today()};
+  var ecr={id:'ecr_gar_'+convId,ref:'GAR-'+conv.numero,date:today(),piece:'GAR/'+conv.numero,libelle:'Libération retenue de garantie — '+constr.raison_sociale,compte:cptRetenue,compte_debit:cptRetenue,compte_credit:cptTreso,montant:montant,type:'passif',mode:'virement',source:'garantie',convention_id:convId,created_at:today()};
   DATA.ecritures.push(ecr);await dbPut('ecritures',ecr);
   if(typeof syncToSupabase==='function')syncToSupabase('pi_ecritures',ecr);
   /* Marque les situations de la convention comme retenue libérée. */
@@ -44808,7 +45004,7 @@ async function genererCodeAcces(clientId) {
   delete client.mot_de_passe;
   dbPut('clients', client);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_clients', client);
-  toast('Code généré pour ' + client.nom + ' : ' + code, 'success');
+  toast('Code d\'accès généré pour ' + client.nom + ' — transmettez-le via l\'invitation.', 'success');
   /* Inviter le souscripteur (identifiant = dossier/tel + code + lien) */
   ouvrirInvitation({
     nom: (client.prenoms ? client.prenoms + ' ' : '') + client.nom,
@@ -44834,7 +45030,7 @@ async function genererCodeApporteur(apporteurId) {
   delete a.code_acces; delete a.mot_de_passe;
   await dbPut('apporteurs', a);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_apporteurs', a);
-  toast('Code apporteur généré : ' + code, 'success');
+  toast('Code apporteur généré — transmettez-le via l\'invitation.', 'success');
   ouvrirInvitation({
     nom: (a.prenoms ? a.prenoms + ' ' : '') + a.nom,
     login: a.email || a.tel,
@@ -46794,6 +46990,8 @@ startApp = async function() {
   verifierRappels();
   /* Vérification hebdomadaire des échéances */
   setTimeout(verifierEcheancesEtNotifier, 5000);
+  /* Connexion RH → messagerie : digest quotidien (congés en attente + contrats expirants) */
+  setTimeout(function(){ if (typeof rhNotifierEcheancesMessagerie === 'function') rhNotifierEcheancesMessagerie(); }, 8000);
 };
 
 /* ══════════════════════════════════════════════════════
@@ -47979,56 +48177,10 @@ function exporterICal() {
 }
 
 /* ─── Messagerie interne ──────────────────────────────── */
-async function chargerMessages() {
-  var msgs=await dbGetAll('messages');
-  if(msgs&&msgs.length) DATA.messages=msgs;
-  else DATA.messages=DATA.messages||[];
-  var convs=await dbGetAll('conversations');
-  if(convs&&convs.length) DATA.conversations=convs;
-  else DATA.conversations=DATA.conversations||[];
-  updateBadgeMessages();
-}
-
-function updateBadgeMessages() {
-  var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
-  var nonLus=(DATA.messages||[]).filter(function(m){return !m.lu&&m.expediteur_id!==userId;}).length;
-  var badge=document.getElementById('badge-messages');
-  if(badge){ badge.textContent=nonLus; badge.style.display=nonLus>0?'inline-flex':'none'; try{refreshGroupBadges();}catch(e){} }
-}
-
-function renderConversations() {
-  var userId=(APP.currentUser&&APP.currentUser.id)||'admin';
-  var convs=(DATA.conversations||[]).filter(function(c){
-    return Array.isArray(c.participants) && c.participants.indexOf(userId)>=0;
-  }).sort(function(a,b){
-    var lastA=(DATA.messages||[]).filter(function(m){return m.conversation_id===a.id;}).sort(function(x,y){return y.date.localeCompare(x.date);})[0];
-    var lastB=(DATA.messages||[]).filter(function(m){return m.conversation_id===b.id;}).sort(function(x,y){return y.date.localeCompare(x.date);})[0];
-    return (lastB?lastB.date:'').localeCompare(lastA?lastA.date:'');
-  });
-  var container=document.getElementById('liste-conversations');
-  if(!container) return;
-  if(!convs.length){ container.innerHTML='<div style="padding:16px;color:var(--blanc-dim);font-size:13px;">Aucune conversation.<br>Cliquez sur ✉️ pour démarrer.</div>'; return; }
-
-  container.innerHTML=convs.map(function(c){
-    var autres=c.participants.filter(function(p){return p!==userId;});
-    var dest=DATA.users.find(function(u){return u.id===autres[0]})||{nom:autres[0]||'?',role:''};
-    var msgs=(DATA.messages||[]).filter(function(m){return m.conversation_id===c.id;}).sort(function(a,b){return b.date.localeCompare(a.date);});
-    var last=msgs[0];
-    var nonLus=msgs.filter(function(m){return !m.lu&&m.expediteur_id!==userId;}).length;
-    return '<div onclick="chargerConversation(\''+c.id+'\')" style="padding:12px 16px;border-bottom:1px solid var(--bord);cursor:pointer;transition:background .15s;" onmouseenter="this.style.background=\'rgba(51,51,80,0.5)\'" onmouseleave="this.style.background=\'\'">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
-        +'<strong style="font-size:13px;">'+dest.nom+'</strong>'
-        +(nonLus>0?'<span style="background:var(--rouge);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:700;">'+nonLus+'</span>':'')
-      +'</div>'
-      +'<div style="font-size:11px;color:var(--blanc-dim);margin-top:2px;">'+(last?last.contenu.slice(0,40)+'…':'Nouvelle conversation')+'</div>'
-      +(last?'<div style="font-size:10px;color:var(--dim);">'+new Date(last.date).toLocaleString('fr-FR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})+'</div>':'')
-    +'</div>';
-  }).join('');
-}
-
-/* ─── FIX v1.1 : fonctions dupliquées supprimées ici.
-   Les versions complètes (avec type:'direct', MSG.activeConvId, pièces jointes)
-   sont définies plus haut dans le bloc Messagerie principal. ─── */
+/* FIX v1.2 : chargerMessages / updateBadgeMessages / renderConversations
+   doublons morts SUPPRIMÉS. Versions officielles définies plus bas dans le
+   bloc « MODULE MESSAGERIE v2 » (MSG.activeConvId, direct+groupes, pièces
+   jointes, échappement XSS). Ne pas redéfinir ici. */
 
 /* ─── Patch goTo ──────────────────────────────────────── */
 var _origGoToCollab = goTo;
@@ -50846,6 +50998,17 @@ async function convertirEnSouscripteur() {
     mode_livraison: _leadObj.mode_livraison || ''
   };
   await saveLead();
+  /* Clôture du lead : passe en « Convertis », marqué converti + daté — évite le
+     double-comptage (prospect + client) et toute reconversion. */
+  var _lid = _leadObj && _leadObj.id;
+  if (_lid) {
+    var _ld = (DATA.leads||[]).find(function(x){ return x.id === _lid; });
+    if (_ld) {
+      _ld.stade = 'reservation'; _ld.statut = 'converti'; _ld.date_conversion = today();
+      await dbPut('leads', _ld);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_leads', _ld);
+    }
+  }
   closeModal('modal-lead');
   setTimeout(function() {
     goTo('clients');
@@ -51189,7 +51352,6 @@ async function chargerDQE() {
   if (typeof edsLoadRessources==='function') await edsLoadRessources();
   if (typeof calcMatSeedPrixManquants==='function') await calcMatSeedPrixManquants();
   if (typeof dqeUnifierPrix==='function') await dqeUnifierPrix();
-  if (typeof seedConceptionMilitaris==='function') await seedConceptionMilitaris();
   if (typeof dqePopulateTypeLogement==='function') dqePopulateTypeLogement();
   chargerNomenclature();
   chargerPrix();
@@ -51255,7 +51417,7 @@ function chargerNomenclature() {
   /* Récap */
   var resume = document.getElementById('resume-dqe');
   if (resume) {
-    var typeLabels = { F2:'F2', F3:'F3', F4:'F4', VILLA:'Villa', 'Appartement 3P (MILITARIS)':'Appartement 3P' };
+    var typeLabels = { F2:'F2', F3:'F3', F4:'F4', VILLA:'Villa' };
     var _co = (typeof dqeCoef==='function') ? dqeCoef() : {fg:10,marge:20,tva:18};
     var debourse = total;
     var fg = debourse * _co.fg/100;
@@ -59211,11 +59373,12 @@ function msgRenderList(elId, convs, userId, isGroupe) {
       : (isGroupe ? 'Groupe créé' : 'Nouvelle conversation');
     var lastTime = last ? msgFormatTime(last.date) : '';
 
+    var _nomE = msgEscape(nom), _prevE = msgEscape(lastPreview), _avE = msgEscape(avatarContent);
     return '<div class="msg-conv-item'+(isActive?' active':'')+'" onclick="chargerConversation(\''+c.id+'\')">'
-      +'<div class="msg-conv-avatar'+(isGroupe?' groupe':'')+'" style="background:'+avatarColor+';">'+avatarContent+'</div>'
+      +'<div class="msg-conv-avatar'+(isGroupe?' groupe':'')+'" style="background:'+avatarColor+';">'+_avE+'</div>'
       +'<div class="msg-conv-info">'
-        +'<div class="msg-conv-nom">'+(nonLus>0?'<strong>'+nom+'</strong>':nom)+'</div>'
-        +'<div class="msg-conv-preview">'+(nonLus>0?'<strong>'+lastPreview+'</strong>':lastPreview)+'</div>'
+        +'<div class="msg-conv-nom">'+(nonLus>0?'<strong>'+_nomE+'</strong>':_nomE)+'</div>'
+        +'<div class="msg-conv-preview">'+(nonLus>0?'<strong>'+_prevE+'</strong>':_prevE)+'</div>'
       +'</div>'
       +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
         +lastTime
@@ -59289,7 +59452,7 @@ async function chargerConversation(convId) {
   renderConversations();
 }
 
-function msgRenderMessages(convId, userId, isGroupe, conv) {
+async function msgRenderMessages(convId, userId, isGroupe, conv) {
   var msgs = (DATA.messages||[]).filter(function(m){return m.conversation_id===convId;}).sort(function(a,b){return a.date.localeCompare(b.date);});
   var el = document.getElementById('messages-liste');
   if (!el) return;
@@ -59297,6 +59460,13 @@ function msgRenderMessages(convId, userId, isGroupe, conv) {
   if (!msgs.length) {
     el.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--dim);">Aucun message. Envoyez le premier ! 👋</div>';
     return;
+  }
+
+  /* Pièces jointes sans base64 local (venues du cloud) → URL signée Storage */
+  var _aResoudre = [];
+  msgs.forEach(function(m){ (m.fichiers||[]).forEach(function(f){ if (f && !f.data && f.path && !f._url) _aResoudre.push(f); }); });
+  if (_aResoudre.length && typeof msgSignedUrl === 'function') {
+    try { await Promise.all(_aResoudre.map(function(f){ return msgSignedUrl(f.bucket, f.path).then(function(u){ f._url = u; }).catch(function(){ f._url = ''; }); })); } catch(e){}
   }
 
   var html = '';
@@ -59325,9 +59495,10 @@ function msgRenderMessages(convId, userId, isGroupe, conv) {
     var fichiersHtml = '';
     if (m.fichiers && m.fichiers.length) {
       fichiersHtml = m.fichiers.map(function(f) {
+        var _src = f.data || f._url || '';
         if (f.type && f.type.startsWith('image/')) {
           return '<div class="msg-attach-item">'
-            +'<img class="msg-attach-img" src="'+f.data+'" alt="'+f.nom+'"'
+            +'<img class="msg-attach-img" src="'+_src+'" alt="'+msgEscape(f.nom)+'"'
             +' onclick="msgOuvrirImageLb(\''+f.id+'\',\''+m.id+'\')" loading="lazy">'
             +'</div>';
         }
@@ -59337,10 +59508,10 @@ function msgRenderMessages(convId, userId, isGroupe, conv) {
           +'<div class="msg-attach-file">'
           +'<span class="msg-attach-file-icon">'+icone+'</span>'
           +'<div class="msg-attach-file-info">'
-            +'<div class="msg-attach-file-nom">'+f.nom+'</div>'
+            +'<div class="msg-attach-file-nom">'+msgEscape(f.nom)+'</div>'
             +'<div class="msg-attach-file-size">'+taille+'</div>'
           +'</div>'
-          +'<a href="'+f.data+'" download="'+f.nom+'" class="btn btn-secondary btn-sm btn-icon" style="font-size:11px;flex-shrink:0;">⬇</a>'
+          +(_src?'<a href="'+_src+'" download="'+msgEscape(f.nom)+'" target="_blank" class="btn btn-secondary btn-sm btn-icon" style="font-size:11px;flex-shrink:0;">⬇</a>':'<span style="font-size:10px;color:var(--dim);">indispo.</span>')
           +'</div></div>';
       }).join('');
     }
@@ -59350,7 +59521,7 @@ function msgRenderMessages(convId, userId, isGroupe, conv) {
         :'<div class="msg-bubble-avatar" style="background:'+expColor+';">'+msgAvatarInitiales(exp)+'</div>')
       +'<div>'
       +'<div class="msg-bubble">'
-      +(isGroupe&&!isMine?'<span class="msg-bubble-sender">'+exp+'</span>':'')
+      +(isGroupe&&!isMine?'<span class="msg-bubble-sender">'+msgEscape(exp)+'</span>':'')
       +(m.contenu?'<div class="msg-bubble-text">'+msgEscape(m.contenu)+'</div>':'')
       +fichiersHtml
       +'</div>'
@@ -59362,12 +59533,13 @@ function msgRenderMessages(convId, userId, isGroupe, conv) {
       +'</div>';
   });
 
+  var _stick = (el.scrollHeight - el.scrollTop - el.clientHeight) < 60;
   el.innerHTML = html;
-  el.scrollTop = el.scrollHeight;
+  if (_stick) el.scrollTop = el.scrollHeight;
 }
 
 function msgEscape(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 /* ────────────────────────────────────────────
@@ -59380,28 +59552,67 @@ function msgStartPolling() {
   if (!SB.url || !SB.key) return;          // pas de cloud configuré → pas de rafraîchissement
   MSG._pollTimer = setInterval(msgPollNouveaux, 12000);
 }
+/* ── Pull filtré côté serveur (Edge Function messagerie-pull) ──────────────
+   Récupère UNIQUEMENT les conversations dont l'utilisateur est membre et
+   leurs messages. Corrige la fuite : plus de « select=* » sur tout le tenant.
+   Dégradation propre : si la fonction n'est pas déployée / échoue, on repasse
+   automatiquement au pull direct (msgPollNouveaux fallback) pour la session. */
+async function msgPullFiltre(since) {
+  if (!SB.url || !SB.key) return null;
+  if (MSG._pullFnUp === false) {
+    /* Re-sonder au plus toutes les 5 min après un échec */
+    if (Date.now() - (MSG._pullFnSince || 0) < 5 * 60 * 1000) return null;
+  }
+  var userId = (APP.currentUser && APP.currentUser.id) || 'admin';
+  try {
+    var resp = await fetch(SB.url + '/functions/v1/messagerie-pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key },
+      body: JSON.stringify({ user_id: userId, since: since, token: (DATA.params && DATA.params.messagerie_session_token) || '' })
+    });
+    if (!resp.ok) { MSG._pullFnUp = false; MSG._pullFnSince = Date.now(); return null; }
+    var data = await resp.json();
+    MSG._pullFnUp = true;
+    return { conversations: data.conversations || [], messages: data.messages || [] };
+  } catch (e) {
+    MSG._pullFnUp = false; MSG._pullFnSince = Date.now();
+    return null;
+  }
+}
+
 async function msgPollNouveaux() {
   if (!SB.url || !SB.key || !navigator.onLine) return;
   var since = new Date(Date.now() - 60000).toISOString();   // 60 s glissantes (chevauchement = aucun manque)
   try {
     var changed = false, convChanged = false;
-    var rows = await sbFetch('pi_messages?updated_at=gt.' + encodeURIComponent(since) + '&select=*&order=updated_at.asc', 'GET');
-    if (rows && rows.length) {
+    var incomingMsgs = [], incomingConvs = [];
+
+    /* Voie prioritaire : pull filtré serveur (confidentialité). */
+    var pulled = await msgPullFiltre(since);
+    if (pulled) {
+      incomingMsgs = pulled.messages || [];
+      incomingConvs = pulled.conversations || [];
+    } else {
+      /* Fallback : pull direct PostgREST (nécessite RLS participant pour être sûr). */
+      var rows = await sbFetch('pi_messages?updated_at=gt.' + encodeURIComponent(since) + '&select=*&order=updated_at.asc', 'GET');
+      if (rows && rows.length) incomingMsgs = rows.map(function(row){ return _supaUnwrap('pi_messages', row); });
+      var crows = await sbFetch('pi_conversations?updated_at=gt.' + encodeURIComponent(since) + '&select=*&order=updated_at.asc', 'GET');
+      if (crows && crows.length) incomingConvs = crows.map(function(row){ return _supaUnwrap('pi_conversations', row); });
+    }
+
+    if (incomingMsgs.length) {
       DATA.messages = DATA.messages || [];
       var byId = {}; DATA.messages.forEach(function(x){ byId[x.id] = x; });
-      rows.forEach(function(row){
-        var m = _supaUnwrap('pi_messages', row);
+      incomingMsgs.forEach(function(m){
         if (!m || !m.id) return;
         if (!byId[m.id] || _ts(m) >= _ts(byId[m.id])) { byId[m.id] = m; try { dbPut('messages', m); } catch(e){} changed = true; }
       });
       DATA.messages = Object.keys(byId).map(function(k){ return byId[k]; });
     }
-    var crows = await sbFetch('pi_conversations?updated_at=gt.' + encodeURIComponent(since) + '&select=*&order=updated_at.asc', 'GET');
-    if (crows && crows.length) {
+    if (incomingConvs.length) {
       DATA.conversations = DATA.conversations || [];
       var cById = {}; DATA.conversations.forEach(function(x){ cById[x.id] = x; });
-      crows.forEach(function(row){
-        var c = _supaUnwrap('pi_conversations', row);
+      incomingConvs.forEach(function(c){
         if (!c || !c.id) return;
         if (!cById[c.id] || _ts(c) >= _ts(cById[c.id])) { cById[c.id] = c; try { dbPut('conversations', c); } catch(e){} convChanged = true; }
       });
@@ -59415,6 +59626,16 @@ async function msgPollNouveaux() {
         if (typeof msgRenderMessages === 'function') msgRenderMessages(MSG.activeConvId, u, conv && conv.type === 'groupe', conv);
       }
       if (typeof updateBadgeMessages === 'function') updateBadgeMessages();
+      /* Notifier uniquement les messages ENTRANTS d'un autre utilisateur (jamais système ni soi-même) */
+      if (changed && incomingMsgs.length) {
+        var _moi = (APP.currentUser && APP.currentUser.id) || 'admin';
+        incomingMsgs.forEach(function(mm){
+          if (mm && mm.expediteur_id !== _moi && mm.expediteur_id !== 'system' && !mm.lu) {
+            var exp = ((DATA.users||[]).find(function(x){return x.id===mm.expediteur_id;})||{}).nom || 'Message';
+            notifierTitre('📩 ' + exp, { body:(mm.contenu||'📎 Fichier').slice(0,60) });
+          }
+        });
+      }
     }
   } catch(e) {}
 }
@@ -59447,7 +59668,8 @@ async function envoyerMessage() {
   var conv = (DATA.conversations||[]).find(function(c){return c.id===convId;});
   msgRenderMessages(convId, userId, conv&&conv.type==='groupe', conv);
   renderConversations();
-  notifierTitre('📩 Nouveau message', {body:(contenu||'📎 Fichier').slice(0,60)});
+  /* Pas de notifierTitre ici : ne jamais notifier l'expéditeur de son propre message.
+     La notification des messages entrants est gérée dans msgPollNouveaux. */
 }
 
 /* ────────────────────────────────────────────
@@ -59501,7 +59723,7 @@ function msgRenderAttachPreview() {
     var taille = f.taille>1048576?(f.taille/1048576).toFixed(1)+' Mo':Math.round(f.taille/1024)+' Ko';
     return '<div class="msg-attach-chip">'
       +(isImg?'<img src="'+f.data+'" style="width:24px;height:24px;border-radius:3px;object-fit:cover;">':icone)
-      +'<span style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+f.nom+'</span>'
+      +'<span style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+msgEscape(f.nom)+'</span>'
       +'<span style="color:var(--dim);font-size:9px;">'+taille+'</span>'
       +'<span class="chip-del" onclick="msgRetirerFichier(\''+f.id+'\')">×</span>'
       +'</div>';
@@ -59531,7 +59753,7 @@ function msgRenderModalFiles() {
   if (!el) return;
   el.innerHTML = MSG.modalFiles.map(function(f){
     var icone = f.type&&f.type.startsWith('image/')?'🖼️':(f.type==='application/pdf'?'📕':'📎');
-    return '<div class="msg-attach-chip">'+icone+'<span>'+f.nom+'</span>'
+    return '<div class="msg-attach-chip">'+icone+'<span>'+msgEscape(f.nom)+'</span>'
       +'<span class="chip-del" onclick="MSG.modalFiles=MSG.modalFiles.filter(function(x){return x.id!==\''+f.id+'\';});msgRenderModalFiles();">×</span></div>';
   }).join('');
 }
@@ -59673,6 +59895,7 @@ async function msgCreerGroupe() {
     if (g) {
       g.nom=nom; g.emoji=emoji; g.description=desc; g.participants=membres;
       await dbPut('conversations', g);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', g);
       toast('✅ Groupe modifié.','success');
     }
   } else {
@@ -59684,6 +59907,7 @@ async function msgCreerGroupe() {
     };
     DATA.conversations.push(groupe);
     await dbPut('conversations', groupe);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', groupe);
     /* Message système */
     var sysmsg = {
       id:uid(), conversation_id:groupe.id, expediteur_id:'system',
@@ -59692,6 +59916,7 @@ async function msgCreerGroupe() {
     };
     DATA.messages.push(sysmsg);
     await dbPut('messages', sysmsg);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_messages', sysmsg);
     closeModal('modal-nouveau-groupe');
     MSG.activeTab='groupes';
     msgSwitchTab('groupes');
@@ -59723,12 +59948,12 @@ function msgVoirInfos() {
       var isAdmin = uid===conv.admin_id;
       return '<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--bord);">'
         +'<div class="grp-membre-avatar" style="background:'+msgAvatarColor(uid)+';">'+msgAvatarInitiales(u.nom)+'</div>'
-        +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+u.nom+'</div>'
-        +'<div style="font-size:10px;color:var(--dim);">'+u.role+(isAdmin?' · Admin':'')+'</div></div>'
+        +'<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+msgEscape(u.nom)+'</div>'
+        +'<div style="font-size:10px;color:var(--dim);">'+msgEscape(u.role)+(isAdmin?' · Admin':'')+'</div></div>'
         +'</div>';
     }).join('');
     content.innerHTML = '<div style="padding:12px 14px;border-bottom:1px solid var(--bord);">'
-      +'<div style="font-size:13px;color:var(--dim);">'+( conv.description||'Aucune description')+'</div>'
+      +'<div style="font-size:13px;color:var(--dim);">'+( conv.description?msgEscape(conv.description):'Aucune description')+'</div>'
       +'<div style="margin-top:8px;display:flex;gap:6px;">'
       +'<button class="btn btn-secondary btn-sm" onclick="msgOuvrirNouveauGroupe(\''+conv.id+'\')">✏️ Modifier</button>'
       +'</div></div>'
@@ -59741,9 +59966,9 @@ function msgVoirInfos() {
     titre.textContent = 'ℹ️ '+dest.nom;
     content.innerHTML = '<div style="text-align:center;padding:20px;">'
       +'<div class="grp-membre-avatar" style="background:'+msgAvatarColor(autreId)+';width:56px;height:56px;font-size:22px;margin:0 auto 10px;">'+msgAvatarInitiales(dest.nom)+'</div>'
-      +'<div style="font-weight:700;font-size:16px;">'+dest.nom+'</div>'
-      +'<div style="color:var(--dim);font-size:13px;margin-top:4px;">'+dest.role+'</div>'
-      +(dest.email?'<div style="color:var(--bleu);font-size:12px;margin-top:4px;">'+dest.email+'</div>':'')
+      +'<div style="font-weight:700;font-size:16px;">'+msgEscape(dest.nom)+'</div>'
+      +'<div style="color:var(--dim);font-size:13px;margin-top:4px;">'+msgEscape(dest.role)+'</div>'
+      +(dest.email?'<div style="color:var(--bleu);font-size:12px;margin-top:4px;">'+msgEscape(dest.email)+'</div>':'')
       +'</div>'
       +'<div style="padding:0 14px;"><button class="btn btn-danger btn-sm" onclick="msgSupprimerConversation(\''+conv.id+'\')">🗑 Supprimer la conversation</button></div>';
   }
@@ -59762,8 +59987,9 @@ async function msgQuitterGroupe() {
   var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
   conv.participants = (conv.participants||[]).filter(function(p){return p!==userId;});
   await dbPut('conversations',conv);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', conv);
   MSG.activeConvId=null;
-  closeModal('modal-groupe-info');
+  msgFermerInfos();
   msgResetChat();
   renderConversations();
   toast('Vous avez quitté le groupe.','info');
@@ -59802,13 +60028,98 @@ function msgOuvrirImageLb(fileId, msgId) {
   if (!m||!m.fichiers) return;
   var imgs = m.fichiers.filter(function(f){ return f.type&&f.type.startsWith('image/'); });
   var idx  = imgs.findIndex(function(f){ return f.id===fileId; });
-  PLAN_STATE._lbVues = imgs.map(function(f){ return { data:f.data, type:f.type, angle_id:'general', label_custom:f.nom }; });
+  PLAN_STATE._lbVues = imgs.map(function(f){ return { data:(f.data||f._url||''), type:f.type, angle_id:'general', label_custom:f.nom }; });
   PLAN_STATE.lbIdx = Math.max(0,idx);
   var lb = document.getElementById('plan-lightbox');
   if (lb) { lb.style.display='flex'; lb.classList.add('open'); }
   planUpdateLightbox();
   document.addEventListener('keydown', planLbKeyHandler);
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   PIÈCES JOINTES → SUPABASE STORAGE (bucket privé + URL signée)
+   Objectif : ne plus stocker le base64 dans pi_messages (lignes géantes,
+   Realtime lourd). Le base64 reste en LOCAL (IndexedDB) pour l'affichage
+   hors-ligne ; à la synchro, chaque fichier est téléversé dans Storage et la
+   copie cloud ne conserve que { path, bucket } (data retiré). Les autres
+   postes résolvent une URL signée à l'affichage. Dégradation propre : si le
+   téléversement échoue, on synchronise le base64 comme avant (aucune perte).
+   ════════════════════════════════════════════════════════════════════════ */
+var MSG_PJ_BUCKET = 'messagerie-pj';
+var _msgUrlCache = {};
+
+function _b64ToBytes(dataUrl) {
+  var b64 = String(dataUrl || '').split(',').pop();
+  var bin = atob(b64), len = bin.length, bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+function _msgSafeName(n) { return String(n || 'fichier').replace(/[^\w.\-]+/g, '_').slice(-80); }
+
+async function msgUploadFichier(convId, msgId, f) {
+  if (!SB.url || !SB.key || !f || !f.data || f.path) return f && f.path ? f.path : null;
+  var path = (convId || 'divers') + '/' + (msgId || 'm') + '/' + (f.id || ('f' + Date.now())) + '_' + _msgSafeName(f.nom);
+  var resp = await fetch(SB.url + '/storage/v1/object/' + MSG_PJ_BUCKET + '/' + encodeURI(path), {
+    method: 'POST',
+    headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': f.type || 'application/octet-stream', 'x-upsert': 'true' },
+    body: _b64ToBytes(f.data)
+  });
+  if (!resp.ok) throw new Error('upload ' + resp.status);
+  return path;
+}
+
+/* Téléverse les fichiers d'un message, renvoie une COPIE cloud sans base64. */
+async function msgFichiersVersStorage(msg) {
+  var clone = JSON.parse(JSON.stringify(msg));
+  var mute = false;
+  var fichiers = msg.fichiers || [];
+  for (var i = 0; i < fichiers.length; i++) {
+    var f = fichiers[i];
+    if (f && f.data && !f.path) {
+      var p = await msgUploadFichier(msg.conversation_id, msg.id, f);
+      if (p) { f.path = p; f.bucket = MSG_PJ_BUCKET; clone.fichiers[i].path = p; clone.fichiers[i].bucket = MSG_PJ_BUCKET; mute = true; }
+    }
+  }
+  (clone.fichiers || []).forEach(function(cf) { if (cf.path) delete cf.data; }); /* cloud : métadonnées + chemin uniquement */
+  if (mute) { try { await dbPut('messages', msg); } catch (e) {} } /* persiste les chemins localement, garde le base64 */
+  return clone;
+}
+
+/* URL signée (cache 1 h, renouvelée avant expiration). */
+async function msgSignedUrl(bucket, path) {
+  if (!SB.url || !SB.key || !path) return '';
+  bucket = bucket || MSG_PJ_BUCKET;
+  var key = bucket + '/' + path, c = _msgUrlCache[key];
+  if (c && c.exp > Date.now() + 30000) return c.url;
+  try {
+    var resp = await fetch(SB.url + '/storage/v1/object/sign/' + bucket + '/' + encodeURI(path), {
+      method: 'POST',
+      headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 3600 })
+    });
+    if (!resp.ok) return '';
+    var j = await resp.json();
+    var url = SB.url + '/storage/v1' + (j.signedURL || j.signedUrl || '');
+    _msgUrlCache[key] = { url: url, exp: Date.now() + 3600 * 1000 };
+    return url;
+  } catch (e) { return ''; }
+}
+
+/* Wrapper syncToSupabase : déporte le base64 des pi_messages vers Storage.
+   Placé APRÈS le wrapper Realtime → englobe tout (chat, RH, caisse, pointage). */
+(function () {
+  if (typeof syncToSupabase !== 'function') return;
+  var _origSyncPJ = syncToSupabase;
+  syncToSupabase = async function (table, obj, opts) {
+    if (table === 'pi_messages' && obj && obj.fichiers && obj.fichiers.length && SB.url && SB.key) {
+      try {
+        var cloud = await msgFichiersVersStorage(obj);
+        return await _origSyncPJ.call(this, table, cloud, opts);
+      } catch (e) { /* échec upload → repli base64 intégral */ }
+    }
+    return await _origSyncPJ.apply(this, arguments);
+  };
+})();
 
 /* ────────────────────────────────────────────
    OVERRIDE chargerMessages + updateBadgeMessages
@@ -59825,9 +60136,9 @@ async function chargerMessages() {
 
 function updateBadgeMessages() {
   var userId = (APP.currentUser&&APP.currentUser.id)||'admin';
-  var nonLus = (DATA.messages||[]).filter(function(m){ return !m.lu&&m.expediteur_id!==userId; }).length;
+  var nonLus = (DATA.messages||[]).filter(function(m){ return !m.lu&&m.expediteur_id!==userId&&m.expediteur_id!=='system'; }).length;
   var badge = document.getElementById('badge-messages');
-  if (badge) { badge.textContent=nonLus; badge.style.display=nonLus>0?'inline-flex':'none'; }
+  if (badge) { badge.textContent=nonLus; badge.style.display=nonLus>0?'inline-flex':'none'; try{refreshGroupBadges();}catch(e){} }
 }
 
 /* FIN MODULE MESSAGERIE v2 */
@@ -61228,6 +61539,218 @@ var CONGE_STATUTS = {
   annule:     { label: 'Annulé', badge: 'badge-neutre' }
 };
 
+/* ══════════════════════════════════════════════════════════════════════════
+   PONT RH → MESSAGERIE INTERNE
+   Même mécanisme que pointage/caisse : une conversation de groupe dédiée par
+   flux RH (clé de params), créée une fois puis réutilisée. Destinataires par
+   défaut = admins + validateurs, ou DATA.params.<clé>_destinataires.
+   Peut aussi adresser un message direct à l'employé s'il possède un compte
+   utilisateur (correspondance par email ou matricule).
+   ══════════════════════════════════════════════════════════════════════════ */
+function rhMsgDestinatairesDefaut() {
+  return (DATA.users || []).filter(function(u){ return u.role === 'admin' || u.role === 'validateur'; }).map(function(u){ return u.id; });
+}
+
+function _rhEmpNomComplet(emp) {
+  if (!emp) return '?';
+  return ((((emp.prenoms ? emp.prenoms + ' ' : '') + (emp.nom || '')).trim()) || emp.matricule || '?');
+}
+
+/* Retrouve le compte utilisateur (DATA.users) d'un employé : email puis matricule. */
+function rhEmployeVersUser(emp) {
+  if (!emp) return null;
+  var mail = (emp.email || '').trim().toLowerCase();
+  var u = mail ? (DATA.users || []).find(function(x){ return (x.email || '').trim().toLowerCase() === mail; }) : null;
+  if (!u && emp.matricule) u = (DATA.users || []).find(function(x){ return x.matricule && String(x.matricule) === String(emp.matricule); });
+  return u || null;
+}
+
+async function rhMsgGetOrCreateConversation(convKey, nom, emoji, description) {
+  var userId = (APP.currentUser && APP.currentUser.id) || 'system';
+  if (!DATA.params) DATA.params = {};
+  var destCfg = DATA.params[convKey + '_destinataires'];
+  var idKey   = convKey + '_conversation_id';
+  var dest = (destCfg && destCfg.length) ? destCfg : rhMsgDestinatairesDefaut();
+  var membres = [userId].concat(dest).filter(function(v,i,a){ return v && a.indexOf(v) === i; });
+
+  var conv = DATA.params[idKey] ? (DATA.conversations || []).find(function(x){ return x.id === DATA.params[idKey]; }) : null;
+  if (conv) {
+    var manquants = membres.filter(function(m){ return conv.participants.indexOf(m) < 0; });
+    if (manquants.length) {
+      conv.participants = conv.participants.concat(manquants);
+      await dbPut('conversations', conv);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', conv);
+    }
+    return conv;
+  }
+  if (membres.length < 2) return null; /* aucun destinataire (admin/validateur) configuré */
+
+  conv = {
+    id: uid(), type: 'groupe', nom: nom, emoji: emoji, description: description,
+    participants: membres, admin_id: userId, date_creation: new Date().toISOString()
+  };
+  DATA.conversations.push(conv);
+  await dbPut('conversations', conv);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', conv);
+  DATA.params.id = 'main';
+  DATA.params[idKey] = conv.id;
+  await dbPut('params', DATA.params);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+  return conv;
+}
+
+/* Conversation directe (1-à-1) avec un utilisateur, réutilisée si existante. */
+async function rhMsgGetOrCreateDirect(destUserId) {
+  var moi = (APP.currentUser && APP.currentUser.id) || 'system';
+  if (!destUserId || destUserId === moi) return null;
+  var conv = (DATA.conversations || []).find(function(c){
+    return (!c.type || c.type === 'direct') && Array.isArray(c.participants) && c.participants.length === 2
+      && c.participants.indexOf(moi) >= 0 && c.participants.indexOf(destUserId) >= 0;
+  });
+  if (!conv) {
+    conv = { id: uid(), type: 'direct', participants: [moi, destUserId].sort(), date_creation: new Date().toISOString() };
+    DATA.conversations.push(conv);
+    await dbPut('conversations', conv);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_conversations', conv);
+  }
+  return conv;
+}
+
+async function _rhMsgPoster(conv, texte, fichiers) {
+  if (!conv) return false;
+  var msg = {
+    id: uid(), conversation_id: conv.id,
+    expediteur_id: (APP.currentUser && APP.currentUser.id) || 'system',
+    contenu: texte, date: new Date().toISOString(), lu: false, fichiers: fichiers || []
+  };
+  DATA.messages = DATA.messages || [];
+  DATA.messages.push(msg);
+  await dbPut('messages', msg);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_messages', msg);
+  if (typeof renderConversations === 'function') renderConversations();
+  if (typeof updateBadgeMessages === 'function') updateBadgeMessages();
+  return true;
+}
+
+/* Publie un message dans le groupe RH « Congés & Personnel ». */
+async function rhMsgCongesGroupe(texte, fichiers) {
+  var conv = await rhMsgGetOrCreateConversation('rh_conges', '🌴 RH — Congés & Personnel', '🌴',
+    'Demandes de congés, décisions et alertes contrats transmises automatiquement.');
+  return await _rhMsgPoster(conv, texte, fichiers);
+}
+
+/* Adresse un message direct à l'employé s'il a un compte utilisateur. */
+async function rhMsgDirectEmploye(emp, texte, fichiers) {
+  var u = rhEmployeVersUser(emp);
+  if (!u) return false;
+  var conv = await rhMsgGetOrCreateDirect(u.id);
+  if (!conv) return false;
+  return await _rhMsgPoster(conv, texte, fichiers);
+}
+
+/* Publie un message dans le groupe RH « Paie & Comptabilité ». */
+async function rhMsgPaieGroupe(texte, fichiers) {
+  var conv = await rhMsgGetOrCreateConversation('rh_paie', '💰 RH — Paie & Comptabilité', '💰',
+    'Comptabilisation de paie et notifications de bulletins transmises automatiquement.');
+  return await _rhMsgPoster(conv, texte, fichiers);
+}
+
+/* ── Pont congés → pointage ──────────────────────────────────────────────
+   Un congé APPROUVÉ pré-remplit le pointage sur sa période (hors week-ends)
+   avec le statut adéquat, pour que la paie proratise correctement :
+     annuel → C (congé payé)   maladie/maternité/paternité → AT (arrêt justifié)
+     sans solde → A (retenue)  autre → C
+   Les pointages ainsi créés sont marqués [CG:<id>] dans les notes, ce qui
+   permet de les retirer si le congé est refusé/supprimé. On n'écrase JAMAIS
+   un pointage réel saisi manuellement (présence/retard). */
+function congeStatutPointage(type) {
+  return type === 'sans_solde' ? 'A'
+    : (type === 'maladie' || type === 'maternite' || type === 'paternite') ? 'AT'
+    : 'C';
+}
+
+async function rhCongeAppliquerPointage(cg) {
+  if (!cg || cg.statut !== 'approuve' || !cg.date_debut || !cg.date_fin) return 0;
+  var statut = congeStatutPointage(cg.type);
+  var tag = '[CG:' + cg.id + ']';
+  var d = new Date(cg.date_debut), fin = new Date(cg.date_fin);
+  if (isNaN(d.getTime()) || isNaN(fin.getTime())) return 0;
+  DATA.pointages = DATA.pointages || [];
+  var n = 0;
+  for (; d <= fin; d.setDate(d.getDate() + 1)) {
+    var dow = d.getDay();
+    if (dow === 0 || dow === 6) continue; /* week-ends non pointés */
+    var dateStr = d.toISOString().slice(0, 10);
+    var existant = DATA.pointages.find(function(p){ return p.employe_id === cg.employe_id && p.date === dateStr; });
+    /* Ne pas écraser une présence réelle ; ne réécrire que si vide ou déjà issu d'un congé */
+    if (existant && !(existant.notes && existant.notes.indexOf('[CG:') === 0)) continue;
+    var pt = {
+      id: 'pt_' + cg.employe_id + '_' + dateStr.replace(/-/g, ''),
+      employe_id: cg.employe_id, date: dateStr, statut: statut,
+      heure_entree: '', heure_sortie: '', pause: 0, heures_supp: 0,
+      chantier_id: null, tache: '', justifie: '1',
+      notes: tag + ' ' + (CONGE_TYPES[cg.type] ? CONGE_TYPES[cg.type].label : cg.type),
+      heures_travaillees: 0, cout_mo: 0,
+      created_at: new Date().toISOString().slice(0, 10)
+    };
+    var idx = DATA.pointages.findIndex(function(p){ return p.employe_id === cg.employe_id && p.date === dateStr; });
+    if (idx >= 0) DATA.pointages[idx] = pt; else DATA.pointages.push(pt);
+    await dbPut('pointages', pt);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_pointages', pt);
+    n++;
+  }
+  return n;
+}
+
+async function rhCongeRetirerPointage(cg) {
+  if (!cg) return 0;
+  var tag = '[CG:' + cg.id + ']';
+  var aRetirer = (DATA.pointages || []).filter(function(p){ return p.employe_id === cg.employe_id && p.notes && p.notes.indexOf(tag) === 0; });
+  for (var i = 0; i < aRetirer.length; i++) {
+    try { await deleteRecord('pointages', aRetirer[i].id, { skipIntegrity: true }); } catch (e) {}
+  }
+  return aRetirer.length;
+}
+
+/* Digest quotidien (dédup localStorage) : congés en attente + contrats expirant. */
+async function rhNotifierEcheancesMessagerie() {
+  try {
+    var jour = today();
+    if (localStorage.getItem('rh_msg_digest_jour') === jour) return; /* déjà envoyé aujourd'hui */
+
+    var idxEmp = {}; (DATA.employes || []).forEach(function(e){ idxEmp[e.id] = e; });
+
+    var enAttente = (DATA.conges_rh || []).filter(function(c){ return c.statut === 'en_attente'; });
+    var in30 = new Date(); in30.setDate(in30.getDate() + 30);
+    var auj = new Date(); auj.setHours(0,0,0,0);
+    var contratsExp = (DATA.employes || []).filter(function(e){
+      if (e.statut !== 'actif' || !e.date_fin) return false;
+      var d = new Date(e.date_fin);
+      return d >= auj && d <= in30;
+    }).sort(function(a,b){ return (a.date_fin || '').localeCompare(b.date_fin || ''); });
+
+    if (!enAttente.length && !contratsExp.length) { localStorage.setItem('rh_msg_digest_jour', jour); return; }
+
+    var lignes = ['📊 Point RH du ' + new Date().toLocaleDateString('fr-FR')];
+    if (enAttente.length) {
+      lignes.push('', '🌴 Congés en attente (' + enAttente.length + ') :');
+      enAttente.slice(0, 15).forEach(function(c){
+        var e = idxEmp[c.employe_id] || {};
+        lignes.push('  • ' + _rhEmpNomComplet(e) + ' — ' + (CONGE_TYPES[c.type] ? CONGE_TYPES[c.type].label : c.type) + ' ' + (c.nb_jours || '?') + ' j (du ' + c.date_debut + ' au ' + c.date_fin + ')');
+      });
+    }
+    if (contratsExp.length) {
+      lignes.push('', '⚠️ Contrats expirant sous 30 j (' + contratsExp.length + ') :');
+      contratsExp.slice(0, 15).forEach(function(e){
+        var j = Math.ceil((new Date(e.date_fin) - auj) / 86400000);
+        lignes.push('  • ' + _rhEmpNomComplet(e) + ' (' + (e.contrat || '—') + ') — fin ' + e.date_fin + ' · reste ' + j + ' j');
+      });
+    }
+    var ok = await rhMsgCongesGroupe(lignes.join('\n'));
+    if (ok) localStorage.setItem('rh_msg_digest_jour', jour);
+  } catch (e) {}
+}
+
 function loadConges() {
   // Init mois courant dans le filtre planning
   var fp = document.getElementById('filter-mois-planning-conges');
@@ -61354,6 +61877,15 @@ async function saveConge() {
   closeModal('modal-conge');
   updateCongesKPIs();
   renderCongesDemandes();
+  /* Connexion messagerie : nouvelle demande en attente → groupe RH pour validation */
+  if (!APP.editingId && cg.statut === 'en_attente') {
+    var _txtDem = '🌴 Nouvelle demande de congé\n'
+      + _rhEmpNomComplet(emp) + (emp && emp.matricule ? ' (' + emp.matricule + ')' : '') + '\n'
+      + (CONGE_TYPES[cg.type] ? CONGE_TYPES[cg.type].label : cg.type) + ' — ' + cg.nb_jours + ' j\n'
+      + 'Du ' + cg.date_debut + ' au ' + cg.date_fin
+      + (cg.motif ? '\nMotif : ' + cg.motif : '');
+    try { await rhMsgCongesGroupe(_txtDem); } catch (e) {}
+  }
   toast('Demande enregistrée.'+(cg.allocation>0?' Allocation congé : '+fmtF(cg.allocation)+' FCFA.':''), 'success');
 }
 
@@ -61402,9 +61934,26 @@ async function validerConge(id, ok) {
   cg._modifie = new Date().toISOString();
   if (typeof dbPut === 'function') await dbPut('conges_rh', cg);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_conges_rh', cg);
+  /* Pont congés → pointage : approuvé = pré-remplir ; refusé = retirer d'éventuels pointages auto */
+  var _ptN = 0;
+  try { _ptN = ok ? await rhCongeAppliquerPointage(cg) : await rhCongeRetirerPointage(cg); } catch (e) {}
+  if (typeof renderPointageJour === 'function') { try { renderPointageJour(); buildPointageMensuel(); } catch(e){} }
   updateCongesKPIs();
   renderCongesDemandes();
-  toast(ok ? 'Congé approuvé.' : 'Congé refusé.', ok ? 'success' : 'info');
+  /* Connexion messagerie : décision → groupe RH + message direct à l'employé (si compte) */
+  var _empV = (DATA.employes||[]).find(function(x){ return x.id === cg.employe_id; });
+  var _libT = CONGE_TYPES[cg.type] ? CONGE_TYPES[cg.type].label : cg.type;
+  var _txtDec = (ok ? '✅ Congé approuvé' : '❌ Congé refusé') + '\n'
+    + _rhEmpNomComplet(_empV) + ' — ' + _libT + ' ' + cg.nb_jours + ' j\n'
+    + 'Du ' + cg.date_debut + ' au ' + cg.date_fin;
+  try { await rhMsgCongesGroupe(_txtDec); } catch (e) {}
+  try {
+    await rhMsgDirectEmploye(_empV, (ok
+      ? '✅ Votre demande de congé a été approuvée.\n'
+      : '❌ Votre demande de congé a été refusée.\n')
+      + _libT + ' — ' + cg.nb_jours + ' j (du ' + cg.date_debut + ' au ' + cg.date_fin + ').');
+  } catch (e) {}
+  toast((ok ? 'Congé approuvé.' : 'Congé refusé.') + (_ptN ? ' Pointage mis à jour ('+_ptN+' j).' : ''), ok ? 'success' : 'info');
 }
 
 async function deleteConge(id) {
@@ -61473,7 +62022,7 @@ function rhSalaireMoyen(emp){
   var bulls=(DATA.bulletins||[]).filter(function(b){return b.employe_id===emp.id;})
     .sort(function(a,b){return (b.mois||'').localeCompare(a.mois||'');}).slice(0,12);
   if(bulls.length){
-    var tot=bulls.reduce(function(s,b){var r=calcPaieCI(b);return s+r.brutTotal;},0);
+    var tot=bulls.reduce(function(s,b){var r=calcNetAPayer(b);return s+r.brutTotal;},0);
     return Math.round(tot/bulls.length);
   }
   return calcPaieEmploye(emp).brutTotal;
@@ -64259,62 +64808,6 @@ function brnPrintPlan() {
   w.document.close(); w.print();
 }
 
-/* ── Seed : parcelle YAOU (Bounoua) — morcellement TF 4726 ── */
-async function fonSeedYaou() {
-  if (typeof DEMO_DATA==='undefined' || !DEMO_DATA) return; /* prod : pas de parcelle de démo */
-  var exists = (DATA.parcelles||[]).some(function(p){ return p.ref === 'YAOU-4726' || p.morcellement === '4726'; });
-  if (exists) return;
-  if (typeof tombHas === 'function' && tombHas('parcelles', 'parc_yaou_4726')) return; /* supprimée → ne pas recréer */
-  var bornes = [
-    { nom:'B1',  x:430434.395, y:576815.718, angle:62.453,  distance:657.828 },
-    { nom:'B2',  x:430434.395, y:576157.890, angle:126.372, distance:21.528 },
-    { nom:'B3',  x:430414.688, y:576149.225, angle:127.171, distance:549.522 },
-    { nom:'B4',  x:430005.105, y:576515.581, angle:87.488,  distance:10.511 },
-    { nom:'B5',  x:430013.508, y:576521.896, angle:155.989, distance:26.125 },
-    { nom:'B6',  x:430039.604, y:576520.674, angle:217.844, distance:57.839 },
-    { nom:'B7',  x:430095.873, y:576534.056, angle:209.579, distance:9.288 },
-    { nom:'B8',  x:430104.485, y:576537.535, angle:221.816, distance:29.593 },
-    { nom:'B9',  x:430126.604, y:576557.195, angle:299.125, distance:22.427 },
-    { nom:'B10', x:430111.936, y:576574.161, angle:102.797, distance:128.725 },
-    { nom:'B11', x:430205.521, y:576662.546, angle:189.366, distance:275.399 }
-  ];
-  var p = {
-    id: 'parc_yaou_4726',
-    ref: 'YAOU-4726',
-    localisation: 'YAOU (Bounoua)',
-    commune: 'Grand-Bassam',
-    sous_prefecture: 'Bonoua',
-    superficie: 143925,          /* 14 ha 39 a 25 ca */
-    superficie_const: 0,
-    description: 'Morcellement du TF 4726 — Livre Foncier de Bassam. Plan certifié conforme (Abidjan, 09/06/2022).',
-    type_titre: 'tf_definitif',
-    num_titre: 'TF 21289',
-    date_titre: '',
-    notaire: 'SORO NANGA DIDIER (Géomètre-Expert)',
-    vendeur: 'ÉTAT-CI',
-    date_bornage: '2022-06-09',
-    statut: 'tf_definitif',
-    risque: 'faible',
-    obs_jur: 'Cédant : ÉTAT-CI. Copie certifiée conforme par DIE N\u2019Goran Bertrand, Géomètre Assermenté du Cadastre.',
-    prix_acq: 0, frais_mutation: 0, frais_bornage: 0, frais_notaire: 0, valeur_actuelle: 0,
-    programme_id: '',
-    cout_total: 0,
-    /* ── cadastre + bornes ── */
-    tf_num: 'TF 21289',
-    morcellement: '4726',
-    livre_foncier: 'Bassam',
-    cedant: 'ÉTAT-CI',
-    demandeur: 'LGI-BTP',
-    contenance: '14 ha 39 a 25 ca',
-    geometre: 'SORO NANGA DIDIER',
-    date_plan: '2022-06-09',
-    echelle: '1/7000',
-    bornes: bornes,
-    created_at: today()
-  };
-  DATA.parcelles.push(p);
-  await dbPut('parcelles', p);
-}
 
 /* Point d'entrée page Foncier : seed puis rendu */
 async function fonEnter() {
@@ -64322,7 +64815,6 @@ async function fonEnter() {
     var rows = await dbGetAll('parcelles');
     if (rows && rows.length) DATA.parcelles = rows;
   }
-  await fonSeedYaou();
   if (!DATA.cessions_foncieres || !DATA.cessions_foncieres.length) { var _cr = await dbGetAll('cessions_foncieres'); if (_cr && _cr.length) DATA.cessions_foncieres = _cr; }
   renderParcelles();
   if (typeof cesRender==='function') cesRender();
@@ -67906,7 +68398,7 @@ async function genererCodeAcquereurFoncier(cessionId) {
   c.code_acces_date = new Date().toISOString();
   await dbPut('cessions_foncieres', c);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_cessions_foncieres', c);
-  toast('Code généré pour ' + (c.acquereur || cesAcquereurLabel(a)) + ' : ' + code, 'success');
+  toast('Code d\'accès généré pour ' + (c.acquereur || cesAcquereurLabel(a)) + ' — transmettez-le via l\'invitation.', 'success');
   cesRenderPortailBox(c);
   if (typeof renderAccesFoncier === 'function' && APP.currentPage === 'acces-foncier') renderAccesFoncier();
   ouvrirInvitation({
@@ -69400,20 +69892,6 @@ function dqeImmeubleInfo(type){
   return { immeuble: !!c, nb: c?(parseInt(c.nb_unites)||0):0, conc:c||null };
 }
 /* Crée le projet de conception de l'appartement 3P (unité commercialisée) — idempotent */
-async function seedConceptionMilitaris(){
-  if (typeof DEMO_DATA==='undefined' || !DEMO_DATA) return false; /* prod : pas de conception de démo */
-  if(!DATA.conceptions) DATA.conceptions=[];
-  if(DATA.conceptions.some(function(c){return c.ref==='CONC-MIL-APT3P';})) return false;
-  var prog=(DATA.programmes||[]).find(function(p){ return /militaris|eden|yaou/i.test(((p.nom||'')+' '+(p.localisation||''))); });
-  var c={ id:uid(), ref:'CONC-MIL-APT3P', type_logements:'Appartement 3P (MILITARIS)',
-    programme_id:prog?prog.id:'', nature:'immeuble', architecte:'', surface:0, nb_unites:0, cout:0,
-    phase:'APD', statut:'valide', date_debut:today(), date_fin:'',
-    description:"Projet de conception de l'appartement 3 pièces — immeuble R+4 (unité commercialisée). DQE & déboursé rattachés dans le module DQE & Coût de revient (type « Appartement 3P (MILITARIS) »). Surface et nombre d'unités à renseigner depuis les plans.",
-    phases:[], avancement:0, created_at:today() };
-  DATA.conceptions.push(c); await dbPut('conceptions', c);
-  if(typeof syncToSupabase==='function') syncToSupabase('pi_conceptions', c);
-  return true;
-}
 
 
 
@@ -78648,7 +79126,7 @@ async function plGenererCodeAcces(partenaireId) {
   p.code_acces_date = new Date().toISOString();
   await dbPut('partenaires_lot', p);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_partenaires_lot', p);
-  toast('Code généré pour ' + p.nom + ' : ' + code, 'success');
+  toast('Code d\'accès généré pour ' + p.nom + ' — transmettez-le via l\'invitation.', 'success');
   renderPartenairesLot();
   ouvrirInvitation({
     nom: p.nom, login: p.tel || p.email, secret: code, email: p.email||'', tel: p.tel||'',
