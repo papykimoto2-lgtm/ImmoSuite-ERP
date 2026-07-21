@@ -14876,7 +14876,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
           </select>
         </div>
         <div class="form-group"><label>Nouvelle division</label>
-          <select class="form-control" id="mob-nouvelle-division">
+          <select class="form-control" id="mob-nouvelle-division" onchange="onMobiliteDivisionChange()">
             <option value="">— Sélectionner une division —</option>
           </select>
         </div>
@@ -14893,6 +14893,29 @@ button:focus-visible, input:focus-visible, select:focus-visible {
         <div class="form-group span-2"><label>Motif de la mutation / promotion *</label><textarea class="form-control" id="mob-motif" rows="2" placeholder="Ex: réorganisation du service, besoin opérationnel, mérite, avancement..."></textarea></div>
         <div class="form-group"><label>Décidé par</label><input type="text" class="form-control" id="mob-decide-par" placeholder="Nom / fonction du signataire"></div>
         <div class="form-group span-2"><label>Observations</label><textarea class="form-control" id="mob-observations" rows="2"></textarea></div>
+      </div>
+
+      <div id="mob-rupture-panel" style="display:none;margin-top:16px;border:1px solid var(--rouge);border-radius:8px;padding:14px;background:rgba(220,50,50,0.06);">
+        <div style="font-weight:700;color:var(--rouge);margin-bottom:4px;">⚖️ Mutation inter-division — Rupture de contrat</div>
+        <div style="font-size:11px;color:var(--blanc-dim);margin-bottom:12px;">Les divisions sont des entités juridiques distinctes (RCCM/NCC/CNPS propres). Ce changement <strong>rompt le contrat</strong> avec la division sortante (droits d'ancienneté soldés) et ouvre un <strong>nouveau contrat</strong> — <strong>ancienneté remise à zéro</strong> à la date d'effet.</div>
+        <div class="form-grid">
+          <div class="form-group span-2"><label>Type de rupture *</label>
+            <select class="form-control" id="mob-rup-type" onchange="mobRuptureRecompute()">
+              <option value="rupture_accord">Rupture d'un commun accord (mutation concertée intra-groupe)</option>
+              <option value="mutation_concertee">Mutation concertée — transfert négocié</option>
+              <option value="licenciement_eco">Licenciement pour motif économique</option>
+              <option value="licenciement_perso">Licenciement pour motif personnel</option>
+              <option value="demission">Démission (initiative du salarié)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Congés acquis non pris (jours)</label><input type="number" class="form-control" id="mob-rup-conges" value="0" oninput="mobRuptureRecompute()"></div>
+          <div class="form-group"><label>Catégorie préavis</label><select class="form-control" id="mob-rup-preavis-cat" onchange="mobRuptureRecompute()"><option value="ouvrier">Ouvrier/Employé (1 mois)</option><option value="maitrise">Agent de maîtrise (2 mois)</option><option value="cadre">Cadre (3 mois)</option></select></div>
+          <div class="form-group"><label>Avances à déduire (FCFA)</label><input type="number" class="form-control" id="mob-rup-avances" value="0" oninput="mobRuptureRecompute()"></div>
+          <div class="form-group span-2"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="mob-rup-preavis-inc" onchange="mobRuptureRecompute()"> Indemniser le préavis (non effectué)</label>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:8px;cursor:pointer;"><input type="checkbox" id="mob-rup-13" checked onchange="mobRuptureRecompute()"> Inclure 13ᵉ mois (prorata)</label>
+          </div>
+        </div>
+        <div id="mob-rup-decompte" style="margin-top:12px;font-size:12px;"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -18424,6 +18447,7 @@ function dbPut(store, obj) {
          de réexpédier ce qu'on vient juste de recevoir. ── */
       if (!_pulling && obj && obj.id !== undefined && _SYNC_TABLE_BY_STORE && _SYNC_TABLE_BY_STORE[store]) {
         _dirtySync[store + '|' + String(obj.id)] = true;
+        try { _untomb(store, obj.id); } catch(e){}   /* recréation volontaire → lève le tombstone */
       }
       var tx = db.transaction(store, 'readwrite');
       tx.objectStore(store).put(obj);
@@ -18462,6 +18486,7 @@ function dbPutBatch(store, objs) {
       toWrite.forEach(function(obj) {
         if (!_pulling && obj && obj.id !== undefined && _SYNC_TABLE_BY_STORE && _SYNC_TABLE_BY_STORE[store]) {
           _dirtySync[store + '|' + String(obj.id)] = true;
+          try { _untomb(store, obj.id); } catch(e){}
         }
         os.put(obj);
       });
@@ -20597,7 +20622,7 @@ async function syncFromSupabase() {
   }
   if (out) out.innerHTML = '<span style="color:var(--vert);">✅ ' + total + ' enregistrement(s) récupéré(s)</span>';
   /* Rafraîchir les vues principales */
-  ['renderClients','renderLots','renderProgrammes','renderVersements','buildRapportsCommerciaux','refreshDashboard']
+  ['renderClients','renderLots','renderProgrammes','renderVersements','buildRapportsCommerciaux','refreshDashboard','renderOrdresMission']
     .forEach(function(fn){ if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} } });
   try { majDerniereSync('Récupération cloud'); } catch(e){}
   toast('Données récupérées depuis le Cloud (' + total + ').', 'success');
@@ -20772,21 +20797,19 @@ async function pullFromCloudSilent() {
    Chaque suppression faite sur n'importe quel poste arrive ici via
    pi_suppressions : on marque le registre local, on retire la ligne si
    elle a été réinjectée, et on re-nettoie le cloud le cas échéant.
-   Purge automatique des tombstones de plus de 180 jours. */
+   Tombstones conservés en permanence (protection anti-résurrection durable). */
 async function _appliquerSuppressionsSync(){
   var lst = DATA.suppressions_sync || [];
   if (!lst.length) return;
-  var limite = Date.now() - 180*24*3600*1000;
+  /* Tombstones PERMANENTS. On ne purge JAMAIS la trace cloud pi_suppressions :
+     c'est le socle du trigger DB anti-résurrection et l'unique rempart contre un
+     poste resté sur un build obsolète qui re-pousserait l'enregistrement des mois
+     plus tard. Coût négligeable (~100 o/ligne). Le pull phase-0 réhydrate le
+     registre local depuis le cloud à chaque cycle. */
   var garder = [];
   for (var i = 0; i < lst.length; i++) {
     var ts = lst[i];
     if (!ts || !ts.store || !ts.record_id) continue;
-    var expire = ts.date && (new Date(ts.date).getTime() < limite);
-    if (expire) {
-      try { await dbDelete('suppressions_sync', ts.id); } catch(e){}
-      try { if (typeof deleteFromSupabase === 'function') deleteFromSupabase('pi_suppressions', ts.id); } catch(e){}
-      continue;
-    }
     garder.push(ts);
     try { if (typeof tombAdd === 'function') tombAdd(ts.store, ts.record_id); } catch(e){}
     try { delete _dirtySync[ts.store + '|' + String(ts.record_id)]; } catch(e){}
@@ -22489,7 +22512,7 @@ function travAvancementDetaille(actifs){
    ══════════════════════════════════════════════════════════════ */
 function buildDashTabRH() {
   var ms       = (typeof calcMasseSalariale === 'function') ? calcMasseSalariale() : {effectif:0,masseBrute:0,coutEmployeur:0};
-  var actifs   = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; });
+  var actifs   = (DATA.employes || []).filter(function(e){ return empEstActif(e); });
   var congesAttente = (DATA.conges_rh || []).filter(function(c){ return c.statut === 'en_attente'; });
   var today0   = today();
   var absentsAuj = (DATA.conges_rh || []).filter(function(c){
@@ -23407,7 +23430,7 @@ function buildDashStepper() {
     {n:'③',label:'CRM',sub:DATA.leads.length+' prospects',done:DATA.leads.length>0,page:'leads'},
     {n:'④',label:'Ventes',sub:DATA.clients.length+' souscripteurs · '+pctR+'% recouvrement',done:DATA.clients.length>0,page:'clients'},
     {n:'⑤',label:'Finance',sub:fmtF(totalVerse)+' FCFA encaissé',done:totalVerse>0,page:'comptabilite'},
-    {n:'⑥',label:'RH',sub:DATA.employes.filter(function(e){return e.statut==='actif';}).length+' actifs',done:DATA.employes.length>0,page:'rh-employes'},
+    {n:'⑥',label:'RH',sub:DATA.employes.filter(function(e){return empEstActif(e);}).length+' actifs',done:DATA.employes.length>0,page:'rh-employes'},
   ];
   el.innerHTML = steps.map(function(s){
     var col = s.done?'var(--vert)':'rgba(154,149,160,0.4)';
@@ -27275,7 +27298,7 @@ function renderConflitsSync() {
   var el = document.getElementById('conflits-sync-list'); if (!el) return;
   var list = (DATA.conflits_sync || []).filter(function(c){ return !c.resolu; });
   if (!list.length) { el.innerHTML = '<div style="font-size:12px;color:var(--vert);">✅ Aucun conflit en attente.</div>'; return; }
-  var reopenFn = { ecritures:'openEcritureModal', factures_client:'imprimerFactureFNE', financements_programme:'bpEditFinancement', cessions_foncieres:'cesOpen', lots:'openLotModal', programmes:'openProgrammeModal', clients:'openClientModal' };
+  var reopenFn = { ecritures:'openEcritureModal', factures_client:'imprimerFactureFNE', financements_programme:'bpEditFinancement', cessions_foncieres:'cesOpen', lots:'openLotModal', programmes:'openProgrammeModal', clients:'openClientModal', employes:'openEmployeModal' };
   el.innerHTML = list.map(function(c){
     var e = c.local_snapshot || {};
     var label = e.libelle || e.designation || e.client || e.numero || c.record_id;
@@ -32187,7 +32210,7 @@ function calcPaieEmploye(e, bull) {
 /* Masse salariale du mois (bulletins si présents, sinon estimation fiche) */
 function calcMasseSalariale(mois) {
   if (!mois) { var n = new Date(); mois = n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0'); }
-  var actifs = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e){ return empEstActif(e); });
   var brute = 0, net = 0, pat = 0, cout = 0;
   actifs.forEach(function(e){
     var bull = (DATA.bulletins || []).find(function(b){ return b.employe_id === e.id && b.mois === mois; });
@@ -32423,6 +32446,12 @@ function empEstSorti(e) {
   var d = e.date_depart ? String(e.date_depart).slice(0, 10) : '';
   return !!(d && d <= today());
 }
+/* Effectif ACTIF canonique : statut 'actif' ET non sorti. Le verrou date_depart
+   empêche qu'une régression de statut (réinjection 'actif' par une synchro d'un
+   autre poste, alors qu'une date de départ existe) ne regonfle l'effectif ni ne
+   réintègre l'employé dans la paie. Remplace tous les filtres statut==='actif'
+   sur DATA.employes. Les 'suspendu' restent exclus (comme avant). */
+function empEstActif(e) { return !!e && e.statut === 'actif' && !empEstSorti(e); }
 var _modeExEmployes = false;
 
 function toggleExEmployes() {
@@ -33186,6 +33215,7 @@ function onMobiliteEmployeChange() {
   document.getElementById('mob-nouvelle-division').value = e.division || '';
   document.getElementById('mob-nouvelle-categorie').innerHTML = buildGrilleOptions(e.secteur || 'btp', e.categorie || '');
   document.getElementById('mob-nouveau-salaire').value = e.salaire_base || 0;
+  if (typeof onMobiliteDivisionChange === 'function') onMobiliteDivisionChange();
 }
 
 function onMobiliteTypeChange() { /* réservé pour d'éventuelles règles de validation par type */ }
@@ -33271,16 +33301,39 @@ async function saveMobilite() {
   }).pop();
   var estLeDernier = dernier && dernier.id === m.id;
 
+  var _interDiv = estLeDernier && _isInterDiv(m.ancienne_division, nouvelleDivision);
   if (estLeDernier) {
-    // Appliquer la nouvelle situation sur la fiche employé
+    if (_interDiv) {
+      /* ── Mutation inter-division = rupture + nouveau contrat (ancienneté RAZ) ── */
+      var _dateRupture = _dateVeille(dateEffet);
+      var _rp = {
+        typeRupture: (document.getElementById('mob-rup-type')||{}).value || 'rupture_accord',
+        dateRupture: _dateRupture,
+        congesJours: parseFloat((document.getElementById('mob-rup-conges')||{}).value) || 0,
+        incPreavis:  !!(document.getElementById('mob-rup-preavis-inc')||{}).checked,
+        catPreavis:  (document.getElementById('mob-rup-preavis-cat')||{}).value || 'ouvrier',
+        inc13:       !!(document.getElementById('mob-rup-13')||{}).checked,
+        avances:     parseFloat((document.getElementById('mob-rup-avances')||{}).value) || 0
+      };
+      var _calc = _calcRuptureInterDiv(e, _rp);
+      m.is_inter_division = true;
+      m.rupture = { type:_rp.typeRupture, date:_dateRupture, ancien_date_embauche:e.date_embauche,
+        anciennete:_calc.anc, decompte:_calc, division_sortante:m.ancienne_division };
+      try { m.rupture.ecriture_id = _odRuptureInterDiv(e, _calc, _dateRupture, m); } catch(errOD){ console.warn('OD rupture inter-division', errOD); }
+      /* Nouveau contrat : ancienneté remise à zéro à la date d'effet */
+      e.date_embauche = dateEffet;
+      e.date_entree = dateEffet;
+    }
     e.poste = nouveauPoste;
     e.dept = nouveauDept;
     e.division = nouvelleDivision;
     if (nouvelleCategorie) e.categorie = nouvelleCategorie;
     e.salaire_base = nouveauSalaire;
+    e.statut = 'actif';
     e._modifie = new Date().toISOString(); // horodatage requis pour la synchro (voir saveEmploye)
     await dbPut('employes', e);
     if (typeof syncToSupabase === 'function') syncToSupabase('pi_employes', e);
+    if (_interDiv) { await dbPut('mobilites_rh', m); if (typeof syncToSupabase === 'function') syncToSupabase('pi_mobilites_rh', m); }
   }
 
   closeModal('modal-mobilite');
@@ -33294,6 +33347,10 @@ async function saveMobilite() {
     toast(estLeDernier ? 'Mutation modifiée et fiche employé mise à jour.' : 'Mutation modifiée. (Ce n\'est pas le mouvement le plus récent : la fiche employé actuelle n\'a pas été changée.)', 'success');
   } else {
     toast('Mutation enregistrée et appliquée à la fiche employé.', 'success');
+  }
+  if (m.is_inter_division) {
+    toast('⚖️ Rupture inter-division enregistrée — ancienneté remise à zéro, OD SYSCOHADA passée.', 'info');
+    setTimeout(function(){ if (confirm('Générer le dossier de mutation (lettre + reçu STC + certificat de travail) ?')) genererDossierMutation(m.id); }, 350);
   }
 }
 
@@ -33348,6 +33405,8 @@ function renderMobilite() {
         + '<td>'
         + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openMobiliteEditModal(\'' + m.id + '\')" title="Modifier">✏️</button> '
         + '<button class="btn btn-secondary btn-sm btn-icon" onclick="imprimerDecisionMutation(\'' + m.id + '\')" title="Imprimer la décision">🖨️</button> '
+        + (m.is_inter_division ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="genererDossierMutation(\'' + m.id + '\')" title="Dossier de mutation (lettre, STC, certificat)">⚖️</button> ' : '')
+        + ''
         + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteMobilite(\'' + m.id + '\')" title="Supprimer">🗑</button>'
         + '</td></tr>';
     }).join('');
@@ -33391,6 +33450,8 @@ function renderMobiliteEmploye() {
       + '<td>'
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="openMobiliteEditModal(\'' + m.id + '\')" title="Modifier">✏️</button> '
       + '<button class="btn btn-secondary btn-sm btn-icon" onclick="imprimerDecisionMutation(\'' + m.id + '\')" title="Imprimer la décision">🖨️</button> '
+        + (m.is_inter_division ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="genererDossierMutation(\'' + m.id + '\')" title="Dossier de mutation (lettre, STC, certificat)">⚖️</button> ' : '')
+        + ''
       + '<button class="btn btn-danger btn-sm btn-icon" onclick="deleteMobilite(\'' + m.id + '\')" title="Supprimer">🗑</button>'
       + '</td>'
       + '</tr>';
@@ -33405,6 +33466,228 @@ async function deleteMobilite(id) {
   if (document.getElementById('tab-modal-emp-mobilite')) renderMobiliteEmploye();
   toast('Enregistrement de mobilité supprimé.', 'info');
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MUTATION INTER-DIVISION — Rupture de contrat + nouveau contrat
+   Les divisions étant des entités juridiques distinctes (RCCM/NCC/CNPS
+   propres), un changement de division rompt le contrat avec la division
+   sortante (droits d'ancienneté soldés selon le type de rupture, convention
+   collective interpro CI) et ouvre un nouveau contrat — ANCIENNETÉ RAZ.
+════════════════════════════════════════════════════════════════════════ */
+function _isInterDiv(anciennediv, nouvellediv) {
+  return !!(nouvellediv && anciennediv && String(nouvellediv) !== String(anciennediv));
+}
+function _dateVeille(d) {
+  if (!d) return d;
+  var x = new Date(d); x.setDate(x.getDate() - 1);
+  return x.toISOString().slice(0, 10);
+}
+function _cptRup(key, fb) {
+  var c = (DATA.params && DATA.params.comptes_defaut) ? DATA.params.comptes_defaut[key] : '';
+  return (c && String(c).trim()) || fb;
+}
+
+/* Décompte de rupture selon le type — barème convention interpro CI */
+function _calcRuptureInterDiv(e, p) {
+  var brutMensuel = (e.salaire_base||0)+(e.primes||0)+(e.transport||0)+(e.logement||0);
+  var journalier  = (e.salaire_base||0)/PAIE_CI.joursMois;
+  var anc = _ancienneteYM(e.date_embauche, p.dateRupture);
+  var anneesLic = anc.annees + (anc.mois >= 6 ? 1 : 0);
+
+  var typesAvecLic = ['licenciement_perso','licenciement_eco','rupture_accord','mutation_concertee'];
+  var indemniteLicenciement = (typesAvecLic.indexOf(p.typeRupture) !== -1)
+    ? _calcIndemniteLicenciementCI(brutMensuel, anneesLic) : 0;
+
+  var moisPreavis = { ouvrier:1, maitrise:2, cadre:3 }[p.catPreavis] || 1;
+  var indemnitePreavis = (p.incPreavis && typesAvecLic.indexOf(p.typeRupture) !== -1)
+    ? Math.round(brutMensuel * moisPreavis) : 0;
+
+  var indemniteConges = Math.round(journalier * (p.congesJours || 0));
+
+  var indemnite13 = 0;
+  if (p.inc13) {
+    var dRup = new Date(p.dateRupture), deb = new Date(dRup.getFullYear(), 0, 1);
+    var dEmb = e.date_embauche ? new Date(e.date_embauche) : deb;
+    var ref = dEmb > deb ? dEmb : deb;
+    var mE = (dRup.getFullYear()-ref.getFullYear())*12 + (dRup.getMonth()-ref.getMonth()) + 1;
+    if (mE < 0) mE = 0; if (mE > 12) mE = 12;
+    indemnite13 = Math.round((brutMensuel/12) * mE);
+  }
+
+  var jour = new Date(p.dateRupture).getDate();
+  var soldeSalaire = Math.round(brutMensuel * jour / PAIE_CI.joursMois);
+
+  var imposable = soldeSalaire + indemniteConges + indemnite13;   // soumis CNPS/ITS
+  var exonere   = indemnitePreavis + indemniteLicenciement;       // exonéré (barème légal)
+  var totalBrut = imposable + exonere;
+  var avances   = p.avances || 0;
+  var net       = totalBrut - avances;
+
+  return { brutMensuel:brutMensuel, soldeSalaire:soldeSalaire, indemniteConges:indemniteConges,
+    indemnitePreavis:indemnitePreavis, indemniteLicenciement:indemniteLicenciement, indemnite13:indemnite13,
+    imposable:imposable, exonere:exonere, totalBrut:totalBrut, avances:avances, net:net,
+    anc:anc, moisPreavis:moisPreavis, typeRupture:p.typeRupture, congesJours:p.congesJours||0 };
+}
+
+var RUP_TYPE_LABELS = { rupture_accord:"Rupture d'un commun accord", mutation_concertee:'Mutation concertée (transfert négocié)',
+  licenciement_eco:'Licenciement pour motif économique', licenciement_perso:'Licenciement pour motif personnel',
+  demission:'Démission (initiative du salarié)' };
+
+/* Affiche/masque le panneau rupture quand la division change + recalcule */
+function onMobiliteDivisionChange() {
+  var empId = document.getElementById('mob-employe').value;
+  var e = DATA.employes.find(function(x){ return x.id === empId; });
+  var newDiv = document.getElementById('mob-nouvelle-division').value;
+  var panel = document.getElementById('mob-rupture-panel');
+  if (!panel) return;
+  var inter = e && _isInterDiv(e.division, newDiv);
+  panel.style.display = inter ? 'block' : 'none';
+  if (inter) mobRuptureRecompute();
+}
+
+function mobRuptureRecompute() {
+  var empId = document.getElementById('mob-employe').value;
+  var e = DATA.employes.find(function(x){ return x.id === empId; });
+  var box = document.getElementById('mob-rup-decompte');
+  if (!e || !box) return;
+  var dateEffet = document.getElementById('mob-date-effet').value || today();
+  var p = {
+    typeRupture: (document.getElementById('mob-rup-type')||{}).value || 'rupture_accord',
+    dateRupture: _dateVeille(dateEffet),
+    congesJours: parseFloat((document.getElementById('mob-rup-conges')||{}).value) || 0,
+    incPreavis:  !!(document.getElementById('mob-rup-preavis-inc')||{}).checked,
+    catPreavis:  (document.getElementById('mob-rup-preavis-cat')||{}).value || 'ouvrier',
+    inc13:       !!(document.getElementById('mob-rup-13')||{}).checked,
+    avances:     parseFloat((document.getElementById('mob-rup-avances')||{}).value) || 0
+  };
+  var c = _calcRuptureInterDiv(e, p);
+  var droitConges = Math.round(c.anc.moisTotal * 2.5);
+  function L(lib, m, exo){ return m>0 ? '<tr><td>'+lib+(exo?' <span style="color:var(--vert);font-size:10px;">(exonéré CNPS/ITS)</span>':'')+'</td><td style="text-align:right;font-weight:600;">'+fmtF(m)+' F</td></tr>' : ''; }
+  box.innerHTML =
+    '<div style="background:var(--card2);border-radius:6px;padding:10px 12px;">'
+    + '<div style="font-size:11px;color:var(--blanc-dim);margin-bottom:6px;">Ancienneté division sortante : <strong>'+c.anc.annees+' an(s) '+c.anc.mois+' mois</strong> · Droit congés acquis ≈ <strong>'+droitConges+' j</strong> (2,5 j/mois)</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    + L('Solde de salaire ('+new Date(c.anc? p.dateRupture:p.dateRupture).getDate()+' j)', c.soldeSalaire, false)
+    + L('Indemnité compensatrice de congés payés ('+c.congesJours+' j)', c.indemniteConges, false)
+    + L('13ᵉ mois — prorata', c.indemnite13, false)
+    + L('Indemnité compensatrice de préavis ('+c.moisPreavis+' mois)', c.indemnitePreavis, true)
+    + L('Indemnité de licenciement', c.indemniteLicenciement, true)
+    + (c.avances>0 ? '<tr><td>Avances à déduire</td><td style="text-align:right;color:var(--rouge);font-weight:600;">-'+fmtF(c.avances)+' F</td></tr>' : '')
+    + '<tr style="border-top:2px solid var(--or);"><td style="padding-top:8px;"><strong>Net à payer (STC)</strong></td><td style="text-align:right;padding-top:8px;color:var(--or);font-weight:700;">'+fmtF(c.net)+' FCFA</td></tr>'
+    + '</table></div>';
+}
+
+/* OD SYSCOHADA de rupture — entité SORTANTE. Indemnités préavis/licenciement
+   exonérées (barème légal) → compte 663 ; salaire/congés/13ᵉ → 661 (imposable). */
+function _odRuptureInterDiv(e, c, dateRupture, m) {
+  if (typeof uid !== 'function') return null;
+  var lib = 'STC rupture mutation — ' + (e.prenoms||'') + ' ' + (e.nom||'');
+  var c661 = _cptRup('paie_charge','661');
+  var c663 = _cptRup('paie_indemnite_rupture','663');
+  var c422 = _cptRup('paie_du','422');
+  var c421 = _cptRup('paie_avances','421');
+  var lignes = [];
+  var imp = c.soldeSalaire + c.indemniteConges + c.indemnite13;
+  if (imp > 0)       lignes.push({ compte:c661, sens:'D', montant:imp,       libelle:'Salaire + congés + 13e — '+lib });
+  if (c.exonere > 0) lignes.push({ compte:c663, sens:'D', montant:c.exonere, libelle:'Indemnités préavis/licenciement (exonéré) — '+lib });
+  if (c.avances > 0) lignes.push({ compte:c421, sens:'C', montant:c.avances, libelle:'Avances déduites — '+lib });
+  lignes.push({ compte:c422, sens:'C', montant:c.net, libelle:'Net à payer STC — '+lib });
+  var ecr = {
+    id: uid(), date: dateRupture, piece: 'STC-MUT', journal: 'OD', type: 'od',
+    libelle: lib, lignes: lignes, source: 'mutation_interdiv', mobilite_id: m.id,
+    division_id: m.ancienne_division, entite: m.ancienne_division,
+    compte_debit: c661, compte_credit: c422, montant: c.totalBrut,
+    created_at: (typeof today === 'function' ? today() : new Date().toISOString().slice(0,10))
+  };
+  DATA.ecritures = DATA.ecritures || [];
+  DATA.ecritures.push(ecr);
+  dbPut('ecritures', ecr);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', ecr);
+  return ecr.id;
+}
+
+/* Dossier documentaire de mutation : lettre + reçu STC + certificat (division
+   sortante), chacun sur une page. Le nouveau contrat s'imprime depuis la fiche
+   (division entrante) via imprimerContratTravail(). */
+function genererDossierMutation(mobId) {
+  var m = (DATA.mobilites_rh || []).find(function(x){ return x.id === mobId; });
+  if (!m || !m.is_inter_division || !m.rupture) { toast('Dossier indisponible pour cet enregistrement.', 'error'); return; }
+  var params = DATA.params || {};
+  var logo = (typeof getLogoForPrint === 'function') ? getLogoForPrint() : '';
+  var now = new Date().toLocaleDateString('fr-FR', { year:'numeric', month:'long', day:'numeric' });
+  var c = m.rupture.decompte || {};
+  var nom = escHtml(m.employe_nom || '');
+  var divA = escHtml(_nomDivision(m.ancienne_division));
+  var divB = escHtml(_nomDivision(m.nouvelle_division));
+  var dEmbA = m.rupture.ancien_date_embauche ? dateShort(m.rupture.ancien_date_embauche) : '—';
+  var dRup = dateShort(m.rupture.date);
+  var dEffet = dateShort(m.date_effet);
+  var anc = m.rupture.anciennete || {};
+
+  function ligne(l, v, exo){ return v>0 ? '<tr><td>'+l+(exo?' <i style="color:#0a0;font-size:10px;">(exonéré CNPS/ITS)</i>':'')+'</td><td style="text-align:right;font-weight:600;">'+fmtF(v)+' FCFA</td></tr>' : ''; }
+  var decompteRows =
+      ligne('Solde de salaire', c.soldeSalaire, false)
+    + ligne('Indemnité compensatrice de congés payés ('+(c.congesJours||0)+' j)', c.indemniteConges, false)
+    + ligne('13ᵉ mois — prorata', c.indemnite13, false)
+    + ligne('Indemnité compensatrice de préavis', c.indemnitePreavis, true)
+    + ligne('Indemnité de licenciement', c.indemniteLicenciement, true)
+    + (c.avances>0 ? '<tr><td>Avances déduites</td><td style="text-align:right;color:#c00;font-weight:600;">-'+fmtF(c.avances)+' FCFA</td></tr>' : '');
+
+  var css = 'body{font-family:Arial,sans-serif;font-size:12px;padding:32px;color:#1C1C2E;line-height:1.7;}'
+    + 'h1{font-size:16px;text-align:center;margin:4px 0;} h2{color:#B87333;font-size:13px;margin-top:20px;border-bottom:1px solid #E0E0EA;padding-bottom:5px;}'
+    + '.header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #B87333;padding-bottom:14px;margin-bottom:18px;}'
+    + '.doc{page-break-after:always;} table{width:100%;border-collapse:collapse;margin-top:6px;} td{padding:7px 6px;border-bottom:1px solid #E0E0EA;}'
+    + '.total td{border-top:2px solid #1C1C2E;border-bottom:none;font-size:13px;padding-top:10px;}'
+    + '.net{margin-top:12px;padding:12px 16px;background:#F6F1EA;border-left:4px solid #B87333;display:flex;justify-content:space-between;}'
+    + '.sign{margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:40px;} .sign-box{border-top:1px solid #1C1C2E;padding-top:6px;font-size:11px;}'
+    + '.no-print{text-align:center;margin-bottom:16px;} .no-print button{padding:9px 20px;background:#B87333;color:#fff;border:none;border-radius:6px;cursor:pointer;}'
+    + '@media print{.no-print{display:none;}body{padding:14px;} .doc{page-break-after:always;}}';
+  function head(titre, ref){
+    return '<div class="header">'+(logo?'<img src="'+logo+'" style="height:46px;object-fit:contain;">':'')
+      + '<div style="text-align:center;flex:1;"><h1>'+titre+'</h1><div style="font-size:11px;color:#6B6B9A;">'+ref+' · Fait à '+escHtml(params.ville||'Abidjan')+', le '+now+'</div></div>'
+      + '<div style="text-align:right;font-size:11px;color:#6B6B9A;">'+escHtml(params.societe||'')+'<br>'+escHtml(params.tel||'')+'</div></div>';
+  }
+
+  // 1) LETTRE DE MUTATION
+  var lettre = '<div class="doc">'+head('NOTIFICATION DE MUTATION INTER-DIVISION','Réf. '+escHtml(m.ref_decision||('MUT-'+(m.employe_matricule||''))))
+    + '<p>À l\'attention de <strong>'+nom+'</strong> — Matricule '+escHtml(m.employe_matricule||'—')+'</p>'
+    + '<h2>Objet : Mutation avec changement d\'entité juridique</h2>'
+    + '<p>Nous vous notifions votre mutation de la division <strong>'+divA+'</strong> vers la division <strong>'+divB+'</strong>, à effet du <strong>'+dEffet+'</strong>.</p>'
+    + '<p>Ces divisions constituant des <strong>entités juridiques distinctes</strong>, cette mutation emporte <strong>rupture de votre contrat</strong> avec la division '+divA+' (traitement : <strong>'+escHtml(RUP_TYPE_LABELS[m.rupture.type]||m.rupture.type)+'</strong>) et conclusion d\'un <strong>nouveau contrat de travail</strong> avec la division '+divB+'.</p>'
+    + '<p>Conformément à la convention collective, l\'ensemble de vos droits liés à l\'ancienneté acquise auprès de la division sortante ('+ (anc.annees||0) +' an(s) '+(anc.mois||0)+' mois) est <strong>soldé</strong> par le reçu pour solde de tout compte ci-joint. Votre <strong>ancienneté est reprise à zéro</strong> au sein de la division '+divB+' à compter du '+dEffet+'.</p>'
+    + '<p><strong>Nouvelle situation :</strong> poste « '+escHtml(m.nouveau_poste||'—')+' »'+(m.nouvelle_categorie?', catégorie '+escHtml(m.nouvelle_categorie):'')+', salaire de base '+fmtF(m.nouveau_salaire||0)+' FCFA.</p>'
+    + '<div class="sign"><div class="sign-box">La Direction<br>'+escHtml(m.decide_par||'')+'</div><div class="sign-box">Le salarié (lu et approuvé)<br>'+nom+'</div></div></div>';
+
+  // 2) REÇU POUR SOLDE DE TOUT COMPTE (division sortante)
+  var stc = '<div class="doc">'+head('REÇU POUR SOLDE DE TOUT COMPTE','Réf. STC-'+escHtml(m.employe_matricule||''))
+    + '<h2>Identification</h2>'
+    + '<p><strong>Salarié :</strong> '+nom+' &nbsp; <strong>Matricule :</strong> '+escHtml(m.employe_matricule||'—')+'</p>'
+    + '<p><strong>Division sortante :</strong> '+divA+' &nbsp; <strong>Poste :</strong> '+escHtml(m.ancien_poste||'—')+'</p>'
+    + '<p><strong>Embauche :</strong> '+dEmbA+' &nbsp; <strong>Rupture :</strong> '+dRup+' &nbsp; <strong>Ancienneté :</strong> '+(anc.annees||0)+' an(s) '+(anc.mois||0)+' mois</p>'
+    + '<p><strong>Motif :</strong> '+escHtml(RUP_TYPE_LABELS[m.rupture.type]||m.rupture.type)+'</p>'
+    + '<h2>Décompte des sommes dues</h2><table>'+decompteRows
+    + '<tr class="total"><td><strong>Total brut</strong></td><td style="text-align:right;"><strong>'+fmtF(c.totalBrut||0)+' FCFA</strong></td></tr></table>'
+    + '<div class="net"><strong>NET À PAYER</strong><strong>'+fmtF(c.net||0)+' FCFA</strong></div>'
+    + '<p style="font-size:10px;color:#6B6B9A;margin-top:10px;">Reçu pour solde de tout compte établi en application des dispositions du Code du Travail et de la convention collective interprofessionnelle. Les indemnités de préavis et de licenciement sont exonérées de CNPS et d\'ITS dans la limite du barème légal.</p>'
+    + '<div class="sign"><div class="sign-box">Pour la division '+divA+'</div><div class="sign-box">Le salarié (pour solde de tout compte)<br>'+nom+'</div></div></div>';
+
+  // 3) CERTIFICAT DE TRAVAIL (division sortante)
+  var certif = '<div class="doc">'+head('CERTIFICAT DE TRAVAIL','')
+    + '<p style="margin-top:20px;">Je soussigné(e), représentant de la division <strong>'+divA+'</strong>, certifie que :</p>'
+    + '<p style="margin:14px 0;font-size:13px;"><strong>'+nom+'</strong>, matricule '+escHtml(m.employe_matricule||'—')+',</p>'
+    + '<p>a été employé(e) au sein de notre entité du <strong>'+dEmbA+'</strong> au <strong>'+dRup+'</strong>, en qualité de <strong>'+escHtml(m.ancien_poste||'—')+'</strong>'+(m.ancienne_categorie?' (catégorie '+escHtml(m.ancienne_categorie)+')':'')+'.</p>'
+    + '<p>L\'intéressé(e) quitte l\'entité dans le cadre d\'une mutation vers la division '+divB+'. En foi de quoi le présent certificat lui est délivré pour servir et valoir ce que de droit, libre de tout engagement.</p>'
+    + '<div class="sign"><div></div><div class="sign-box">La Direction, division '+divA+'<br>'+escHtml(params.ville||'Abidjan')+', le '+now+'</div></div></div>';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Dossier de mutation — '+nom+'</title><style>'+css+'</style></head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer / PDF le dossier complet</button></div>'
+    + lettre + stc + certif + '</body></html>';
+
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else { toast('Autorisez les fenêtres pop-up pour imprimer le dossier.', 'error'); }
+}
+
 
 function exportMobilite() {
   var rows = ['Date effet,Matricule,Employé,Type,Ancien poste,Ancien département,Ancienne division,Ancienne catégorie,Ancien salaire,Nouveau poste,Nouveau département,Nouvelle division,Nouveau service,Nouvelle catégorie,Nouveau salaire,Motif,Réf décision,Décidé par'];
@@ -33489,7 +33772,7 @@ function imprimerDecisionMutation(id) {
    COCKPIT RH — Pilotage stratégique
    ══════════════════════════════════════════════════════════════════════ */
 function renderCockpitRH(){
-  var actifs=(DATA.employes||[]).filter(function(e){return e.statut==='actif';});
+  var actifs=(DATA.employes||[]).filter(function(e){return empEstActif(e);});
   var tous=(DATA.employes||[]);
   var moisCourant=new Date().toISOString().slice(0,7);
   var ms=(typeof calcMasseSalariale==='function')?calcMasseSalariale(moisCourant):{masseBrute:0,coutEmployeur:0,chargesPat:0};
@@ -33584,7 +33867,7 @@ function rhcAbsenteisme(){
   var host=document.getElementById('rhc-absenteisme'); if(!host)return;
   var now=new Date(); var mois=[];
   for(var i=5;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);mois.push({key:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),label:d.toLocaleDateString('fr-FR',{month:'short'}).slice(0,4)});}
-  var actifs=(DATA.employes||[]).filter(function(e){return e.statut==='actif';}).length||1;
+  var actifs=(DATA.employes||[]).filter(function(e){return empEstActif(e);}).length||1;
   var vals=mois.map(function(m){var abs=(DATA.pointages||[]).filter(function(p){return (p.date||'').startsWith(m.key)&&(p.statut==='A'||p.statut==='AI'||p.statut==='absent');}).length;var theo=actifs*22;return theo>0?Math.round(abs/theo*1000)/10:0;});
   var max=Math.max.apply(null,vals.concat([1]));
   var W=100/(mois.length-1);
@@ -33998,7 +34281,7 @@ function exportAuditRapport(){
 }
 
 function updateRHKPIs() {
-  var actifs = DATA.employes.filter(function(e) { return e.statut === 'actif'; });
+  var actifs = DATA.employes.filter(function(e) { return empEstActif(e); });
   var masseBrute = actifs.reduce(function(s, e) { return s + (e.salaire_base + (e.primes||0) + (e.transport||0) + (e.logement||0)); }, 0);
   var chargesPatronales = actifs.reduce(function(s, e) { return s + calcCNPSPatronal(e.salaire_base).total; }, 0);
   var kpiE = document.getElementById('kpi-effectif');
@@ -34097,7 +34380,7 @@ function renderGrilleSalariale() {
 function renderPayslips(mois) {
   var grid = document.getElementById('payslip-grid');
   if (!grid) return;
-  var actifs = DATA.employes.filter(function(e) { return e.statut === 'actif'; });
+  var actifs = DATA.employes.filter(function(e) { return empEstActif(e); });
   if (!actifs.length) {
     grid.innerHTML = '<div style="color:var(--blanc-dim);font-size:13px;padding:20px;">Aucun employé actif enregistré.</div>';
     return;
@@ -34144,7 +34427,7 @@ function renderPayslips(mois) {
    coût total employeur. Les employés sans division sont classés
    dans "Non affectée". */
 function calcEtatSalairesParDivision(mois) {
-  var actifs = DATA.employes.filter(function(e) { return e.statut === 'actif'; });
+  var actifs = DATA.employes.filter(function(e) { return empEstActif(e); });
   var byDiv = {};
   var ordre = [];
   DATA.divisions.forEach(function(d) { byDiv[d.id] = { id: d.id, nom: d.nom, effectif: 0, brut: 0, net: 0, cnpsSal: 0, its: 0, cnpsPat: 0, coutTotal: 0 }; ordre.push(d.id); });
@@ -34212,7 +34495,7 @@ function exportEtatSalairesDivision() {
 function buildPaieRecap(mois) {
   var box = document.getElementById('paie-recap-box');
   if (!box) return;
-  var actifs = DATA.employes.filter(function(e) { return e.statut === 'actif'; });
+  var actifs = DATA.employes.filter(function(e) { return empEstActif(e); });
   var totBrut = 0, totNet = 0, totITS = 0, totCNPSSal = 0, totCNPSPat = 0;
   actifs.forEach(function(e) {
     var bull = DATA.bulletins.find(function(b) { return b.employe_id === e.id && b.mois === mois; });
@@ -34256,7 +34539,7 @@ function buildPaieRecap(mois) {
 function buildVirements(mois) {
   var tbody = document.getElementById('tbody-virements');
   if (!tbody) return;
-  var actifs = DATA.employes.filter(function(e) { return e.statut === 'actif'; });
+  var actifs = DATA.employes.filter(function(e) { return empEstActif(e); });
   if (!actifs.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--blanc-dim);text-align:center;padding:20px;">Aucun employé actif.</td></tr>'; return; }
   var modeLabel = { virement: '🏦 Virement', wave: '🌊 Wave', orange_money: '🟠 Orange Money', mtn: '🟡 MTN MoMo', especes: '💵 Espèces' };
   tbody.innerHTML = actifs.map(function(e) {
@@ -34280,7 +34563,7 @@ function buildVirements(mois) {
 function exportVirements() {
   var mois = document.getElementById('paie-mois').value;
   var rows = ['Matricule,Nom,Prénoms,Banque/Opérateur,N° Compte/Wallet,Net à payer (FCFA),Mode'];
-  DATA.employes.filter(function(e){ return e.statut==='actif'; }).forEach(function(e) {
+  DATA.employes.filter(function(e){ return empEstActif(e); }).forEach(function(e) {
     var bull = DATA.bulletins.find(function(b){ return b.employe_id===e.id && b.mois===mois; });
     var r = calcPaieEmploye(e, bull);
     var coord = e.mode_paiement === 'virement' ? e.banque : '';
@@ -34296,7 +34579,7 @@ function exportVirements() {
 async function genererTousBulletins() {
   var mois = document.getElementById('paie-mois').value;
   if (!mois) { toast('Sélectionnez un mois.', 'error'); return; }
-  var actifs = DATA.employes.filter(function(e) { return e.statut === 'actif'; });
+  var actifs = DATA.employes.filter(function(e) { return empEstActif(e); });
   if (!actifs.length) { toast('Aucun employé actif.', 'error'); return; }
   for (var i = 0; i < actifs.length; i++) {
     var e = actifs[i];
@@ -34322,7 +34605,7 @@ function openBulletinModal(bullId, empId) {
   APP.editingId = bullId || null;
   var selEmp = document.getElementById('b-employe');
   selEmp.innerHTML = '<option value="">— Choisir —</option>';
-  DATA.employes.filter(function(e){ return e.statut==='actif'; }).forEach(function(e) {
+  DATA.employes.filter(function(e){ return empEstActif(e); }).forEach(function(e) {
     var o = document.createElement('option');
     o.value = e.id; o.textContent = e.matricule + ' — ' + e.nom + ' ' + e.prenoms;
     selEmp.appendChild(o);
@@ -34616,7 +34899,7 @@ function loadLivrePaie() {
   /* Peupler select employé individuel */
   var empSel = document.getElementById('lp-emp-individuel');
   if (empSel && empSel.options.length <= 1) {
-    var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+    var actifs = (DATA.employes || []).filter(function(e) { return empEstActif(e); });
     actifs.forEach(function(e) {
       var o = document.createElement('option');
       o.value = e.id; o.textContent = e.matricule + ' — ' + e.nom + ' ' + e.prenoms;
@@ -34652,7 +34935,7 @@ function _lpDataEmp(e, moisKey) {
 /* ── KPIs annuels ────────────────────────────────────────────────── */
 function _lpUpdateKPIs() {
   var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
-  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e) { return empEstActif(e); });
   var totBrut = 0, totNet = 0, totITS = 0, totCNPS = 0, totCout = 0;
   var sommePresents = 0;
   for (var m = 1; m <= 12; m++) {
@@ -34692,7 +34975,7 @@ function renderLPJournal() {
   var filterDept = (document.getElementById('lp-filter-dept-journal') || {}).value || '';
 
   var actifs = (DATA.employes || []).filter(function(e) {
-    return e.statut === 'actif' && (!filterDept || e.dept === filterDept) && _lpPresent(e, moisKey);
+    return empEstActif(e) && (!filterDept || e.dept === filterDept) && _lpPresent(e, moisKey);
   });
 
   if (!actifs.length) {
@@ -34811,7 +35094,7 @@ function _paieComptes(){
     retenues:requireCompteDefaut('paie_retenues'), treso:requireCompteDefaut('treso_banque') };
 }
 function _paieMoisData(moisKey, dept){
-  var actifs=(DATA.employes||[]).filter(function(e){ return e.statut==='actif' && (!dept||e.dept===dept) && (typeof _lpPresent!=='function' || _lpPresent(e,moisKey)); });
+  var actifs=(DATA.employes||[]).filter(function(e){ return empEstActif(e) && (!dept||e.dept===dept) && (typeof _lpPresent!=='function' || _lpPresent(e,moisKey)); });
   return actifs.map(function(e){
     var r=(typeof _lpDataEmp==='function'?_lpDataEmp(e,moisKey):{})||{};
     if(r.itsNet==null) r.itsNet=r.its||0;
@@ -35006,7 +35289,7 @@ function renderLPAnnuel() {
   var col = (document.getElementById('lp-col-annuel') || {}).value || 'net';
   var colLabels = { net: 'Net à payer', brut: 'Brut total', its: 'ITS', cnpsSal: 'CNPS sal.', coutTotal: 'Coût total' };
 
-  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e) { return empEstActif(e); });
   if (!actifs.length) { wrap.innerHTML = '<div style="color:var(--dim);padding:20px;">Aucun employé actif.</div>'; return; }
 
   /* En-têtes mois */
@@ -35176,7 +35459,7 @@ function renderLPCharges() {
   if (!wrap) return;
 
   var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
-  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e) { return empEstActif(e); });
 
   var cols = ['cnpsRetraitePat', 'cnpsAT', 'cnpsPF', 'itsPat', 'fdfpTA', 'fdfpFC', 'fdfpRegul', 'cmuPat', 'totalPatronal'];
   var colLabels = {
@@ -35247,7 +35530,7 @@ function renderLPCharges() {
 /* ── Export CSV du livre de paie complet ─────────────────────────── */
 function exportLivrePaieCSV() {
   var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
-  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e) { return empEstActif(e); });
   var rows = [];
   var header = ['Matricule','Nom','Prénoms','Poste','Mois','Jours','Sal.Catégoriel','Sursalaire','Ancienneté',
     'Primes imp.','H.Supp','Transport','Logement','Brut imposable','Brut total',
@@ -35292,7 +35575,7 @@ function exportLivrePaieCSV() {
 /* ── Impression du livre de paie ─────────────────────────────────── */
 function printLivrePaie() {
   var annee = (document.getElementById('lp-annee') || {}).value || new Date().getFullYear();
-  var actifs = (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e) { return empEstActif(e); });
   var params = DATA.params || {};
   var ste = params.raison_sociale || params.nom_entreprise || '';
 
@@ -36525,7 +36808,7 @@ function renderTeledeclaration() {
   var lbl = document.getElementById('teledecl-mois-label');
   if (lbl) lbl.textContent = new Date(mois + '-01').toLocaleDateString('fr-FR', { month:'long', year:'numeric' });
 
-  var actifs = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; });
+  var actifs = (DATA.employes || []).filter(function(e){ return empEstActif(e); });
   var totITS = 0, totCNPSSal = 0, totCNPSPat = 0, totBrut = 0;
   actifs.forEach(function(e){
     var bull = (DATA.bulletins || []).find(function(b){ return b.employe_id === e.id && b.mois === mois; });
@@ -36591,7 +36874,7 @@ function _declDivisionCourante() {
   return sel ? sel.value : '';
 }
 function _declEmployesActifs(divisionId, exclureConsultants) {
-  var list = DATA.employes.filter(function(e){ return e.statut === 'actif'; });
+  var list = DATA.employes.filter(function(e){ return empEstActif(e); });
   if (divisionId) list = list.filter(function(e){ return e.division === divisionId; });
   if (exclureConsultants) list = list.filter(function(e){ return e.contrat !== 'consultant'; });
   return list;
@@ -36828,7 +37111,7 @@ function exportBordereauCNPS(mois){
   var head='Matricule,Matricule CNPS,Nom & Prénoms,Brut social,Base plafonnée retraite,Retraite salarié (6.3%),Retraite patronal (7.7%),AT (5%),PF (5.75%),CMU sal.,CMU pat.,Total dû';
   var rows=[head];
   var T={brut:0,base:0,rs:0,rp:0,at:0,pf:0,cs:0,cp:0,tot:0};
-  var actifs=(DATA.employes||[]).filter(function(e){return e.statut==='actif' && (!divId || e.division===divId);});
+  var actifs=(DATA.employes||[]).filter(function(e){return empEstActif(e) && (!divId || e.division===divId);});
   actifs.forEach(function(e){
     var b=(DATA.bulletins||[]).find(function(x){return x.employe_id===e.id && x.mois===mois;});
     var r=b?calcNetAPayer(b):calcPaieEmploye(e);
@@ -41773,7 +42056,7 @@ function loadPointage() {
 
 function checkPointageBadge() {
   var today=new Date().toISOString().slice(0,10);
-  var actifs=DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifs=DATA.employes.filter(function(e){return empEstActif(e);});
   var pointed=DATA.pointages.filter(function(p){return p.date===today;}).map(function(p){return p.employe_id;});
   var missing=actifs.filter(function(e){return !pointed.includes(e.id);}).length;
   var badge=document.getElementById('badge-pointage');
@@ -41814,7 +42097,7 @@ function renderPointageJour() {
   if (!box) return;
 
   var actifs=DATA.employes.filter(function(e){
-    return e.statut==='actif' && (!dept||e.dept===dept);
+    return empEstActif(e) && (!dept||e.dept===dept);
   });
 
   if (!actifs.length) { box.innerHTML='<div style="color:var(--blanc-dim);padding:20px;">Aucun employé actif.</div>'; return; }
@@ -41895,7 +42178,7 @@ function buildPointageMensuel() {
   var calBox=document.getElementById('calendrier-mois-box');
   if (!tbody) return;
 
-  var actifs=DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifs=DATA.employes.filter(function(e){return empEstActif(e);});
   var totP=0,totA=0,totR=0,totC=0,totHS=0;
 
   var rows=actifs.map(function(e) {
@@ -41979,7 +42262,7 @@ function buildImpactPaie() {
   var tbody=document.getElementById('tbody-impact-paie');
   if (!tbody||!mois) return;
   var joursOuvres=joursOuvresDansMois(mois);
-  var actifs=DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifs=DATA.employes.filter(function(e){return empEstActif(e);});
 
   tbody.innerHTML=actifs.map(function(e) {
     var ptsMois=getPointageMois(e.id,mois);
@@ -42067,7 +42350,7 @@ function ouvrirSaisiePointage(empId, date) {
   // Fill employee select
   var selEmp=document.getElementById('pt-employe');
   if (selEmp.options.length<=1) {
-    DATA.employes.filter(function(e){return e.statut==='actif';}).forEach(function(e){
+    DATA.employes.filter(function(e){return empEstActif(e);}).forEach(function(e){
       var o=document.createElement('option'); o.value=e.id;
       o.textContent=e.nom+' '+e.prenoms+' ('+e.matricule+')'; selEmp.appendChild(o);
     });
@@ -42182,7 +42465,7 @@ async function genererPointageAuto() {
   if (!mois) { toast('Sélectionnez un mois.','error'); return; }
   var parts=mois.split('-'); var annee=parseInt(parts[0]); var m=parseInt(parts[1]);
   var nbJours=new Date(annee,m,0).getDate();
-  var actifs=DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifs=DATA.employes.filter(function(e){return empEstActif(e);});
   var count=0;
   for (var d=1;d<=nbJours;d++) {
     var dateStr=mois+'-'+String(d).padStart(2,'0');
@@ -42218,7 +42501,7 @@ async function genererBulletinsDepuisPointage() {
   var mois=document.getElementById('pointage-mois') ? document.getElementById('pointage-mois').value : '';
   if (!mois) { toast('Sélectionnez un mois.','error'); return; }
   var joursOuvres=joursOuvresDansMois(mois);
-  var actifs=DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifs=DATA.employes.filter(function(e){return empEstActif(e);});
   var count=0, alertesSMIG=[];
   var _majPct = (getParamRH('maj_heures_supp_pct', 25) / 100) + 1;
   var SMIG_MENSUEL = (GRILLES_PAR_SECTEUR.btp && GRILLES_PAR_SECTEUR.btp.smig) || 75000;
@@ -42313,7 +42596,7 @@ function exportImpactPaieCSV() {
   var mois=document.getElementById('pointage-mois') ? document.getElementById('pointage-mois').value : '';
   var joursOuvres=joursOuvresDansMois(mois);
   var rows=['Matricule,Nom,Catégorie,Salaire base,Jours présents,Jours ouvrés,Retenue absences,Maj.H.Sup,Prime présence,Brut ajusté'];
-  DATA.employes.filter(function(e){return e.statut==='actif';}).forEach(function(e) {
+  DATA.employes.filter(function(e){return empEstActif(e);}).forEach(function(e) {
     var pts=getPointageMois(e.id,mois);
     var nbP=pts.filter(function(p){return p.statut==='P'||p.statut==='R'||p.statut==='M';}).length;
     var nbA=pts.filter(function(p){return p.statut==='A';}).length;
@@ -43860,7 +44143,7 @@ function buildTiers422() {
   /* Moteur réel PAIE_CI — l'ancien code recalculait CNPS (3,2% + plafond
      1 647 315, faux) et ITS (tranches 300k/600k/1,2M/2,4M, faux barème) en
      dur ici, décorrélés du bulletin de paie réel et des Paramètres RH. */
-  var actifs = DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifs = DATA.employes.filter(function(e){return empEstActif(e);});
   var totBrut=0, totCnps=0, totIts=0, totNet=0;
 
   tbody.innerHTML = actifs.map(function(e) {
@@ -43925,7 +44208,7 @@ function buildTiersEtat() {
      forfaitaire 7% de la masse — taux inventés, sans rapport avec le
      barème réel ni les Paramètres RH. Agrégation réelle employé par
      employé via le moteur PAIE_CI ci-dessous. */
-  var actifsEtat=DATA.employes.filter(function(e){return e.statut==='actif';});
+  var actifsEtat=DATA.employes.filter(function(e){return empEstActif(e);});
   var masse=0, cnpsPatTotal=0, cnpsSalTotal=0, itsTotal=0;
   actifsEtat.forEach(function(e){
     var brutImp=e.salaire_base||0;
@@ -45334,7 +45617,7 @@ function openCampagne(id) {
   var pSel=document.getElementById('camp-programme');
   if(pSel&&pSel.options.length<=1) DATA.programmes.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nom;pSel.appendChild(o);});
   var rSel=document.getElementById('camp-responsable');
-  if(rSel&&rSel.options.length<=1) DATA.employes.filter(function(e){return e.statut==='actif';}).forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.nom+' '+e.prenoms;rSel.appendChild(o);});
+  if(rSel&&rSel.options.length<=1) DATA.employes.filter(function(e){return empEstActif(e);}).forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.nom+' '+e.prenoms;rSel.appendChild(o);});
 
   if (id) {
     var c = DATA.campagnes.find(function(x){return x.id===id;});
@@ -45684,7 +45967,7 @@ function renderActionsTable(typeF, mois) {
 function openActionMarketing(dateInit) {
   APP.editingId=null;
   var rSel=document.getElementById('act-responsable');
-  if(rSel&&rSel.options.length<=1) DATA.employes.filter(function(e){return e.statut==='actif';}).forEach(function(e){var o=document.createElement('option');o.value=e.nom+' '+e.prenoms;o.textContent=e.nom+' '+e.prenoms;rSel.appendChild(o);});
+  if(rSel&&rSel.options.length<=1) DATA.employes.filter(function(e){return empEstActif(e);}).forEach(function(e){var o=document.createElement('option');o.value=e.nom+' '+e.prenoms;o.textContent=e.nom+' '+e.prenoms;rSel.appendChild(o);});
   ['act-nom','act-cible','act-notes'].forEach(function(f){var e=document.getElementById(f);if(e)e.value='';});
   document.getElementById('act-date').value=typeof dateInit==='string'&&dateInit.length===10?dateInit:today();
   document.getElementById('act-heure').value='09:00';
@@ -47640,7 +47923,7 @@ function _dureeDepuis(h) {
 
 function _peuplerSelectsHote(ids) {
   var options = '<option value="">— Choisir —</option>';
-  (DATA.employes || []).filter(function(e) { return e.statut === 'actif'; }).forEach(function(e) {
+  (DATA.employes || []).filter(function(e) { return empEstActif(e); }).forEach(function(e) {
     options += '<option value="' + e.id + '">' + escHtml((e.prenoms ? e.prenoms.split(' ')[0] + ' ' : '') + e.nom) + ' — ' + escHtml(e.poste || '') + '</option>';
   });
   ids.forEach(function(id) {
@@ -49855,7 +50138,8 @@ var RT_PAGE_REFRESH = {
   declarations:['loadDeclarations'], conges_rh:['renderConges'],
   candidats_rh:['renderCandidats'], pointages:['renderPointages'],
   visites_rdv:['renderVisitesRDV'], messages:['renderMessages'],
-  dossiersJuridiques:['renderDossiers'], cessions_foncieres:['cesRender','crecRender']
+  dossiersJuridiques:['renderDossiers'], cessions_foncieres:['cesRender','crecRender'],
+  ordres_mission:['renderOrdresMission']
 };
 
 /* MAP store → data-page pour détecter la page active */
@@ -49869,7 +50153,7 @@ var RT_STORE_PAGE = {
   situations:'avancement', stock_mouvements:'stock', declarations:'rh-declarations',
   conges_rh:'rh-conges', candidats_rh:'rh-recrutement', pointages:'rh-pointage',
   visites_rdv:'accueil-visites', messages:'messagerie', dossiersJuridiques:'juridique',
-  cessions_foncieres:'foncier'
+  cessions_foncieres:'foncier', ordres_mission:'ordres-mission'
 };
 
 function _rtRefreshPage(store){
@@ -54782,7 +55066,7 @@ var _quinzLastResult = null;
 function simNBInit() {
   var sel = document.getElementById('simnb-employe');
   if (sel && sel.options.length <= 1) {
-    (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; }).forEach(function(e){
+    (DATA.employes || []).filter(function(e){ return empEstActif(e); }).forEach(function(e){
       var o = document.createElement('option');
       o.value = e.id;
       o.textContent = (e.prenoms||'') + ' ' + (e.nom||'') + ' — ' + (e.poste||'');
@@ -54910,7 +55194,7 @@ function quinzInit() {
 
 function quinzPeuplerListe() {
   var sel = document.getElementById('quinz-employe'); if (!sel) return;
-  var emps = (DATA.employes || []).filter(function(e){ return e.contrat === 'journalier' || e.statut === 'actif'; });
+  var emps = (DATA.employes || []).filter(function(e){ return e.contrat === 'journalier' || empEstActif(e); });
   sel.innerHTML = '<option value="">— Sélectionner ou saisir —</option>';
   emps.forEach(function(e){
     var o = document.createElement('option');
@@ -55192,7 +55476,7 @@ function _omPopulateChef(selected) {
   var sel = document.getElementById('om-chef');
   if (!sel) return;
   var opts = '<option value="">— Sélectionner —</option>';
-  (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; }).forEach(function(e){
+  (DATA.employes || []).filter(function(e){ return empEstActif(e); }).forEach(function(e){
     opts += '<option value="' + e.id + '">' + escHtml(e.nom + ' ' + e.prenoms) + (e.poste ? ' — ' + escHtml(e.poste) : '') + '</option>';
   });
   sel.innerHTML = opts;
@@ -55203,7 +55487,7 @@ function _omPopulateEquipe(selectedIds) {
   var box = document.getElementById('om-equipe-list');
   if (!box) return;
   selectedIds = selectedIds || [];
-  box.innerHTML = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; }).map(function(e){
+  box.innerHTML = (DATA.employes || []).filter(function(e){ return empEstActif(e); }).map(function(e){
     var checked = selectedIds.indexOf(e.id) !== -1 ? ' checked' : '';
     return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:normal;">'
       + '<input type="checkbox" class="om-equipe-chk" value="' + e.id + '" onchange="_omSyncDivisionsFromEquipe()"' + checked + '> '
@@ -58990,7 +59274,7 @@ function renderPointageTableau() {
   if (!tbody) return;
 
   var actifs = (DATA.employes||[]).filter(function(e){
-    return e.statut === 'actif' && (!dept || e.dept === dept);
+    return empEstActif(e) && (!dept || e.dept === dept);
   }).sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
 
   if (!actifs.length) {
@@ -59148,7 +59432,7 @@ function ptMarkDirty(empId, date, field, value) {
   }
   /* Recap */
   var recap = document.getElementById('pointage-recap-jour');
-  if (recap) recap.textContent = (DATA.employes||[]).filter(function(e){return e.statut==='actif';}).length + ' employés · ' + Object.keys(PT.dirty).length + ' modification(s) non sauvegardée(s)';
+  if (recap) recap.textContent = (DATA.employes||[]).filter(function(e){return empEstActif(e);}).length + ' employés · ' + Object.keys(PT.dirty).length + ' modification(s) non sauvegardée(s)';
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -59217,7 +59501,7 @@ async function rhPointageEnvoyerMessageInterne(texte, fichiers) {
 
 function _rhPointageTexteJournalier(date) {
   var pts     = (DATA.pointages || []).filter(function(p){ return p.date === date; });
-  var actifs  = (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; });
+  var actifs  = (DATA.employes || []).filter(function(e){ return empEstActif(e); });
   var presents = pts.filter(function(p){ return p.statut === 'P'; });
   var absents  = pts.filter(function(p){ return p.statut === 'A' || p.statut === 'AI' || p.statut === 'absent'; });
   var retards  = pts.filter(function(p){ return p.statut === 'R'; });
@@ -59311,7 +59595,7 @@ async function ptSauvegarderTableau() {
 function ptTousPresents() {
   var date = (document.getElementById('pointage-jour')||{}).value || new Date().toISOString().slice(0,10);
   var dept = (document.getElementById('pointage-filter-dept')||{}).value || '';
-  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif' && (!dept||e.dept===dept); });
+  var actifs = (DATA.employes||[]).filter(function(e){ return empEstActif(e) && (!dept||e.dept===dept); });
   var dayOfWeek = new Date(date+'T00:00:00').getDay();
   if (dayOfWeek===0||dayOfWeek===6) { toast('Week-end sélectionné.','info'); return; }
   actifs.forEach(function(e) {
@@ -59382,7 +59666,7 @@ function ptAnnulerSelection() {
 /* ── Export CSV jour ── */
 function ptExportJourCSV() {
   var date = (document.getElementById('pointage-jour')||{}).value || new Date().toISOString().slice(0,10);
-  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif'; });
+  var actifs = (DATA.employes||[]).filter(function(e){ return empEstActif(e); });
   var rows = [['Matricule','Nom','Prénom','Poste','Statut','Entrée','Sortie','H.Supp','Heures','Notes']];
   actifs.forEach(function(e) {
     var p = getPointageJour(e.id, date);
@@ -59564,7 +59848,7 @@ function ptRenderNonPointes() {
   var el = document.getElementById('scan-non-pointes');
   if (!el) return;
   var date = new Date().toISOString().slice(0,10);
-  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif'; });
+  var actifs = (DATA.employes||[]).filter(function(e){ return empEstActif(e); });
   var nonPointes = actifs.filter(function(e){ return !getPointageJour(e.id,date); });
   if (!nonPointes.length) { el.innerHTML='<div style="color:var(--vert);font-size:12px;padding:6px 0;">✅ Tous les employés sont pointés.</div>'; return; }
   el.innerHTML = nonPointes.map(function(e,i){
@@ -59580,7 +59864,7 @@ function ptRenderNonPointes() {
 function ptRenderBadgeButtons() {
   var el = document.getElementById('badge-buttons-grid');
   if (!el) return;
-  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut==='actif'; });
+  var actifs = (DATA.employes||[]).filter(function(e){ return empEstActif(e); });
   el.innerHTML = actifs.map(function(e,i){
     return '<button class="badge-btn-sim" onclick="ptSimulerBadge(\''+e.id+'\')" title="'+e.nom+' '+e.prenoms+'">'
       +'<div style="font-size:10px;color:var(--or);font-weight:700;">'+e.matricule+'</div>'
@@ -63355,7 +63639,7 @@ function openCongeModal(id) {
   var sel = document.getElementById('cg-employe');
   if (sel) {
     sel.innerHTML = '<option value="">— Choisir un employé —</option>' +
-      (DATA.employes || []).filter(function(e){ return e.statut === 'actif'; }).map(function(e){
+      (DATA.employes || []).filter(function(e){ return empEstActif(e); }).map(function(e){
         return '<option value="' + e.id + '">' + e.matricule + ' — ' + e.nom + ' ' + e.prenoms + '</option>';
       }).join('');
   }
@@ -63665,7 +63949,7 @@ function rhSoldeToutCompte(emp, opts){
 function renderCongesSoldes() {
   var tbody = document.getElementById('tbody-soldes-conges');
   if (!tbody) return;
-  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut === 'actif'; });
+  var actifs = (DATA.employes||[]).filter(function(e){ return empEstActif(e); });
   if (!actifs.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--dim);padding:20px;">Aucun employé actif</td></tr>';
     return;
@@ -64045,7 +64329,7 @@ function loadFormations() {
   // Populate participants select
   var selPart = document.getElementById('frm-participants');
   if (selPart) {
-    selPart.innerHTML = (DATA.employes||[]).filter(function(e){ return e.statut === 'actif'; }).map(function(e){
+    selPart.innerHTML = (DATA.employes||[]).filter(function(e){ return empEstActif(e); }).map(function(e){
       return '<option value="' + e.id + '">' + e.matricule + ' — ' + e.nom + ' ' + e.prenoms + '</option>';
     }).join('');
   }
@@ -64075,7 +64359,7 @@ function openFormationModal(id) {
   // Reload participants
   var selPart = document.getElementById('frm-participants');
   if (selPart) {
-    selPart.innerHTML = (DATA.employes||[]).filter(function(e){ return e.statut === 'actif'; }).map(function(e){
+    selPart.innerHTML = (DATA.employes||[]).filter(function(e){ return empEstActif(e); }).map(function(e){
       return '<option value="' + e.id + '">' + e.matricule + ' — ' + e.nom + ' ' + e.prenoms + '</option>';
     }).join('');
   }
@@ -64229,7 +64513,7 @@ function renderSuiviFDFP() {
   var eligibles = (DATA.formations_rh||[]).filter(function(f){ return f.fdfp_eligible === 'oui'; });
   var totalCout = eligibles.reduce(function(s,f){ return s + (parseFloat(f.cout)||0); }, 0);
   var totalFdfp = eligibles.reduce(function(s,f){ return s + (parseFloat(f.montant_fdfp)||0); }, 0);
-  var actifs = (DATA.employes||[]).filter(function(e){ return e.statut === 'actif'; });
+  var actifs = (DATA.employes||[]).filter(function(e){ return empEstActif(e); });
   var masseBrute = actifs.reduce(function(s,e){ return s + (e.salaire_base||0); }, 0);
   var taxeTA = Math.round(masseBrute * 0.004);
   var taxeFC = Math.round(masseBrute * 0.006);
@@ -69378,6 +69662,20 @@ function tombRemove(store, id) { var t = _tombLoad(); if (t[store]) { t[store] =
 function tombList() { return _tombLoad(); }
 /* Réinitialise le registre (à utiliser avec prudence) */
 function tombClear(store) { var t = _tombLoad(); if (store) { delete t[store]; } else { t = {}; } _tombSave(t); }
+/* Lève un tombstone : appelé lors d'une écriture LOCALE volontaire (dbPut hors
+   pull). Une recréation/mise à jour explicite par l'utilisateur signifie que
+   l'enregistrement doit exister → on purge sa trace de suppression partout
+   (localStorage + registre + cloud pi_suppressions) sinon flushDirtySync, le
+   pull phase-0 et le trigger DB le bloqueraient indéfiniment à l'envoi. */
+function _untomb(store, id) {
+  if (!store || id === undefined || id === null || store === 'suppressions_sync') return;
+  if (typeof tombHas === 'function' && !tombHas(store, id)) return; /* rien à lever */
+  try { if (typeof tombRemove === 'function') tombRemove(store, id); } catch(e){}
+  var tid = 'ts::' + store + '::' + String(id);
+  try { if (Array.isArray(DATA.suppressions_sync)) DATA.suppressions_sync = DATA.suppressions_sync.filter(function(x){ return !x || x.id !== tid; }); } catch(e){}
+  try { if (typeof dbDelete === 'function') dbDelete('suppressions_sync', tid); } catch(e){}
+  try { if (typeof deleteFromSupabase === 'function') deleteFromSupabase('pi_suppressions', tid); } catch(e){}
+}
 
 
 /* ══════════════════════════════════════════════════════════
