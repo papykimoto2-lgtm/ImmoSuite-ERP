@@ -8777,6 +8777,8 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
               <div class="card-title">📊 Situations de travaux mensuelles</div>
+              <button class="btn btn-primary btn-sm" onclick="ouvrirTdbChantiers()" title="Vue transversale : avancement, écarts, reste à facturer, retenues, retards">📊 Tableau de bord</button>
+              <button class="btn btn-secondary btn-sm" onclick="ouvrirReceptionTravaux()" title="Procès-verbal de réception provisoire ou définitive, réserves et levées">🏗️ Réception</button>
               <button class="btn btn-primary btn-sm" onclick="openSituation()">+ Nouvelle situation</button>
             </div>
             <div class="table-wrap">
@@ -17172,7 +17174,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 
         <div class="form-group" id="situ-wrap-avct"><label>Avancement cumulé (%)</label><input type="number" class="form-control" id="situ-avancement" min="0" max="100" value="0" oninput="calcSituDecompte()"></div>
         <div class="form-group"><label>Cumul HT antérieur</label><input type="number" class="form-control" id="situ-cumul-prec" readonly style="color:var(--blanc-dim);"></div>
-        <div class="form-group"><label>Montant HT période *</label><input type="number" class="form-control" id="situ-montant-ht" oninput="calcSituDecompte()" value="0"></div>
+        <div class="form-group"><label>Montant HT période *</label><input type="number" class="form-control" id="situ-montant-ht" oninput="calcSituDecompte();situEcartAvancement()" value="0"></div>
         <div class="form-group"><label>TVA (%)</label><input type="number" class="form-control" id="situ-tva" value="18" oninput="calcSituDecompte()"></div>
         <div class="form-group"><label>Montant TTC (auto)</label><input type="number" class="form-control" id="situ-montant-ttc" readonly style="color:var(--or);font-weight:700;"></div>
 
@@ -50402,7 +50404,7 @@ function openSituation(convId){
   document.getElementById('modal-situation').classList.add('open');
 }
 function openSituationForConv(convId){openSituation(convId);}
-function openSituationEdit(id){APP.editingId=id;openSituation();setTimeout(function(){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=(v===undefined||v===null)?'':v;};el('situ-convention',s.convention_id);el('situ-numero',s.numero);el('situ-date',s.date);el('situ-periode',s.periode);el('situ-mode-decompte',s.mode_decompte||'direct');el('situ-montant-ht',s.montant_ht);el('situ-tva',s.tva||18);el('situ-montant-ttc',s.montant_ttc);el('situ-avance-recup',s.avance_recup||0);el('situ-retenue',s.retenue);el('situ-net',s.net);el('situ-avancement',s.avancement);el('situ-mode',s.mode);el('situ-statut',s.statut);el('situ-travaux',s.travaux);el('situ-observations',s.observations);onSituModeDecompte();onSelectConventionSitu();document.getElementById('situ-modal-title').textContent='Modifier situation';},100);}
+function openSituationEdit(id){APP.editingId=id;openSituation();setTimeout(function(){var s=DATA.situations.find(function(x){return x.id===id;});if(!s)return;var el=function(eid,v){var e=document.getElementById(eid);if(e)e.value=(v===undefined||v===null)?'':v;};el('situ-convention',s.convention_id);el('situ-numero',s.numero);el('situ-date',s.date);el('situ-periode',s.periode);el('situ-mode-decompte',s.mode_decompte||'direct');el('situ-montant-ht',s.montant_ht);el('situ-tva',s.tva||18);el('situ-montant-ttc',s.montant_ttc);el('situ-avance-recup',s.avance_recup||0);el('situ-retenue',s.retenue);el('situ-net',s.net);el('situ-avancement',s.avancement);el('situ-avct-physique',s.avancement_physique);el('situ-mode',s.mode);el('situ-statut',s.statut);el('situ-travaux',s.travaux);el('situ-observations',s.observations);onSituModeDecompte();onSelectConventionSitu();document.getElementById('situ-modal-title').textContent='Modifier situation';if(typeof situEcartAvancement==='function')situEcartAvancement();},100);}
 
 async function saveSituationAndCompta(){
   var convId=document.getElementById('situ-convention').value;
@@ -50413,6 +50415,13 @@ async function saveSituationAndCompta(){
 
   /* Garde-fou dépassement marché (bloquant sauf avenant couvrant). */
   var marche=situMarcheHT(conv);
+  var _phys = parseFloat((document.getElementById('situ-avct-physique') || {}).value);
+  var _ec = (typeof situEcartAvancement === 'function') ? situEcartAvancement() : null;
+  if (_ec && _ec.sur) {
+    if (!confirm('\u26a0\ufe0f SURFACTURATION APPARENTE\n\nFactur\u00e9 cumul\u00e9 : ' + _ec.fact + ' %\nAvancement constat\u00e9 : ' + _ec.phys + ' %\n'
+      + '\u00c9cart : +' + _ec.ecart + ' points.\n\nR\u00e9gler cette situation revient \u00e0 payer des travaux non r\u00e9alis\u00e9s. '
+      + 'Enregistrer malgr\u00e9 tout ?')) return;
+  }
   var cumulAnt=situCumulAnterieur(convId, APP.editingId);
   if(marche>0 && (cumulAnt+ht) > marche*1.0001){
     if(!confirm('⚠️ Le cumul facturé ('+fmtF(Math.round(cumulAnt+ht))+' FCFA) dépasse le marché ('+fmtF(marche)+' FCFA).\n\nNormalement un avenant doit couvrir ce surplus. Enregistrer quand même ?')) return;
@@ -50430,6 +50439,9 @@ async function saveSituationAndCompta(){
     retenue:parseFloat(document.getElementById('situ-retenue').value)||0,
     net:parseFloat(document.getElementById('situ-net').value)||0,
     avancement:parseInt(document.getElementById('situ-avancement').value)||0,
+    avancement_physique: isNaN(_phys) ? null : _phys,
+    ecart_avancement: _ec ? _ec.ecart : null,
+    ecart_accepte_par: (_ec && _ec.sur) ? ((APP.currentUser && APP.currentUser.nom) || '') : null,
     mode:document.getElementById('situ-mode').value,
     statut:document.getElementById('situ-statut').value,
     travaux:document.getElementById('situ-travaux').value.trim(),
@@ -50443,7 +50455,11 @@ async function saveSituationAndCompta(){
   /* Avancement convention aligné sur le cumul financier réel. */
   var cumulTot=cumulAnt+ht;
   var avPct=marche>0?Math.min(100,Math.round(cumulTot/marche*100)):s.avancement;
-  if(conv&&avPct>(conv.avancement||0)){conv.avancement=avPct;conv._modifie=new Date().toISOString();await dbPut('conventions',conv);if(typeof syncToSupabase==='function')syncToSupabase('pi_conventions',conv);}
+  /* L'avancement de la convention reflete le constat de chantier quand il est
+     renseigne : c'est lui qui doit piloter planning et tableaux de bord, pas
+     le rythme de facturation de l'entreprise. */
+  if(!isNaN(_phys)&&_phys>0) avPct=_phys;
+  if(conv&&avPct>(conv.avancement||0)){conv.avancement=avPct;conv.avancement_source=(!isNaN(_phys)&&_phys>0)?'constat':'facturation';conv._modifie=new Date().toISOString();await dbPut('conventions',conv);if(typeof syncToSupabase==='function')syncToSupabase('pi_conventions',conv);}
 
   /* ── Nettoyage idempotent : on retire les écritures de cette situation
        avant de les régénérer selon le nouveau statut (évite les orphelines). ── */
@@ -50513,6 +50529,375 @@ async function deleteAvenant(id){if(!confirm('Supprimer ?'))return;if(await dele
 
 /* ─── Retenues de garantie ────────────────────────── */
 function renderGaranties(){var tbody=document.getElementById('tbody-garanties');if(!tbody)return;var retenues=DATA.situations.filter(function(s){return s.retenue&&s.retenue>0&&(s.statut==='validee'||s.statut==='payee');});if(!retenues.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--blanc-dim);">Aucune retenue constituée.</td></tr>';return;}var byConv={};retenues.forEach(function(s){if(!byConv[s.convention_id])byConv[s.convention_id]={total:0};byConv[s.convention_id].total+=s.retenue||0;});tbody.innerHTML=Object.keys(byConv).map(function(convId){var conv=DATA.conventions.find(function(c){return c.id===convId;})||{numero:'—'};var constr=DATA.constructeurs.find(function(c){return c.id===conv.constructeur_id;})||{raison_sociale:'—'};var r=byConv[convId];var lib=conv.statut==='reception_definitive';return'<tr style="'+(lib?'background:rgba(74,196,122,0.05);':'')+'"><td style="font-family:monospace;color:var(--or);">'+conv.numero+'</td><td style="font-size:12px;">'+constr.raison_sociale+'</td><td style="font-weight:700;color:var(--rouge);">'+fmtF(r.total)+' FCFA</td><td>'+(conv.date_fin_prev||'—')+'</td><td style="font-size:11px;">Levée des réserves + réception définitive</td><td><span class="badge '+(lib?'badge-vert':'badge-or')+'">'+(lib?'Libérable':'Bloquée')+'</span></td><td>'+(lib?'<button class="btn btn-primary btn-sm" onclick="libererGarantie(\''+convId+'\','+r.total+')">💰 Libérer</button>':'<button class="btn btn-secondary btn-sm btn-icon" disabled style="opacity:.4;">🔒</button>')+'</td></tr>';}).join('');}
+/* ══════════════════════════════════════════════════════════════════════
+   PV DE RÉCEPTION DES TRAVAUX
+   Le store receptions_travaux existait sans écran : conv.statut ne pouvait
+   donc jamais passer à « reception_definitive », et le contrôle posé sur la
+   libération de retenue restait inopérant. Le cycle est désormais complet :
+   réception provisoire avec réserves → levée → réception définitive →
+   libération de la retenue de garantie.
+════════════════════════════════════════════════════════════════════════ */
+var GPA_MOIS = 12;   /* garantie de parfait achèvement — 1 an après réception provisoire */
+
+function _recepDe(convId) {
+  return (DATA.receptions_travaux || []).filter(function(r){ return r.convention_id === convId; })
+    .sort(function(a, b){ return (a.date || '').localeCompare(b.date || ''); });
+}
+function _recepReservesOuvertes(convId) {
+  var n = 0;
+  _recepDe(convId).forEach(function(r){ (r.reserves || []).forEach(function(x){ if (!x.levee_le) n++; }); });
+  return n;
+}
+function ouvrirReceptionTravaux(convId) {
+  var convs = (DATA.conventions || []);
+  var el = document.getElementById('modal-reception');
+  if (!el) { el = document.createElement('div'); el.className = 'modal-overlay'; el.id = 'modal-reception'; document.body.appendChild(el); }
+  el.innerHTML = '<div class="modal modal-lg"><div class="modal-header"><h3>🏗️ Réception des travaux</h3>'
+    + '<button class="btn btn-secondary btn-icon" onclick="document.getElementById(\'modal-reception\').classList.remove(\'open\')">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="form-grid">'
+    + '<div class="form-group span-2"><label>Convention / marché *</label><select class="form-control" id="rt-convention" onchange="recepRender()">'
+    + '<option value="">— choisir —</option>'
+    + convs.map(function(c){ var ct = (DATA.constructeurs || []).find(function(x){ return x.id === c.constructeur_id; });
+        return '<option value="' + c.id + '">' + escHtml((c.numero || '') + ' — ' + (c.objet || '') + (ct ? ' · ' + (ct.raison_sociale || '') : '')) + '</option>'; }).join('')
+    + '</select></div>'
+    + '<div class="form-group"><label>Nature de la réception *</label><select class="form-control" id="rt-type" onchange="recepRender()">'
+    + '<option value="provisoire">Réception provisoire</option><option value="definitive">Réception définitive</option></select></div>'
+    + '<div class="form-group"><label>Date du procès-verbal *</label><input type="date" class="form-control" id="rt-date" value="' + today() + '"></div>'
+    + '<div class="form-group span-2"><label>Présents au constat</label><input type="text" class="form-control" id="rt-presents" placeholder="Maître d\'ouvrage, entreprise, bureau de contrôle…"></div>'
+    + '<div class="form-group span-2"><label>Observations</label><textarea class="form-control" id="rt-obs" rows="2"></textarea></div>'
+    + '</div>'
+    + '<div id="rt-zone-reserves"></div>'
+    + '<div id="rt-etat" style="margin-top:10px;"></div></div>'
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById(\'modal-reception\').classList.remove(\'open\')">Fermer</button>'
+    + '<button class="btn btn-secondary" onclick="imprimerPVReception()">🖨️ Éditer le PV</button>'
+    + '<button class="btn btn-primary" onclick="enregistrerReception()">✔ Prononcer la réception</button></div></div>';
+  el.classList.add('open');
+  if (convId) { var s = document.getElementById('rt-convention'); if (s) s.value = convId; }
+  recepRender();
+}
+
+var _RT_RESERVES = [];
+function recepAjouterReserve() {
+  var d = prompt('Libellé de la réserve :'); if (!d) return;
+  _RT_RESERVES.push({ id: uid(), libelle: d, levee_le: null });
+  recepRender();
+}
+function recepRetirerReserve(i) { _RT_RESERVES.splice(i, 1); recepRender(); }
+async function recepLeverReserve(recId, resId) {
+  var r = (DATA.receptions_travaux || []).find(function(x){ return x.id === recId; }); if (!r) return;
+  var res = (r.reserves || []).find(function(x){ return x.id === resId; }); if (!res) return;
+  if (!confirm('Lever la réserve « ' + res.libelle + ' » ?')) return;
+  res.levee_le = today();
+  res.levee_par = (APP.currentUser && APP.currentUser.nom) || '';
+  r._modifie = new Date().toISOString();
+  await dbPut('receptions_travaux', r);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_receptions_travaux', r);
+  recepRender();
+  toast('Réserve levée.', 'success');
+}
+
+function recepRender() {
+  var convId = (document.getElementById('rt-convention') || {}).value;
+  var type = (document.getElementById('rt-type') || {}).value;
+  var zr = document.getElementById('rt-zone-reserves');
+  var et = document.getElementById('rt-etat');
+  if (!zr || !et) return;
+
+  /* Réserves saisies pour la réception en cours (provisoire uniquement) */
+  zr.innerHTML = (type === 'provisoire')
+    ? '<div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 5px;">'
+      + '<div style="font-weight:700;color:var(--or);font-size:12.5px;">Réserves formulées</div>'
+      + '<button class="btn btn-secondary btn-sm" onclick="recepAjouterReserve()">+ Ajouter une réserve</button></div>'
+      + (_RT_RESERVES.length
+          ? '<ul style="margin:0;padding-left:18px;font-size:12px;">' + _RT_RESERVES.map(function(r, i){
+              return '<li style="margin:3px 0;">' + escHtml(r.libelle)
+                + ' <button class="btn btn-danger btn-sm btn-icon" style="padding:0 5px;" onclick="recepRetirerReserve(' + i + ')">✕</button></li>'; }).join('') + '</ul>'
+          : '<div style="font-size:11.5px;color:var(--blanc-dim);">Aucune réserve — la réception sera prononcée sans réserve.</div>')
+    : '';
+
+  if (!convId) { et.innerHTML = '<div style="font-size:12px;color:var(--blanc-dim);">Sélectionnez une convention.</div>'; return; }
+  var conv = (DATA.conventions || []).find(function(c){ return c.id === convId; }) || {};
+  var hist = _recepDe(convId);
+  var ouvertes = _recepReservesOuvertes(convId);
+  var prov = hist.find(function(r){ return r.type === 'provisoire'; });
+  var retenue = (DATA.situations || []).filter(function(s){ return s.convention_id === convId; })
+    .reduce(function(a, s){ return a + (parseFloat(s.retenue) || 0); }, 0);
+
+  var histHtml = hist.length ? '<div class="table-wrap"><table><thead><tr><th>Date</th><th>Nature</th><th>Réserves</th><th></th></tr></thead><tbody>'
+    + hist.map(function(r){
+        var res = (r.reserves || []);
+        var ouv = res.filter(function(x){ return !x.levee_le; });
+        return '<tr><td>' + dateShort(r.date) + '</td><td>' + (r.type === 'provisoire' ? 'Provisoire' : 'Définitive') + '</td>'
+          + '<td style="font-size:11.5px;">' + (res.length ? (res.length - ouv.length) + ' levée(s) / ' + res.length : '—') + '</td>'
+          + '<td>' + ouv.map(function(x){
+              return '<div style="font-size:11px;">• ' + escHtml(x.libelle)
+                + ' <button class="btn btn-secondary btn-sm" style="padding:0 6px;" onclick="recepLeverReserve(\'' + r.id + '\',\'' + x.id + '\')">lever</button></div>'; }).join('')
+          + '</td></tr>'; }).join('') + '</tbody></table></div>' : '';
+
+  var gpa = prov ? (function(){ var d = new Date(prov.date); d.setMonth(d.getMonth() + GPA_MOIS); return d.toISOString().slice(0, 10); })() : null;
+  var blocage = (type === 'definitive') && ouvertes > 0;
+
+  et.innerHTML = histHtml
+    + '<div style="margin-top:10px;padding:10px 12px;background:var(--card2);border-left:3px solid '
+    + (blocage ? 'var(--rouge)' : 'var(--or)') + ';border-radius:5px;font-size:12px;line-height:1.6;">'
+    + '<strong>État du marché</strong> — statut : ' + escHtml(conv.statut || '—') + '<br>'
+    + 'Retenue de garantie détenue : <strong>' + fmtF(Math.round(retenue)) + ' FCFA</strong><br>'
+    + (prov ? 'Réception provisoire du ' + dateShort(prov.date) + ' · garantie de parfait achèvement jusqu\'au <strong>' + dateShort(gpa) + '</strong><br>' : '')
+    + 'Réserves non levées : <strong style="color:' + (ouvertes ? 'var(--rouge)' : 'var(--vert)') + ';">' + ouvertes + '</strong>'
+    + (blocage ? '<div style="color:var(--rouge);margin-top:5px;">⛔ La réception définitive ne peut être prononcée tant que des réserves subsistent. Levez-les d\'abord.</div>' : '')
+    + (type === 'definitive' && !blocage && prov && today() < gpa
+        ? '<div style="color:var(--or);margin-top:5px;">⚠️ La garantie de parfait achèvement court jusqu\'au ' + dateShort(gpa)
+          + '. Prononcer la réception définitive avant ce terme libère l\'entreprise de ses obligations par anticipation.</div>' : '')
+    + '</div>';
+}
+
+async function enregistrerReception() {
+  if (!exigerDroit('Conventions', 'v', 'une réception de travaux')) return;
+  var convId = (document.getElementById('rt-convention') || {}).value;
+  var type = (document.getElementById('rt-type') || {}).value;
+  var date = (document.getElementById('rt-date') || {}).value;
+  if (!convId || !date) { toast('Convention et date sont requises.', 'error'); return; }
+  var conv = (DATA.conventions || []).find(function(c){ return c.id === convId; }); if (!conv) return;
+  var hist = _recepDe(convId);
+
+  if (type === 'definitive') {
+    if (!hist.some(function(r){ return r.type === 'provisoire'; })) {
+      if (!confirm('Aucune réception provisoire n\'a été prononcée pour ce marché.\n\nProcéder directement à la réception définitive ?')) return;
+    }
+    if (_recepReservesOuvertes(convId) > 0) { toast('⛔ Réserves non levées — réception définitive impossible.', 'error'); return; }
+  }
+  if (hist.some(function(r){ return r.type === type; })) {
+    if (!confirm('Une réception ' + type + ' existe déjà pour ce marché. En enregistrer une seconde ?')) return;
+  }
+
+  var rec = { id: uid(), convention_id: convId, programme_id: conv.programme_id,
+    constructeur_id: conv.constructeur_id, type: type, date: date,
+    presents: ((document.getElementById('rt-presents') || {}).value || ''),
+    observations: ((document.getElementById('rt-obs') || {}).value || ''),
+    reserves: (type === 'provisoire') ? _RT_RESERVES.slice() : [],
+    prononce_par: (APP.currentUser && APP.currentUser.nom) || '',
+    created_at: today() };
+  DATA.receptions_travaux = DATA.receptions_travaux || [];
+  DATA.receptions_travaux.push(rec);
+  await dbPut('receptions_travaux', rec);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_receptions_travaux', rec);
+
+  conv.statut = (type === 'provisoire') ? 'reception_provisoire' : 'reception_definitive';
+  conv.date_reception = date;
+  if (type === 'provisoire') {
+    var d = new Date(date); d.setMonth(d.getMonth() + GPA_MOIS);
+    conv.fin_gpa = d.toISOString().slice(0, 10);   /* garantie de parfait achèvement */
+  }
+  conv._modifie = new Date().toISOString();
+  await dbPut('conventions', conv);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_conventions', conv);
+
+  _RT_RESERVES = [];
+  if (typeof renderConventions === 'function') renderConventions();
+  recepRender();
+  toast('🏗️ Réception ' + type + ' enregistrée' + (type === 'definitive' ? ' — la retenue de garantie peut être libérée.' : '.'), 'success');
+}
+
+function imprimerPVReception() {
+  var convId = (document.getElementById('rt-convention') || {}).value;
+  if (!convId) { toast('Sélectionnez une convention.', 'error'); return; }
+  var conv = (DATA.conventions || []).find(function(c){ return c.id === convId; }) || {};
+  var ct = (DATA.constructeurs || []).find(function(x){ return x.id === conv.constructeur_id; }) || {};
+  var prog = (DATA.programmes || []).find(function(x){ return x.id === conv.programme_id; }) || {};
+  var type = (document.getElementById('rt-type') || {}).value;
+  var date = (document.getElementById('rt-date') || {}).value || today();
+  var presents = (document.getElementById('rt-presents') || {}).value || '';
+  var obs = (document.getElementById('rt-obs') || {}).value || '';
+  var hist = _recepDe(convId);
+  var reserves = (type === 'provisoire') ? _RT_RESERVES : [];
+  var prov = hist.find(function(r){ return r.type === 'provisoire'; });
+  var p = DATA.params || {}, E = escHtml;
+  var gpa = prov ? (function(){ var d = new Date(prov.date); d.setMonth(d.getMonth() + GPA_MOIS); return d.toISOString().slice(0, 10); })() : null;
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>PV de réception</title><style>'
+    + 'body{font-family:Arial;font-size:11px;padding:28px;color:#111;line-height:1.65;}'
+    + 'h1{font-size:15px;text-align:center;margin:6px 0;} h2{font-size:12px;color:#B87333;margin:14px 0 4px;border-bottom:1px solid #B87333;padding-bottom:3px;}'
+    + 'table{width:100%;border-collapse:collapse;margin:5px 0;} td,th{border:1px solid #999;padding:4px 6px;}'
+    + '.sig{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px;font-size:10px;} .sig div{border-top:1px solid #111;padding-top:5px;height:66px;}'
+    + '.no-print{text-align:center;margin-bottom:12px;} .no-print button{padding:8px 18px;background:#B87333;color:#fff;border:none;border-radius:5px;cursor:pointer;}'
+    + '@media print{.no-print{display:none;}}</style></head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer</button></div>'
+    + '<div style="text-align:right;font-size:10px;">' + E(p.societe || '') + '<br>' + E(p.ville || 'Abidjan') + ', le ' + new Date(date).toLocaleDateString('fr-FR') + '</div>'
+    + '<h1>PROCÈS-VERBAL DE RÉCEPTION ' + (type === 'provisoire' ? 'PROVISOIRE' : 'DÉFINITIVE') + ' DES TRAVAUX</h1>'
+    + '<h2>1 — Identification du marché</h2>'
+    + '<table><tbody><tr><td>Marché n°</td><td><b>' + E(conv.numero || '—') + '</b></td><td>Programme</td><td>' + E(prog.nom || '—') + '</td></tr>'
+    + '<tr><td>Objet</td><td colspan="3">' + E(conv.objet || '—') + '</td></tr>'
+    + '<tr><td>Entreprise</td><td><b>' + E(ct.raison_sociale || '—') + '</b></td><td>Montant HT</td><td>' + fmtF(conv.montant_ht || 0) + ' FCFA</td></tr>'
+    + '</tbody></table>'
+    + '<h2>2 — Constat</h2>'
+    + '<p>Le ' + new Date(date).toLocaleDateString('fr-FR') + ', il a été procédé à la visite contradictoire des ouvrages exécutés '
+    + 'au titre du marché susvisé, en présence de : ' + E(presents || 'les parties') + '.</p>'
+    + (type === 'provisoire'
+        ? '<p>La réception provisoire des travaux est prononcée ' + (reserves.length ? '<b>avec les réserves ci-après</b>' : '<b>sans réserve</b>') + '.</p>'
+        : '<p>Les réserves formulées lors de la réception provisoire' + (prov ? ' du ' + new Date(prov.date).toLocaleDateString('fr-FR') : '')
+          + ' ayant été intégralement levées, la <b>réception définitive</b> des travaux est prononcée.</p>')
+    + (reserves.length ? '<h2>3 — Réserves</h2><table><tbody>'
+        + reserves.map(function(r, i){ return '<tr><td style="width:30px;">' + (i + 1) + '</td><td>' + E(r.libelle) + '</td></tr>'; }).join('')
+        + '</tbody></table><p>L\'entreprise dispose d\'un délai de trente (30) jours pour lever les réserves ci-dessus.</p>' : '')
+    + (obs ? '<h2>Observations</h2><p>' + E(obs) + '</p>' : '')
+    + '<h2>' + (reserves.length ? '4' : '3') + ' — Effets de la réception</h2>'
+    + (type === 'provisoire'
+        ? '<p>La réception provisoire emporte transfert de la garde des ouvrages au maître d\'ouvrage et fait courir '
+          + 'la <b>garantie de parfait achèvement d\'une durée de ' + GPA_MOIS + ' mois</b>' + (gpa ? ', soit jusqu\'au <b>' + new Date(gpa).toLocaleDateString('fr-FR') + '</b>' : '')
+          + '. La retenue de garantie demeure détenue jusqu\'à la réception définitive.</p>'
+        : '<p>La réception définitive met fin aux obligations de l\'entreprise au titre de la garantie de parfait achèvement '
+          + 'et ouvre droit à la <b>restitution de la retenue de garantie</b>, sans préjudice des garanties légales demeurant applicables.</p>')
+    + '<div class="sig"><div>Pour le maître d\'ouvrage<br><span style="font-size:9px;color:#666;">Nom, qualité, signature</span></div>'
+    + '<div>Pour l\'entreprise ' + E(ct.raison_sociale || '') + '<br><span style="font-size:9px;color:#666;">Nom, qualité, signature</span></div></div>'
+    + '</body></html>';
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TABLEAU DE BORD TRANSVERSAL DES CHANTIERS
+   L'information existait, éclatée convention par convention : il fallait
+   ouvrir chaque marché pour savoir où on en était. Vue unique de tous les
+   chantiers avec les six indicateurs qui décident d'une action.
+════════════════════════════════════════════════════════════════════════ */
+function _tdbChantiers() {
+  var divF = (typeof userScopeDivision === 'function') ? userScopeDivision() : '';
+  return (DATA.conventions || []).filter(function(c){
+    if (!divF) return true;
+    var pr = (DATA.programmes || []).find(function(x){ return x.id === c.programme_id; });
+    var d = c.division || (pr && (pr.division_id || pr.division));
+    return !d || String(d) === String(divF);
+  }).map(function(c){
+    var sits = (DATA.situations || []).filter(function(s){ return s.convention_id === c.id; });
+    var facture = sits.reduce(function(a, s){ return a + (parseFloat(s.montant_ht) || 0); }, 0);
+    var retenue = sits.reduce(function(a, s){ return a + (s.retenue_liberee ? 0 : (parseFloat(s.retenue) || 0)); }, 0);
+    var marche = parseFloat(c.montant_ht) || 0;
+    var avFact = marche ? Math.round(facture / marche * 100) : 0;
+    /* Dernier constat physique connu — le plus récent, pas le plus élevé. */
+    var derniere = sits.filter(function(s){ return s.avancement_physique != null; })
+      .sort(function(a, b){ return (a.date || '').localeCompare(b.date || ''); }).pop();
+    var avPhys = derniere ? derniere.avancement_physique : null;
+    var ecart = (avPhys != null) ? Math.round((avFact - avPhys) * 10) / 10 : null;
+    var pen = (typeof calcPenalitesRetard === 'function') ? calcPenalitesRetard(c) : { jours: 0, montant: 0 };
+    var recs = (DATA.receptions_travaux || []).filter(function(r){ return r.convention_id === c.id; });
+    var reserves = recs.reduce(function(a, r){ return a + (r.reserves || []).filter(function(x){ return !x.levee_le; }).length; }, 0);
+    var ct = (DATA.constructeurs || []).find(function(x){ return x.id === c.constructeur_id; }) || {};
+    var pr = (DATA.programmes || []).find(function(x){ return x.id === c.programme_id; }) || {};
+    return { c: c, ct: ct, pr: pr, marche: marche, facture: facture, reste: marche - facture,
+      retenue: retenue, avFact: avFact, avPhys: avPhys, ecart: ecart,
+      retard: pen.jours || 0, penalite: pen.montant || 0, reserves: reserves,
+      nbSit: sits.length, statut: c.statut || 'en_cours' };
+  }).sort(function(a, b){
+    /* Les chantiers qui appellent une décision remontent en tête. */
+    var sa = (a.ecart > 10 ? 4 : 0) + (a.retard > 0 ? 2 : 0) + (a.reserves ? 1 : 0);
+    var sb = (b.ecart > 10 ? 4 : 0) + (b.retard > 0 ? 2 : 0) + (b.reserves ? 1 : 0);
+    return sb - sa || b.marche - a.marche;
+  });
+}
+
+function ouvrirTdbChantiers() {
+  var L = _tdbChantiers();
+  var el = document.getElementById('modal-tdb-chantiers');
+  if (!el) { el = document.createElement('div'); el.className = 'modal-overlay'; el.id = 'modal-tdb-chantiers'; document.body.appendChild(el); }
+  var T = L.reduce(function(a, r){
+    return { marche: a.marche + r.marche, facture: a.facture + r.facture, reste: a.reste + r.reste,
+      retenue: a.retenue + r.retenue, penalite: a.penalite + r.penalite }; },
+    { marche: 0, facture: 0, reste: 0, retenue: 0, penalite: 0 });
+  var alertes = L.filter(function(r){ return r.ecart > 10 || r.retard > 0 || r.reserves > 0; }).length;
+
+  function kpi(lib, val, coul) {
+    return '<div style="background:var(--card2);border-left:3px solid ' + coul + ';border-radius:6px;padding:9px 11px;">'
+      + '<div style="font-size:10px;color:var(--blanc-dim);text-transform:uppercase;letter-spacing:.4px;">' + lib + '</div>'
+      + '<div style="font-weight:700;font-size:14px;margin-top:2px;">' + val + '</div></div>';
+  }
+  var rows = L.map(function(r){
+    var av = r.avPhys != null ? r.avPhys : r.avFact;
+    var coulEcart = (r.ecart == null) ? 'var(--blanc-dim)' : (r.ecart > 10 ? 'var(--rouge)' : (r.ecart < -10 ? 'var(--or)' : 'var(--vert)'));
+    return '<tr>'
+      + '<td style="font-size:11.5px;"><strong>' + escHtml(r.c.numero || '—') + '</strong><br>'
+      + '<span style="color:var(--blanc-dim);font-size:10.5px;">' + escHtml((r.ct.raison_sociale || '—')) + ' · ' + escHtml(r.pr.nom || '') + '</span></td>'
+      + '<td style="text-align:right;font-size:11.5px;">' + fmtF(Math.round(r.marche)) + '</td>'
+      + '<td style="min-width:110px;">'
+      + '<div style="height:6px;background:var(--bord);border-radius:3px;overflow:hidden;">'
+      + '<div style="height:100%;width:' + Math.min(100, av) + '%;background:' + coulEcart + ';"></div></div>'
+      + '<div style="font-size:10.5px;margin-top:2px;">facturé ' + r.avFact + ' %'
+      + (r.avPhys != null ? ' · constaté ' + r.avPhys + ' %' : ' <span style="color:var(--or);">· constat absent</span>') + '</div></td>'
+      + '<td style="text-align:right;font-weight:600;color:' + coulEcart + ';font-size:11.5px;">'
+      + (r.ecart == null ? '—' : (r.ecart > 0 ? '+' : '') + r.ecart + ' pt') + '</td>'
+      + '<td style="text-align:right;font-size:11.5px;">' + fmtF(Math.round(r.reste)) + '</td>'
+      + '<td style="text-align:right;font-size:11.5px;color:var(--bleu);">' + (r.retenue ? fmtF(Math.round(r.retenue)) : '—') + '</td>'
+      + '<td style="text-align:right;font-size:11.5px;color:' + (r.retard ? 'var(--rouge)' : 'var(--blanc-dim)') + ';">'
+      + (r.retard ? r.retard + ' j<br><span style="font-size:10px;">' + fmtF(Math.round(r.penalite)) + ' F</span>' : '—') + '</td>'
+      + '<td style="font-size:11px;">' + escHtml(String(r.statut).replace(/_/g, ' '))
+      + (r.reserves ? '<br><span style="color:var(--rouge);">' + r.reserves + ' réserve(s)</span>' : '') + '</td>'
+      + '<td style="white-space:nowrap;">'
+      + '<button class="btn btn-secondary btn-sm btn-icon" title="Réception" onclick="document.getElementById(\'modal-tdb-chantiers\').classList.remove(\'open\');ouvrirReceptionTravaux(\'' + r.c.id + '\')">🏗️</button> '
+      + '<button class="btn btn-secondary btn-sm btn-icon" title="Nouvelle situation" onclick="document.getElementById(\'modal-tdb-chantiers\').classList.remove(\'open\');openSituationForConv(\'' + r.c.id + '\')">📄</button>'
+      + '</td></tr>';
+  }).join('');
+
+  el.innerHTML = '<div class="modal modal-lg"><div class="modal-header"><h3>🏗️ Tableau de bord des chantiers</h3>'
+    + '<button class="btn btn-secondary btn-icon" onclick="document.getElementById(\'modal-tdb-chantiers\').classList.remove(\'open\')">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px;">'
+    + kpi('Chantiers suivis', L.length, 'var(--bleu)')
+    + kpi('Marchés engagés', fmtF(Math.round(T.marche)) + ' F', 'var(--or)')
+    + kpi('Facturé', fmtF(Math.round(T.facture)) + ' F', 'var(--vert)')
+    + kpi('Reste à facturer', fmtF(Math.round(T.reste)) + ' F', 'var(--blanc)')
+    + kpi('Retenues détenues', fmtF(Math.round(T.retenue)) + ' F', 'var(--bleu)')
+    + kpi('Pénalités encourues', fmtF(Math.round(T.penalite)) + ' F', T.penalite ? 'var(--rouge)' : 'var(--vert)')
+    + '</div>'
+    + (alertes ? '<div style="padding:8px 11px;background:rgba(220,50,50,.1);border-left:3px solid var(--rouge);border-radius:4px;font-size:12px;color:var(--rouge);margin-bottom:10px;">'
+        + '⚠️ ' + alertes + ' chantier(s) appellent une décision — surfacturation, retard ou réserves non levées. Ils apparaissent en tête de liste.</div>' : '')
+    + (L.length ? '<div class="table-wrap"><table><thead><tr><th>Marché</th><th style="text-align:right;">Montant HT</th>'
+      + '<th>Avancement</th><th style="text-align:right;">Écart</th><th style="text-align:right;">Reste à facturer</th>'
+      + '<th style="text-align:right;">Retenue</th><th style="text-align:right;">Retard</th><th>Statut</th><th></th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>'
+      : '<div style="padding:16px;text-align:center;color:var(--blanc-dim);">Aucun marché de travaux enregistré.</div>')
+    + '<div style="margin-top:10px;font-size:11px;color:var(--blanc-dim);">L\'écart compare le pourcentage facturé au dernier avancement constaté sur site. '
+    + 'Un marché sans constat ne peut pas être contrôlé : la mention « constat absent » signale les situations saisies sans relevé contradictoire.</div>'
+    + '</div><div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById(\'modal-tdb-chantiers\').classList.remove(\'open\')">Fermer</button>'
+    + '<button class="btn btn-primary" onclick="imprimerTdbChantiers()">🖨️ Éditer l\'état</button></div></div>';
+  el.classList.add('open');
+}
+
+function imprimerTdbChantiers() {
+  var L = _tdbChantiers(), p = DATA.params || {}, E = escHtml;
+  var T = L.reduce(function(a, r){ return { m: a.m + r.marche, f: a.f + r.facture, r: a.r + r.reste, g: a.g + r.retenue, p: a.p + r.penalite }; },
+    { m: 0, f: 0, r: 0, g: 0, p: 0 });
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>État des chantiers</title><style>'
+    + 'body{font-family:Arial;font-size:10px;padding:20px;color:#111;} h1{font-size:14px;text-align:center;margin:4px 0;}'
+    + 'table{width:100%;border-collapse:collapse;margin-top:8px;} th,td{border:1px solid #999;padding:3px 5px;}'
+    + 'th{background:#efeae3;font-size:9px;} .num{text-align:right;} tr.tot td{background:#f6f2ec;font-weight:700;}'
+    + '.al{color:#b91c1c;font-weight:700;}'
+    + '.no-print{text-align:center;margin-bottom:10px;} .no-print button{padding:8px 18px;background:#B87333;color:#fff;border:none;border-radius:5px;cursor:pointer;}'
+    + '@media print{.no-print{display:none;}}</style></head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer</button></div>'
+    + '<div style="text-align:right;font-size:9.5px;">' + E(p.societe || '') + ' · ' + new Date().toLocaleDateString('fr-FR') + '</div>'
+    + '<h1>ÉTAT D\'AVANCEMENT DES CHANTIERS</h1>'
+    + '<table><thead><tr><th>Marché</th><th>Entreprise</th><th class="num">Montant HT</th><th class="num">Facturé</th>'
+    + '<th class="num">Av. fact.</th><th class="num">Av. constaté</th><th class="num">Écart</th>'
+    + '<th class="num">Reste</th><th class="num">Retenue</th><th class="num">Retard</th><th>Statut</th></tr></thead><tbody>'
+    + L.map(function(r){
+        return '<tr><td>' + E(r.c.numero || '—') + '</td><td>' + E(r.ct.raison_sociale || '—') + '</td>'
+          + '<td class="num">' + fmtF(Math.round(r.marche)) + '</td><td class="num">' + fmtF(Math.round(r.facture)) + '</td>'
+          + '<td class="num">' + r.avFact + ' %</td><td class="num">' + (r.avPhys != null ? r.avPhys + ' %' : '—') + '</td>'
+          + '<td class="num' + (r.ecart > 10 ? ' al' : '') + '">' + (r.ecart == null ? '—' : (r.ecart > 0 ? '+' : '') + r.ecart) + '</td>'
+          + '<td class="num">' + fmtF(Math.round(r.reste)) + '</td><td class="num">' + fmtF(Math.round(r.retenue)) + '</td>'
+          + '<td class="num' + (r.retard ? ' al' : '') + '">' + (r.retard ? r.retard + ' j' : '—') + '</td>'
+          + '<td>' + E(String(r.statut).replace(/_/g, ' ')) + (r.reserves ? ' · ' + r.reserves + ' rés.' : '') + '</td></tr>'; }).join('')
+    + '<tr class="tot"><td colspan="2">TOTAL — ' + L.length + ' chantier(s)</td><td class="num">' + fmtF(Math.round(T.m)) + '</td>'
+    + '<td class="num">' + fmtF(Math.round(T.f)) + '</td><td colspan="3"></td><td class="num">' + fmtF(Math.round(T.r)) + '</td>'
+    + '<td class="num">' + fmtF(Math.round(T.g)) + '</td><td colspan="2"></td></tr>'
+    + '</tbody></table>'
+    + '<div style="margin-top:8px;font-size:8.5px;color:#555;">Écart = avancement facturé − avancement constaté sur site. '
+    + 'Un écart supérieur à 10 points traduit une facturation en avance sur les travaux réalisés.</div>'
+    + '</body></html>';
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
 async function libererGarantie(convId,montant){
   var conv=DATA.conventions.find(function(c){return c.id===convId;})||{};
   if(conv.statut!=='reception_definitive'){
@@ -50582,24 +50967,277 @@ function renderChantiersDashboard(){
 function openRapportChantierForConv(convId){openRapportChantier(convId);}
 
 /* ─── Gantt SVG ───────────────────────────────────── */
-function renderGantt(){
-  var container=document.getElementById('gantt-container');if(!container)return;
-  var filtProg=(document.getElementById('filter-gantt-programme')||{}).value||'';
-  var gSel=document.getElementById('filter-gantt-programme');if(gSel&&gSel.options.length<=1)DATA.programmes.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nom;gSel.appendChild(o);});
-  var chantiers=DATA.conventions.filter(function(c){return c.date_demarrage&&c.date_fin_prev&&(!filtProg||c.programme_id===filtProg);});
-  if(!chantiers.length){container.innerHTML='<div style="padding:24px;text-align:center;color:var(--blanc-dim);">Aucun chantier avec dates. Complétez les dates dans les conventions.</div>';return;}
-  var allD=[].concat(chantiers.map(function(c){return c.date_demarrage;}),chantiers.map(function(c){return c.date_fin_prev;}));
-  var minD=new Date(allD.reduce(function(a,b){return a<b?a:b;}));var maxD=new Date(allD.reduce(function(a,b){return a>b?a:b;}));
-  minD.setDate(1);maxD.setMonth(maxD.getMonth()+1,1);
-  var totalDays=Math.ceil((maxD-minD)/(1000*60*60*24));
-  var barH=36,labelW=200,headerH=40,padding=8;
-  var svgW=Math.max(900,labelW+totalDays*3);var svgH=headerH+(chantiers.length*(barH+padding))+20;
-  var ts=today();function dOff(s){return Math.ceil((new Date(s)-minD)/(1000*60*60*24));}
-  var mSVG='';var d=new Date(minD);
-  while(d<maxD){var x=labelW+dOff(d.toISOString().slice(0,10))*3;var lbl=d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});mSVG+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+svgH+'" stroke="rgba(51,51,80,0.3)" stroke-width="1"/><text x="'+(x+4)+'" y="20" fill="rgba(185,165,100,0.7)" font-size="10" font-family="monospace">'+lbl+'</text>';d.setMonth(d.getMonth()+1);}
-  var tx=labelW+dOff(ts)*3;var tLine='<line x1="'+tx+'" y1="'+headerH+'" x2="'+tx+'" y2="'+svgH+'" stroke="#E05252" stroke-width="2" stroke-dasharray="6,3"/><text x="'+(tx+3)+'" y="'+(headerH-5)+'" fill="#E05252" font-size="10">Auj.</text>';
-  var bSVG=chantiers.map(function(c,i){var constr=DATA.constructeurs.find(function(x){return x.id===c.constructeur_id;})||{raison_sociale:'—'};var y=headerH+i*(barH+padding);var x1=labelW+dOff(c.date_demarrage)*3;var x2=labelW+dOff(c.date_fin_prev)*3;var w=Math.max(x2-x1,8);var avW=Math.round(w*(c.avancement||0)/100);var retard=c.date_fin_prev<ts&&c.statut==='en_cours';var bC=retard?'#C93535':c.avancement>=100?'#1A6B3A':'#1E5FAA';var aC=retard?'#E05252':'#2E8B57';return'<rect x="2" y="'+(y+2)+'" width="'+(labelW-8)+'" height="'+(barH-4)+'" fill="rgba(30,30,50,0.5)" rx="3"/><text x="8" y="'+(y+14)+'" fill="rgba(240,240,200,0.9)" font-size="10" font-weight="bold">'+c.numero+'</text><text x="8" y="'+(y+26)+'" fill="rgba(180,170,150,0.8)" font-size="9">'+constr.raison_sociale.slice(0,28)+'</text><rect x="'+x1+'" y="'+(y+6)+'" width="'+w+'" height="'+(barH-12)+'" fill="'+bC+'" rx="4" opacity="0.5"/><rect x="'+x1+'" y="'+(y+6)+'" width="'+avW+'" height="'+(barH-12)+'" fill="'+aC+'" rx="4" opacity="0.9"/><text x="'+(x1+avW+4)+'" y="'+(y+barH/2+4)+'" fill="#fff" font-size="10" font-weight="bold">'+(c.avancement||0)+'%'+(retard?' ⚠':'')+'</text>';}).join('');
-  container.innerHTML='<svg width="'+svgW+'" height="'+svgH+'" xmlns="http://www.w3.org/2000/svg" style="background:#0A0A12;border-radius:8px;"><rect width="'+svgW+'" height="'+svgH+'" fill="#0A0A12" rx="8"/><rect x="0" y="0" width="'+svgW+'" height="'+headerH+'" fill="rgba(26,26,42,0.9)"/><text x="8" y="26" fill="rgba(184,115,51,0.8)" font-size="11" font-weight="bold">PROGRAMME</text>'+mSVG+tLine+bSVG+'</svg>';
+/* ══════════════════════════════════════════════════════════════════════
+   PLANNING GANTT — rendu HTML interactif
+   L'ancienne version produisait un SVG figé : échelle fixe, fond codé en
+   dur ignorant le thème, aucun survol ni clic. Rendu HTML/CSS ici, ce qui
+   permet zoom, info-bulles, actions au clic et lecture de l'avancement
+   réel superposé à la barre de planning.
+════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   PHASES DE CHANTIER — planification par corps d'état
+   Une convention ne se lisait que comme une barre unique : impossible de
+   voir où le retard se forme. Les phases sont portées par la convention
+   elle-même (champ `phases`), donc aucun nouveau store ni migration
+   IndexedDB. Un modèle standard évite la ressaisie sur chaque marché.
+════════════════════════════════════════════════════════════════════════ */
+var PHASES_MODELE = [
+  { nom:'Installation de chantier', part: 3 },
+  { nom:'Terrassement',             part: 7 },
+  { nom:'Fondations',               part: 15 },
+  { nom:'Élévation / maçonnerie',   part: 25 },
+  { nom:'Charpente et couverture',  part: 12 },
+  { nom:'Second œuvre',             part: 20 },
+  { nom:'Finitions',                part: 13 },
+  { nom:'Réception et levée de réserves', part: 5 }
+];
+
+function ouvrirPhasesChantier(convId) {
+  var convs = (DATA.conventions || []).filter(function(c){ return c.date_demarrage && c.date_fin_prev; });
+  var el = document.getElementById('modal-phases');
+  if (!el) { el = document.createElement('div'); el.className = 'modal-overlay'; el.id = 'modal-phases'; document.body.appendChild(el); }
+  el.innerHTML = '<div class="modal modal-lg"><div class="modal-header"><h3>🧱 Phases de chantier</h3>'
+    + '<button class="btn btn-secondary btn-icon" onclick="document.getElementById(\'modal-phases\').classList.remove(\'open\')">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="form-group"><label>Marché *</label><select class="form-control" id="ph-conv" onchange="phasesRender()">'
+    + '<option value="">— choisir —</option>'
+    + convs.map(function(c){ var ct = (DATA.constructeurs || []).find(function(x){ return x.id === c.constructeur_id; });
+        return '<option value="' + c.id + '">' + escHtml((c.numero || '') + ' — ' + (c.objet || '')
+          + (ct ? ' · ' + (ct.raison_sociale || '') : '')) + '</option>'; }).join('')
+    + '</select></div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;">'
+    + '<button class="btn btn-secondary btn-sm" onclick="phasesAppliquerModele()">📋 Appliquer le modèle standard</button>'
+    + '<button class="btn btn-secondary btn-sm" onclick="phasesAjouter()">+ Ajouter une phase</button>'
+    + '<span style="font-size:11px;color:var(--blanc-dim);align-self:center;">Le modèle répartit la durée du marché au prorata du poids de chaque corps d\'état.</span>'
+    + '</div>'
+    + '<div id="ph-liste"></div><div id="ph-synth" style="margin-top:10px;"></div></div>'
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById(\'modal-phases\').classList.remove(\'open\')">Fermer</button>'
+    + '<button class="btn btn-primary" onclick="phasesEnregistrer()">💾 Enregistrer les phases</button></div></div>';
+  el.classList.add('open');
+  if (convId) { var s = document.getElementById('ph-conv'); if (s) s.value = convId; }
+  phasesRender();
+}
+
+var _PH = [];
+function _phConv() {
+  var id = (document.getElementById('ph-conv') || {}).value;
+  return (DATA.conventions || []).find(function(c){ return c.id === id; });
+}
+function phasesAppliquerModele() {
+  var c = _phConv(); if (!c) { toast('Sélectionnez un marché.', 'error'); return; }
+  if (_PH.length && !confirm('Remplacer les phases existantes par le modèle standard ?')) return;
+  var d1 = new Date(c.date_demarrage), d2 = new Date(c.date_fin_prev);
+  var duree = Math.max(1, (d2 - d1) / 86400000);
+  var cur = new Date(d1);
+  _PH = PHASES_MODELE.map(function(m){
+    var j = Math.max(1, Math.round(duree * m.part / 100));
+    var deb = cur.toISOString().slice(0, 10);
+    var f = new Date(cur); f.setDate(f.getDate() + j - 1);
+    cur = new Date(f); cur.setDate(cur.getDate() + 1);
+    return { id: uid(), nom: m.nom, debut: deb, fin: f.toISOString().slice(0, 10), pct: 0, poids: m.part };
+  });
+  phasesRender();
+}
+function phasesAjouter() {
+  var c = _phConv();
+  _PH.push({ id: uid(), nom: '', debut: c ? c.date_demarrage : today(), fin: c ? c.date_fin_prev : today(), pct: 0, poids: 0 });
+  phasesRender();
+}
+function phasesSupprimer(i) { _PH.splice(i, 1); phasesRender(); }
+function phasesMaj(i, champ, val) {
+  if (!_PH[i]) return;
+  _PH[i][champ] = (champ === 'pct' || champ === 'poids') ? (parseFloat(val) || 0) : val;
+  phasesRender();
+}
+function phasesRender() {
+  var box = document.getElementById('ph-liste'), sy = document.getElementById('ph-synth');
+  if (!box) return;
+  var c = _phConv();
+  if (!c) { box.innerHTML = '<div style="font-size:12px;color:var(--blanc-dim);">Sélectionnez un marché.</div>'; if (sy) sy.innerHTML = ''; return; }
+  if (!_PH.length && Array.isArray(c.phases) && c.phases.length) _PH = JSON.parse(JSON.stringify(c.phases));
+
+  box.innerHTML = _PH.length ? '<div class="table-wrap"><table><thead><tr><th>Phase</th><th>Début</th><th>Fin</th>'
+    + '<th style="text-align:right;">Poids %</th><th style="text-align:right;">Avancement %</th><th></th></tr></thead><tbody>'
+    + _PH.map(function(ph, i){
+        var hors = (ph.debut < c.date_demarrage) || (ph.fin > c.date_fin_prev);
+        return '<tr' + (hors ? ' style="background:rgba(220,50,50,.08);"' : '') + '>'
+          + '<td><input type="text" class="form-control" style="padding:3px;" value="' + escHtml(ph.nom || '') + '" onchange="phasesMaj(' + i + ',\'nom\',this.value)"></td>'
+          + '<td><input type="date" class="form-control" style="padding:3px;width:135px;" value="' + (ph.debut || '') + '" onchange="phasesMaj(' + i + ',\'debut\',this.value)"></td>'
+          + '<td><input type="date" class="form-control" style="padding:3px;width:135px;" value="' + (ph.fin || '') + '" onchange="phasesMaj(' + i + ',\'fin\',this.value)"' + (hors ? ' title="Hors des dates du marché"' : '') + '></td>'
+          + '<td><input type="number" class="form-control" style="padding:3px;width:70px;text-align:right;" value="' + (ph.poids || 0) + '" min="0" max="100" onchange="phasesMaj(' + i + ',\'poids\',this.value)"></td>'
+          + '<td><input type="number" class="form-control" style="padding:3px;width:70px;text-align:right;" value="' + (ph.pct || 0) + '" min="0" max="100" onchange="phasesMaj(' + i + ',\'pct\',this.value)"></td>'
+          + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="phasesSupprimer(' + i + ')">🗑</button></td></tr>'; }).join('')
+    + '</tbody></table></div>'
+    : '<div style="font-size:12px;color:var(--blanc-dim);">Aucune phase — appliquez le modèle standard ou ajoutez-les une à une.</div>';
+
+  if (!sy) return;
+  var poids = _PH.reduce(function(a, x){ return a + (x.poids || 0); }, 0);
+  var avPond = poids ? _PH.reduce(function(a, x){ return a + (x.poids || 0) * (x.pct || 0); }, 0) / poids : 0;
+  var hors = _PH.filter(function(x){ return x.debut < c.date_demarrage || x.fin > c.date_fin_prev; }).length;
+  sy.innerHTML = '<div style="padding:9px 11px;background:var(--card2);border-left:3px solid '
+    + (Math.abs(poids - 100) > 1 || hors ? 'var(--or)' : 'var(--vert)') + ';border-radius:5px;font-size:12px;line-height:1.6;">'
+    + 'Somme des poids : <strong style="color:' + (Math.abs(poids - 100) > 1 ? 'var(--or)' : 'var(--vert)') + ';">' + Math.round(poids) + ' %</strong>'
+    + (Math.abs(poids - 100) > 1 ? ' — la répartition doit totaliser 100 % pour que l\'avancement global soit juste.' : '')
+    + '<br>Avancement global pondéré : <strong>' + Math.round(avPond) + ' %</strong>'
+    + (hors ? '<br><span style="color:var(--rouge);">⚠️ ' + hors + ' phase(s) hors des dates du marché (' + dateShort(c.date_demarrage) + ' → ' + dateShort(c.date_fin_prev) + ').</span>' : '')
+    + '</div>';
+}
+async function phasesEnregistrer() {
+  if (!exigerDroit('Conventions', 'm', 'le planning de chantier')) return;
+  var c = _phConv(); if (!c) { toast('Sélectionnez un marché.', 'error'); return; }
+  var vides = _PH.filter(function(x){ return !x.nom || !x.debut || !x.fin; });
+  if (vides.length) { toast('Chaque phase doit porter un nom et des dates.', 'error'); return; }
+  c.phases = _PH.slice();
+  c._modifie = new Date().toISOString();
+  await dbPut('conventions', c);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_conventions', c);
+  document.getElementById('modal-phases').classList.remove('open');
+  _PH = [];
+  if (typeof renderGantt === 'function') renderGantt();
+  toast('🧱 ' + c.phases.length + ' phase(s) enregistrée(s) — le planning les affiche.', 'success');
+}
+
+var GANTT_ZOOM = 'semaine';                     /* jour | semaine | mois */
+var GANTT_PX = { jour: 22, semaine: 7, mois: 2.6 };   /* pixels par jour */
+function ganttSetZoom(z) { GANTT_ZOOM = z; renderGantt(); }
+
+function renderGantt() {
+  var container = document.getElementById('gantt-container'); if (!container) return;
+  var filtProg = (document.getElementById('filter-gantt-programme') || {}).value || '';
+  var gSel = document.getElementById('filter-gantt-programme');
+  if (gSel && gSel.options.length <= 1) {
+    (DATA.programmes || []).forEach(function(p){ var o = document.createElement('option'); o.value = p.id; o.textContent = p.nom; gSel.appendChild(o); });
+  }
+  var scope = (typeof userScopeDivision === 'function') ? userScopeDivision() : '';
+  var chantiers = (DATA.conventions || []).filter(function(c){
+    if (!c.date_demarrage || !c.date_fin_prev) return false;
+    if (filtProg && c.programme_id !== filtProg) return false;
+    if (scope) { var pr = (DATA.programmes || []).find(function(x){ return x.id === c.programme_id; });
+      var d = c.division || (pr && (pr.division_id || pr.division)); if (d && String(d) !== String(scope)) return false; }
+    return true;
+  });
+  var sansDates = (DATA.conventions || []).filter(function(c){ return !c.date_demarrage || !c.date_fin_prev; }).length;
+
+  if (!chantiers.length) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--blanc-dim);">Aucun chantier planifiable.'
+      + (sansDates ? '<br><span style="font-size:12px;">' + sansDates + ' convention(s) sans date de démarrage ou de fin prévue — complétez-les pour les voir apparaître.</span>' : '')
+      + '</div>';
+    return;
+  }
+
+  var J = 86400000, px = GANTT_PX[GANTT_ZOOM] || 7;
+  var dates = [];
+  chantiers.forEach(function(c){ dates.push(c.date_demarrage, c.date_fin_prev); if (c.date_reception) dates.push(c.date_reception); });
+  var minD = new Date(dates.reduce(function(a, b){ return a < b ? a : b; }));
+  var maxD = new Date(dates.reduce(function(a, b){ return a > b ? a : b; }));
+  minD.setDate(minD.getDate() - 7); maxD.setDate(maxD.getDate() + 14);
+  var totalJ = Math.ceil((maxD - minD) / J);
+  var W = Math.max(600, totalJ * px);
+  var off = function(d){ return Math.max(0, (new Date(d) - minD) / J) * px; };
+  var ts = today();
+
+  /* Bandeau d'échelle : mois, ou semaines au zoom jour */
+  var head = '', d = new Date(minD); d.setDate(1);
+  while (d < maxD) {
+    var x = off(d.toISOString().slice(0, 10));
+    var suivant = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    var larg = Math.min(off(suivant.toISOString().slice(0, 10)), W) - x;
+    head += '<div style="position:absolute;left:' + x + 'px;width:' + larg + 'px;top:0;height:100%;'
+      + 'border-left:1px solid var(--bord);font-size:10px;color:var(--blanc-dim);padding:4px 5px;'
+      + 'text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;overflow:hidden;">'
+      + d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }) + '</div>';
+    d = suivant;
+  }
+  var xT = off(ts);
+
+  /* Regroupement par programme : un planning se lit par opération */
+  var groupes = {};
+  chantiers.forEach(function(c){ (groupes[c.programme_id || '__'] = groupes[c.programme_id || '__'] || []).push(c); });
+
+  var lignes = '', labels = '';
+  Object.keys(groupes).forEach(function(pid){
+    var pr = (DATA.programmes || []).find(function(x){ return x.id === pid; });
+    labels += '<div class="gt-grp">' + escHtml(pr ? pr.nom : 'Sans programme') + '</div>';
+    lignes += '<div class="gt-grp-row"></div>';
+    groupes[pid].sort(function(a, b){ return (a.date_demarrage || '').localeCompare(b.date_demarrage || ''); })
+      .forEach(function(c){
+        var ct = (DATA.constructeurs || []).find(function(x){ return x.id === c.constructeur_id; }) || {};
+        var sits = (DATA.situations || []).filter(function(s){ return s.convention_id === c.id; });
+        var marche = parseFloat(c.montant_ht) || 0;
+        var facture = sits.reduce(function(a, s){ return a + (parseFloat(s.montant_ht) || 0); }, 0);
+        var avFact = marche ? Math.round(facture / marche * 100) : 0;
+        var derniere = sits.filter(function(s){ return s.avancement_physique != null; })
+          .sort(function(a, b){ return (a.date || '').localeCompare(b.date || ''); }).pop();
+        var avPhys = derniere ? derniere.avancement_physique : null;
+        var av = avPhys != null ? avPhys : avFact;
+        var x1 = off(c.date_demarrage), x2 = off(c.date_fin_prev), larg = Math.max(6, x2 - x1);
+        var enRetard = ts > c.date_fin_prev && av < 100;
+        var termine = String(c.statut || '').indexOf('reception') === 0;
+        var coul = termine ? 'var(--vert)' : enRetard ? 'var(--rouge)' : 'var(--or)';
+        /* Dérive : ce que le planning devrait afficher à ce jour */
+        var duree = Math.max(1, (new Date(c.date_fin_prev) - new Date(c.date_demarrage)) / J);
+        var ecoule = Math.min(100, Math.max(0, (new Date(ts) - new Date(c.date_demarrage)) / J / duree * 100));
+        var derive = Math.round(av - ecoule);
+
+        labels += '<div class="gt-lbl" title="' + escHtml((c.objet || '')) + '">'
+          + '<div class="gt-lbl-n">' + escHtml(c.numero || '—') + '</div>'
+          + '<div class="gt-lbl-s">' + escHtml(ct.raison_sociale || '—') + '</div></div>';
+
+        var infobulle = escHtml((c.numero || '') + ' · ' + (ct.raison_sociale || '') + '\n'
+          + 'Du ' + dateShort(c.date_demarrage) + ' au ' + dateShort(c.date_fin_prev) + '\n'
+          + 'Avancement ' + av + ' % (facturé ' + avFact + ' %' + (avPhys != null ? ', constaté ' + avPhys + ' %' : ', constat absent') + ')\n'
+          + 'Attendu à ce jour ' + Math.round(ecoule) + ' % · dérive ' + (derive > 0 ? '+' : '') + derive + ' pt');
+
+        lignes += '<div class="gt-row">'
+          + '<div class="gt-bar" style="left:' + x1 + 'px;width:' + larg + 'px;background:' + coul + '22;border-color:' + coul + ';" '
+          + 'title="' + infobulle + '" onclick="ganttOuvrir(\'' + c.id + '\')">'
+          + '<div class="gt-fill" style="width:' + Math.min(100, av) + '%;background:' + coul + ';"></div>'
+          + '<span class="gt-txt">' + av + ' %' + (derive < -10 ? ' ⚠' : '') + '</span>'
+          + '</div>'
+          + (c.date_reception ? '<div class="gt-jalon" style="left:' + (off(c.date_reception) - 6) + 'px;" title="Réception ' + dateShort(c.date_reception) + '">◆</div>' : '')
+          + '</div>';
+      });
+  });
+
+  var css = '<style>'
+    + '.gt-wrap{display:flex;border:1px solid var(--bord);border-radius:10px;overflow:hidden;background:var(--card2);}'
+    + '.gt-left{flex:0 0 190px;border-right:1px solid var(--bord);background:var(--card2);z-index:2;}'
+    + '.gt-right{flex:1;overflow-x:auto;position:relative;}'
+    + '.gt-head{height:26px;position:relative;border-bottom:1px solid var(--bord);}'
+    + '.gt-grp{height:24px;display:flex;align-items:center;padding:0 10px;font-size:10px;font-weight:800;'
+    + 'text-transform:uppercase;letter-spacing:.5px;color:var(--or);background:var(--bord2);}'
+    + '.gt-grp-row{height:24px;background:var(--bord2);}'
+    + '.gt-lbl{height:34px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;border-top:1px solid var(--bord);}'
+    + '.gt-lbl-n{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    + '.gt-lbl-s{font-size:10px;color:var(--blanc-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    + '.gt-row{height:34px;position:relative;border-top:1px solid var(--bord);}'
+    + '.gt-bar{position:absolute;top:6px;height:22px;border:1px solid;border-radius:5px;overflow:hidden;cursor:pointer;transition:filter .15s;}'
+    + '.gt-bar:hover{filter:brightness(1.15);}'
+    + '.gt-fill{position:absolute;left:0;top:0;height:100%;opacity:.75;}'
+    + '.gt-txt{position:relative;z-index:1;font-size:10px;font-weight:700;line-height:22px;padding-left:7px;color:var(--blanc);}'
+    + '.gt-jalon{position:absolute;top:9px;font-size:13px;color:var(--vert);}'
+    + '.gt-today{position:absolute;top:0;bottom:0;width:2px;background:var(--rouge);opacity:.75;z-index:1;pointer-events:none;}'
+    + '</style>';
+
+  var nbJ = chantiers.length;
+  container.innerHTML = css
+    + '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
+    + ['jour','semaine','mois'].map(function(z){
+        return '<button class="btn btn-secondary btn-sm" style="' + (GANTT_ZOOM === z ? 'border-color:var(--or);color:var(--or);' : '') + '" '
+          + 'onclick="ganttSetZoom(\'' + z + '\')">' + z.charAt(0).toUpperCase() + z.slice(1) + '</button>'; }).join('')
+    + '<span style="font-size:11px;color:var(--blanc-dim);margin-left:6px;">' + nbJ + ' chantier(s) · barre = planning, remplissage = avancement réel, ◆ = réception'
+    + (sansDates ? ' · <span style="color:var(--or);">' + sansDates + ' sans dates</span>' : '') + '</span>'
+    + '</div>'
+    + '<div class="gt-wrap"><div class="gt-left"><div class="gt-head"></div>' + labels + '</div>'
+    + '<div class="gt-right"><div style="width:' + W + 'px;position:relative;">'
+    + '<div class="gt-head">' + head + '</div>'
+    + (xT >= 0 && xT <= W ? '<div class="gt-today" style="left:' + xT + 'px;" title="Aujourd\'hui"></div>' : '')
+    + lignes + '</div></div></div>';
+}
+
+function ganttOuvrir(convId) {
+  if (typeof ouvrirTdbChantiers === 'function') { ouvrirTdbChantiers(); return; }
+  if (typeof openConventionEdit === 'function') openConventionEdit(convId);
 }
 
 /* ─── Rapports chantier ───────────────────────────── */
