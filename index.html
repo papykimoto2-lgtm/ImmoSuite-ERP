@@ -2146,6 +2146,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .tb-sep{display:inline-block;width:1px;height:20px;background:var(--bord);margin:0 3px;opacity:.7;vertical-align:middle;}
 /* Profils sans droit de suppression : les boutons correspondants sont masqués
    plutôt que laissés cliquables pour rien. Le verrou reste côté deleteRecord. */
+/* Actions refusées par le rôle : on masque plutôt que d'offrir un bouton
+   qui affichera un refus. Le contrôle réel reste dans les fonctions. */
+body.no-creer   [data-droit="c"],
+body.no-modifier[data-droit="m"],
+body.no-valider [data-droit="v"]{display:none !important;}
 body.no-delete .btn-danger,
 body.no-delete [onclick*="delete"],
 body.no-delete [onclick*="supprimer"],
@@ -3293,6 +3298,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               <button class="tab-btn" onclick="switchTab('compta','tresorerie')" title="Situation et prévisions de trésorerie"><i>💵</i>Trésorerie</button>
               <button class="tab-btn" onclick="switchTab('compta','analytique');buildAnalytique()" title="Ventilation par programme et par division"><i>🧮</i>Analytique</button>
               <button class="tab-btn" onclick="switchTab('compta','periodique')" title="États sur période libre"><i>📅</i>État périodique</button>
+              <button class="tab-btn" onclick="ouvrirCutoff()" title="Charges et produits constatés d'avance, factures non parvenues, factures à établir"><i>📆</i>Régularisations</button>
               <button class="tab-btn" onclick="ouvrirDeclarationTVA()" title="Déclaration mensuelle de TVA — collectée, déductible, prorata, liquidation"><i>🧾</i>TVA</button>
             </div>
           </div>
@@ -3426,6 +3432,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             </label>
             <button class="btn btn-secondary btn-sm" onclick="ouvrirPerimetreConso()" title="Définir le périmètre, les méthodes et les comptes de liaison">🏛️ Périmètre groupe</button>
             <button class="btn btn-primary btn-sm" onclick="genererConsolidation()" title="Bilan et compte de résultat consolidés avec éliminations">🧩 Consolidation</button>
+            <button class="btn btn-secondary btn-sm" onclick="genererEtatsDGI()" title="Salaires, honoraires, loyers, relevés clients et fournisseurs, immobilisations">🗂️ États DGI</button>
             <button class="btn btn-primary btn-sm" onclick="genererLiasseFiscale()" title="Bilan et compte de résultat normalisés SYSCOHADA — présentation DGI Côte d'Ivoire">📑 Liasse fiscale</button>
             <button class="btn btn-secondary btn-sm" onclick="diagnostiquerBalance()" title="Identifie les causes chiffrées d'un écart de balance">🩺 Diagnostiquer l'écart</button>
             <button class="btn btn-secondary btn-sm" onclick="etatBalance()">🖨️ Balance PDF</button>
@@ -20268,6 +20275,7 @@ async function renderSyncStatus() {
     +   '<span style="font-size:12px;color:var(--blanc-dim);">⬇️ Dernière réception : <strong style="color:var(--blanc)">'+lastPull+'</strong></span>'
     + '</div>'
     + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    +   '<button class="btn btn-secondary btn-sm" onclick="pullReinitialiserCurseurs()" title="Force une récupération complète au prochain cycle — si des données semblent manquer">🔄 Resynchro complète</button>'
     +   '<button class="btn btn-primary btn-sm" onclick="syncAllToSupabase()" '+(online?'':'disabled')+'>⬆️ Tout envoyer</button>'
     +   '<button class="btn btn-secondary btn-sm" onclick="syncFromSupabase()" '+(online?'':'disabled')+'>⬇️ Tout récupérer</button>'
     +   '<button class="btn btn-secondary btn-sm" onclick="(async function(){try{await flushSyncOutbox();}catch(e){}; renderSyncStatus();})()" '+(online&&outbox?'':'disabled')+'>🔁 Réessayer la file ('+outbox+')</button>'
@@ -21015,6 +21023,54 @@ async function _pullPlanComptableCloud() {
   } catch(e) { /* échec silencieux — le prochain cycle de sync réessaiera */ }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   PULL INCRÉMENTAL
+   Le pull tirait les 108 tables intégralement à chaque cycle : une base de
+   46 Mo retéléchargée des dizaines de fois par mois saturait le quota de
+   transfert sortant. On ne demande désormais que les lignes modifiées depuis
+   le dernier passage.
+   Conception défensive : si la colonne updated_at n'existe pas encore sur une
+   table, la requête échoue proprement et ce cycle-là repasse en intégral pour
+   cette table uniquement. Le mécanisme s'active donc de lui-même dès que la
+   migration SQL est appliquée, sans redéploiement.
+════════════════════════════════════════════════════════════════════════ */
+var PULL_CURSEURS_KEY = 'immosuite_pull_curseurs';
+var PULL_INCR_INAPTES = {};        /* tables sans updated_at, réévaluées à chaque session */
+/* Toujours tirées en intégral : petites et structurantes. */
+var PULL_TOUJOURS_COMPLET = ['pi_suppressions','pi_params','pi_users','pi_custom_roles','pi_divisions'];
+
+function _pullCurseurs() {
+  try { return JSON.parse(localStorage.getItem(PULL_CURSEURS_KEY) || '{}'); } catch(e) { return {}; }
+}
+function _pullCurseurSet(table, iso) {
+  try {
+    var c = _pullCurseurs(); c[table] = iso;
+    localStorage.setItem(PULL_CURSEURS_KEY, JSON.stringify(c));
+  } catch(e){}
+}
+function pullReinitialiserCurseurs() {
+  try { localStorage.removeItem(PULL_CURSEURS_KEY); } catch(e){}
+  PULL_INCR_INAPTES = {};
+  if (typeof toast === 'function') toast('Curseurs de synchronisation réinitialisés — le prochain cycle sera complet.', 'info');
+}
+/* Récupère les lignes d'une table, en incrémental quand c'est possible. */
+async function _pullTable(table) {
+  var complet = PULL_TOUJOURS_COMPLET.indexOf(table) !== -1 || PULL_INCR_INAPTES[table];
+  var curseur = complet ? null : (_pullCurseurs()[table] || null);
+  if (curseur) {
+    try {
+      var rows = await sbFetch(table + '?updated_at=gt.' + encodeURIComponent(curseur) + '&select=*', 'GET');
+      if (rows !== null && rows !== undefined) return { rows: rows, incremental: true };
+    } catch(e) {
+      /* Colonne absente ou filtre refusé : on retombe en intégral pour cette
+         table et on ne réessaiera plus avant la prochaine session. */
+      PULL_INCR_INAPTES[table] = true;
+    }
+  }
+  var all = await sbFetch(table + '?select=*', 'GET');
+  return { rows: all, incremental: false };
+}
+
 async function pullFromCloudSilent() {
   if (!navigator.onLine) return;
   getSBConfig();
@@ -21048,8 +21104,15 @@ async function pullFromCloudSilent() {
       var table = SUPA_STORE_MAP[i][0], store = SUPA_STORE_MAP[i][1];
       if (store === 'suppressions_sync') continue; /* déjà traité en phase 0 */
       try {
-        var rows = await sbFetch(table + '?select=*', 'GET');
-        if (!rows || !rows.length) continue;
+        var _res = await _pullTable(table);
+        var rows = _res.rows;
+        var _tsMax = _pullCurseurs()[table] || '';
+        if (!rows || !rows.length) {
+          /* Rien de neuf : on avance quand même le curseur pour ne pas
+             redemander la même fenêtre au cycle suivant. */
+          if (_res.incremental) _pullCurseurSet(table, new Date().toISOString());
+          continue;
+        }
         if (!DATA[store]) DATA[store] = [];
         var byId = {};
         DATA[store].forEach(function(x){ if (x && x.id !== undefined) byId[String(x.id)] = x; });
@@ -21064,6 +21127,14 @@ async function pullFromCloudSilent() {
             total++;
           }
         }
+        /* Curseur = horodatage serveur le plus récent réellement reçu. On ne
+           prend pas l'heure locale : une horloge de poste décalée ferait
+           sauter des enregistrements au cycle suivant. */
+        for (var jt = 0; jt < rows.length; jt++) {
+          var _u = rows[jt] && rows[jt].updated_at;
+          if (_u && (!_tsMax || _u > _tsMax)) _tsMax = _u;
+        }
+        if (_tsMax) _pullCurseurSet(table, _tsMax);
         DATA[store] = Object.keys(byId).map(function(k){ return byId[k]; });
         /* Cas spécial : custom_roles → reconstruire l'index en mémoire */
         if (store === 'custom_roles' && typeof CUSTOM_ROLES !== 'undefined') {
@@ -21110,6 +21181,7 @@ async function pullFromCloudSilent() {
   }
   try { majDerniereSync('Récupération cloud'); } catch(e){}
   try { await _appliquerResetBroadcast(); } catch(e){}
+  try { if (typeof repeuplerListes === 'function') repeuplerListes(); } catch(e){}
   try { if (typeof _synthAutoCheck === 'function') setTimeout(_synthAutoCheck, 4000); } catch(e){}
   try { _appliquerSuppressionsSync(); } catch(e){}
   try { if (typeof majNotificationsSidebar === 'function') majNotificationsSidebar(); if (typeof pmsgRender === 'function') pmsgRender(); } catch(e){}
@@ -24200,7 +24272,7 @@ function renderClients() {
   var idxEmp = {}; DATA.employes.forEach(function(e){ idxEmp[e.id] = e; });
   var idxAp = {}; DATA.apporteurs.forEach(function(a){ idxAp[a.id] = a; });
 
-  var list = DATA.clients.filter(function(c) {
+  var list = scopeFiltrer(DATA.clients, 'programme_id').filter(function(c) {
     var match = !search || (c.nom + ' ' + c.prenoms + ' ' + c.tel + ' ' + (c.email || '')).toLowerCase().indexOf(search) !== -1;
     var prog = !filterProg || c.programme_id === filterProg;
     var stand = !filterStand || c.standing === filterStand;
@@ -27118,6 +27190,7 @@ function exportMargeCSV() {
 }
 
 function renderLots() {
+  /* Périmètre de rôle appliqué à la source de la liste. */
   renderLotsDashboard();
   var filterProg = document.getElementById('filter-programme-lots').value;
   var filterStat = document.getElementById('filter-statut-lot').value;
@@ -27136,7 +27209,7 @@ function renderLots() {
     if (u.statut==='vendu') idxUnitesParLot[u.lot_id].vendus++;
   });
 
-  var list = DATA.lots.filter(function(l) {
+  var list = scopeFiltrer(DATA.lots, 'programme_id').filter(function(l) {
     var matchProg = !filterProg || l.programme_id === filterProg;
     var matchStat = !filterStat || l.statut === filterStat;
 
@@ -28256,6 +28329,7 @@ function auditerDoublonsPlan() {
 }
 
 async function supprimerDoublonsPlan() {
+  if (!exigerDroit('Comptabilite','m','le plan comptable')) return;
   if (typeof _paramsToucher === 'function') _paramsToucher();
   var R = _pcAnalyseDoublons(), S = R.S;
   if (!R.doublons.length && !R.invalides.length) { toast('Aucun doublon à supprimer.', 'info'); return; }
@@ -28736,6 +28810,10 @@ function analytiqueDetail(axe, key){
 
 /* ── CHARGEMENT COMPTABILITÉ ──────────────────────────── */
 function _comptaDivisionFilter() {
+  /* Rôle limité à sa division : le filtre est imposé, la liste déroulante ne
+     peut plus servir à consulter une autre entité. */
+  var _sc = (typeof userScopeDivision === 'function') ? userScopeDivision() : '';
+  if (_sc) return _sc;
   var el = document.getElementById('filter-compta-division');
   return el ? el.value : '';
 }
@@ -28937,7 +29015,13 @@ function ouvrirVisaEcritures() {
 function _visaFermer() { var el = document.getElementById('modal-visa'); if (el) el.classList.remove('open'); }
 
 async function validerEcritures() {
+  if (!exigerDroit('Comptabilite','v','des écritures')) return;
   var list = _visaPerimetre();
+  var _maxE = list.reduce(function(a, e){
+    var t = ecrLignes(e).filter(function(l){ return l.sens === 'D'; })
+      .reduce(function(x, l){ return x + (parseFloat(l.montant) || 0); }, 0);
+    return Math.max(a, t); }, 0);
+  if (!exigerPlafond(_maxE, 'Ce visa')) return;
   var ko = _visaControles(list);
   var cible = list.filter(function(e){ return !ecrEstValidee(e) && !ko.some(function(k){ return k.e.id === e.id; }); });
   if (!cible.length) { toast('Aucune écriture visable.', 'info'); return; }
@@ -28960,6 +29044,7 @@ async function validerEcritures() {
 }
 
 async function devaliderPerimetre() {
+  if (!exigerDroit('Comptabilite','v','des écritures')) return;
   if (!hasRole('admin')) { toast('Réservé à l\'administrateur.', 'error'); return; }
   var list = _visaPerimetre().filter(ecrEstValidee);
   if (!list.length) { toast('Aucune écriture validée sur ce périmètre.', 'info'); return; }
@@ -28986,6 +29071,7 @@ async function devaliderPerimetre() {
    lien avec la pièce d'origine dans les deux sens.
 ════════════════════════════════════════════════════════════════════════ */
 async function contrePasserEcriture(id) {
+  if (!exigerDroit('Comptabilite','c','une contre-passation')) return;
   var src = (DATA.ecritures || []).find(function(x){ return x.id === id; });
   if (!src) { toast('Écriture introuvable.', 'error'); return; }
   if (src.contrepassee_par) { toast('Cette pièce a déjà été contre-passée (' + src.contrepassee_par + ').', 'info'); return; }
@@ -29188,6 +29274,9 @@ function renderDeclarationTVA() {
 }
 
 async function passerEcritureTVA() {
+  if (!exigerDroit('Comptabilite','v','la liquidation de TVA')) return;
+  var _tvaMois = (document.getElementById('tva-mois') || {}).value;
+  if (_tvaMois) { var _T = calculerTVA(_tvaMois); if (!exigerPlafond(_T.aPayer || _T.credit || 0, 'Cette liquidation')) return; }
   var mois = (document.getElementById('tva-mois') || {}).value; if (!mois) return;
   var T = calculerTVA(mois);
   if (!Math.round(T.totCol) && !Math.round(T.totDedBrut)) { toast('Aucun mouvement de TVA sur la période.', 'info'); return; }
@@ -29279,7 +29368,165 @@ function imprimerDeclarationTVA() {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   RÉGULARISATIONS DE FIN D'EXERCICE (cut-off)
+   Le principe de spécialisation des exercices impose de rattacher charges
+   et produits à la période qu'ils concernent, pas à celle où ils ont été
+   payés ou facturés. Sans ces écritures, le résultat — donc la liasse et
+   l'impôt — est faux. Chaque régularisation est extournée à l'ouverture
+   de l'exercice suivant : c'est ce qui la rend neutre à terme.
+════════════════════════════════════════════════════════════════════════ */
+var CUTOFF_TYPES = {
+  cca: { lib:'Charge constatée d\'avance', cpt:'476', sens:'D', contre:'charge',
+         aide:'Charge payée sur l\'exercice mais concernant le suivant (loyer, assurance, abonnement).' },
+  pca: { lib:'Produit constaté d\'avance', cpt:'477', sens:'C', contre:'produit',
+         aide:'Produit encaissé ou facturé sur l\'exercice mais concernant le suivant.' },
+  fnp: { lib:'Facture non parvenue', cpt:'408', sens:'C', contre:'charge',
+         aide:'Charge de l\'exercice dont la facture fournisseur n\'est pas encore reçue.' },
+  fae: { lib:'Facture à établir', cpt:'418', sens:'D', contre:'produit',
+         aide:'Prestation réalisée sur l\'exercice mais pas encore facturée au client.' },
+  cap: { lib:'Charge à payer', cpt:'428', sens:'C', contre:'charge',
+         aide:'Congés payés, primes, intérêts courus non échus à la clôture.' }
+};
+
+function _cutoffList(annee) {
+  return (DATA.params && DATA.params.cutoff && DATA.params.cutoff[annee]) || [];
+}
+async function _cutoffSave(annee, list) {
+  DATA.params = DATA.params || {};
+  DATA.params.cutoff = DATA.params.cutoff || {};
+  DATA.params.cutoff[annee] = list;
+  if (typeof _paramsToucher === 'function') _paramsToucher();
+  await dbPut('params', DATA.params);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+}
+
+function ouvrirCutoff() {
+  var annee = ((document.getElementById('filter-annee-compta') || {}).value) || String(new Date().getFullYear());
+  var el = document.getElementById('modal-cutoff');
+  if (!el) { el = document.createElement('div'); el.className = 'modal-overlay'; el.id = 'modal-cutoff'; document.body.appendChild(el); }
+  el.innerHTML = '<div class="modal modal-lg"><div class="modal-header"><h3>📆 Régularisations de fin d\'exercice ' + annee + '</h3>'
+    + '<button class="btn btn-secondary btn-icon" onclick="document.getElementById(\'modal-cutoff\').classList.remove(\'open\')">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="form-grid">'
+    + '<div class="form-group"><label>Nature</label><select class="form-control" id="co-type" onchange="cutoffAide()">'
+    + Object.keys(CUTOFF_TYPES).map(function(k){ return '<option value="' + k + '">' + CUTOFF_TYPES[k].lib + '</option>'; }).join('')
+    + '</select></div>'
+    + '<div class="form-group"><label>Compte de contrepartie</label><input type="text" class="form-control" id="co-compte" list="dl-plan-comptable" placeholder="Ex. 6132"></div>'
+    + '<div class="form-group span-2"><label>Libellé</label><input type="text" class="form-control" id="co-libelle" placeholder="Loyer janvier N+1 payé d\'avance"></div>'
+    + '<div class="form-group"><label>Montant HT (FCFA)</label><input type="number" class="form-control" id="co-montant" step="1"></div>'
+    + '<div class="form-group"><label>TVA associée (FCFA)</label><input type="number" class="form-control" id="co-tva" step="1" value="0" title="Sur FNP : 4455 · sur FAE : 4435. Laisser 0 pour les charges et produits constatés d\'avance."></div>'
+    + '</div>'
+    + '<div id="co-aide" style="font-size:11.5px;color:var(--blanc-dim);margin:4px 0 10px;"></div>'
+    + '<button class="btn btn-secondary btn-sm" onclick="cutoffAjouter()">+ Ajouter la régularisation</button>'
+    + '<div id="co-liste" style="margin-top:12px;"></div></div>'
+    + '<div class="modal-footer"><button class="btn btn-secondary" onclick="document.getElementById(\'modal-cutoff\').classList.remove(\'open\')">Fermer</button>'
+    + '<button class="btn btn-secondary" onclick="cutoffGenererExtourne()">↩️ Générer l\'extourne N+1</button>'
+    + '<button class="btn btn-primary" onclick="cutoffGenererOD()">📥 Passer les écritures de régularisation</button></div></div>';
+  el.classList.add('open');
+  cutoffAide(); cutoffRender();
+}
+function cutoffAide() {
+  var t = CUTOFF_TYPES[(document.getElementById('co-type') || {}).value];
+  var el = document.getElementById('co-aide');
+  if (el && t) el.innerHTML = 'ℹ️ ' + escHtml(t.aide) + ' <span style="color:var(--or);">Compte de régularisation : ' + t.cpt + '</span>';
+}
+async function cutoffAjouter() {
+  var annee = ((document.getElementById('filter-annee-compta') || {}).value) || String(new Date().getFullYear());
+  var type = (document.getElementById('co-type') || {}).value;
+  var cpt = ((document.getElementById('co-compte') || {}).value || '').trim();
+  var lib = ((document.getElementById('co-libelle') || {}).value || '').trim();
+  var mt = parseFloat((document.getElementById('co-montant') || {}).value) || 0;
+  var tva = parseFloat((document.getElementById('co-tva') || {}).value) || 0;
+  if (!cpt || !lib || !mt) { toast('Compte, libellé et montant sont requis.', 'error'); return; }
+  if (typeof compteEstParent === 'function' && compteEstParent(cpt)) { toast('Imputez un compte de détail, pas un regroupement.', 'error'); return; }
+  var list = _cutoffList(annee).slice();
+  list.push({ id: uid(), type: type, compte: cpt, libelle: lib, montant: mt, tva: tva, cree_le: new Date().toISOString() });
+  await _cutoffSave(annee, list);
+  ['co-libelle','co-montant'].forEach(function(id){ var e = document.getElementById(id); if (e) e.value = ''; });
+  cutoffRender();
+}
+async function cutoffSupprimer(id) {
+  var annee = ((document.getElementById('filter-annee-compta') || {}).value) || String(new Date().getFullYear());
+  await _cutoffSave(annee, _cutoffList(annee).filter(function(x){ return x.id !== id; }));
+  cutoffRender();
+}
+function cutoffRender() {
+  var annee = ((document.getElementById('filter-annee-compta') || {}).value) || String(new Date().getFullYear());
+  var box = document.getElementById('co-liste'); if (!box) return;
+  var list = _cutoffList(annee);
+  if (!list.length) { box.innerHTML = '<div style="font-size:12px;color:var(--blanc-dim);">Aucune régularisation enregistrée pour ' + annee + '.</div>'; return; }
+  var totC = 0, totP = 0;
+  var rows = list.map(function(r){
+    var t = CUTOFF_TYPES[r.type];
+    if (t.contre === 'charge') totC += r.montant; else totP += r.montant;
+    return '<tr><td style="font-size:11.5px;">' + escHtml(t.lib) + '</td>'
+      + '<td style="font-family:monospace;font-size:11px;">' + escHtml(t.cpt) + ' / ' + escHtml(r.compte) + '</td>'
+      + '<td style="font-size:11.5px;">' + escHtml(r.libelle) + '</td>'
+      + '<td style="text-align:right;font-weight:600;">' + fmtF(r.montant) + '</td>'
+      + '<td style="text-align:right;font-size:11px;color:var(--blanc-dim);">' + (r.tva ? fmtF(r.tva) : '—') + '</td>'
+      + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="cutoffSupprimer(\'' + r.id + '\')">🗑</button></td></tr>';
+  }).join('');
+  box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Nature</th><th>Comptes</th><th>Libellé</th>'
+    + '<th style="text-align:right;">Montant</th><th style="text-align:right;">TVA</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + '<div style="margin-top:6px;font-size:12px;">Impact sur les charges <strong style="color:var(--rouge);">' + fmtF(totC)
+    + ' F</strong> · sur les produits <strong style="color:var(--vert);">' + fmtF(totP) + ' F</strong></div>';
+}
+
+function _cutoffLignes(r, extourne) {
+  var t = CUTOFF_TYPES[r.type];
+  var L = [], inv = function(x){ return extourne ? (x === 'D' ? 'C' : 'D') : x; };
+  var cptTva = (r.type === 'fnp') ? '4455' : (r.type === 'fae' ? '4435' : null);
+  /* Sens de la contrepartie : opposé à celui du compte de régularisation. */
+  var sensReg = t.sens, sensContre = (t.sens === 'D') ? 'C' : 'D';
+  L.push({ compte: t.cpt, sens: inv(sensReg), montant: r.montant + ((cptTva && r.tva) ? r.tva : 0),
+    libelle: (extourne ? 'Extourne — ' : '') + t.lib + ' — ' + r.libelle });
+  L.push({ compte: r.compte, sens: inv(sensContre), montant: r.montant,
+    libelle: (extourne ? 'Extourne — ' : '') + r.libelle });
+  if (cptTva && r.tva) L.push({ compte: cptTva, sens: inv(sensContre), montant: r.tva,
+    libelle: (extourne ? 'Extourne — ' : '') + 'TVA sur ' + t.lib });
+  return L;
+}
+
+async function _cutoffPasser(extourne) {
+  if (!exigerDroit('Comptabilite', 'c', 'des écritures de régularisation')) return;
+  var annee = parseInt(((document.getElementById('filter-annee-compta') || {}).value) || new Date().getFullYear(), 10);
+  var list = _cutoffList(String(annee));
+  if (!list.length) { toast('Aucune régularisation à passer.', 'info'); return; }
+  var date = extourne ? ((annee + 1) + '-01-01') : (annee + '-12-31');
+  if (typeof exerciceEstClos === 'function' && exerciceEstClos(date)) { toast('🔒 Exercice clos à cette date.', 'error'); return; }
+  var marque = extourne ? 'cutoff_extourne' : 'cutoff';
+  if ((DATA.ecritures || []).some(function(e){ return e.source === marque && String(e.cutoff_annee) === String(annee); })) {
+    if (!confirm('Ces écritures ont déjà été passées pour ' + annee + '. En générer un second jeu ?')) return;
+  }
+  if (!confirm((extourne ? 'Extourner' : 'Passer') + ' ' + list.length + ' régularisation(s) au ' + dateShort(date) + ' ?')) return;
+
+  var n = 0;
+  for (var i = 0; i < list.length; i++) {
+    var lignes = _cutoffLignes(list[i], extourne);
+    var sD = lignes.filter(function(l){ return l.sens === 'D'; }).reduce(function(a, l){ return a + l.montant; }, 0);
+    var sC = lignes.filter(function(l){ return l.sens === 'C'; }).reduce(function(a, l){ return a + l.montant; }, 0);
+    if (Math.round(sD - sC) !== 0) { console.warn('Régularisation déséquilibrée', list[i]); continue; }
+    var e = { id: uid(), date: date, journal: 'OD', type: 'od',
+      piece: (extourne ? 'EXT-' : 'REG-') + annee + '-' + String(i + 1).padStart(3, '0'),
+      libelle: (extourne ? 'Extourne régularisation — ' : 'Régularisation ' + annee + ' — ') + list[i].libelle,
+      lignes: lignes, source: marque, cutoff_annee: annee, cutoff_id: list[i].id,
+      montant: sD, compte_debit: lignes[0].compte,
+      compte_credit: (lignes.find(function(l){ return l.sens === 'C'; }) || {}).compte,
+      created_at: today() };
+    DATA.ecritures.push(e);
+    await dbPut('ecritures', e);
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_ecritures', e);
+    n++;
+  }
+  if (typeof renderEcritures === 'function') renderEcritures();
+  toast((extourne ? '↩️ ' : '📥 ') + n + ' écriture(s) ' + (extourne ? 'd\'extourne' : 'de régularisation') + ' générée(s) au ' + dateShort(date) + '.', 'success');
+}
+function cutoffGenererOD() { return _cutoffPasser(false); }
+function cutoffGenererExtourne() { return _cutoffPasser(true); }
+
 async function saveEcriture() {
+  if (!exigerDroit('Comptabilite', (APP.editingId ? 'm' : 'c'), 'une écriture comptable')) return;
   /* Intangibilité : une pièce visée ne se modifie plus. */
   if (APP.editingId) {
     var _ecrV = (DATA.ecritures || []).find(function(x){ return x.id === APP.editingId; });
@@ -30695,6 +30942,163 @@ function _lfNotes(annee, sN, sP) {
   return { r4: r4, corps: corps, nb: recap.filter(function(r){ return r.statut === 'A'; }).length };
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   ÉTATS SUPPLÉMENTAIRES DGI — 6ᵉ volet de la liasse
+   Relevés annexes exigés à l'appui de la déclaration : salaires versés,
+   honoraires et commissions, loyers, relevés clients et fournisseurs,
+   mouvements d'immobilisations. Tous reconstitués depuis la comptabilité
+   et le module RH, sans ressaisie.
+════════════════════════════════════════════════════════════════════════ */
+function _dgiTiersLabel(id) {
+  var t = (DATA.tiers_comptables || []).find(function(x){ return x.id === id || x.code === id; })
+       || (DATA.clients || []).find(function(x){ return x.id === id; })
+       || (DATA.fournisseurs || []).find(function(x){ return x.id === id; });
+  if (!t) return { nom: String(id || '—'), ncc: '', code: String(id || '') };
+  return { nom: t.nom || t.raison_sociale || t.libelle || String(id),
+           ncc: t.ncc || t.cc || t.num_contribuable || '', code: t.code || String(id) };
+}
+/* Cumul par tiers sur un jeu de comptes, dans un sens donné */
+function _dgiParTiers(annee, prefixes, sens, divF) {
+  var agg = {};
+  (DATA.ecritures || []).forEach(function(e){
+    if (!e.date || e.date.indexOf(String(annee)) !== 0) return;
+    if (divF && e.division !== divF) return;
+    var lignes = ecrLignes(e);
+    /* Le tiers porté par la ligne de contrepartie (401/411) identifie le
+       bénéficiaire réel de la charge ou du produit. */
+    var tiers = '';
+    lignes.forEach(function(l){ if (!tiers && l.tiers_id) tiers = l.tiers_id; });
+    lignes.forEach(function(l){
+      var c = String(l.compte || '');
+      if (!prefixes.some(function(p){ return c.indexOf(p) === 0; })) return;
+      if (l.sens !== sens) return;
+      var k = tiers || ('cpt:' + c);
+      if (!agg[k]) agg[k] = { total: 0, nb: 0 };
+      agg[k].total += parseFloat(l.montant) || 0;
+      agg[k].nb++;
+    });
+  });
+  return Object.keys(agg).map(function(k){
+    var t = k.indexOf('cpt:') === 0 ? { nom: 'Non affecté à un tiers (' + k.slice(4) + ')', ncc: '', code: '' } : _dgiTiersLabel(k);
+    return { cle: k, nom: t.nom, ncc: t.ncc, code: t.code, total: agg[k].total, nb: agg[k].nb };
+  }).filter(function(r){ return Math.round(r.total) !== 0; })
+    .sort(function(a, b){ return b.total - a.total; });
+}
+
+function genererEtatsDGI() {
+  var annee = parseInt(((document.getElementById('filter-annee-compta') || {}).value) || new Date().getFullYear(), 10);
+  var divF = (typeof _comptaDivisionFilter === 'function') ? _comptaDivisionFilter() : '';
+  var p = DATA.params || {};
+  var f = function(v){ v = Math.round(v || 0); return v === 0 ? '' : fmtF(v); };
+  var E = escHtml;
+
+  /* ── 1. État des salaires versés ── */
+  var buls = (DATA.bulletins || []).filter(function(b){ return String(b.mois || b.periode || '').indexOf(String(annee)) === 0; });
+  var parEmp = {};
+  buls.forEach(function(b){
+    var k = b.employe_id || b.employe_matricule || '?';
+    if (!parEmp[k]) parEmp[k] = { nom: b.employe_nom || '', mat: b.employe_matricule || '', brut: 0, its: 0, cnps: 0, net: 0, nb: 0 };
+    parEmp[k].brut += parseFloat(b.brut || b.salaire_brut) || 0;
+    parEmp[k].its  += parseFloat(b.its || b.impot) || 0;
+    parEmp[k].cnps += parseFloat(b.cnps || b.cnps_salarie) || 0;
+    parEmp[k].net  += parseFloat(b.net || b.net_a_payer) || 0;
+    parEmp[k].nb++;
+  });
+  var emps = Object.keys(parEmp).map(function(k){
+    var r = parEmp[k];
+    if (!r.nom) { var e = (DATA.employes || []).find(function(x){ return x.id === k; });
+      if (e) { r.nom = ((e.prenoms || '') + ' ' + (e.nom || '')).trim(); r.mat = e.matricule || r.mat; } }
+    return r;
+  }).sort(function(a, b){ return b.brut - a.brut; });
+  var tSal = emps.reduce(function(a, r){ return { brut: a.brut + r.brut, its: a.its + r.its, cnps: a.cnps + r.cnps, net: a.net + r.net }; },
+    { brut: 0, its: 0, cnps: 0, net: 0 });
+
+  /* ── 2 à 6 : relevés reconstitués de la comptabilité ── */
+  var honoraires = _dgiParTiers(annee, ['6324','6325','6326','632','633'], 'D', divF);
+  var loyers     = _dgiParTiers(annee, ['6221','6222','622','6132'], 'D', divF);
+  var clients    = _dgiParTiers(annee, ['70','71','75'], 'C', divF);
+  var fournis    = _dgiParTiers(annee, ['60','61','62','63'], 'D', divF);
+
+  var immoAcq = [], immoCed = [];
+  (DATA.ecritures || []).forEach(function(e){
+    if (!e.date || e.date.indexOf(String(annee)) !== 0) return;
+    if (divF && e.division !== divF) return;
+    ecrLignes(e).forEach(function(l){
+      var c = String(l.compte || '');
+      if (c.charAt(0) === '2' && l.sens === 'D' && c.indexOf('28') !== 0 && c.indexOf('29') !== 0)
+        immoAcq.push({ date: e.date, compte: c, lib: l.libelle || e.libelle, mt: parseFloat(l.montant) || 0 });
+      if (c.indexOf('82') === 0 && l.sens === 'C')
+        immoCed.push({ date: e.date, compte: c, lib: l.libelle || e.libelle, mt: parseFloat(l.montant) || 0 });
+    });
+  });
+
+  function tabTiers(titre, num, list, colNb) {
+    if (!list.length) return '<h2>ÉTAT ' + num + ' — ' + titre + '</h2><p class="vide">Aucune opération sur l\'exercice.</p>';
+    var tot = list.reduce(function(a, r){ return a + r.total; }, 0);
+    return '<h2>ÉTAT ' + num + ' — ' + titre + '</h2>'
+      + '<table><thead><tr><th style="width:26px;">N°</th><th>Bénéficiaire / tiers</th><th>N° contribuable</th>'
+      + (colNb ? '<th class="num">Nb opérations</th>' : '') + '<th class="num">Montant (FCFA)</th></tr></thead><tbody>'
+      + list.map(function(r, i){
+          return '<tr><td class="num">' + (i + 1) + '</td><td>' + E(r.nom) + '</td><td>' + E(r.ncc || '—') + '</td>'
+            + (colNb ? '<td class="num">' + r.nb + '</td>' : '') + '<td class="num">' + f(r.total) + '</td></tr>'; }).join('')
+      + '<tr class="tot"><td colspan="' + (colNb ? 4 : 3) + '">TOTAL</td><td class="num">' + f(tot) + '</td></tr>'
+      + '</tbody></table>';
+  }
+  function tabImmo(titre, num, list) {
+    if (!list.length) return '<h2>ÉTAT ' + num + ' — ' + titre + '</h2><p class="vide">Aucun mouvement sur l\'exercice.</p>';
+    var tot = list.reduce(function(a, r){ return a + r.mt; }, 0);
+    return '<h2>ÉTAT ' + num + ' — ' + titre + '</h2>'
+      + '<table><thead><tr><th>Date</th><th>Compte</th><th>Désignation</th><th class="num">Montant</th></tr></thead><tbody>'
+      + list.map(function(r){ return '<tr><td>' + dateShort(r.date) + '</td><td>' + E(r.compte) + '</td>'
+          + '<td>' + E(String(r.lib || '').slice(0, 70)) + '</td><td class="num">' + f(r.mt) + '</td></tr>'; }).join('')
+      + '<tr class="tot"><td colspan="3">TOTAL</td><td class="num">' + f(tot) + '</td></tr></tbody></table>';
+  }
+
+  var etatSal = !emps.length ? '<h2>ÉTAT 1 — SALAIRES VERSÉS</h2><p class="vide">Aucun bulletin sur l\'exercice.</p>'
+    : '<h2>ÉTAT 1 — SALAIRES VERSÉS (état 301)</h2>'
+      + '<table><thead><tr><th style="width:26px;">N°</th><th>Matricule</th><th>Nom et prénoms</th>'
+      + '<th class="num">Mois payés</th><th class="num">Brut</th><th class="num">ITS retenu</th>'
+      + '<th class="num">CNPS salarié</th><th class="num">Net versé</th></tr></thead><tbody>'
+      + emps.map(function(r, i){
+          return '<tr><td class="num">' + (i + 1) + '</td><td>' + E(r.mat || '—') + '</td><td>' + E(r.nom || '—') + '</td>'
+            + '<td class="num">' + r.nb + '</td><td class="num">' + f(r.brut) + '</td><td class="num">' + f(r.its) + '</td>'
+            + '<td class="num">' + f(r.cnps) + '</td><td class="num">' + f(r.net) + '</td></tr>'; }).join('')
+      + '<tr class="tot"><td colspan="4">TOTAL — ' + emps.length + ' salarié(s)</td><td class="num">' + f(tSal.brut) + '</td>'
+      + '<td class="num">' + f(tSal.its) + '</td><td class="num">' + f(tSal.cnps) + '</td><td class="num">' + f(tSal.net) + '</td></tr>'
+      + '</tbody></table>';
+
+  var css = 'body{font-family:Arial;font-size:10px;color:#111;padding:20px;}'
+    + 'h1{font-size:14px;text-align:center;margin:4px 0;} h2{font-size:11.5px;color:#B87333;margin:14px 0 4px;border-bottom:1.5px solid #B87333;padding-bottom:3px;}'
+    + 'table{width:100%;border-collapse:collapse;margin:4px 0;} th,td{border:1px solid #999;padding:3px 5px;}'
+    + 'th{background:#efeae3;font-size:9px;text-align:center;} .num{text-align:right;font-variant-numeric:tabular-nums;}'
+    + 'tr.tot td{background:#f6f2ec;font-weight:700;} p.vide{font-size:9.5px;color:#777;font-style:italic;}'
+    + '.hdr{display:flex;justify-content:space-between;border-bottom:2px solid #B87333;padding-bottom:6px;margin-bottom:8px;font-size:9px;}'
+    + '.no-print{text-align:center;margin-bottom:10px;} .no-print button{padding:8px 18px;background:#B87333;color:#fff;border:none;border-radius:5px;cursor:pointer;}'
+    + '@media print{.no-print{display:none;}body{padding:8px;}}';
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>États supplémentaires DGI ' + annee + '</title><style>' + css + '</style></head><body>'
+    + '<div class="no-print"><button onclick="window.print()">🖨️ Imprimer / PDF</button></div>'
+    + '<div class="hdr"><div><b>' + E(p.societe || '') + '</b><br>NCC ' + E(p.ncc || p.cc || '—') + ' · RCCM ' + E(p.rccm || '—') + '</div>'
+    + '<div style="text-align:center;"><h1>ÉTATS SUPPLÉMENTAIRES DGI</h1>'
+    + '<div>Exercice clos le 31/12/' + annee + ' · Montants en FCFA</div></div>'
+    + '<div style="text-align:right;font-size:8.5px;">Annexes à la liasse<br>' + (divF ? E(_nomDivision(divF)) : 'Toutes divisions') + '</div></div>'
+    + etatSal
+    + tabTiers('HONORAIRES, COMMISSIONS ET COURTAGES VERSÉS', '2', honoraires, true)
+    + tabTiers('LOYERS ET CHARGES LOCATIVES VERSÉS', '3', loyers, true)
+    + tabTiers('RELEVÉ DES CLIENTS — CHIFFRE D\'AFFAIRES RÉALISÉ', '4', clients, true)
+    + tabTiers('RELEVÉ DES FOURNISSEURS — ACHATS ET SERVICES', '5', fournis, true)
+    + tabImmo('IMMOBILISATIONS ACQUISES', '6', immoAcq)
+    + tabImmo('IMMOBILISATIONS CÉDÉES', '7', immoCed)
+    + '<div style="margin-top:12px;font-size:8.5px;color:#555;">Relevés reconstitués à partir de la comptabilité et du module de paie. '
+    + 'Les opérations non rattachées à un compte auxiliaire apparaissent sous la mention « non affecté à un tiers » : '
+    + 'compléter les comptes tiers avant dépôt pour un relevé nominatif complet.</div>'
+    + '<div style="margin-top:26px;text-align:right;font-size:9.5px;">' + E(p.ville || 'Abidjan') + ', le ' + new Date().toLocaleDateString('fr-FR')
+    + '<br><br>_______________________<br>Le représentant légal</div></body></html>';
+  var w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else toast('Autorisez les fenêtres pop-up.', 'error');
+}
+
 function genererLiasseFiscale() {
   var annee = parseInt(((document.getElementById('filter-annee-compta') || {}).value) || new Date().getFullYear(), 10);
   var divF = (typeof _comptaDivisionFilter === 'function') ? _comptaDivisionFilter() : '';
@@ -30909,7 +31313,7 @@ function genererLiasseFiscale() {
     + '<div>EXERCICE CLOS LE : <b>31/12/' + annee + '</b></div></div>'
     + '<table style="width:58%;margin:18px auto;"><tbody>'
     + ['Fiche d\'identification et renseignements divers','Bilan','Compte de résultat','Tableau des flux de trésorerie','Notes annexes','États supplémentaires DGI']
-        .map(function(x,i){ return '<tr><td style="text-align:left;">' + x + '</td><td style="width:26px;text-align:center;font-weight:700;">' + (i < 5 ? 'X' : '—') + '</td></tr>'; }).join('')
+        .map(function(x,i){ return '<tr><td style="text-align:left;">' + x + '</td><td style="width:26px;text-align:center;font-weight:700;">' + 'X' + '</td></tr>'; }).join('')
     + '</tbody></table></div></div>';
 
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Liasse fiscale ' + annee + ' — ' + E(ent) + '</title><style>' + css + '</style></head><body>'
@@ -33077,6 +33481,13 @@ function rebuildRoleMatrix() {
    Absence de droits[module] ⇒ toutes les actions autorisées, pour ne pas
    restreindre rétroactivement les rôles déjà en place.
 ════════════════════════════════════════════════════════════════════════ */
+var PAGE_MODULE = {
+  caisse:'Caisse', 'caisse-page':'Caisse',
+  comptabilite:'Comptabilite', 'compta':'Comptabilite',
+  tresorerie:'Tresorerie', 'tresorerie-page':'Tresorerie',
+  'rh-employes':'Paie', 'rh-paie':'Paie', 'rh-pointage':'Journaliers & Temporaires',
+  clients:'Souscripteurs', lots:'Lots & Reservations', programmes:'Programmes'
+};
 var ACTIONS_LIB = { c:'Créer', m:'Modifier', s:'Supprimer', v:'Valider' };
 /* Rattachement des stores sensibles à leur module, pour appliquer les droits
    au niveau des données et pas seulement de l'écran. */
@@ -33100,6 +33511,53 @@ function userPeut(module, action) {
   if (d === undefined || d === null) return true;      /* non restreint */
   return String(d).indexOf(action) !== -1;
 }
+/* Garde d'action : refuse et explique, plutôt que de laisser l'utilisateur
+   remplir un formulaire qui échouera à l'enregistrement. */
+/* ══════════════════════════════════════════════════════════════════════
+   PÉRIMÈTRE DE DONNÉES ET PLAFOND DE VALIDATION
+   Ces deux réglages du rôle existaient sans être appliqués. Ils le sont
+   désormais au niveau des données : filtrage par division sur les listes,
+   refus au-delà du montant autorisé sur les validations.
+════════════════════════════════════════════════════════════════════════ */
+function _divisionDeProgramme(pid) {
+  if (!pid) return '';
+  var pr = (DATA.programmes || []).find(function(x){ return x.id === pid; });
+  return pr ? (pr.division_id || pr.division || pr.entite || '') : '';
+}
+function scopeFiltrer(list, champ) {
+  var d = (typeof userScopeDivision === 'function') ? userScopeDivision() : '';
+  if (!d || !Array.isArray(list)) return list || [];
+  var k = champ || 'division';
+  return list.filter(function(r){
+    if (!r) return false;
+    var v = r.division || r.division_id || r.entite || '';
+    /* Lots et souscripteurs ne portent pas de division : elle se déduit du
+       programme auquel ils sont rattachés. */
+    if (!v && k === 'programme_id') v = _divisionDeProgramme(r.programme_id);
+    if (!v && r[k]) v = r[k];
+    /* Enregistrement sans division rattachable : conservé. Le masquer ferait
+       disparaître les données historiques non sectorisées, et l'utilisateur
+       croirait à une suppression. */
+    return !v || String(v) === String(d);
+  });
+}
+/* Refus d'une approbation au-delà du plafond porté par le rôle. */
+function exigerPlafond(montant, libelle) {
+  var pl = (typeof userPlafond === 'function') ? userPlafond() : Infinity;
+  var m = Math.abs(parseFloat(montant) || 0);
+  if (m <= pl) return true;
+  try { toast('🔒 Montant de ' + fmtF(Math.round(m)) + ' F supérieur à votre plafond de validation ('
+    + fmtF(Math.round(pl)) + ' F). ' + (libelle || 'Cette opération') + ' doit être approuvée par un responsable habilité.', 'error'); } catch(e){}
+  return false;
+}
+
+function exigerDroit(module, action, libelle) {
+  if (typeof userPeut !== 'function' || userPeut(module, action)) return true;
+  var verbe = { c:'créer', m:'modifier', s:'supprimer', v:'valider' }[action] || action;
+  try { toast('🔒 Votre profil ne permet pas de ' + verbe + ' ' + (libelle || 'cet élément') + '.', 'error'); } catch(e){}
+  return false;
+}
+
 function userPeutSurStore(store, action) {
   var mod = STORE_MODULE[store];
   return mod ? userPeut(mod, action) : (action !== 's' || userPeutSupprimer());
@@ -35552,13 +36010,15 @@ function filterEmployes() {
 }
 
 function renderEmployes() {
+  /* Un rôle limité à sa division ne voit que son effectif. */
+  var _scRH = (typeof userScopeDivision === 'function') ? userScopeDivision() : '';
   var tbody = document.getElementById('tbody-employes');
   if (!tbody) return;
   var q = (document.getElementById('search-employes').value || '').toLowerCase();
   var dept = document.getElementById('filter-dept').value;
   var contrat = document.getElementById('filter-contrat').value;
   var divisionF = (document.getElementById('filter-division')||{}).value || '';
-  var list = DATA.employes.filter(function(e) {
+  var list = scopeFiltrer(DATA.employes, 'division').filter(function(e) {
     var match = !q || (e.nom + ' ' + e.prenoms + ' ' + e.matricule + ' ' + e.poste).toLowerCase().includes(q);
     var matchDept = !dept || e.dept === dept;
     var matchContrat = !contrat || e.contrat === contrat;
@@ -40215,7 +40675,7 @@ function _declDivisionCourante() {
   return sel ? sel.value : '';
 }
 function _declEmployesActifs(divisionId, exclureConsultants) {
-  var list = DATA.employes.filter(function(e){ return empEstActif(e); });
+  var list = scopeFiltrer(DATA.employes, 'division').filter(function(e){ return empEstActif(e); });
   if (divisionId) list = list.filter(function(e){ return e.division === divisionId; });
   if (exclureConsultants) list = list.filter(function(e){ return e.contrat !== 'consultant'; });
   return list;
@@ -46653,6 +47113,7 @@ function etatNonLettres(annee) {
 
 /* ── Clôture d'exercice ───────────────────────────────────── */
 async function cloturerExercice(annee) {
+  if (!exigerDroit('Comptabilite','v','la clôture de l\'exercice')) return;
   if (!hasRole('admin')) { toast('Réservé à l\'administrateur.', 'error'); return; }
   if (!confirm('🔒 Clôturer l\'exercice '+annee+' ?\n\n• Solde de chaque compte 6 et 7 mouvementé → résultat\n• Génération des à-nouveaux au 01/01/'+(annee+1)+'\n• Verrouillage des écritures '+annee+'\n\nCette action est réversible uniquement par un admin.')) return;
   if (!confirm('Dernière confirmation — exercice '+annee+' ?')) return;
@@ -53621,6 +54082,8 @@ var RT_STORE_PAGE = {
 
 var RT_COLLAB_STORES = ['messages','conversations','evenements_calendrier','reunions_direction','actions_reunion'];
 function _rtRefreshPage(store){
+  /* Toute donnée reçue peut alimenter une liste déroulante ouverte ailleurs. */
+  try { if (typeof repeuplerListes === 'function') repeuplerListes(); } catch(e){}
   /* Collaboration : le compteur de messages non lus et les alertes d'agenda
      doivent se mettre à jour quelle que soit la page consultée, sinon un
      utilisateur ne sait pas qu'on lui a écrit tant qu'il n'ouvre pas le module. */
@@ -54152,6 +54615,59 @@ function populateApporteursPartout() {
     });
     if (cur) sel.value = cur;
   });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   REPEUPLEMENT GLOBAL DES LISTES DÉROULANTES
+   Les selects et datalists sont remplis ponctuellement — à l'ouverture d'un
+   écran ou d'un modal. Une donnée créée sur un autre poste, ou reçue au pull,
+   atterrissait donc en base sans que la liste ouverte ne la propose jamais.
+   Ce point d'entrée unique rejoue toutes les fonctions de peuplement ; il est
+   appelé après chaque pull et à chaque réception temps réel, avec anti-rebond
+   pour éviter de reconstruire les listes des dizaines de fois d'affilée.
+════════════════════════════════════════════════════════════════════════ */
+var LISTES_POPULATE = [
+  'populateAllERP','populateApporteursPartout','populateClientSelects',
+  'populateCommerciauxPartout','populateComptesTresorerieSelects','populateConventionSelects',
+  'populateDatalistPlanComptable','populateDivisionSelects','populateFilterProgrammes',
+  'populateFiltreCommApporteurClient','populateItiSelects','populateJournauxSelects',
+  'populateLcProgrammeSelect','populateMobiliteSelects','populateProgrammeSelects',
+  'populateRapprochFilters','populateTypeLogementOptions'
+];
+var _repeuplerTimer = null;
+function repeuplerListes(immediat) {
+  function run() {
+    _repeuplerTimer = null;
+    var n = 0;
+    LISTES_POPULATE.forEach(function(fn){
+      try { if (typeof window[fn] === 'function') { window[fn](); n++; } } catch(e){}
+    });
+    /* Listes bâties hors des fonctions ci-dessus : on repeuple directement
+       tout select ou datalist déclaré via data-src="<store>", ce qui permet
+       de couvrir un nouvel écran sans écrire de fonction dédiée. */
+    document.querySelectorAll('select[data-src],datalist[data-src]').forEach(function(el){
+      try {
+        var store = el.getAttribute('data-src');
+        var champ = el.getAttribute('data-label') || 'nom';
+        var list = DATA[store] || [];
+        var cur = el.value;
+        var garde = (el.tagName === 'SELECT' && el.options.length && !el.options[0].value) ? 1 : 0;
+        while (el.options.length > garde) el.remove(garde);
+        list.forEach(function(r){
+          var o = document.createElement('option');
+          o.value = r.id;
+          o.textContent = r[champ] || r.libelle || r.ref || r.numero || r.id;
+          el.appendChild(o);
+        });
+        if (cur) el.value = cur;
+        n++;
+      } catch(e){}
+    });
+    return n;
+  }
+  if (immediat) return run();
+  if (_repeuplerTimer) clearTimeout(_repeuplerTimer);
+  _repeuplerTimer = setTimeout(run, 700);
 }
 
 function populateAllERP() {
@@ -56707,6 +57223,10 @@ function chargerNomenclature() {
       + '<span>Marge <input type="number" id="dqe-marge" value="'+_co.marge+'" onchange="dqeSetCoef()" style="width:58px;padding:2px 4px;"> %</span>'
       + '<span>TVA <input type="number" id="dqe-tva" value="'+_co.tva+'" onchange="dqeSetCoef()" style="width:58px;padding:2px 4px;"> %</span>'
       + '</div>';
+    /* Mémorisé pour le report vers le modèle de logement (voir dqeReporterPrixVente). */
+    window._DQE_COURANT = { type: type, label: (typeLabels[type] || type), debourse: debourse,
+      coutRevient: coutRevient, marge: marge, pvHT: pvHT, pvTTC: pvTTC, coef: _co,
+      nbPostes: nomens.length, div: _div || 1 };
     resume.innerHTML = '<div class="form-section-title">Récapitulatif — ' + (typeLabels[type] || type) + '</div>'
       + coefBar
       + '<div class="kpi-grid" style="margin-top:4px;">'
@@ -56719,8 +57239,71 @@ function chargerNomenclature() {
       + _c('Nb postes', nomens.length, '')
       + _perApptCards
       + '</div>'
+      + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      + '<button class="btn btn-primary btn-sm" onclick="dqeReporterPrixVente()" title="Enregistre le prix calculé sur le modèle de logement correspondant">📤 Reporter le prix de vente</button>'
+      + '<span style="font-size:11px;color:var(--blanc-dim);">Le montant calculé devient le prix catalogue du modèle ; l\'ancien prix est conservé en historique.</span>'
+      + '</div>'
       + (isDefault ? '<div class="alert alert-info" style="margin-top:8px;font-size:12px;">ℹ️ Données par défaut — cliquez sur <strong>+ Ajouter poste</strong> pour personnaliser cette nomenclature.</div>' : '');
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   REPORT DU PRIX CALCULÉ VERS LE MODÈLE DE LOGEMENT
+   Le DQE produisait un prix de vente que personne ne reprenait : il fallait
+   le relever à l'écran et le ressaisir dans le catalogue. Le report devient
+   explicite, horodaté, et conserve l'historique des prix successifs — un
+   changement de prix catalogue doit pouvoir se justifier.
+════════════════════════════════════════════════════════════════════════ */
+async function dqeReporterPrixVente() {
+  var D = window._DQE_COURANT;
+  if (!D || !D.pvHT) { toast('Calculez d\'abord le récapitulatif du DQE.', 'error'); return; }
+  var mods = (DATA.modeles_logement || []);
+  if (!mods.length) { toast('Aucun modèle de logement enregistré — créez-le d\'abord.', 'error'); return; }
+
+  /* Rapprochement automatique sur le type de logement, sinon choix manuel */
+  var cible = mods.find(function(m){ return _rhNorm ? _rhNorm(m.nom) === _rhNorm(D.label) : m.nom === D.label; });
+  var liste = mods.map(function(m, i){ return (i + 1) + '. ' + m.nom + (m.prix_vente ? ' — actuel ' + fmtF(m.prix_vente) + ' F' : ' — sans prix'); }).join('\n');
+  var def = cible ? String(mods.indexOf(cible) + 1) : '';
+  var rep = prompt('Reporter ' + fmtF(Math.round(D.pvHT)) + ' FCFA HT sur quel modèle ?\n\n' + liste + '\n\nNuméro :', def);
+  if (!rep) return;
+  var m = mods[parseInt(rep, 10) - 1];
+  if (!m) { toast('Numéro invalide.', 'error'); return; }
+
+  var ancien = parseFloat(m.prix_vente) || 0;
+  var nouveau = Math.round(D.pvHT);
+  var ttc = Math.round(D.pvTTC);
+  if (ancien && Math.abs(nouveau - ancien) / ancien > 0.30) {
+    if (!confirm('⚠️ Écart de ' + Math.round((nouveau - ancien) / ancien * 100) + ' % avec le prix actuel ('
+      + fmtF(ancien) + ' F).\n\nVérifiez la nomenclature et les coefficients avant de valider.\n\nConfirmer ?')) return;
+  }
+  m.prix_vente = nouveau;
+  m.prix_vente_ttc = ttc;
+  m.cout_revient = Math.round(D.coutRevient);
+  m.taux_marge = D.coef ? D.coef.marge : null;
+  m.prix_source = 'DQE';
+  m.prix_maj = new Date().toISOString();
+  m.prix_historique = (m.prix_historique || []).concat([{
+    le: m.prix_maj, par: (APP.currentUser && APP.currentUser.nom) || '',
+    ancien: ancien, nouveau: nouveau,
+    cout_revient: Math.round(D.coutRevient), marge: D.coef ? D.coef.marge : null, nb_postes: D.nbPostes }]);
+  m._modifie = m.prix_maj;
+  await dbPut('modeles_logement', m);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_modeles_logement', m);
+  if (typeof repeuplerListes === 'function') repeuplerListes(true);
+
+  /* Les lots non encore vendus rattachés à ce modèle peuvent être réalignés. */
+  var lots = (DATA.lots || []).filter(function(l){
+    return l.modele_id === m.id && ['libre','disponible','reserve'].indexOf(String(l.statut || '').toLowerCase()) !== -1; });
+  if (lots.length && confirm('Appliquer aussi ce prix aux ' + lots.length + ' lot(s) non vendu(s) de ce modèle ?\n\nLes lots vendus ou réservés avec échéancier ne sont jamais modifiés.')) {
+    for (var i = 0; i < lots.length; i++) {
+      lots[i].prix = nouveau; lots[i]._modifie = new Date().toISOString();
+      await dbPut('lots', lots[i]);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lots[i]);
+    }
+    if (typeof renderLots === 'function') renderLots();
+  }
+  toast('📤 Prix reporté sur « ' + m.nom + ' » : ' + fmtF(nouveau) + ' F HT'
+    + (ancien ? ' (auparavant ' + fmtF(ancien) + ' F)' : '') + '.', 'success');
 }
 
 /* ── Ajouter un poste personnalisé ───────────────────── */
@@ -66565,8 +67148,28 @@ var PAGE_MODULE_MAP = {
 /* ── 4. Masquer/afficher la sidebar selon le rôle ── */
 function applyRoleToSidebar() {
   try {
+    /* Bandeau discret : un utilisateur qui ne voit qu'une partie des données
+       doit le savoir, sinon il conclut à une perte de données. */
+    var _scD = (typeof userScopeDivision === 'function') ? userScopeDivision() : '';
+    var _b = document.getElementById('bandeau-scope');
+    if (_scD && !_b) {
+      _b = document.createElement('div');
+      _b.id = 'bandeau-scope';
+      _b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:60;background:var(--or);color:#fff;'
+        + 'font-size:11px;text-align:center;padding:3px 8px;letter-spacing:.3px;';
+      _b.textContent = '🔒 Périmètre restreint — vous consultez uniquement les données de ' +
+        ((typeof _nomDivision === 'function' ? _nomDivision(_scD) : _scD) || 'votre division');
+      document.body.appendChild(_b);
+    } else if (!_scD && _b) { _b.remove(); }
     document.body.classList.toggle('no-delete',
       typeof userPeutSupprimer === 'function' && !userPeutSupprimer());
+    /* Classes d'action calculées sur le module de la page courante. */
+    var _mod = (typeof PAGE_MODULE !== 'undefined' && PAGE_MODULE[APP.currentPage]) || null;
+    ['c','m','v'].forEach(function(a){
+      var cls = { c:'no-creer', m:'no-modifier', v:'no-valider' }[a];
+      document.body.classList.toggle(cls,
+        !!_mod && typeof userPeut === 'function' && !userPeut(_mod, a));
+    });
   } catch(e){}
   if (!APP.currentUser) return;
   document.querySelectorAll('.nav-item[data-page]').forEach(function(navItem) {
@@ -83568,6 +84171,7 @@ function caisseConfigModal(caisseId) {
 }
 
 async function caisseSaveConfig() {
+  if (!exigerDroit('Caisse','m','le paramétrage de la caisse')) return;
   var id = document.getElementById('cc-id').value;
   var nom = document.getElementById('cc-nom').value.trim();
   if (!nom) { toast('Le nom de la caisse est obligatoire.', 'error'); return; }
@@ -83614,6 +84218,7 @@ function caisseOuvrirModal(caisseId) {
 }
 
 async function caisseOuvrir() {
+  if (!exigerDroit('Caisse','c','une session de caisse')) return;
   var caisseId = document.getElementById('co-caisse-id').value;
   var fond = parseFloat(document.getElementById('co-fond').value) || 0;
   if (caisseGetSessionOuverte(caisseId)) { toast('Cette caisse est déjà ouverte.', 'error'); closeModal('modal-caisse-ouvrir'); return; }
@@ -83757,6 +84362,7 @@ function caisseEditBonModal(mvtId) {
 }
 
 async function caisseSaveBon() {
+  if (!exigerDroit('Caisse', (APP.editingId ? 'm' : 'c'), 'un bon de caisse')) return;
   var editId = document.getElementById('cb-mvt-id').value;
   var caisseId = document.getElementById('cb-caisse-id').value;
   var type = document.getElementById('cb-type').value;
@@ -84102,6 +84708,9 @@ function caisseUpdateEcartPreview() {
 }
 
 async function caisseCloturer() {
+  if (!exigerDroit('Caisse','v','la clôture de caisse')) return;
+  var _ses = (DATA.caisse_sessions || []).find(function(x){ return x.statut === 'ouverte'; });
+  if (_ses && !exigerPlafond(_ses.solde_theorique || _ses.total || 0, 'Cette clôture')) return;
   var caisseId = document.getElementById('ccl-caisse-id').value;
   var session = caisseGetSessionOuverte(caisseId);
   if (!session) { toast('Session introuvable.', 'error'); closeModal('modal-caisse-cloturer'); return; }
@@ -84736,6 +85345,7 @@ function caisseRenderVentilationConfigList() {
 }
 
 async function caisseAddVentilationRule() {
+  if (!exigerDroit('Caisse','m','les règles de ventilation')) return;
   var motEl = document.getElementById('cvc-motcle');
   var cptEl = document.getElementById('cvc-compte');
   var mot = (motEl ? motEl.value : '').trim().toLowerCase();
@@ -85195,6 +85805,7 @@ async function genererEcritureEcartCaisse(session){
 }
 
 async function caisseRegulariserEcart(sessionId){
+  if (!exigerDroit('Caisse','v','un écart de caisse')) return;
   var s = (DATA.caisse_sessions||[]).find(function(x){ return x.id===sessionId; });
   if (!s) return;
   if (s.ecart_regularise) { toast('Écart déjà régularisé.', 'info'); return; }
@@ -85207,6 +85818,7 @@ async function caisseRegulariserEcart(sessionId){
 }
 
 async function caisseRegulariserTousEcarts(){
+  if (!exigerDroit('Caisse','v','les écarts de caisse')) return;
   var liste = _caisseEcartsEnAttente();
   if (!liste.length) return;
   for (var i=0;i<liste.length;i++) await genererEcritureEcartCaisse(liste[i]);
