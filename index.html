@@ -2471,6 +2471,10 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="nav-item" onclick="goTo('portail-apporteur')" data-page="portail-apporteur">
         <span class="nav-icon">🤝</span><span>Portail Apporteur</span>
       </div>
+          <div class="nav-item" onclick="goTo('locatif')" data-page="locatif" title="Baux, quittancement, charges, recouvrement">
+        <span class="nav-icon">🏠</span><span>Gestion locative</span>
+        <span class="nav-badge" id="badge-locatif" style="display:none;">0</span>
+      </div>
           <div class="nav-item" onclick="goTo('archives-docs')" data-page="archives-docs" title="GED — Archivage numérique">
         <span class="nav-icon">📁</span><span>GED — Archivage numérique</span>
       </div>
@@ -2582,6 +2586,16 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="nav-item" onclick="goTo('portail')" data-page="portail">
         <span class="nav-icon">🌐</span><span>Site / Portail</span>
         <span class="nav-badge" id="badge-portail-msg" style="display:none;">0</span>
+      </div>
+        </div>
+      </div>
+
+      <div class="nav-group" id="navgrp-13" data-group="13">
+        <div class="nav-section" onclick="toggleNavGroup(13)"><span class="nav-group-badge" id="grpbadge-13"></span><span class="nav-step">13</span><span>Diaspora</span><span class="nav-toggle"></span></div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="goTo('diaspo')" data-page="diaspo" title="Confiance vérifiable à distance">
+        <span class="nav-icon">🌍</span><span>Investisseurs Diaspora</span>
+        <span class="nav-badge" id="badge-diaspo" style="display:none;">0</span>
       </div>
         </div>
       </div>
@@ -3023,6 +3037,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="tab-btn" onclick="switchTab('paiements','echeanciers')">📅 Échéanciers</button>
           <button class="tab-btn" onclick="switchTab('paiements','vefa')">🏗️ Appels VEFA</button>
           <button class="tab-btn" onclick="switchTab('paiements','momo')">📲 Encaissement Mobile Money</button>
+          <button class="tab-btn" onclick="switchTab('paiements','lien')">🔗 Paiement en ligne</button>
         </div>
 
         <div class="tab-pane active" id="tab-paiements-versements">
@@ -3095,6 +3110,51 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <textarea id="momo-input" class="form-control" rows="4" placeholder="12/07/2026 ; 0707182018 ; KOUAME Yao ; 500000 ; TXN12345&#10;12/07/2026 ; 0140017751 ; DIABATE Awa ; 250000 ; TXN12346"></textarea>
             <div id="momo-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0;"></div>
             <div id="momo-table"></div>
+          </div>
+        </div>
+
+        <!-- 🔗 PAIEMENT EN LIGNE — passerelle CinetPay/PayDunya (Wave/OM/MTN/Moov) -->
+        <div class="tab-pane" id="tab-paiements-lien">
+          <details class="card" style="border:1px solid var(--or);margin-bottom:14px;">
+            <summary style="cursor:pointer;font-weight:bold;">⚙️ Configuration passerelle</summary>
+            <div class="filters-bar" style="flex-wrap:wrap;align-items:end;margin-top:10px;">
+              <div class="form-group"><label>Fournisseur</label>
+                <select id="pol-cfg-provider" class="form-control">
+                  <option value="cinetpay">CinetPay (Wave/OM/MTN/Moov)</option>
+                  <option value="paydunya">PayDunya</option>
+                </select></div>
+              <div class="form-group"><label>Devise</label>
+                <select id="pol-cfg-devise" class="form-control"><option value="XOF">XOF (FCFA)</option><option value="XAF">XAF</option></select></div>
+              <div class="form-group"><label>Compte trésorerie e-monnaie</label><input id="pol-cfg-treso" class="form-control" placeholder="52500000"></div>
+              <div class="form-group"><label>Commission passerelle (%)</label><input id="pol-cfg-fraispct" class="form-control" type="number" step="0.1" placeholder="1.5"></div>
+              <div class="form-group"><label>Commission à la charge</label>
+                <select id="pol-cfg-fraischarge" class="form-control"><option value="promoteur">Promoteur (charge 631)</option><option value="client">Client (majorée)</option></select></div>
+              <div class="form-group"><label>Compte charge commission</label><input id="pol-cfg-fraiscompte" class="form-control" placeholder="6311"></div>
+              <button class="btn btn-primary btn-sm" onclick="payOnlineSaveCfg()">💾 Enregistrer</button>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:6px;">🔒 Aucune clé secrète ici. Les identifiants API restent dans les variables d'environnement des Edge Functions Supabase (<code>pay-initiate</code>, <code>pay-webhook</code>).</div>
+          </details>
+
+          <div class="card" style="border:1px solid var(--or);">
+            <div class="card-title">🔗 Générer un lien de paiement</div>
+            <div class="filters-bar" style="flex-wrap:wrap;align-items:end;">
+              <div class="form-group" style="min-width:220px;"><label>Souscripteur</label><select id="pol-client" class="form-control"></select></div>
+              <div class="form-group"><label>Type</label>
+                <select id="pol-type" class="form-control"><option value="mensualite">Mensualité</option><option value="apport">Apport</option><option value="frais_souscription">Frais souscription</option><option value="regularisation">Régularisation</option><option value="autre">Autre</option></select></div>
+              <div class="form-group"><label>Montant (FCFA)</label><input id="pol-montant" class="form-control" type="number" placeholder="250000"></div>
+              <div class="form-group" style="min-width:200px;"><label>Description</label><input id="pol-desc" class="form-control" placeholder="Mensualité lot A-12"></div>
+              <button class="btn btn-primary" id="pol-gen-btn" onclick="payOnlineGenerer()">🔗 Générer le lien</button>
+            </div>
+            <div id="pol-result" style="margin-top:12px;"></div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>📡 Transactions en ligne</span>
+              <button class="btn btn-secondary btn-sm" onclick="payOnlinePoll()">🔄 Vérifier maintenant</button>
+            </div>
+            <div id="pol-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0;"></div>
+            <div class="table-wrap"><div id="pol-table"></div></div>
           </div>
         </div>
       </div>
@@ -3927,6 +3987,18 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               📌 Saisissez ici les lignes de votre <strong>relevé bancaire</strong> (extrait de compte SGCI, NSIA, BNI, etc.). Elles seront ensuite comparées aux écritures du journal comptable (compte 512/521/551...).
             </div>
 
+            <!-- 📥 IMPORT AUTOMATIQUE DE RELEVÉ (CAMT.053 / CSV / OFX) -->
+            <div class="card" style="border:1px solid var(--or);margin-bottom:16px;">
+              <div class="form-section-title">📥 Importer un relevé (CAMT.053 · CSV · OFX)</div>
+              <div class="filters-bar" style="flex-wrap:wrap;align-items:end;margin-top:10px;">
+                <div class="form-group"><label>Compte bancaire (imputation)</label><select id="imp-rb-compte" class="form-control"></select></div>
+                <div class="form-group"><label>Fichier</label><input type="file" id="imp-rb-file" class="form-control" accept=".xml,.csv,.txt,.ofx,.qfx" onchange="impRbCharger(event)"></div>
+                <button class="btn btn-secondary btn-sm" onclick="impRbColler()">📋 Coller un relevé (CSV)</button>
+              </div>
+              <div style="font-size:11px;color:var(--dim);margin-top:6px;">CSV attendu : <b>date;libellé;débit;crédit;référence</b> (ou <b>date;libellé;montant;référence</b> — montant négatif = débit). Séparateur <code>;</code> ou <code>,</code>, décimale <code>,</code> ou <code>.</code>. CAMT.053 (norme ISO 20022 BCEAO/UEMOA) et OFX détectés automatiquement.</div>
+              <div id="imp-rb-preview" style="margin-top:12px;"></div>
+            </div>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
               <!-- Formulaire de saisie -->
               <div class="card">
@@ -4060,7 +4132,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
                 <option value="non_rapproche">Non rapproché ⚠️</option>
                 <option value="partiel">Partiel 🔶</option>
               </select>
-              <button class="btn btn-primary btn-sm" onclick="rapprochAuto()">⚡ Rapprocher auto</button>
+              <button class="btn btn-primary btn-sm" onclick="rapprochAutoScore()">⚡ Rapprocher auto</button>
               <button class="btn btn-secondary btn-sm" onclick="validerRapprochement()">✅ Valider rapprochement</button>
               <button class="btn btn-secondary btn-sm" onclick="exportRapprochement()">⬇ Export</button>
             </div>
@@ -12533,6 +12605,184 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <!-- ══════════════════════════════════════════════════
            PAGE : CARTOGRAPHIE & SIG — parcelles, orthophotos, mesures
       ═══════════════════════════════════════════════════ -->
+      <div class="page" id="page-diaspo">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">🌍 Investisseurs Diaspora</h1>
+            <div class="page-sub">Confiance vérifiable à distance · Chaîne de preuve · Séquestre par jalons · Co-investissement familial</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="dspVerifierChaine()">🔐 Vérifier la chaîne</button>
+            <button class="btn btn-primary" onclick="dspOpenDossier()">+ Dossier diaspora</button>
+          </div>
+        </div>
+
+        <div id="dsp-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
+
+        <div class="tab-nav" style="margin-bottom:14px;">
+          <button class="tab-btn active" onclick="switchTab('diaspo','dossiers')">🗂️ Dossiers</button>
+          <button class="tab-btn" onclick="switchTab('diaspo','preuve')">🔐 Chaîne de preuve</button>
+          <button class="tab-btn" onclick="switchTab('diaspo','sequestre')">🔒 Séquestre par jalons</button>
+          <button class="tab-btn" onclick="switchTab('diaspo','parts')">👨‍👩‍👧 Co-investissement</button>
+          <button class="tab-btn" onclick="switchTab('diaspo','ancrage')">⚓ Ancrage &amp; certificat</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-diaspo-dossiers">
+          <div class="filters-bar" style="flex-wrap:wrap;">
+            <input type="text" class="search-input" id="dsp-search" placeholder="🔍 Investisseur, pays, lot..." oninput="dspRenderDossiers()">
+            <select class="form-control" id="dsp-filter-pays" onchange="dspRenderDossiers()" style="max-width:180px;"><option value="">— Tous pays —</option></select>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="dsp-dossiers-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-diaspo-preuve">
+          <div class="alert alert-info">
+            Chaque preuve de chantier est <strong>hachée en SHA-256</strong> et <strong>chaînée</strong> au bloc précédent (photo + date + coordonnées GPS + auteur).
+            Modifier ou remplacer une preuve a posteriori casse la chaîne — la vérification le détecte immédiatement.
+          </div>
+          <div class="card" style="border:1px solid var(--or);">
+            <div class="form-section-title">➕ Sceller une preuve d'avancement</div>
+            <div class="form-grid" style="margin-top:10px;">
+              <div class="form-group"><label>Dossier / Lot concerné *</label><select id="dsp-pv-dossier" class="form-control"></select></div>
+              <div class="form-group"><label>Nature de la preuve</label><select id="dsp-pv-type" class="form-control">
+                <option value="photo">Photo de chantier</option><option value="jalon">Franchissement de jalon</option>
+                <option value="document">Document administratif</option><option value="constat">Constat tiers / huissier</option>
+                <option value="paiement">Justificatif de paiement</option></select></div>
+              <div class="form-group span-2"><label>Description *</label><input type="text" id="dsp-pv-desc" class="form-control" placeholder="Coulage dalle R+1 — lot A-12"></div>
+              <div class="form-group"><label>Fichier (photo / PDF)</label><input type="file" id="dsp-pv-file" class="form-control" accept="image/*,application/pdf"></div>
+              <div class="form-group"><label>Coordonnées GPS</label>
+                <div style="display:flex;gap:6px;"><input type="text" id="dsp-pv-geo" class="form-control" placeholder="5.3599, -4.0083">
+                <button class="btn btn-secondary btn-sm" onclick="dspGeoloc()" title="Position actuelle">📍</button></div></div>
+              <div class="form-group"><label>Auteur / Témoin</label><input type="text" id="dsp-pv-auteur" class="form-control" placeholder="Chef de chantier, huissier..."></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:12px;" onclick="dspSceller()">🔐 Sceller dans la chaîne</button>
+          </div>
+          <div id="dsp-chain-status" style="margin-top:12px;"></div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="dsp-preuve-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-diaspo-sequestre">
+          <div class="alert alert-warning">
+            L'investisseur verse par avance : les fonds sont <strong>séquestrés</strong> (dette au passif, compte 4191) et ne deviennent acquis
+            qu'au <strong>franchissement d'un jalon prouvé</strong>. Chaque libération exige une preuve scellée dans la chaîne.
+          </div>
+          <div class="filters-bar" style="flex-wrap:wrap;align-items:end;">
+            <div class="form-group" style="min-width:220px;"><label>Dossier</label><select id="dsp-sq-dossier" class="form-control" onchange="dspRenderSequestre()"></select></div>
+            <button class="btn btn-secondary btn-sm" onclick="dspOpenJalon()">+ Jalon</button>
+            <button class="btn btn-secondary btn-sm" onclick="dspOpenVersement()">💰 Verser au séquestre</button>
+          </div>
+          <div id="dsp-sq-resume" style="margin-top:12px;"></div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="dsp-sequestre-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-diaspo-parts">
+          <div class="alert alert-info">
+            <strong>Tontine numérique</strong> — un même bien financé par plusieurs membres d'une famille répartis dans plusieurs pays.
+            Quotes-parts nominatives, appels de fonds individuels, suivi de chacun. Le titre reste au porteur désigné : à sécuriser par convention d'indivision notariée.
+          </div>
+          <div class="filters-bar" style="flex-wrap:wrap;align-items:end;">
+            <div class="form-group" style="min-width:220px;"><label>Dossier</label><select id="dsp-pt-dossier" class="form-control" onchange="dspRenderParts()"></select></div>
+            <div class="form-group"><label>Co-investisseur</label><input type="text" id="dsp-pt-nom" class="form-control" placeholder="Nom complet"></div>
+            <div class="form-group"><label>Pays</label><input type="text" id="dsp-pt-pays" class="form-control" placeholder="France"></div>
+            <div class="form-group"><label>Quote-part (%)</label><input type="number" step="0.01" id="dsp-pt-pct" class="form-control"></div>
+            <div class="form-group"><label>Lien</label><select id="dsp-pt-lien" class="form-control">
+              <option value="principal">Porteur principal</option><option value="famille">Famille</option><option value="ami">Ami / associé</option></select></div>
+            <button class="btn btn-primary btn-sm" onclick="dspAjouterPart()">+ Ajouter</button>
+          </div>
+          <div id="dsp-parts-resume" style="margin-top:12px;"></div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="dsp-parts-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-diaspo-ancrage">
+          <div class="alert alert-warning">
+            <strong>Limite à connaître et à assumer</strong> — une chaîne de hachage détecte toute altération <em>a posteriori</em>,
+            mais celui qui contrôle le serveur peut recalculer toute la chaîne. Pour une valeur probante opposable,
+            il faut <strong>ancrer périodiquement</strong> le hash racine hors du système : dépôt chez huissier, courrier recommandé,
+            ou publication horodatée. Générez ce certificat chaque semaine et faites-le horodater.
+          </div>
+          <div class="card">
+            <div class="form-section-title">⚓ Certificat d'ancrage</div>
+            <div id="dsp-ancrage-info" style="margin-top:10px;"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+              <button class="btn btn-primary btn-sm" onclick="dspGenererAncrage()">📜 Générer le certificat</button>
+              <button class="btn btn-secondary btn-sm" onclick="dspImprimerAncrage()">🖨️ Imprimer</button>
+            </div>
+          </div>
+          <div id="dsp-ancrage-doc" style="margin-top:12px;"></div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="dsp-ancrages-table"></div></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-locatif">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">🏠 Gestion locative</h1>
+            <div class="page-sub">Baux · Quittancement · Charges · Recouvrement · Dépôts de garantie</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="locQuittancerMois()">🧾 Quittancer le mois</button>
+            <button class="btn btn-primary" onclick="locOpenBail()">+ Nouveau bail</button>
+          </div>
+        </div>
+
+        <div id="loc-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
+
+        <div class="tab-nav" style="margin-bottom:14px;">
+          <button class="tab-btn active" onclick="switchTab('locatif','baux')">📄 Baux</button>
+          <button class="tab-btn" onclick="switchTab('locatif','quittances')">🧾 Quittances</button>
+          <button class="tab-btn" onclick="switchTab('locatif','charges')">🔥 Charges</button>
+          <button class="tab-btn" onclick="switchTab('locatif','recouvrement')">⚠️ Recouvrement</button>
+          <button class="tab-btn" onclick="switchTab('locatif','revision')">📈 Révision loyers</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-locatif-baux">
+          <div class="filters-bar" style="flex-wrap:wrap;">
+            <input type="text" class="search-input" id="loc-search" placeholder="🔍 Locataire, bien, réf bail..." oninput="locRenderBaux()">
+            <select class="form-control" id="loc-filter-statut" onchange="locRenderBaux()" style="max-width:180px;">
+              <option value="">— Tous statuts —</option><option value="actif">Actif</option><option value="preavis">Préavis</option><option value="resilie">Résilié</option>
+            </select>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="loc-baux-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-quittances">
+          <div class="filters-bar" style="flex-wrap:wrap;align-items:end;">
+            <div class="form-group"><label>Période</label><input type="month" id="loc-q-mois" class="form-control" onchange="locRenderQuittances()"></div>
+            <div class="form-group"><label>Statut</label><select id="loc-q-statut" class="form-control" onchange="locRenderQuittances()">
+              <option value="">— Tous —</option><option value="impaye">Impayé</option><option value="partiel">Partiel</option><option value="solde">Soldé</option></select></div>
+            <button class="btn btn-secondary btn-sm" onclick="locQuittancerMois()">🧾 Générer les quittances du mois</button>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="loc-quittances-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-charges">
+          <div class="alert alert-info">Régularisation annuelle : provisions encaissées (compte 4191) vs charges réelles récupérables. Solde débiteur → complément facturé au locataire ; créditeur → remboursement.</div>
+          <div class="filters-bar" style="flex-wrap:wrap;align-items:end;">
+            <div class="form-group"><label>Bail</label><select id="loc-ch-bail" class="form-control"></select></div>
+            <div class="form-group"><label>Exercice</label><input type="number" id="loc-ch-annee" class="form-control" placeholder="2026"></div>
+            <div class="form-group"><label>Charges réelles récupérables (FCFA)</label><input type="number" id="loc-ch-reel" class="form-control"></div>
+            <button class="btn btn-primary btn-sm" onclick="locRegulariserCharges()">⚖️ Régulariser</button>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="loc-charges-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-recouvrement">
+          <div class="alert alert-warning">Escalade graduée : rappel amiable (J+5) → relance (J+15) → mise en demeure (J+30) → commandement de payer (J+60, acte d'huissier). Droit ivoirien : loi n°2018-575 sur le bail à usage d'habitation.</div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="loc-recouv-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-revision">
+          <div class="alert alert-info">Révision annuelle du loyer. En Côte d'Ivoire, la révision doit être prévue au contrat ; en l'absence d'indice officiel publié type INS, le taux contractuel s'applique. Plafond légal à vérifier selon la nature du bail (habitation / commercial / professionnel).</div>
+          <div class="filters-bar" style="flex-wrap:wrap;align-items:end;">
+            <div class="form-group"><label>Taux de révision (%)</label><input type="number" step="0.1" id="loc-rev-taux" class="form-control" placeholder="3"></div>
+            <div class="form-group"><label>Prise d'effet</label><input type="date" id="loc-rev-date" class="form-control"></div>
+            <button class="btn btn-secondary btn-sm" onclick="locSimulerRevision()">🔎 Simuler</button>
+            <button class="btn btn-primary btn-sm" onclick="locAppliquerRevision()">✅ Appliquer aux baux éligibles</button>
+          </div>
+          <div class="table-wrap" style="margin-top:12px;"><div id="loc-revision-table"></div></div>
+        </div>
+      </div>
+
       <div class="page" id="page-sig">
         <div class="page-header">
           <div>
@@ -14571,6 +14821,149 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 </div>
 
 <!-- Modal Écriture comptable SYSCOHADA -->
+<div class="modal-overlay" id="modal-dsp-dossier">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-dsp-title">Nouveau dossier diaspora</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-dsp-dossier')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="dd-id">
+      <div class="form-grid">
+        <div class="form-group"><label>Investisseur (souscripteur) *</label><select id="dd-client" class="form-control"></select></div>
+        <div class="form-group"><label>Pays de résidence *</label><input type="text" id="dd-pays" class="form-control" placeholder="France, USA, Canada, Italie..."></div>
+        <div class="form-group"><label>Devise de versement</label><select id="dd-devise" class="form-control">
+          <option value="XOF">XOF (FCFA)</option><option value="EUR">EUR</option><option value="USD">USD</option>
+          <option value="CAD">CAD</option><option value="GBP">GBP</option></select></div>
+        <div class="form-group"><label>Fuseau horaire</label><input type="text" id="dd-tz" class="form-control" placeholder="Europe/Paris"></div>
+        <div class="form-group span-2"><label>Bien / Lot concerné *</label><input type="text" id="dd-bien" class="form-control" placeholder="Lot A-12 — Programme Riviera"></div>
+        <div class="form-group"><label>Montant total du projet (FCFA)</label><input type="number" id="dd-montant" class="form-control"></div>
+        <div class="form-group"><label>Mandataire local désigné</label><input type="text" id="dd-mandataire" class="form-control" placeholder="Nom du représentant sur place"></div>
+        <div class="form-group"><label>Téléphone (WhatsApp)</label><input type="text" id="dd-tel" class="form-control" placeholder="+33 6 ..."></div>
+        <div class="form-group"><label>Statut</label><select id="dd-statut" class="form-control">
+          <option value="actif">Actif</option><option value="suspendu">Suspendu</option><option value="livre">Livré</option></select></div>
+        <div class="form-group span-2"><label>Observations</label><textarea id="dd-notes" class="form-control" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-dsp-dossier')">Annuler</button>
+      <button class="btn btn-primary" onclick="dspSaveDossier()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-dsp-jalon">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Jalon de libération</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-dsp-jalon')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group span-2"><label>Intitulé du jalon *</label><input type="text" id="dj-label" class="form-control" placeholder="Fondations achevées"></div>
+        <div class="form-group"><label>Montant libérable (FCFA) *</label><input type="number" id="dj-montant" class="form-control"></div>
+        <div class="form-group"><label>Ordre</label><input type="number" id="dj-ordre" class="form-control" value="1"></div>
+        <div class="form-group span-2"><label>Preuve exigée</label><input type="text" id="dj-preuve" class="form-control" placeholder="Photo géolocalisée + PV de bureau de contrôle"></div>
+        <div class="form-group span-2"><label>Validateur tiers</label><input type="text" id="dj-valid" class="form-control" placeholder="Bureau de contrôle, huissier, architecte"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-dsp-jalon')">Annuler</button>
+      <button class="btn btn-primary" onclick="dspSaveJalon()">💾 Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-dsp-versement">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Versement au séquestre</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-dsp-versement')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Date</label><input type="date" id="dv-date" class="form-control"></div>
+        <div class="form-group"><label>Devise d'origine</label><select id="dv-devise" class="form-control" onchange="dspRecalcConv()">
+          <option value="XOF">XOF</option><option value="EUR">EUR</option><option value="USD">USD</option>
+          <option value="CAD">CAD</option><option value="GBP">GBP</option></select></div>
+        <div class="form-group"><label>Montant en devise *</label><input type="number" step="0.01" id="dv-montant" class="form-control" oninput="dspRecalcConv()"></div>
+        <div class="form-group"><label>Taux appliqué (1 devise = ? FCFA)</label><input type="number" step="0.0001" id="dv-taux" class="form-control" oninput="dspRecalcConv()"></div>
+        <div class="form-group"><label>Frais de transfert (FCFA)</label><input type="number" id="dv-frais" class="form-control" value="0" oninput="dspRecalcConv()"></div>
+        <div class="form-group"><label>Mode</label><select id="dv-mode" class="form-control">
+          <option value="virement">Virement international</option><option value="mobile_money">Mobile Money</option>
+          <option value="especes">Espèces</option><option value="cheque">Chèque</option></select></div>
+        <div class="form-group span-2"><label>Référence de transfert</label><input type="text" id="dv-ref" class="form-control"></div>
+      </div>
+      <div id="dv-conv" class="alert alert-info" style="margin-top:12px;font-size:12px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-dsp-versement')">Annuler</button>
+      <button class="btn btn-primary" onclick="dspSaveVersement()">🔒 Verser au séquestre</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-loc-bail">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-loc-bail-title">Nouveau bail</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-loc-bail')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="lb-id">
+      <div class="form-grid">
+        <div class="form-group"><label>Locataire *</label><select class="form-control" id="lb-locataire"></select></div>
+        <div class="form-group"><label>Bien loué *</label><input type="text" class="form-control" id="lb-bien" placeholder="Villa 4P — Riviera Palmeraie, lot A-12"></div>
+        <div class="form-group"><label>Nature du bail</label><select class="form-control" id="lb-nature">
+          <option value="habitation">Habitation</option><option value="commercial">Commercial</option><option value="professionnel">Professionnel</option></select></div>
+        <div class="form-group"><label>Date de début *</label><input type="date" class="form-control" id="lb-debut"></div>
+        <div class="form-group"><label>Durée (mois)</label><input type="number" class="form-control" id="lb-duree" value="12"></div>
+        <div class="form-group"><label>Loyer mensuel HT (FCFA) *</label><input type="number" class="form-control" id="lb-loyer"></div>
+        <div class="form-group"><label>Provision charges / mois (FCFA)</label><input type="number" class="form-control" id="lb-charges" value="0"></div>
+        <div class="form-group"><label>Jour d'échéance</label><input type="number" min="1" max="28" class="form-control" id="lb-jour" value="5"></div>
+        <div class="form-group"><label>Dépôt de garantie (FCFA)</label><input type="number" class="form-control" id="lb-depot"></div>
+        <div class="form-group"><label>Taux de révision annuel (%)</label><input type="number" step="0.1" class="form-control" id="lb-revision" value="0"></div>
+        <div class="form-group"><label>Retenue à la source BIC (%)</label><input type="number" step="0.1" class="form-control" id="lb-rs" value="0" title="Bailleur personne physique : retenue applicable selon le CGI ivoirien"></div>
+        <div class="form-group"><label>Statut</label><select class="form-control" id="lb-statut">
+          <option value="actif">Actif</option><option value="preavis">Préavis</option><option value="resilie">Résilié</option></select></div>
+        <div class="form-group span-2"><label>Observations</label><textarea class="form-control" id="lb-notes" rows="2"></textarea></div>
+      </div>
+      <div class="alert alert-info" style="margin-top:12px;font-size:12px;">
+        SYSCOHADA — Quittance : <b>D 4111 locataire / C 7052 loyers</b> (+ <b>C 4191</b> provisions charges, + <b>C 4432</b> TVA si assujetti).
+        Dépôt de garantie : <b>D 521 / C 4194</b> — dette restituable, jamais un produit.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-loc-bail')">Annuler</button>
+      <button class="btn btn-primary" onclick="locSaveBail()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-loc-encaisser">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Encaisser un loyer</h3>
+      <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-loc-encaisser')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="lq-id">
+      <div id="lq-info" style="margin-bottom:12px;font-size:13px;"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Date</label><input type="date" class="form-control" id="lq-date"></div>
+        <div class="form-group"><label>Montant encaissé (FCFA) *</label><input type="number" class="form-control" id="lq-montant"></div>
+        <div class="form-group"><label>Mode</label><select class="form-control" id="lq-mode">
+          <option value="virement">Virement</option><option value="especes">Espèces</option><option value="mobile_money">Mobile Money</option><option value="cheque">Chèque</option></select></div>
+        <div class="form-group"><label>Référence</label><input type="text" class="form-control" id="lq-ref"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-loc-encaisser')">Annuler</button>
+      <button class="btn btn-primary" onclick="locSaveEncaissement()">💰 Encaisser</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-ecriture">
   <div class="modal modal-lg">
     <div class="modal-header">
@@ -18450,7 +18843,13 @@ var ALL_STORES = [
   /* v139 — Couches SIG digitalisées */
   'sig_couches',
   /* v141 — Tombstones partagés (anti-réinjection multi-postes) */
-  'suppressions_sync'
+  'suppressions_sync',
+  /* v49 — Paiement en ligne (passerelle Mobile Money : liens + webhook + rapprochement auto) */
+  'paiements_online',
+  /* v50 — Gestion locative (baux, quittances, régularisation charges, relances) */
+  'baux', 'quittances', 'loc_relances',
+  /* v51 — Diaspora : chaîne de preuve, séquestre jalonné, co-investissement */
+  'diaspo_dossiers', 'diaspo_preuves', 'diaspo_jalons', 'diaspo_parts', 'diaspo_ancrages'
 ];
 
 function initDB() {
@@ -20070,6 +20469,15 @@ function _filtrerFantomes(table, store, ids) {
 /* Correspondance table Supabase ↔ store local (IndexedDB / DATA) */
 var SUPA_STORE_MAP = [
   ['pi_suppressions',     'suppressions_sync'],
+  ['pi_paiements_online', 'paiements_online'],
+  ['pi_baux',             'baux'],
+  ['pi_quittances',       'quittances'],
+  ['pi_loc_relances',     'loc_relances'],
+  ['pi_diaspo_dossiers',  'diaspo_dossiers'],
+  ['pi_diaspo_preuves',   'diaspo_preuves'],
+  ['pi_diaspo_jalons',    'diaspo_jalons'],
+  ['pi_diaspo_parts',     'diaspo_parts'],
+  ['pi_diaspo_ancrages',  'diaspo_ancrages'],
   ['pi_caisses',          'caisses'],
   ['pi_caisse_sessions',  'caisse_sessions'],
   ['pi_caisse_mouvements','caisse_mouvements'],
@@ -20787,11 +21195,13 @@ function renderSyncQueue(){
 
 /* Démarre la synchro automatique : envoi des changements toutes les 30 s + reprise de la file. */
 function demarrerSyncAuto() {
+  try { if (typeof payOnlineStartPolling === 'function') payOnlineStartPolling(); } catch(e){}
   if (window._autoSyncTimer) return;
   window._autoSyncTimer = setInterval(function(){
     try { flushDirtySync(); } catch(e){}
     try { if (typeof flushSyncOutbox === 'function') flushSyncOutbox(); } catch(e){}
     try { majDerniereSync('Synchro auto (local→cloud)'); } catch(e){}
+    try { if (typeof payOnlinePoll === 'function') payOnlinePoll(); } catch(e){}
   }, 30000);
 }
 
@@ -21899,6 +22309,8 @@ function goTo(page) {
   if (page === 'validations') { renderValidations(); }
   if (page === 'recliv') { renderRecliv(); }
   if (page === 'foncierops') { afRender(); }
+  if (page === 'locatif') { locEnter(); }
+  if (page === 'diaspo') { dspEnter(); }
 }
 
 function switchTab(context, tab) {
@@ -21907,6 +22319,21 @@ function switchTab(context, tab) {
   if (context==='recliv' && tab==='garsav' && typeof garInit==='function') { garInit(); }
   if (context==='conventions' && tab==='cautions' && typeof cauInit==='function') { cauInit(); }
   if (context==='paiements' && tab==='momo' && typeof momoInit==='function') { momoInit(); }
+  if (context==='paiements' && tab==='lien' && typeof payOnlineInit==='function') { payOnlineInit(); }
+  if (context==='diaspo') {
+    if (tab==='dossiers' && typeof dspRenderDossiers==='function') dspRenderDossiers();
+    if (tab==='preuve' && typeof dspRenderPreuves==='function') { dspFillSelects(); dspRenderPreuves(); dspVerifierChaine(); }
+    if (tab==='sequestre' && typeof dspRenderSequestre==='function') { dspFillSelects(); dspRenderSequestre(); }
+    if (tab==='parts' && typeof dspRenderParts==='function') { dspFillSelects(); dspRenderParts(); }
+    if (tab==='ancrage' && typeof dspRenderAncrage==='function') dspRenderAncrage();
+  }
+  if (context==='locatif') {
+    if (tab==='baux' && typeof locRenderBaux==='function') locRenderBaux();
+    if (tab==='quittances' && typeof locRenderQuittances==='function') locRenderQuittances();
+    if (tab==='charges' && typeof locFillSelects==='function') locFillSelects();
+    if (tab==='recouvrement' && typeof locRenderRecouvrement==='function') locRenderRecouvrement();
+    if (tab==='revision' && typeof locSimulerRevision==='function') locSimulerRevision();
+  }
   if (context==='foncier' && tab==='workflow' && typeof tfwInit==='function') { tfwInit(); }
   if (context==='paiements' && tab==='vefa' && typeof vefaInit==='function') { vefaInit(); }
   if (context==='pointage' && tab==='scan' && typeof ptInitScanTab==='function') { ptInitScanTab(); }
@@ -39837,6 +40264,215 @@ function tfwOpen(id){ var sel=document.getElementById('tfw-parc'); if(sel){ sel.
 /* ══════ ENCAISSEMENT MOBILE MONEY — relevé → souscripteur → versement ══════ */
 var MOMO_LINES = [];
 function momoDigits(x){ return (x||'').toString().replace(/\D/g,''); }
+/* ══════════════════════════════════════════════════════════════════
+   PAIEMENT EN LIGNE — passerelle CinetPay/PayDunya (Wave/OM/MTN/Moov)
+   Flux : lien généré (Edge Function pay-initiate) → client paie →
+   webhook (pay-webhook) écrit pi_paiements_online → pull/polling →
+   rapprochement SYSCOHADA automatique (même chaîne que les versements).
+   Aucune clé secrète côté client : identifiants API dans l'env des
+   Edge Functions Supabase uniquement.
+══════════════════════════════════════════════════════════════════ */
+function payOnlineCfg(){
+  var c=(DATA.params && DATA.params.paiement_online) || {};
+  return {
+    provider: c.provider || 'cinetpay',
+    devise: c.devise || 'XOF',
+    treso_compte: c.treso_compte || '',
+    frais_pct: (c.frais_pct != null ? c.frais_pct : 1.5),
+    frais_charge: c.frais_charge || 'promoteur',
+    frais_compte: c.frais_compte || '6311',
+    edge_base: c.edge_base || ''
+  };
+}
+async function payOnlineSaveCfg(){
+  var cfg={
+    provider:(document.getElementById('pol-cfg-provider')||{}).value||'cinetpay',
+    devise:(document.getElementById('pol-cfg-devise')||{}).value||'XOF',
+    treso_compte:((document.getElementById('pol-cfg-treso')||{}).value||'').trim(),
+    frais_pct:parseFloat((document.getElementById('pol-cfg-fraispct')||{}).value)||0,
+    frais_charge:(document.getElementById('pol-cfg-fraischarge')||{}).value||'promoteur',
+    frais_compte:((document.getElementById('pol-cfg-fraiscompte')||{}).value||'6311').trim(),
+    edge_base:''
+  };
+  DATA.params=DATA.params||{}; DATA.params.id=DATA.params.id||'main';
+  DATA.params.paiement_online=cfg; DATA.params._modifie=new Date().toISOString();
+  try{ await dbPut('params',DATA.params); }catch(e){}
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_params',DATA.params);
+  toast('Configuration passerelle enregistrée.','success');
+}
+function payOnlineSave(p){
+  DATA.paiements_online=DATA.paiements_online||[];
+  var i=DATA.paiements_online.findIndex(function(x){return x.id===p.id;});
+  if(i>=0) DATA.paiements_online[i]=p; else DATA.paiements_online.push(p);
+  return dbPut('paiements_online',p).then(function(){
+    if(typeof syncToSupabase==='function') syncToSupabase('pi_paiements_online',p);
+  }).catch(function(){});
+}
+function payOnlineClients(){
+  return (DATA.clients||[]).slice().sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');});
+}
+function payOnlineInit(){
+  var cfg=payOnlineCfg();
+  var g=function(id){return document.getElementById(id);};
+  if(g('pol-cfg-provider')) g('pol-cfg-provider').value=cfg.provider;
+  if(g('pol-cfg-devise')) g('pol-cfg-devise').value=cfg.devise;
+  if(g('pol-cfg-treso')) g('pol-cfg-treso').value=cfg.treso_compte;
+  if(g('pol-cfg-fraispct')) g('pol-cfg-fraispct').value=cfg.frais_pct;
+  if(g('pol-cfg-fraischarge')) g('pol-cfg-fraischarge').value=cfg.frais_charge;
+  if(g('pol-cfg-fraiscompte')) g('pol-cfg-fraiscompte').value=cfg.frais_compte;
+  var sel=g('pol-client');
+  if(sel){ sel.innerHTML='<option value="">— Choisir —</option>'+payOnlineClients().map(function(c){
+    return '<option value="'+c.id+'">'+escHtml((c.nom||'')+' '+(c.prenoms||''))+(c.tel?(' · '+c.tel):'')+'</option>'; }).join(''); }
+  payOnlineRender();
+  payOnlineStartPolling();
+  payOnlinePoll();
+}
+async function payOnlineGenerer(){
+  var cfg=payOnlineCfg();
+  if(!SB.url||!SB.key){ toast('Configurez Supabase (Paramètres → Cloud) avant.','error'); return; }
+  var cid=(document.getElementById('pol-client')||{}).value;
+  var montant=parseFloat((document.getElementById('pol-montant')||{}).value)||0;
+  var type=(document.getElementById('pol-type')||{}).value||'mensualite';
+  var desc=(document.getElementById('pol-desc')||{}).value||'';
+  if(!cid){ toast('Choisissez un souscripteur.','error'); return; }
+  if(montant<100){ toast('Montant invalide.','error'); return; }
+  var client=(DATA.clients||[]).find(function(c){return c.id===cid;})||{};
+  var ref='POL-'+Date.now();
+  var btn=document.getElementById('pol-gen-btn'); if(btn){btn.disabled=true;btn.textContent='⏳ Génération…';}
+  try{
+    var base=(cfg.edge_base||(SB.url+'/functions/v1')).replace(/\/+$/,'');
+    var resp=await fetch(base+'/pay-initiate',{ method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SB.key,'Authorization':'Bearer '+SB.key},
+      body:JSON.stringify({ provider:cfg.provider, ref:ref, client_id:cid,
+        client_nom:((client.nom||'')+' '+(client.prenoms||'')).trim(), client_tel:client.tel||'',
+        client_email:client.email||'', montant:montant, type:type, description:desc,
+        devise:cfg.devise, scope_id:(localStorage.getItem('sb_scope')||'') }) });
+    if(!resp.ok){ throw new Error('HTTP '+resp.status+' — '+(await resp.text())); }
+    var d=await resp.json();
+    if(!d||!d.payment_url||!d.transaction_id){ throw new Error('Réponse passerelle invalide.'); }
+    var p={ id:d.transaction_id, transaction_id:d.transaction_id, provider:cfg.provider,
+      client_id:cid, client_tel:client.tel||'', montant:montant, type:type, description:desc,
+      payment_url:d.payment_url, statut:'pending', ref:ref, cree_le:new Date().toISOString(),
+      expire_le:d.expires_at||'', reconcilie:false, _modifie:new Date().toISOString() };
+    await payOnlineSave(p);
+    payOnlineRender();
+    payOnlineAfficherLien(p, client);
+    toast('Lien de paiement généré.','success');
+  }catch(e){ toast('Échec : '+e.message,'error'); }
+  finally{ if(btn){btn.disabled=false;btn.textContent='🔗 Générer le lien';} }
+}
+function payOnlineAfficherLien(p, client){
+  var el=document.getElementById('pol-result'); if(!el) return;
+  var msg='Bonjour '+((client.nom||'')+' '+(client.prenoms||'')).trim()+', réglez '+fcfa(p.montant)+' ('+(p.description||p.type)+') via ce lien sécurisé : '+p.payment_url;
+  var tel=(client.tel||'').replace(/[^0-9]/g,''); if(tel && tel.length<=10) tel='225'+tel;
+  var wa=tel?('https://wa.me/'+tel+'?text='+encodeURIComponent(msg)):'';
+  var qr='';
+  try{ var q=qrcode(0,'M'); q.addData(p.payment_url); q.make(); qr=q.createDataURL(4,8); }catch(e){}
+  el.innerHTML='<div class="card" style="border:1px dashed var(--or);">'
+    +'<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
+    +(qr?'<img src="'+qr+'" alt="QR" style="width:120px;height:120px;border-radius:8px;">':'')
+    +'<div style="flex:1;min-width:220px;">'
+    +'<div style="font-size:12px;color:var(--dim);">Lien de paiement '+escHtml(p.provider)+' — '+fcfa(p.montant)+'</div>'
+    +'<div style="word-break:break-all;font-size:12px;margin:6px 0;"><a href="'+p.payment_url+'" target="_blank" rel="noopener">'+escHtml(p.payment_url)+'</a></div>'
+    +'<button class="btn btn-secondary btn-sm" onclick="payOnlineCopier(\''+p.id+'\')">📋 Copier</button> '
+    +(wa?'<a class="btn btn-primary btn-sm" href="'+wa+'" target="_blank" rel="noopener">🟢 Envoyer WhatsApp</a> ':'')
+    +'<a class="btn btn-secondary btn-sm" href="'+p.payment_url+'" target="_blank" rel="noopener">↗ Ouvrir</a>'
+    +'</div></div></div>';
+}
+function payOnlineCopier(id){
+  var p=(DATA.paiements_online||[]).find(function(x){return x.id===id;}); if(!p) return;
+  if(navigator.clipboard){ navigator.clipboard.writeText(p.payment_url).then(function(){toast('Lien copié.','success');}); }
+  else { toast(p.payment_url,'info'); }
+}
+async function payOnlinePoll(){
+  if(!SB.url||!SB.key||!navigator.onLine) return;
+  var pend=(DATA.paiements_online||[]).filter(function(p){return p.statut==='pending';});
+  for(var i=0;i<pend.length;i++){ await payOnlinePullOne(pend[i]); }
+}
+async function payOnlinePullOne(p){
+  try{
+    var rows=await sbFetch('pi_paiements_online?id=eq.'+encodeURIComponent(p.transaction_id)+'&select=*&limit=1','GET');
+    if(rows&&rows.length){
+      var r=_supaUnwrap('pi_paiements_online',rows[0]);
+      if(r&&r.statut&&r.statut!==p.statut){
+        Object.keys(r).forEach(function(k){ if(k!=='reconcilie'&&k!=='versement_id') p[k]=r[k]; });
+        p._modifie=new Date().toISOString(); await payOnlineSave(p);
+        if(p.statut==='success') await payOnlineReconcilier(p); else payOnlineRender();
+      }
+    }
+  }catch(e){}
+}
+async function payOnlineReconcilier(p){
+  if(!p || p.statut!=='success' || p.reconcilie) { payOnlineRender(); return; }
+  if((DATA.versements||[]).some(function(v){return v.reference===p.transaction_id;})){ p.reconcilie=true; await payOnlineSave(p); payOnlineRender(); return; }
+  var client=(DATA.clients||[]).find(function(c){return c.id===p.client_id;});
+  if(!client){ toast('Paiement '+p.transaction_id+' réussi mais souscripteur introuvable.','error'); return; }
+  var montant=parseFloat(p.montant)||0;
+  var ref='VRS-'+new Date().getFullYear()+'-'+String((DATA.versements||[]).length+1).padStart(4,'0');
+  var versement={ id:uid(), ref:ref, client_id:p.client_id, date:(p.paye_le||today()).slice(0,10),
+    type:p.type||'mensualite', montant:montant, mode:'mobile_money', reference:p.transaction_id, mois:'',
+    notes:'Paiement en ligne '+(p.provider||'')+(p.canal?(' · '+p.canal):'')+(p.client_tel?(' · '+p.client_tel):''), created_at:today() };
+  DATA.versements.push(versement);
+  await dbPut('versements',versement);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_versements',versement);
+  await genererEcritureVersement(versement);
+  if(typeof genererCommissionsVersement==='function') await genererCommissionsVersement(versement);
+  if(typeof majStatutLotClient==='function') await majStatutLotClient(versement.client_id);
+  var cfg=payOnlineCfg();
+  var frais=(cfg.frais_charge==='promoteur')?Math.round(montant*(parseFloat(cfg.frais_pct)||0)/100):0;
+  if(frais>0){ await payOnlineEcritureFrais(p,versement,frais,cfg); }
+  p.reconcilie=true; p.versement_id=versement.id; p.frais=frais; p._modifie=new Date().toISOString();
+  await payOnlineSave(p);
+  if(typeof renderVersements==='function') renderVersements();
+  payOnlineRender();
+  toast('✅ Paiement rapproché — versement '+ref+' + écriture 585/411 générés.','success');
+}
+async function payOnlineEcritureFrais(p,versement,frais,cfg){
+  var treso=(typeof _compteTresoVersement==='function')?_compteTresoVersement('mobile_money'):(cfg.treso_compte||'52500000');
+  var compteFrais=cfg.frais_compte||'6311';
+  var ecr={ id:'ecr_frais_'+p.transaction_id, ref:'FRAIS-'+versement.ref, date:versement.date,
+    piece:versement.reference, libelle:'Commission '+(p.provider||'passerelle')+' — '+versement.ref,
+    compte:compteFrais, compte_debit:compteFrais, compte_credit:treso, montant:frais,
+    type:'charge', mode:'mobile_money', notes:'Frais passerelle de paiement (à confirmer TVA/6311)', created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+  if(typeof buildBalance==='function') buildBalance();
+  if(typeof buildGrandLivre==='function') buildGrandLivre();
+}
+async function payOnlineVerifier(id){
+  var p=(DATA.paiements_online||[]).find(function(x){return x.id===id;}); if(!p) return;
+  await payOnlinePullOne(p);
+  if(p.statut==='pending') toast('Toujours en attente.','info');
+}
+function payOnlineRender(){
+  var kel=document.getElementById('pol-kpis'), tel=document.getElementById('pol-table'); if(!tel) return;
+  var list=(DATA.paiements_online||[]).slice().sort(function(a,b){return (b.cree_le||'').localeCompare(a.cree_le||'');});
+  var nb=list.length, ok=list.filter(function(p){return p.statut==='success';});
+  var enc=ok.reduce(function(s,p){return s+(parseFloat(p.montant)||0);},0);
+  var pend=list.filter(function(p){return p.statut==='pending';}).length;
+  if(kel){ kel.innerHTML=[['Transactions',nb],['Réussies',ok.length],['En attente',pend],['Encaissé',fcfa(enc)]].map(function(k){
+    return '<div class="card" style="text-align:center;padding:10px;"><div style="font-size:20px;font-weight:bold;">'+k[1]+'</div><div style="font-size:11px;color:var(--dim);">'+k[0]+'</div></div>'; }).join(''); }
+  if(!list.length){ tel.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucune transaction en ligne.</div>'; return; }
+  var badge={pending:'<span class="badge badge-orange">En attente</span>',success:'<span class="badge badge-vert">Payé</span>',failed:'<span class="badge badge-rouge">Échec</span>',expired:'<span class="badge badge-gris">Expiré</span>'};
+  tel.innerHTML='<table><thead><tr><th>Réf</th><th>Date</th><th>Souscripteur</th><th>Montant</th><th>Canal</th><th>Statut</th><th>Rappr.</th><th>Actions</th></tr></thead><tbody>'
+    +list.map(function(p){
+      var c=(DATA.clients||[]).find(function(x){return x.id===p.client_id;});
+      var nom=c?(c.nom+' '+(c.prenoms||'')):'—';
+      var acts='<button class="btn btn-secondary btn-sm btn-icon" onclick="payOnlineCopier(\''+p.id+'\')" title="Copier lien">📋</button> ';
+      if(p.statut==='pending') acts+='<button class="btn btn-secondary btn-sm btn-icon" onclick="payOnlineVerifier(\''+p.id+'\')" title="Vérifier">🔄</button>';
+      return '<tr><td><strong>'+escHtml(p.ref||'—')+'</strong></td><td>'+dateShort((p.cree_le||'').slice(0,10))+'</td><td>'+escHtml(nom)+'</td>'
+        +'<td style="font-weight:bold;">'+fcfa(p.montant)+'</td><td>'+escHtml(p.canal||p.provider||'—')+'</td><td>'+(badge[p.statut]||p.statut)+'</td>'
+        +'<td>'+(p.reconcilie?'✅':(p.statut==='success'?'⏳':'—'))+'</td><td style="white-space:nowrap;">'+acts+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function payOnlineStartPolling(){
+  if(window._polPollTimer) return;
+  if(!SB.url||!SB.key) return;
+  window._polPollTimer=setInterval(payOnlinePoll,15000);
+}
+
 function momoInit(){ MOMO_LINES=[]; momoRender(); }
 function momoClients(){ return (DATA.clients||[]); }
 function momoResteDu(c){
@@ -48660,6 +49296,7 @@ switchTab = function(context, tab) {
       buildRapprochKPIs();
       renderReleveTable();
       populateRapprochFilters();
+      if (typeof impRbInitSelect==='function') impRbInitSelect();
     }, 60);
   }
 };
@@ -48703,6 +49340,1067 @@ function buildRapprochKPIs() {
 }
 
 /* ─── Saisie relevé bancaire ─────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════
+   IMPORT AUTOMATIQUE DE RELEVÉ BANCAIRE — CAMT.053 (ISO 20022) · CSV · OFX
+   Parse → normalise → déduplique → alimente releves_bank → rapprochement auto.
+══════════════════════════════════════════════════════════════════ */
+function _impNum(s){
+  if(s==null) return 0;
+  s=String(s).replace(/\u00a0/g,'').replace(/\s/g,'').trim();
+  if(!s) return 0;
+  var neg=/^\(.*\)$/.test(s)||/-/.test(s); s=s.replace(/[()\-]/g,'');
+  var hasC=s.indexOf(',')>=0, hasD=s.indexOf('.')>=0, v;
+  if(hasC&&hasD){ var dec=(s.lastIndexOf(',')>s.lastIndexOf('.'))?',':'.'; var th=dec===','?'.':','; v=s.split(th).join('').replace(dec,'.'); }
+  else if(hasC){ v=(/,\d{1,2}$/.test(s))?s.replace(',','.'):s.split(',').join(''); }
+  else { v=s; }
+  var n=parseFloat(v); if(isNaN(n)) n=0; return neg?-Math.abs(n):n;
+}
+function _impDate(s){
+  if(!s) return today();
+  s=String(s).trim();
+  var m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/); if(m) return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/); if(m){ var y=m[3].length===2?'20'+m[3]:m[3]; return y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); }
+  m=s.match(/^(\d{8})$/); if(m) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+  return s.slice(0,10);
+}
+function _impSig(l){ return _impDate(l.date)+'|'+Math.round((l.debit||0)+(l.credit||0))+'|'+String(l.ref||l.libelle||'').replace(/\s/g,'').slice(0,24).toLowerCase(); }
+
+function _impDetect(text){
+  var t=text.slice(0,4000).toLowerCase();
+  if(t.indexOf('<document')>=0 && t.indexOf('camt.05')>=0) return 'camt';
+  if(t.indexOf('<ntry>')>=0 || (t.indexOf('<bktocstmtstmt')>=0)) return 'camt';
+  if(t.indexOf('<ofx>')>=0 || t.indexOf('<stmttrn>')>=0 || t.indexOf('ofxheader')>=0) return 'ofx';
+  return 'csv';
+}
+function _impParseCAMT(xml){
+  var out=[], doc;
+  try{ doc=new DOMParser().parseFromString(xml,'application/xml'); }catch(e){ return out; }
+  if(doc.getElementsByTagName('parsererror').length){ return out; }
+  var entries=doc.getElementsByTagName('Ntry');
+  var tv=function(node,tag){ var e=node.getElementsByTagName(tag); return e.length?(e[0].textContent||'').trim():''; };
+  for(var i=0;i<entries.length;i++){
+    var n=entries[i];
+    var montant=_impNum(tv(n,'Amt'));
+    var sens=(tv(n,'CdtDbtInd')||'').toUpperCase(); // CRDT / DBIT
+    var dt='';
+    var bd=n.getElementsByTagName('BookgDt'); if(bd.length) dt=(bd[0].getElementsByTagName('Dt')[0]||bd[0].getElementsByTagName('DtTm')[0]||{}).textContent||'';
+    if(!dt){ var vd=n.getElementsByTagName('ValDt'); if(vd.length) dt=(vd[0].getElementsByTagName('Dt')[0]||{}).textContent||''; }
+    var ref=tv(n,'AcctSvcrRef')||tv(n,'NtryRef')||tv(n,'EndToEndId')||'';
+    var lib=tv(n,'AddtlNtryInf'); if(!lib){ var u=n.getElementsByTagName('Ustrd'); if(u.length) lib=(u[0].textContent||'').trim(); }
+    if(!lib) lib=tv(n,'RmtInf')||'Opération';
+    out.push({ date:_impDate(dt), libelle:lib.slice(0,120), ref:ref.slice(0,40),
+      debit: sens==='DBIT'?Math.abs(montant):0, credit: sens==='CRDT'?Math.abs(montant):0 });
+  }
+  return out;
+}
+function _impParseOFX(text){
+  var out=[], blocks=text.split(/<STMTTRN>/i).slice(1);
+  var g=function(b,tag){ var m=b.match(new RegExp('<'+tag+'>([^<\r\n]*)','i')); return m?m[1].trim():''; };
+  blocks.forEach(function(b){
+    var amt=_impNum(g(b,'TRNAMT')), dt=g(b,'DTPOSTED').slice(0,8), ref=g(b,'FITID'),
+        lib=g(b,'MEMO')||g(b,'NAME')||'Opération';
+    if(!amt) return;
+    out.push({ date:_impDate(dt), libelle:lib.slice(0,120), ref:ref.slice(0,40),
+      debit: amt<0?Math.abs(amt):0, credit: amt>0?amt:0 });
+  });
+  return out;
+}
+function _impParseCSV(text){
+  var out=[], lines=text.split(/\r?\n/).filter(function(l){return l.trim();});
+  if(!lines.length) return out;
+  var sep=(lines[0].indexOf(';')>=0)?';':(lines[0].split('\t').length>2?'\t':',');
+  var start=0, first=lines[0].split(sep)[0].trim();
+  /* En-tête uniquement si la 1re cellule n'est PAS une date (les lignes de données
+     commencent par un chiffre) — évite de sauter une vraie ligne contenant « ref ». */
+  if(!/^\d/.test(first) && /date|libell|montant|d[eé]bit|cr[eé]dit|ref|solde/i.test(lines[0])) start=1;
+  for(var i=start;i<lines.length;i++){
+    var c=lines[i].split(sep).map(function(x){return x.trim().replace(/^"|"$/g,'');});
+    if(c.length<2) continue;
+    var date=c[0], libelle=c[1]||'', debit=0, credit=0, ref='';
+    if(c.length>=5){ debit=_impNum(c[2]); credit=_impNum(c[3]); ref=c[4]||''; }
+    else if(c.length===4){ var m=_impNum(c[2]); ref=c[3]||''; if(m<0)debit=Math.abs(m);else credit=m; }
+    else if(c.length===3){ var m2=_impNum(c[2]); if(m2<0)debit=Math.abs(m2);else credit=m2; }
+    if(!debit&&!credit) continue;
+    out.push({ date:_impDate(date), libelle:libelle.slice(0,120), ref:String(ref).slice(0,40), debit:debit, credit:credit });
+  }
+  return out;
+}
+function _impParse(text){
+  var f=_impDetect(text);
+  var lignes = f==='camt'?_impParseCAMT(text) : f==='ofx'?_impParseOFX(text) : _impParseCSV(text);
+  return { format:f, lignes:lignes };
+}
+function impRbColler(){
+  var el=document.getElementById('imp-rb-preview'); if(!el) return;
+  el.innerHTML='<div class="card"><textarea id="imp-rb-textarea" class="form-control" rows="6" placeholder="14/07/2026;Virement DIABATE Awa;;250000;VIR12345&#10;15/07/2026;Frais tenue compte;3500;;FRAIS"></textarea>'
+    +'<button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="impRbAnalyserColle()">🔎 Analyser</button></div>';
+}
+function impRbAnalyserColle(){
+  var t=(document.getElementById('imp-rb-textarea')||{}).value||'';
+  if(!t.trim()){ toast('Collez un relevé.','error'); return; }
+  var r=_impParse(t); impRbPreview(r);
+}
+function impRbCharger(ev){
+  var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){ var r=_impParse(String(rd.result||'')); impRbPreview(r); };
+  rd.onerror=function(){ toast('Lecture du fichier impossible.','error'); };
+  rd.readAsText(f, 'utf-8');
+}
+function impRbPreview(res){
+  var el=document.getElementById('imp-rb-preview'); if(!el) return;
+  var lignes=res.lignes||[];
+  if(!lignes.length){ el.innerHTML='<div class="alert alert-warning">Aucune ligne détectée ('+res.format.toUpperCase()+'). Vérifiez le format.</div>'; return; }
+  var existSig={}; (DATA.releves_bank||[]).forEach(function(r){ existSig[r.sig||_impSig(r)]=true; });
+  var seen={};
+  lignes.forEach(function(l){ l.sig=_impSig(l); l._dup = existSig[l.sig]||seen[l.sig]; seen[l.sig]=true; });
+  window._impRbLines=lignes;
+  var nNew=lignes.filter(function(l){return !l._dup;}).length, nDup=lignes.length-nNew;
+  var rows=lignes.slice(0,200).map(function(l){
+    return '<tr'+(l._dup?' style="opacity:.45;"':'')+'><td style="font-size:11px;">'+l.date+'</td>'
+      +'<td style="font-size:11px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(l.libelle)+'</td>'
+      +'<td style="text-align:right;color:var(--rouge);font-size:11px;">'+(l.debit?fmtF(l.debit):'—')+'</td>'
+      +'<td style="text-align:right;color:var(--vert);font-size:11px;">'+(l.credit?fmtF(l.credit):'—')+'</td>'
+      +'<td style="font-family:monospace;font-size:10px;">'+escHtml(l.ref||'')+'</td>'
+      +'<td>'+(l._dup?'<span class="badge badge-gris">doublon</span>':'<span class="badge badge-vert">nouveau</span>')+'</td></tr>';
+  }).join('');
+  el.innerHTML='<div class="card">'
+    +'<div style="margin-bottom:8px;font-size:12px;">Format <b>'+res.format.toUpperCase()+'</b> — <b>'+nNew+'</b> nouvelle(s) ligne(s), '+nDup+' doublon(s) ignoré(s).</div>'
+    +'<div class="table-wrap" style="max-height:260px;overflow:auto;"><table><thead><tr><th>Date</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Réf</th><th>État</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;"><input type="checkbox" id="imp-rb-autorap" checked> Lancer le rapprochement auto après import</label>'
+    +'<div class="spacer" style="flex:1;"></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="impRbValider()" '+(nNew?'':'disabled')+'>✅ Importer '+nNew+' ligne(s)</button>'
+    +'</div></div>';
+}
+async function impRbValider(){
+  var lignes=(window._impRbLines||[]).filter(function(l){return !l._dup;});
+  if(!lignes.length){ toast('Rien à importer.','error'); return; }
+  var compte=(document.getElementById('imp-rb-compte')||{}).value||'';
+  var n=0;
+  for(var i=0;i<lignes.length;i++){
+    var l=lignes[i];
+    var ligne={ id:'rb_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+      banque:compte, mois:l.date.slice(0,7), date:l.date, ref:l.ref||'', libelle:l.libelle||'',
+      debit:l.debit||0, credit:l.credit||0, mode:'import', type_op:'import',
+      sig:l.sig, rapproche:false, ecriture_id:null, created_at:new Date().toISOString().slice(0,10) };
+    DATA.releves_bank.push(ligne);
+    await dbPut('releves_bank', ligne);
+    if(typeof syncToSupabase==='function') syncToSupabase('pi_releves_bank', ligne);
+    n++;
+  }
+  var el=document.getElementById('imp-rb-preview'); if(el) el.innerHTML='';
+  window._impRbLines=[];
+  var fEl=document.getElementById('imp-rb-file'); if(fEl) fEl.value='';
+  if(typeof renderReleveTable==='function') renderReleveTable();
+  if(typeof buildRapprochKPIs==='function') buildRapprochKPIs();
+  if(typeof populateRapprochFilters==='function') populateRapprochFilters();
+  toast('📥 '+n+' ligne(s) importée(s).','success');
+  var auto=(document.getElementById('imp-rb-autorap')||{}).checked;
+  if(auto && typeof rapprochAutoScore==='function'){
+    var pEl=document.getElementById('rapproch-periode'); if(pEl&&lignes[0]) pEl.value=lignes[0].date.slice(0,7);
+    var cEl=document.getElementById('rapproch-compte'); if(cEl&&compte) cEl.value=compte;
+    rapprochAutoScore();
+  }
+}
+function impRbInitSelect(){
+  var sel=document.getElementById('imp-rb-compte'); if(!sel) return;
+  var list=(APP.planComptable||[]).filter(function(c){ return String(c.code).charAt(0)==='5' && !c._horsPlan; })
+    .slice().sort(function(a,b){ return String(a.code).localeCompare(String(b.code),undefined,{numeric:true}); });
+  sel.innerHTML=list.map(function(c){ return '<option value="'+escHtml(String(c.code))+'">'+escHtml(c.code+' — '+c.label)+'</option>'; }).join('');
+}
+
+/* Rapprochement auto PONDÉRÉ : score = montant exact/±100 + proximité date + réf.
+   1 relevé ↔ 1 écriture (appariement au meilleur score, seuil minimal requis). */
+function rapprochAutoScore(){
+  var mois=(document.getElementById('rapproch-periode')||{}).value||'';
+  var compte=(document.getElementById('rapproch-compte')||{}).value||'';
+  var releves=DATA.releves_bank.filter(function(r){ return !r.rapproche && (!mois||r.mois===mois); });
+  var ecritures=getEcrituresBanque(mois, compte).filter(function(e){ return !e._rapproche; });
+  var pris={}, matched=0;
+  releves.forEach(function(r){
+    var montantR=r.credit>0?r.credit:r.debit;
+    var rIsDebit=r.debit>0;
+    var rDate=new Date(r.date);
+    var best=null, bestScore=0;
+    ecritures.forEach(function(e){
+      if(pris[e.id]) return;
+      if(e._tresoIsDebit!==!rIsDebit && (typeof e._tresoIsDebit==='boolean')){
+        /* relevé crédit (entrée banque) ↔ écriture débit trésorerie ; relevé débit ↔ crédit tréso */
+      }
+      var montantE=e._tresoMontant;
+      var diff=Math.abs(montantE-montantR);
+      if(diff>Math.max(100, montantR*0.01)) return;
+      var dd=Math.abs((rDate-new Date(e.date||''))/(864e5));
+      if(dd>10) return;
+      var score=0;
+      score += diff===0?50:(diff<=100?40:25);
+      score += dd<=1?25:(dd<=3?18:(dd<=5?10:4));
+      var refMatch=r.ref&&e.ref&&(String(r.ref).indexOf(e.ref)>=0||String(e.ref).indexOf(r.ref)>=0);
+      if(refMatch) score+=25;
+      var sensOk=(rIsDebit && e._tresoIsDebit===false)||(!rIsDebit && e._tresoIsDebit===true);
+      if(sensOk) score+=10;
+      if(score>bestScore){ bestScore=score; best=e; }
+    });
+    if(best && bestScore>=55){
+      r.rapproche=true; r.ecriture_id=best.id; best._rapproche=true; pris[best.id]=true; matched++;
+      dbPut('releves_bank', r);
+      if(typeof syncToSupabase==='function') syncToSupabase('pi_releves_bank', r);
+    }
+  });
+  ecritures.forEach(function(e){ delete e._rapproche; });
+  if(typeof buildRapprochement==='function') buildRapprochement();
+  if(typeof buildRapprochKPIs==='function') buildRapprochKPIs();
+  if(typeof renderReleveTable==='function') renderReleveTable();
+  toast('⚡ Rapprochement pondéré : '+matched+' ligne(s) appariée(s).','success');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GESTION LOCATIVE — Baux · Quittancement · Charges · Recouvrement
+   SYSCOHADA : quittance D 4111 / C 7052 (+ C 4191 charges, + C 4432 TVA)
+               encaissement D 5x / C 4111
+               dépôt garantie D 5x / C 4194 (dette restituable)
+   Droit ivoirien : loi n°2018-575 (bail à usage d'habitation).
+══════════════════════════════════════════════════════════════════ */
+var LOC_CPT = { locataire:'41110000', loyers:'70520000', charges_prov:'41910000', tva:'44320000', depot:'41940000', rs:'44720000' };
+function _locCpt(k){ var cd=(DATA.params&&DATA.params.comptes_locatif)||{}; return cd[k]||LOC_CPT[k]; }
+function _locBaux(){ return DATA.baux||(DATA.baux=[]); }
+function _locQ(){ return DATA.quittances||(DATA.quittances=[]); }
+function _locFin(b){
+  if(!b.debut) return '';
+  var d=new Date(b.debut); d.setMonth(d.getMonth()+(parseInt(b.duree,10)||12));
+  return d.toISOString().slice(0,10);
+}
+function _locDu(q){ return (parseFloat(q.total)||0)-(parseFloat(q.regle)||0); }
+function _locStatutQ(q){ var du=_locDu(q); return du<=0?'solde':((parseFloat(q.regle)||0)>0?'partiel':'impaye'); }
+function _locRetard(q){
+  if(_locStatutQ(q)==='solde') return 0;
+  return Math.max(0, Math.floor((new Date()-new Date(q.echeance||q.date))/864e5));
+}
+function _locPalier(j){
+  if(j>=60) return {n:4,label:'Commandement de payer',cls:'badge-rouge'};
+  if(j>=30) return {n:3,label:'Mise en demeure',cls:'badge-rouge'};
+  if(j>=15) return {n:2,label:'Relance formelle',cls:'badge-or'};
+  if(j>=5)  return {n:1,label:'Rappel amiable',cls:'badge-or'};
+  return {n:0,label:'—',cls:'badge-gris'};
+}
+async function _locSave(store,obj,table){
+  obj._modifie=new Date().toISOString();
+  var arr=DATA[store]||(DATA[store]=[]);
+  var i=arr.findIndex(function(x){return x.id===obj.id;});
+  if(i>=0) arr[i]=obj; else arr.push(obj);
+  await dbPut(store,obj);
+  if(typeof syncToSupabase==='function') syncToSupabase(table,obj);
+  return obj;
+}
+function locEnter(){
+  var m=document.getElementById('loc-q-mois'); if(m&&!m.value) m.value=today().slice(0,7);
+  var a=document.getElementById('loc-ch-annee'); if(a&&!a.value) a.value=new Date().getFullYear()-1;
+  locRenderKPIs(); locRenderBaux(); locRenderQuittances(); locRenderRecouvrement(); locFillSelects();
+}
+function locFillSelects(){
+  var sb=document.getElementById('loc-ch-bail');
+  if(sb) sb.innerHTML=_locBaux().map(function(b){ return '<option value="'+b.id+'">'+escHtml(b.ref+' — '+(b.bien||''))+'</option>'; }).join('');
+  var sl=document.getElementById('lb-locataire');
+  if(sl) sl.innerHTML='<option value="">— Choisir —</option>'+(DATA.clients||[]).slice()
+    .sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');})
+    .map(function(c){ return '<option value="'+c.id+'">'+escHtml((c.nom||'')+' '+(c.prenoms||''))+'</option>'; }).join('');
+}
+function locRenderKPIs(){
+  var el=document.getElementById('loc-kpis'); if(!el) return;
+  var baux=_locBaux(), actifs=baux.filter(function(b){return b.statut==='actif';});
+  var quit=_locQ();
+  var mois=today().slice(0,7);
+  var qm=quit.filter(function(q){return (q.periode||'')===mois;});
+  var quittance=qm.reduce(function(s,q){return s+(parseFloat(q.total)||0);},0);
+  var encaisse=qm.reduce(function(s,q){return s+(parseFloat(q.regle)||0);},0);
+  var impayes=quit.filter(function(q){return _locStatutQ(q)!=='solde';}).reduce(function(s,q){return s+_locDu(q);},0);
+  var depots=actifs.reduce(function(s,b){return s+(parseFloat(b.depot)||0);},0);
+  var tx=quittance>0?Math.round(encaisse/quittance*100):0;
+  el.innerHTML=[
+    {label:'Baux actifs',val:actifs.length,icon:'📄',cls:''},
+    {label:'Quittancé (mois)',val:fmtF(quittance)+' FCFA',icon:'🧾',cls:'kpi-blue'},
+    {label:'Encaissé (mois)',val:fmtF(encaisse)+' FCFA',icon:'💰',cls:'kpi-green'},
+    {label:'Taux de recouvrement',val:tx+'%',icon:'📊',cls:tx>=90?'kpi-green':(tx>=70?'':'kpi-red')},
+    {label:'Impayés cumulés',val:fmtF(impayes)+' FCFA',icon:'⚠️',cls:impayes>0?'kpi-red':'kpi-green'},
+    {label:'Dépôts détenus (4194)',val:fmtF(depots)+' FCFA',icon:'🔒',cls:''}
+  ].map(function(k){
+    return '<div class="kpi-card '+k.cls+'" data-icon="'+k.icon+'"><div class="kpi-label">'+k.label+'</div><div class="kpi-value or" style="font-size:16px;">'+k.val+'</div></div>';
+  }).join('');
+  var bd=document.getElementById('badge-locatif');
+  if(bd){ var n=_locQ().filter(function(q){return _locStatutQ(q)!=='solde'&&_locRetard(q)>=5;}).length;
+    bd.textContent=n; bd.style.display=n?'inline-block':'none'; }
+}
+function locOpenBail(id){
+  locFillSelects();
+  var b=id?_locBaux().find(function(x){return x.id===id;}):null;
+  var v=function(i,val){ var e=document.getElementById(i); if(e) e.value=val; };
+  v('lb-id',b?b.id:''); v('lb-locataire',b?b.locataire_id:''); v('lb-bien',b?b.bien:'');
+  v('lb-nature',b?b.nature:'habitation'); v('lb-debut',b?b.debut:today()); v('lb-duree',b?b.duree:12);
+  v('lb-loyer',b?b.loyer:''); v('lb-charges',b?b.charges:0); v('lb-jour',b?b.jour:5);
+  v('lb-depot',b?b.depot:''); v('lb-revision',b?b.revision:0); v('lb-rs',b?b.rs:0);
+  v('lb-statut',b?b.statut:'actif'); v('lb-notes',b?b.notes:'');
+  var t=document.getElementById('modal-loc-bail-title'); if(t) t.textContent=b?('Bail '+b.ref):'Nouveau bail';
+  openModal('modal-loc-bail');
+}
+async function locSaveBail(){
+  var g=function(i){ var e=document.getElementById(i); return e?e.value:''; };
+  var id=g('lb-id'), loc=g('lb-locataire'), bien=(g('lb-bien')||'').trim(), loyer=parseFloat(g('lb-loyer'))||0;
+  if(!loc){ toast('Sélectionnez le locataire.','error'); return; }
+  if(!bien){ toast('Précisez le bien loué.','error'); return; }
+  if(loyer<=0){ toast('Loyer invalide.','error'); return; }
+  var exist=id?_locBaux().find(function(x){return x.id===id;}):null;
+  var b=exist||{ id:uid(), ref:'BAIL-'+new Date().getFullYear()+'-'+String(_locBaux().length+1).padStart(3,'0'), created_at:today() };
+  b.locataire_id=loc; b.bien=bien; b.nature=g('lb-nature'); b.debut=g('lb-debut');
+  b.duree=parseInt(g('lb-duree'),10)||12; b.loyer=loyer; b.charges=parseFloat(g('lb-charges'))||0;
+  b.jour=Math.min(28,Math.max(1,parseInt(g('lb-jour'),10)||5)); b.depot=parseFloat(g('lb-depot'))||0;
+  b.revision=parseFloat(g('lb-revision'))||0; b.rs=parseFloat(g('lb-rs'))||0;
+  b.statut=g('lb-statut'); b.notes=g('lb-notes'); b.fin=_locFin(b);
+  var isNew=!exist;
+  await _locSave('baux',b,'pi_baux');
+  if(isNew && b.depot>0) await _locEcritureDepot(b);
+  closeModal('modal-loc-bail');
+  locEnter();
+  toast(isNew?('Bail '+b.ref+' créé.'):'Bail mis à jour.','success');
+}
+async function _locEcritureDepot(b){
+  var treso=(typeof _compteTresoVersement==='function')?_compteTresoVersement('virement'):'52100000';
+  var ecr={ id:'ecr_dep_'+b.id, ref:'DG-'+b.ref, date:b.debut, piece:b.ref,
+    libelle:'Dépôt de garantie — '+b.ref+' — '+_locNom(b), montant:b.depot, type:'passif', mode:'virement',
+    lignes:[ {compte:treso,sens:'D',montant:b.depot,libelle:'Encaissement dépôt de garantie'},
+             {compte:_locCpt('depot'),sens:'C',montant:b.depot,libelle:'Dette de restitution (4194)'} ],
+    notes:'Dépôt de garantie — dette restituable, non imposable au titre des loyers.', created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+}
+function _locNom(b){
+  var c=(DATA.clients||[]).find(function(x){return x.id===b.locataire_id;});
+  return c?((c.nom||'')+' '+(c.prenoms||'')).trim():'—';
+}
+/* ─── Quittancement récurrent ──────────────────────────── */
+async function locQuittancerMois(){
+  var mois=(document.getElementById('loc-q-mois')||{}).value||today().slice(0,7);
+  var actifs=_locBaux().filter(function(b){ return b.statut==='actif' && (!b.debut||b.debut.slice(0,7)<=mois) && (!b.fin||b.fin.slice(0,7)>=mois); });
+  if(!actifs.length){ toast('Aucun bail actif sur la période.','error'); return; }
+  var n=0;
+  for(var i=0;i<actifs.length;i++){
+    var b=actifs[i];
+    if(_locQ().some(function(q){ return q.bail_id===b.id && q.periode===mois; })) continue;
+    var loyer=parseFloat(b.loyer)||0, ch=parseFloat(b.charges)||0;
+    var tva=(b.nature!=='habitation'&&b.tva_assujetti)?Math.round(loyer*0.18):0;
+    var q={ id:uid(), ref:'QUIT-'+mois.replace('-','')+'-'+String(_locQ().length+1).padStart(4,'0'),
+      bail_id:b.id, locataire_id:b.locataire_id, periode:mois, date:mois+'-01',
+      echeance:mois+'-'+String(b.jour||5).padStart(2,'0'),
+      loyer:loyer, charges:ch, tva:tva, total:loyer+ch+tva, regle:0, created_at:today() };
+    await _locSave('quittances',q,'pi_quittances');
+    await _locEcritureQuittance(q,b);
+    n++;
+  }
+  if(typeof buildBalance==='function') buildBalance();
+  locEnter();
+  toast(n?('🧾 '+n+' quittance(s) générée(s) pour '+mois+'.'):'Quittances déjà générées pour cette période.', n?'success':'info');
+}
+async function _locEcritureQuittance(q,b){
+  var lignes=[{compte:_locCpt('locataire'),sens:'D',montant:q.total,libelle:'Quittance '+q.ref}];
+  if(q.loyer>0) lignes.push({compte:_locCpt('loyers'),sens:'C',montant:q.loyer,libelle:'Loyer '+q.periode});
+  if(q.charges>0) lignes.push({compte:_locCpt('charges_prov'),sens:'C',montant:q.charges,libelle:'Provision charges '+q.periode});
+  if(q.tva>0) lignes.push({compte:_locCpt('tva'),sens:'C',montant:q.tva,libelle:'TVA collectée sur loyer'});
+  var ecr={ id:'ecr_quit_'+q.id, ref:q.ref, date:q.date, piece:q.ref,
+    libelle:'Quittance '+q.periode+' — '+_locNom(b)+' — '+(b.bien||''),
+    montant:q.total, type:'produit', mode:'', lignes:lignes, created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+}
+function locOpenEncaisser(qid){
+  var q=_locQ().find(function(x){return x.id===qid;}); if(!q) return;
+  var b=_locBaux().find(function(x){return x.id===q.bail_id;})||{};
+  var v=function(i,val){ var e=document.getElementById(i); if(e) e.value=val; };
+  v('lq-id',q.id); v('lq-date',today()); v('lq-montant',_locDu(q)); v('lq-ref','');
+  var info=document.getElementById('lq-info');
+  if(info) info.innerHTML='<b>'+escHtml(q.ref)+'</b> — '+escHtml(_locNom(b))+'<br>Total : '+fmtF(q.total)+' FCFA · Déjà réglé : '+fmtF(q.regle||0)+' · <span style="color:var(--rouge);">Reste : '+fmtF(_locDu(q))+'</span>';
+  openModal('modal-loc-encaisser');
+}
+async function locSaveEncaissement(){
+  var g=function(i){ var e=document.getElementById(i); return e?e.value:''; };
+  var q=_locQ().find(function(x){return x.id===g('lq-id');}); if(!q) return;
+  var m=parseFloat(g('lq-montant'))||0;
+  if(m<=0){ toast('Montant invalide.','error'); return; }
+  if(m>_locDu(q)+1){ toast('Montant supérieur au reste dû.','error'); return; }
+  var mode=g('lq-mode'), date=g('lq-date')||today(), ref=g('lq-ref');
+  q.regle=(parseFloat(q.regle)||0)+m;
+  q.paiements=(q.paiements||[]).concat([{date:date,montant:m,mode:mode,ref:ref}]);
+  await _locSave('quittances',q,'pi_quittances');
+  var treso=(typeof _compteTresoVersement==='function')?_compteTresoVersement(mode):'52100000';
+  var ecr={ id:'ecr_enc_'+q.id+'_'+q.paiements.length, ref:'ENC-'+q.ref, date:date, piece:ref||q.ref,
+    libelle:'Encaissement loyer '+q.periode+' — '+q.ref, montant:m, type:'actif', mode:mode,
+    lignes:[ {compte:treso,sens:'D',montant:m,libelle:'Encaissement loyer'},
+             {compte:_locCpt('locataire'),sens:'C',montant:m,libelle:'Lettrage quittance '+q.ref} ],
+    created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+  if(typeof buildBalance==='function') buildBalance();
+  closeModal('modal-loc-encaisser');
+  locEnter();
+  toast('💰 Encaissement enregistré — écriture 5x/4111 générée.','success');
+}
+/* ─── Régularisation annuelle des charges ──────────────── */
+async function locRegulariserCharges(){
+  var bid=(document.getElementById('loc-ch-bail')||{}).value;
+  var an=(document.getElementById('loc-ch-annee')||{}).value;
+  var reel=parseFloat((document.getElementById('loc-ch-reel')||{}).value)||0;
+  var b=_locBaux().find(function(x){return x.id===bid;});
+  if(!b){ toast('Sélectionnez un bail.','error'); return; }
+  if(!an){ toast('Précisez l\'exercice.','error'); return; }
+  var prov=_locQ().filter(function(q){ return q.bail_id===bid && (q.periode||'').slice(0,4)===String(an); })
+    .reduce(function(s,q){ return s+(parseFloat(q.charges)||0); },0);
+  if(prov===0 && reel===0){ toast('Aucune provision ni charge sur l\'exercice.','error'); return; }
+  var solde=reel-prov;
+  var date=String(an)+'-12-31';
+  var lignes=[{compte:_locCpt('charges_prov'),sens:'D',montant:prov,libelle:'Solde provisions charges '+an}];
+  if(solde>0){ lignes.push({compte:_locCpt('locataire'),sens:'D',montant:solde,libelle:'Complément charges dû par le locataire'}); }
+  else if(solde<0){ lignes.push({compte:_locCpt('locataire'),sens:'C',montant:-solde,libelle:'Trop-perçu à restituer au locataire'}); }
+  lignes.push({compte:_locCpt('loyers'),sens:'C',montant:reel,libelle:'Charges récupérables réelles '+an});
+  var ecr={ id:'ecr_regch_'+bid+'_'+an, ref:'REGCH-'+an+'-'+b.ref, date:date, piece:b.ref,
+    libelle:'Régularisation charges '+an+' — '+b.ref+' — '+_locNom(b),
+    montant:Math.max(prov,reel), type:'produit', mode:'', lignes:lignes,
+    notes:'Provisions encaissées : '+fmtF(prov)+' · Charges réelles : '+fmtF(reel)+' · Solde : '+fmtF(solde), created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+  if(typeof buildBalance==='function') buildBalance();
+  var el=document.getElementById('loc-charges-table');
+  if(el) el.innerHTML='<table><thead><tr><th>Bail</th><th>Exercice</th><th>Provisions</th><th>Charges réelles</th><th>Solde</th><th>Sens</th></tr></thead><tbody>'
+    +'<tr><td>'+escHtml(b.ref)+'</td><td>'+an+'</td><td style="text-align:right;">'+fmtF(prov)+'</td><td style="text-align:right;">'+fmtF(reel)+'</td>'
+    +'<td style="text-align:right;font-weight:bold;">'+fmtF(Math.abs(solde))+'</td>'
+    +'<td>'+(solde>0?'<span class="badge badge-or">À facturer au locataire</span>':(solde<0?'<span class="badge badge-vert">À rembourser</span>':'<span class="badge badge-gris">Équilibré</span>'))+'</td></tr></tbody></table>';
+  toast('⚖️ Régularisation '+an+' comptabilisée.','success');
+}
+/* ─── Révision des loyers ──────────────────────────────── */
+function _locEligiblesRevision(){
+  var d=(document.getElementById('loc-rev-date')||{}).value||today();
+  return _locBaux().filter(function(b){
+    if(b.statut!=='actif') return false;
+    var base=b.derniere_revision||b.debut||'';
+    if(!base) return false;
+    return (new Date(d)-new Date(base))/864e5 >= 365;
+  });
+}
+function locSimulerRevision(){
+  var taux=parseFloat((document.getElementById('loc-rev-taux')||{}).value)||0;
+  var list=_locEligiblesRevision();
+  var el=document.getElementById('loc-revision-table'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucun bail éligible (12 mois révolus depuis la dernière révision).</div>'; return; }
+  el.innerHTML='<table><thead><tr><th>Bail</th><th>Locataire</th><th>Loyer actuel</th><th>Taux appliqué</th><th>Nouveau loyer</th><th>Écart annuel</th></tr></thead><tbody>'
+    +list.map(function(b){
+      var t=taux||parseFloat(b.revision)||0;
+      var nv=Math.round((parseFloat(b.loyer)||0)*(1+t/100));
+      return '<tr><td>'+escHtml(b.ref)+'</td><td>'+escHtml(_locNom(b))+'</td><td style="text-align:right;">'+fmtF(b.loyer)+'</td>'
+        +'<td style="text-align:right;">'+t+' %</td><td style="text-align:right;font-weight:bold;color:var(--or);">'+fmtF(nv)+'</td>'
+        +'<td style="text-align:right;color:var(--vert);">+'+fmtF((nv-(parseFloat(b.loyer)||0))*12)+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+async function locAppliquerRevision(){
+  var taux=parseFloat((document.getElementById('loc-rev-taux')||{}).value)||0;
+  var d=(document.getElementById('loc-rev-date')||{}).value||today();
+  var list=_locEligiblesRevision();
+  if(!list.length){ toast('Aucun bail éligible.','error'); return; }
+  if(!confirm('Appliquer la révision à '+list.length+' bail/baux ? Le nouveau loyer prendra effet au '+d+'.')) return;
+  for(var i=0;i<list.length;i++){
+    var b=list[i], t=taux||parseFloat(b.revision)||0;
+    b.loyer_precedent=b.loyer;
+    b.loyer=Math.round((parseFloat(b.loyer)||0)*(1+t/100));
+    b.derniere_revision=d;
+    b.historique_revisions=(b.historique_revisions||[]).concat([{date:d,taux:t,ancien:b.loyer_precedent,nouveau:b.loyer}]);
+    await _locSave('baux',b,'pi_baux');
+  }
+  locEnter(); locSimulerRevision();
+  toast('📈 Révision appliquée à '+list.length+' bail/baux.','success');
+}
+/* ─── Recouvrement gradué ──────────────────────────────── */
+function locRenderRecouvrement(){
+  var el=document.getElementById('loc-recouv-table'); if(!el) return;
+  var imp=_locQ().filter(function(q){ return _locStatutQ(q)!=='solde'; })
+    .map(function(q){ q._j=_locRetard(q); return q; })
+    .filter(function(q){ return q._j>0; })
+    .sort(function(a,b){ return b._j-a._j; });
+  if(!imp.length){ el.innerHTML='<div style="text-align:center;color:var(--vert);padding:20px;">✅ Aucun impayé en retard.</div>'; return; }
+  el.innerHTML='<table><thead><tr><th>Quittance</th><th>Locataire</th><th>Bien</th><th>Échéance</th><th>Retard</th><th>Reste dû</th><th>Palier</th><th>Actions</th></tr></thead><tbody>'
+    +imp.map(function(q){
+      var b=_locBaux().find(function(x){return x.id===q.bail_id;})||{};
+      var p=_locPalier(q._j);
+      var c=(DATA.clients||[]).find(function(x){return x.id===q.locataire_id;})||{};
+      var tel=(c.tel||'').replace(/[^0-9]/g,''); if(tel&&tel.length<=10) tel='225'+tel;
+      var msg='Bonjour '+_locNom(b)+', votre loyer '+q.periode+' ('+fmtF(_locDu(q))+' FCFA) reste impayé depuis '+q._j+' jours. Merci de régulariser.';
+      var wa=tel?('<a class="btn btn-secondary btn-sm btn-icon" href="https://wa.me/'+tel+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" title="Relancer WhatsApp">🟢</a> '):'';
+      return '<tr><td><strong>'+escHtml(q.ref)+'</strong></td><td>'+escHtml(_locNom(b))+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(b.bien||'—')+'</td><td>'+dateShort(q.echeance)+'</td>'
+        +'<td style="text-align:right;color:var(--rouge);font-weight:bold;">'+q._j+' j</td>'
+        +'<td style="text-align:right;font-weight:bold;">'+fmtF(_locDu(q))+'</td>'
+        +'<td><span class="badge '+p.cls+'">'+p.label+'</span></td>'
+        +'<td style="white-space:nowrap;">'+wa+'<button class="btn btn-secondary btn-sm btn-icon" onclick="locOpenEncaisser(\''+q.id+'\')" title="Encaisser">💰</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+/* ─── Rendus tableaux ──────────────────────────────────── */
+function locRenderBaux(){
+  var el=document.getElementById('loc-baux-table'); if(!el) return;
+  var s=((document.getElementById('loc-search')||{}).value||'').toLowerCase();
+  var f=(document.getElementById('loc-filter-statut')||{}).value||'';
+  var list=_locBaux().filter(function(b){
+    if(f&&b.statut!==f) return false;
+    if(!s) return true;
+    return (b.ref+' '+(b.bien||'')+' '+_locNom(b)).toLowerCase().indexOf(s)>=0;
+  });
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucun bail. Cliquez « + Nouveau bail ».</div>'; return; }
+  var bg={actif:'badge-vert',preavis:'badge-or',resilie:'badge-gris'};
+  el.innerHTML='<table><thead><tr><th>Réf</th><th>Locataire</th><th>Bien</th><th>Nature</th><th>Début</th><th>Fin</th><th>Loyer</th><th>Charges</th><th>Dépôt</th><th>Statut</th><th></th></tr></thead><tbody>'
+    +list.map(function(b){
+      return '<tr><td><strong>'+escHtml(b.ref)+'</strong></td><td>'+escHtml(_locNom(b))+'</td>'
+        +'<td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(b.bien||'')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(b.nature||'')+'</td><td>'+dateShort(b.debut)+'</td><td>'+dateShort(b.fin)+'</td>'
+        +'<td style="text-align:right;font-weight:bold;">'+fmtF(b.loyer)+'</td><td style="text-align:right;">'+fmtF(b.charges||0)+'</td>'
+        +'<td style="text-align:right;">'+fmtF(b.depot||0)+'</td>'
+        +'<td><span class="badge '+(bg[b.statut]||'badge-gris')+'">'+escHtml(b.statut||'')+'</span></td>'
+        +'<td><button class="btn btn-secondary btn-sm btn-icon" onclick="locOpenBail(\''+b.id+'\')" title="Modifier">✏️</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function locRenderQuittances(){
+  var el=document.getElementById('loc-quittances-table'); if(!el) return;
+  var mois=(document.getElementById('loc-q-mois')||{}).value||'';
+  var st=(document.getElementById('loc-q-statut')||{}).value||'';
+  var list=_locQ().filter(function(q){
+    if(mois&&q.periode!==mois) return false;
+    if(st&&_locStatutQ(q)!==st) return false;
+    return true;
+  }).sort(function(a,b){ return (b.periode||'').localeCompare(a.periode||''); });
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucune quittance. Cliquez « Générer les quittances du mois ».</div>'; return; }
+  var bg={solde:'badge-vert',partiel:'badge-or',impaye:'badge-rouge'};
+  el.innerHTML='<table><thead><tr><th>Réf</th><th>Période</th><th>Locataire</th><th>Loyer</th><th>Charges</th><th>TVA</th><th>Total</th><th>Réglé</th><th>Reste</th><th>Statut</th><th></th></tr></thead><tbody>'
+    +list.map(function(q){
+      var b=_locBaux().find(function(x){return x.id===q.bail_id;})||{};
+      var s=_locStatutQ(q);
+      return '<tr><td style="font-family:monospace;font-size:10px;">'+escHtml(q.ref)+'</td><td>'+escHtml(q.periode)+'</td>'
+        +'<td>'+escHtml(_locNom(b))+'</td><td style="text-align:right;">'+fmtF(q.loyer)+'</td>'
+        +'<td style="text-align:right;">'+fmtF(q.charges||0)+'</td><td style="text-align:right;">'+fmtF(q.tva||0)+'</td>'
+        +'<td style="text-align:right;font-weight:bold;">'+fmtF(q.total)+'</td><td style="text-align:right;color:var(--vert);">'+fmtF(q.regle||0)+'</td>'
+        +'<td style="text-align:right;color:var(--rouge);">'+fmtF(_locDu(q))+'</td>'
+        +'<td><span class="badge '+bg[s]+'">'+s+'</span></td>'
+        +'<td>'+(s!=='solde'?'<button class="btn btn-primary btn-sm btn-icon" onclick="locOpenEncaisser(\''+q.id+'\')" title="Encaisser">💰</button>':'✅')+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   DIASPORA — CONFIANCE VÉRIFIABLE À DISTANCE
+   Trois primitives :
+   1. Chaîne de preuve  : chaque preuve hachée SHA-256 et chaînée au bloc
+      précédent → toute altération postérieure est détectable.
+   2. Séquestre jalonné : fonds au passif (4191), libérés uniquement sur
+      jalon franchi ET preuve scellée.
+   3. Co-investissement : quotes-parts nominatives multi-pays (tontine).
+   SHA-256 en JS pur : crypto.subtle est indisponible en file://.
+══════════════════════════════════════════════════════════════════ */
+var _K256=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function _dspUtf8(s){
+  var out=[],i,c;
+  for(i=0;i<s.length;i++){
+    c=s.charCodeAt(i);
+    if(c<0x80) out.push(c);
+    else if(c<0x800){ out.push(0xc0|(c>>6),0x80|(c&63)); }
+    else if(c>=0xd800&&c<0xdc00){
+      var c2=s.charCodeAt(++i), cp=0x10000+((c-0xd800)<<10)+(c2-0xdc00);
+      out.push(0xf0|(cp>>18),0x80|((cp>>12)&63),0x80|((cp>>6)&63),0x80|(cp&63));
+    } else { out.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63)); }
+  }
+  return out;
+}
+function sha256Hex(msg){
+  var bytes=(typeof msg==='string')?_dspUtf8(msg):Array.prototype.slice.call(msg);
+  var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  var l=bytes.length, hi=Math.floor(l/536870912), lo=(l<<3)>>>0;
+  bytes=bytes.concat([0x80]);
+  while(bytes.length%64!==56) bytes.push(0);
+  bytes.push((hi>>>24)&255,(hi>>>16)&255,(hi>>>8)&255,hi&255,(lo>>>24)&255,(lo>>>16)&255,(lo>>>8)&255,lo&255);
+  var w=new Array(64),i,j,a,b,c,d,e,f,g,h,S0,S1,ch,maj,t1,t2;
+  var rr=function(x,n){ return ((x>>>n)|(x<<(32-n)))>>>0; };
+  for(i=0;i<bytes.length;i+=64){
+    for(j=0;j<16;j++) w[j]=((bytes[i+j*4]<<24)|(bytes[i+j*4+1]<<16)|(bytes[i+j*4+2]<<8)|bytes[i+j*4+3])>>>0;
+    for(j=16;j<64;j++){
+      var s0=(rr(w[j-15],7)^rr(w[j-15],18)^(w[j-15]>>>3))>>>0;
+      var s1=(rr(w[j-2],17)^rr(w[j-2],19)^(w[j-2]>>>10))>>>0;
+      w[j]=(w[j-16]+s0+w[j-7]+s1)>>>0;
+    }
+    a=H[0];b=H[1];c=H[2];d=H[3];e=H[4];f=H[5];g=H[6];h=H[7];
+    for(j=0;j<64;j++){
+      S1=(rr(e,6)^rr(e,11)^rr(e,25))>>>0; ch=((e&f)^((~e)&g))>>>0;
+      t1=(h+S1+ch+_K256[j]+w[j])>>>0;
+      S0=(rr(a,2)^rr(a,13)^rr(a,22))>>>0; maj=((a&b)^(a&c)^(b&c))>>>0;
+      t2=(S0+maj)>>>0;
+      h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+    }
+    H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
+    H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+  }
+  return H.map(function(x){ return ('00000000'+x.toString(16)).slice(-8); }).join('');
+}
+var DSP_CPT={ sequestre:'41910000', client:'41110000', frais_transfert:'63100000', perte_change:'67600000', gain_change:'77600000' };
+function _dspCpt(k){ var p=(DATA.params&&DATA.params.comptes_diaspo)||{}; return p[k]||DSP_CPT[k]; }
+function _dspD(){ return DATA.diaspo_dossiers||(DATA.diaspo_dossiers=[]); }
+function _dspP(){ return DATA.diaspo_preuves||(DATA.diaspo_preuves=[]); }
+function _dspJ(){ return DATA.diaspo_jalons||(DATA.diaspo_jalons=[]); }
+function _dspQ(){ return DATA.diaspo_parts||(DATA.diaspo_parts=[]); }
+function _dspA(){ return DATA.diaspo_ancrages||(DATA.diaspo_ancrages=[]); }
+async function _dspSave(store,obj,table){
+  obj._modifie=new Date().toISOString();
+  var arr=DATA[store]||(DATA[store]=[]);
+  var i=arr.findIndex(function(x){return x.id===obj.id;});
+  if(i>=0) arr[i]=obj; else arr.push(obj);
+  await dbPut(store,obj);
+  if(typeof syncToSupabase==='function') syncToSupabase(table,obj);
+  return obj;
+}
+function _dspNom(d){
+  var c=(DATA.clients||[]).find(function(x){return x.id===d.client_id;});
+  return c?((c.nom||'')+' '+(c.prenoms||'')).trim():(d.nom_libre||'—');
+}
+/* ─── Chaîne de preuve ────────────────────────────────── */
+function _dspChaine(){ return _dspP().slice().sort(function(a,b){ return (a.index||0)-(b.index||0); }); }
+function _dspPayload(b){
+  /* Champs figés dans le hash — l'ordre est normatif, ne jamais le modifier */
+  return [b.index, b.dossier_id, b.type, b.description, b.horodatage, b.geo, b.auteur, b.fichier_hash, b.prev_hash].join('|');
+}
+function _dspCalcHash(b){ return sha256Hex(_dspPayload(b)); }
+async function dspSceller(){
+  var g=function(i){ var e=document.getElementById(i); return e?e.value:''; };
+  var dossier=g('dsp-pv-dossier'), desc=(g('dsp-pv-desc')||'').trim();
+  if(!dossier){ toast('Sélectionnez un dossier.','error'); return; }
+  if(!desc){ toast('Décrivez la preuve.','error'); return; }
+  var fEl=document.getElementById('dsp-pv-file');
+  var file=fEl&&fEl.files&&fEl.files[0];
+  var fichierHash='', fichierNom='';
+  if(file){
+    fichierNom=file.name;
+    var buf=await new Promise(function(res,rej){
+      var r=new FileReader(); r.onload=function(){res(new Uint8Array(r.result));}; r.onerror=rej; r.readAsArrayBuffer(file);
+    });
+    fichierHash=sha256Hex(buf);
+  }
+  var ch=_dspChaine();
+  var last=ch.length?ch[ch.length-1]:null;
+  var bloc={ id:uid(), index:last?(last.index+1):1, dossier_id:dossier, type:g('dsp-pv-type')||'photo',
+    description:desc, horodatage:new Date().toISOString(), geo:(g('dsp-pv-geo')||'').trim(),
+    auteur:(g('dsp-pv-auteur')||'').trim(), fichier_nom:fichierNom, fichier_hash:fichierHash,
+    prev_hash:last?last.hash:'0'.repeat(64), created_at:today() };
+  bloc.hash=_dspCalcHash(bloc);
+  await _dspSave('diaspo_preuves',bloc,'pi_diaspo_preuves');
+  ['dsp-pv-desc','dsp-pv-auteur'].forEach(function(i){ var e=document.getElementById(i); if(e) e.value=''; });
+  if(fEl) fEl.value='';
+  dspRenderPreuves(); dspVerifierChaine(); dspRenderKPIs();
+  toast('🔐 Preuve scellée — bloc #'+bloc.index+' · '+bloc.hash.slice(0,12)+'…','success');
+}
+function dspGeoloc(){
+  if(!navigator.geolocation){ toast('Géolocalisation indisponible.','error'); return; }
+  navigator.geolocation.getCurrentPosition(function(p){
+    var e=document.getElementById('dsp-pv-geo');
+    if(e) e.value=p.coords.latitude.toFixed(6)+', '+p.coords.longitude.toFixed(6);
+    toast('Position capturée.','success');
+  }, function(){ toast('Position refusée ou indisponible.','error'); }, {enableHighAccuracy:true,timeout:8000});
+}
+function dspVerifierChaine(){
+  var ch=_dspChaine(), el=document.getElementById('dsp-chain-status');
+  var erreurs=[], prev='0'.repeat(64);
+  ch.forEach(function(b,i){
+    if(b.prev_hash!==prev) erreurs.push({i:b.index,motif:'Rupture du chaînage (prev_hash ne correspond pas au bloc précédent)'});
+    if(_dspCalcHash(b)!==b.hash) erreurs.push({i:b.index,motif:'Contenu altéré (le hash recalculé diffère du hash scellé)'});
+    prev=b.hash;
+  });
+  var ok=erreurs.length===0;
+  if(el){
+    el.innerHTML = !ch.length
+      ? '<div class="alert alert-info">Chaîne vide — aucune preuve scellée.</div>'
+      : (ok
+        ? '<div class="alert alert-success">✅ <strong>Chaîne intègre</strong> — '+ch.length+' bloc(s) vérifié(s). Empreinte racine : <code style="font-size:11px;">'+prev.slice(0,32)+'…</code></div>'
+        : '<div class="alert alert-danger">❌ <strong>ALTÉRATION DÉTECTÉE</strong> — '+erreurs.length+' anomalie(s) :<ul style="margin:6px 0 0 18px;">'
+          +erreurs.map(function(e){return '<li>Bloc #'+e.i+' — '+e.motif+'</li>';}).join('')+'</ul></div>');
+  }
+  if(ch.length) toast(ok?('✅ Chaîne intègre — '+ch.length+' bloc(s).'):('❌ '+erreurs.length+' altération(s) détectée(s) !'), ok?'success':'error');
+  return {ok:ok,racine:prev,blocs:ch.length,erreurs:erreurs};
+}
+function dspRenderPreuves(){
+  var el=document.getElementById('dsp-preuve-table'); if(!el) return;
+  var ch=_dspChaine().slice().reverse();
+  if(!ch.length){ el.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucune preuve scellée.</div>'; return; }
+  var ico={photo:'📷',jalon:'🎯',document:'📄',constat:'⚖️',paiement:'💰'};
+  el.innerHTML='<table><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Dossier</th><th>Horodatage</th><th>GPS</th><th>Auteur</th><th>Empreinte</th></tr></thead><tbody>'
+    +ch.map(function(b){
+      var d=_dspD().find(function(x){return x.id===b.dossier_id;})||{};
+      var alt=_dspCalcHash(b)!==b.hash;
+      return '<tr'+(alt?' style="background:rgba(220,53,69,.12);"':'')+'><td><strong>'+b.index+'</strong></td>'
+        +'<td>'+(ico[b.type]||'📌')+'</td>'
+        +'<td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(b.description)+(b.fichier_nom?(' <span style="color:var(--dim);">('+escHtml(b.fichier_nom)+')</span>'):'')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(d.bien||'—')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml((b.horodatage||'').replace('T',' ').slice(0,16))+'</td>'
+        +'<td style="font-size:10px;font-family:monospace;">'+escHtml(b.geo||'—')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(b.auteur||'—')+'</td>'
+        +'<td style="font-family:monospace;font-size:10px;color:'+(alt?'var(--rouge)':'var(--or)')+';" title="'+b.hash+'">'+b.hash.slice(0,14)+'…'+(alt?' ⚠️':'')+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+/* ─── Séquestre par jalons ────────────────────────────── */
+function dspOpenJalon(){
+  if(!(document.getElementById('dsp-sq-dossier')||{}).value){ toast('Sélectionnez d\'abord un dossier.','error'); return; }
+  var n=_dspJ().filter(function(j){return j.dossier_id===document.getElementById('dsp-sq-dossier').value;}).length;
+  var v=function(i,val){var e=document.getElementById(i); if(e) e.value=val;};
+  v('dj-label',''); v('dj-montant',''); v('dj-ordre',n+1); v('dj-preuve',''); v('dj-valid','');
+  openModal('modal-dsp-jalon');
+}
+async function dspSaveJalon(){
+  var g=function(i){var e=document.getElementById(i); return e?e.value:'';};
+  var dossier=(document.getElementById('dsp-sq-dossier')||{}).value;
+  var label=(g('dj-label')||'').trim(), montant=parseFloat(g('dj-montant'))||0;
+  if(!label){ toast('Intitulé requis.','error'); return; }
+  if(montant<=0){ toast('Montant invalide.','error'); return; }
+  var j={ id:uid(), dossier_id:dossier, label:label, montant:montant,
+    ordre:parseInt(g('dj-ordre'),10)||1, preuve_exigee:g('dj-preuve'), validateur:g('dj-valid'),
+    statut:'attente', preuve_id:'', libere_le:'', created_at:today() };
+  await _dspSave('diaspo_jalons',j,'pi_diaspo_jalons');
+  closeModal('modal-dsp-jalon'); dspRenderSequestre(); dspRenderKPIs();
+  toast('Jalon ajouté.','success');
+}
+function dspOpenVersement(){
+  var did=(document.getElementById('dsp-sq-dossier')||{}).value;
+  if(!did){ toast('Sélectionnez un dossier.','error'); return; }
+  var d=_dspD().find(function(x){return x.id===did;})||{};
+  var v=function(i,val){var e=document.getElementById(i); if(e) e.value=val;};
+  v('dv-date',today()); v('dv-devise',d.devise||'XOF'); v('dv-montant','');
+  v('dv-taux',(d.devise==='XOF'||!d.devise)?1:''); v('dv-frais',0); v('dv-ref','');
+  dspRecalcConv(); openModal('modal-dsp-versement');
+}
+function dspRecalcConv(){
+  var g=function(i){var e=document.getElementById(i); return e?e.value:'';};
+  var dev=g('dv-devise'), m=parseFloat(g('dv-montant'))||0;
+  var tEl=document.getElementById('dv-taux');
+  if(dev==='XOF'&&tEl) tEl.value=1;
+  var t=parseFloat(g('dv-taux'))||0, fr=parseFloat(g('dv-frais'))||0;
+  var brut=Math.round(m*t), net=brut-fr;
+  var el=document.getElementById('dv-conv');
+  if(el) el.innerHTML= (m&&t)
+    ? ('Converti : <strong>'+fmtF(brut)+' FCFA</strong> (taux figé '+t+') · Frais '+fmtF(fr)+' · <strong>Net séquestré : '+fmtF(net)+' FCFA</strong>'
+      +'<br><span style="font-size:11px;">Le taux est figé à la date du versement. Tout écart constaté à la conversion réelle se comptabilise en 676 (perte) ou 776 (gain) de change.</span>')
+    : 'Saisissez le montant et le taux.';
+}
+async function dspSaveVersement(){
+  var g=function(i){var e=document.getElementById(i); return e?e.value:'';};
+  var did=(document.getElementById('dsp-sq-dossier')||{}).value;
+  var d=_dspD().find(function(x){return x.id===did;}); if(!d){ toast('Dossier introuvable.','error'); return; }
+  var m=parseFloat(g('dv-montant'))||0, t=parseFloat(g('dv-taux'))||0, fr=parseFloat(g('dv-frais'))||0;
+  if(m<=0||t<=0){ toast('Montant ou taux invalide.','error'); return; }
+  var brut=Math.round(m*t), net=brut-fr;
+  var mvt={ date:g('dv-date')||today(), devise:g('dv-devise'), montant_devise:m, taux:t,
+    montant_xof:brut, frais:fr, net:net, mode:g('dv-mode'), ref:g('dv-ref') };
+  d.sequestre=(d.sequestre||[]).concat([mvt]);
+  await _dspSave('diaspo_dossiers',d,'pi_diaspo_dossiers');
+  var treso=(typeof _compteTresoVersement==='function')?_compteTresoVersement(mvt.mode):'52100000';
+  var lignes=[{compte:treso,sens:'D',montant:net,libelle:'Encaissement transfert diaspora'}];
+  if(fr>0) lignes.push({compte:_dspCpt('frais_transfert'),sens:'D',montant:fr,libelle:'Frais de transfert international'});
+  lignes.push({compte:_dspCpt('sequestre'),sens:'C',montant:brut,libelle:'Fonds séquestrés — non acquis (4191)'});
+  var ecr={ id:'ecr_dspseq_'+did+'_'+d.sequestre.length, ref:'SEQ-'+(d.ref||did).slice(0,12)+'-'+d.sequestre.length,
+    date:mvt.date, piece:mvt.ref||'', libelle:'Versement séquestre diaspora — '+_dspNom(d)+' ('+mvt.devise+' '+m+' @ '+t+')',
+    montant:brut, type:'passif', mode:mvt.mode, lignes:lignes,
+    notes:'Fonds non acquis — libération conditionnée au franchissement de jalons prouvés.', created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+  if(typeof buildBalance==='function') buildBalance();
+  closeModal('modal-dsp-versement'); dspRenderSequestre(); dspRenderKPIs();
+  toast('🔒 '+fmtF(net)+' FCFA séquestrés — écriture 5x/4191 générée.','success');
+}
+function _dspSolde(d){
+  var verse=(d.sequestre||[]).reduce(function(s,m){return s+(m.montant_xof||0);},0);
+  var libere=_dspJ().filter(function(j){return j.dossier_id===d.id&&j.statut==='libere';})
+    .reduce(function(s,j){return s+(j.montant||0);},0);
+  return {verse:verse, libere:libere, bloque:verse-libere};
+}
+async function dspLibererJalon(jid){
+  var j=_dspJ().find(function(x){return x.id===jid;}); if(!j) return;
+  var d=_dspD().find(function(x){return x.id===j.dossier_id;}); if(!d) return;
+  var s=_dspSolde(d);
+  if(j.montant>s.bloque){ toast('Fonds séquestrés insuffisants ('+fmtF(s.bloque)+' FCFA disponibles).','error'); return; }
+  var preuves=_dspP().filter(function(p){return p.dossier_id===d.id;});
+  if(!preuves.length){ toast('Aucune preuve scellée pour ce dossier — libération refusée.','error'); return; }
+  var v=dspVerifierChaine();
+  if(!v.ok){ toast('Chaîne de preuve altérée — libération bloquée.','error'); return; }
+  var last=preuves[preuves.length-1];
+  if(!confirm('Libérer '+fmtF(j.montant)+' FCFA pour « '+j.label+' » ?\n\nPreuve rattachée : bloc #'+last.index+' — '+last.description+'\nValidateur : '+(j.validateur||'non désigné'))) return;
+  j.statut='libere'; j.preuve_id=last.id; j.libere_le=today();
+  await _dspSave('diaspo_jalons',j,'pi_diaspo_jalons');
+  var ecr={ id:'ecr_dsplib_'+j.id, ref:'LIB-'+(j.label||'').slice(0,12), date:today(), piece:last.hash.slice(0,16),
+    libelle:'Libération séquestre — '+j.label+' — '+_dspNom(d), montant:j.montant, type:'actif', mode:'',
+    lignes:[ {compte:_dspCpt('sequestre'),sens:'D',montant:j.montant,libelle:'Apurement fonds séquestrés'},
+             {compte:_dspCpt('client'),sens:'C',montant:j.montant,libelle:'Imputation créance client — jalon franchi'} ],
+    notes:'Preuve scellée bloc #'+last.index+' · empreinte '+last.hash+' · validateur '+(j.validateur||'—'), created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+  if(typeof buildBalance==='function') buildBalance();
+  dspRenderSequestre(); dspRenderKPIs();
+  toast('✅ Jalon libéré — écriture 4191/4111 générée avec empreinte de preuve.','success');
+}
+function dspRenderSequestre(){
+  var did=(document.getElementById('dsp-sq-dossier')||{}).value;
+  var rEl=document.getElementById('dsp-sq-resume'), tEl=document.getElementById('dsp-sequestre-table');
+  if(!tEl) return;
+  var d=_dspD().find(function(x){return x.id===did;});
+  if(!d){ if(rEl) rEl.innerHTML=''; tEl.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Sélectionnez un dossier.</div>'; return; }
+  var s=_dspSolde(d);
+  var jalons=_dspJ().filter(function(j){return j.dossier_id===did;}).sort(function(a,b){return (a.ordre||0)-(b.ordre||0);});
+  var total=jalons.reduce(function(x,j){return x+(j.montant||0);},0);
+  var pct=total>0?Math.round(jalons.filter(function(j){return j.statut==='libere';}).reduce(function(x,j){return x+j.montant;},0)/total*100):0;
+  if(rEl) rEl.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;">'
+    +[['Versé au séquestre',fmtF(s.verse),''],['Libéré',fmtF(s.libere),'kpi-green'],['Encore bloqué',fmtF(s.bloque),'kpi-blue'],['Avancement jalons',pct+' %','']]
+      .map(function(k){ return '<div class="kpi-card '+k[2]+'"><div class="kpi-label">'+k[0]+'</div><div class="kpi-value or" style="font-size:16px;">'+k[1]+'</div></div>'; }).join('')
+    +'</div>';
+  if(!jalons.length){ tEl.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucun jalon défini. Cliquez « + Jalon ».</div>'; return; }
+  tEl.innerHTML='<table><thead><tr><th>#</th><th>Jalon</th><th>Montant</th><th>Preuve exigée</th><th>Validateur</th><th>Statut</th><th>Libéré le</th><th></th></tr></thead><tbody>'
+    +jalons.map(function(j){
+      var lib=j.statut==='libere';
+      return '<tr><td>'+(j.ordre||'')+'</td><td><strong>'+escHtml(j.label)+'</strong></td>'
+        +'<td style="text-align:right;font-weight:bold;">'+fmtF(j.montant)+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(j.preuve_exigee||'—')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(j.validateur||'—')+'</td>'
+        +'<td><span class="badge '+(lib?'badge-vert':'badge-or')+'">'+(lib?'Libéré':'Bloqué')+'</span></td>'
+        +'<td style="font-size:11px;">'+(j.libere_le?dateShort(j.libere_le):'—')+'</td>'
+        +'<td>'+(lib?'🔓':'<button class="btn btn-primary btn-sm" onclick="dspLibererJalon(\''+j.id+'\')">🔓 Libérer</button>')+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+/* ─── Co-investissement (tontine numérique) ───────────── */
+async function dspAjouterPart(){
+  var g=function(i){var e=document.getElementById(i); return e?e.value:'';};
+  var did=g('dsp-pt-dossier'), nom=(g('dsp-pt-nom')||'').trim(), pct=parseFloat(g('dsp-pt-pct'))||0;
+  if(!did){ toast('Sélectionnez un dossier.','error'); return; }
+  if(!nom){ toast('Nom du co-investisseur requis.','error'); return; }
+  if(pct<=0||pct>100){ toast('Quote-part invalide.','error'); return; }
+  var cum=_dspQ().filter(function(p){return p.dossier_id===did;}).reduce(function(s,p){return s+(p.pct||0);},0);
+  if(cum+pct>100.01){ toast('Total des quotes-parts > 100 % (déjà '+cum.toFixed(2)+' %).','error'); return; }
+  var p={ id:uid(), dossier_id:did, nom:nom, pays:g('dsp-pt-pays'), pct:pct, lien:g('dsp-pt-lien'), verse:0, created_at:today() };
+  await _dspSave('diaspo_parts',p,'pi_diaspo_parts');
+  ['dsp-pt-nom','dsp-pt-pays','dsp-pt-pct'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';});
+  dspRenderParts();
+  toast('Co-investisseur ajouté.','success');
+}
+async function dspSupprimerPart(id){
+  if(!confirm('Retirer ce co-investisseur ?')) return;
+  if(typeof deleteRecord==='function'){ await deleteRecord('diaspo_parts',id,'pi_diaspo_parts'); }
+  else { DATA.diaspo_parts=_dspQ().filter(function(p){return p.id!==id;}); }
+  dspRenderParts(); toast('Co-investisseur retiré.','info');
+}
+function dspRenderParts(){
+  var did=(document.getElementById('dsp-pt-dossier')||{}).value;
+  var rEl=document.getElementById('dsp-parts-resume'), tEl=document.getElementById('dsp-parts-table');
+  if(!tEl) return;
+  var d=_dspD().find(function(x){return x.id===did;});
+  var list=_dspQ().filter(function(p){return p.dossier_id===did;}).sort(function(a,b){return (b.pct||0)-(a.pct||0);});
+  var cum=list.reduce(function(s,p){return s+(p.pct||0);},0);
+  var total=d?(parseFloat(d.montant)||0):0;
+  if(rEl) rEl.innerHTML=d?('<div class="alert '+(Math.abs(cum-100)<0.01?'alert-success':'alert-warning')+'">'
+    +'Quotes-parts réparties : <strong>'+cum.toFixed(2)+' %</strong>'+(Math.abs(cum-100)<0.01?' — répartition complète.':' — reste '+(100-cum).toFixed(2)+' % à attribuer.')
+    +' · Projet : '+fmtF(total)+' FCFA · '+list.length+' co-investisseur(s) dans '+(new Set(list.map(function(p){return p.pays||'—';}))).size+' pays.</div>'):'';
+  if(!list.length){ tEl.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucun co-investisseur.</div>'; return; }
+  tEl.innerHTML='<table><thead><tr><th>Co-investisseur</th><th>Pays</th><th>Lien</th><th>Quote-part</th><th>Apport théorique</th><th>Versé</th><th>Reste</th><th></th></tr></thead><tbody>'
+    +list.map(function(p){
+      var du=Math.round(total*(p.pct||0)/100), reste=du-(p.verse||0);
+      return '<tr><td><strong>'+escHtml(p.nom)+'</strong></td><td>'+escHtml(p.pays||'—')+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(p.lien||'')+'</td>'
+        +'<td style="text-align:right;font-weight:bold;color:var(--or);">'+(p.pct||0).toFixed(2)+' %</td>'
+        +'<td style="text-align:right;">'+fmtF(du)+'</td><td style="text-align:right;color:var(--vert);">'+fmtF(p.verse||0)+'</td>'
+        +'<td style="text-align:right;color:'+(reste>0?'var(--rouge)':'var(--vert)')+';">'+fmtF(reste)+'</td>'
+        +'<td><button class="btn btn-secondary btn-sm btn-icon" onclick="dspSupprimerPart(\''+p.id+'\')" title="Retirer">🗑️</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+/* ─── Ancrage externe ─────────────────────────────────── */
+async function dspGenererAncrage(){
+  var v=dspVerifierChaine();
+  if(!v.blocs){ toast('Aucune preuve à ancrer.','error'); return; }
+  if(!v.ok){ toast('Chaîne altérée — corrigez avant d\'ancrer.','error'); return; }
+  var a={ id:uid(), date:new Date().toISOString(), racine:v.racine, blocs:v.blocs,
+    ref:'ANCR-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+String(_dspA().length+1).padStart(3,'0'),
+    depose:false, created_at:today() };
+  await _dspSave('diaspo_ancrages',a,'pi_diaspo_ancrages');
+  dspRenderAncrage();
+  toast('📜 Certificat '+a.ref+' généré.','success');
+}
+function dspRenderAncrage(){
+  var iEl=document.getElementById('dsp-ancrage-info');
+  var v=dspVerifierChaine();
+  if(iEl) iEl.innerHTML='<div style="font-size:13px;">Blocs scellés : <strong>'+v.blocs+'</strong><br>'
+    +'Empreinte racine actuelle : <code style="font-size:11px;word-break:break-all;">'+(v.racine||'—')+'</code></div>';
+  var list=_dspA().slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  var tEl=document.getElementById('dsp-ancrages-table');
+  if(tEl) tEl.innerHTML= list.length
+    ? ('<table><thead><tr><th>Référence</th><th>Date</th><th>Blocs</th><th>Empreinte racine</th><th>Déposé</th></tr></thead><tbody>'
+      +list.map(function(a){
+        return '<tr><td><strong>'+escHtml(a.ref)+'</strong></td><td>'+escHtml((a.date||'').replace('T',' ').slice(0,16))+'</td>'
+          +'<td style="text-align:right;">'+a.blocs+'</td>'
+          +'<td style="font-family:monospace;font-size:10px;" title="'+a.racine+'">'+a.racine.slice(0,24)+'…</td>'
+          +'<td><input type="checkbox" '+(a.depose?'checked':'')+' onchange="dspMarquerDepose(\''+a.id+'\',this.checked)" style="accent-color:var(--or);"></td></tr>';
+      }).join('')+'</tbody></table>')
+    : '<div style="text-align:center;color:var(--dim);padding:20px;">Aucun certificat généré.</div>';
+  var last=list[0], dEl=document.getElementById('dsp-ancrage-doc');
+  if(dEl&&last) dEl.innerHTML='<div class="card" id="dsp-cert-print" style="border:2px solid var(--or);">'
+    +'<h3 style="text-align:center;margin-bottom:4px;">CERTIFICAT D\'ANCRAGE DE PREUVE</h3>'
+    +'<div style="text-align:center;font-size:12px;color:var(--dim);margin-bottom:14px;">Registre chaîné d\'avancement de projet immobilier</div>'
+    +'<table style="width:100%;font-size:13px;"><tbody>'
+    +'<tr><td style="padding:4px;"><b>Référence</b></td><td>'+escHtml(last.ref)+'</td></tr>'
+    +'<tr><td style="padding:4px;"><b>Date de génération</b></td><td>'+escHtml((last.date||'').replace('T',' ').slice(0,19))+' UTC</td></tr>'
+    +'<tr><td style="padding:4px;"><b>Nombre de preuves scellées</b></td><td>'+last.blocs+'</td></tr>'
+    +'<tr><td style="padding:4px;"><b>Algorithme</b></td><td>SHA-256, chaînage séquentiel</td></tr>'
+    +'<tr><td style="padding:4px;vertical-align:top;"><b>Empreinte racine</b></td><td style="font-family:monospace;font-size:11px;word-break:break-all;">'+escHtml(last.racine)+'</td></tr>'
+    +'</tbody></table>'
+    +'<div style="margin-top:14px;font-size:11px;line-height:1.6;border-top:1px solid var(--or);padding-top:10px;">'
+    +'Toute modification, suppression ou substitution ultérieure d\'une preuve enregistrée avant la date ci-dessus '
+    +'produira une empreinte racine différente de celle figurant sur le présent certificat. '
+    +'Ce document doit être déposé auprès d\'un tiers de confiance (huissier de justice, notaire) ou expédié par courrier recommandé '
+    +'afin de lui conférer une date certaine opposable.'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;margin-top:24px;font-size:12px;">'
+    +'<div>Fait à Abidjan, le '+dateShort(today())+'<br><br>Le promoteur<br><br><br>_______________________</div>'
+    +'<div style="text-align:center;">Visa du tiers de confiance<br><br><br><br>_______________________</div></div>'
+    +'</div>';
+}
+async function dspMarquerDepose(id,val){
+  var a=_dspA().find(function(x){return x.id===id;}); if(!a) return;
+  a.depose=!!val; await _dspSave('diaspo_ancrages',a,'pi_diaspo_ancrages');
+  toast(val?'Certificat marqué comme déposé.':'Dépôt annulé.','info');
+}
+function dspImprimerAncrage(){
+  var el=document.getElementById('dsp-cert-print');
+  if(!el){ toast('Générez d\'abord un certificat.','error'); return; }
+  if(typeof imprimerHTML==='function'){ imprimerHTML(el.innerHTML,'Certificat d\'ancrage'); return; }
+  var w=window.open('','_blank');
+  if(!w){ toast('Autorisez les fenêtres surgissantes.','error'); return; }
+  w.document.write('<html><head><title>Certificat d\'ancrage</title><style>body{font-family:Georgia,serif;padding:40px;}table{width:100%;}h3{text-align:center;}</style></head><body>'+el.innerHTML+'</body></html>');
+  w.document.close(); w.print();
+}
+/* ─── Dossiers ────────────────────────────────────────── */
+function dspOpenDossier(id){
+  dspFillSelects();
+  var d=id?_dspD().find(function(x){return x.id===id;}):null;
+  var v=function(i,val){var e=document.getElementById(i); if(e) e.value=val;};
+  v('dd-id',d?d.id:''); v('dd-client',d?d.client_id:''); v('dd-pays',d?d.pays:'');
+  v('dd-devise',d?d.devise:'EUR'); v('dd-tz',d?d.tz:''); v('dd-bien',d?d.bien:'');
+  v('dd-montant',d?d.montant:''); v('dd-mandataire',d?d.mandataire:''); v('dd-tel',d?d.tel:'');
+  v('dd-statut',d?d.statut:'actif'); v('dd-notes',d?d.notes:'');
+  var t=document.getElementById('modal-dsp-title'); if(t) t.textContent=d?('Dossier '+(d.ref||'')):'Nouveau dossier diaspora';
+  openModal('modal-dsp-dossier');
+}
+async function dspSaveDossier(){
+  var g=function(i){var e=document.getElementById(i); return e?e.value:'';};
+  var id=g('dd-id'), cid=g('dd-client'), bien=(g('dd-bien')||'').trim(), pays=(g('dd-pays')||'').trim();
+  if(!cid){ toast('Sélectionnez l\'investisseur.','error'); return; }
+  if(!pays){ toast('Précisez le pays de résidence.','error'); return; }
+  if(!bien){ toast('Précisez le bien concerné.','error'); return; }
+  var ex=id?_dspD().find(function(x){return x.id===id;}):null;
+  var d=ex||{ id:uid(), ref:'DSP-'+new Date().getFullYear()+'-'+String(_dspD().length+1).padStart(3,'0'), sequestre:[], created_at:today() };
+  d.client_id=cid; d.pays=pays; d.devise=g('dd-devise'); d.tz=g('dd-tz'); d.bien=bien;
+  d.montant=parseFloat(g('dd-montant'))||0; d.mandataire=g('dd-mandataire'); d.tel=g('dd-tel');
+  d.statut=g('dd-statut'); d.notes=g('dd-notes');
+  await _dspSave('diaspo_dossiers',d,'pi_diaspo_dossiers');
+  closeModal('modal-dsp-dossier'); dspEnter();
+  toast(ex?'Dossier mis à jour.':('Dossier '+d.ref+' créé.'),'success');
+}
+function _dspScore(d){
+  /* Indice de transparence : ce que l'investisseur peut vérifier lui-même. */
+  var pr=_dspP().filter(function(p){return p.dossier_id===d.id;});
+  var jal=_dspJ().filter(function(j){return j.dossier_id===d.id;});
+  var s=0;
+  if(pr.length>=1) s+=20;
+  if(pr.length>=5) s+=15;
+  if(pr.filter(function(p){return p.geo;}).length>=1) s+=15;
+  if(pr.filter(function(p){return p.type==='constat';}).length>=1) s+=15;
+  if(jal.length>=1) s+=15;
+  if(jal.filter(function(j){return j.validateur;}).length>=1) s+=10;
+  if(_dspA().length>=1) s+=10;
+  return Math.min(100,s);
+}
+function dspRenderKPIs(){
+  var el=document.getElementById('dsp-kpis'); if(!el) return;
+  var ds=_dspD(), actifs=ds.filter(function(d){return d.statut==='actif';});
+  var verse=ds.reduce(function(s,d){return s+_dspSolde(d).verse;},0);
+  var bloque=ds.reduce(function(s,d){return s+_dspSolde(d).bloque;},0);
+  var pays=new Set(ds.map(function(d){return (d.pays||'').trim();}).filter(Boolean));
+  var v=dspVerifierChaine();
+  var score=ds.length?Math.round(ds.reduce(function(s,d){return s+_dspScore(d);},0)/ds.length):0;
+  el.innerHTML=[
+    {l:'Dossiers actifs',v:actifs.length,i:'🗂️',c:''},
+    {l:'Pays représentés',v:pays.size,i:'🌍',c:'kpi-blue'},
+    {l:'Versé au séquestre',v:fmtF(verse)+' FCFA',i:'💰',c:'kpi-green'},
+    {l:'Encore bloqué',v:fmtF(bloque)+' FCFA',i:'🔒',c:'kpi-blue'},
+    {l:'Preuves scellées',v:v.blocs,i:'🔐',c:v.ok?'kpi-green':'kpi-red'},
+    {l:'Indice de transparence',v:score+'/100',i:'🛡️',c:score>=70?'kpi-green':(score>=40?'':'kpi-red')}
+  ].map(function(k){ return '<div class="kpi-card '+k.c+'" data-icon="'+k.i+'"><div class="kpi-label">'+k.l+'</div><div class="kpi-value or" style="font-size:16px;">'+k.v+'</div></div>'; }).join('');
+  var bd=document.getElementById('badge-diaspo');
+  if(bd){ bd.textContent=actifs.length; bd.style.display=actifs.length?'inline-block':'none'; }
+}
+function dspFillSelects(){
+  var cl=(DATA.clients||[]).slice().sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');});
+  var sc=document.getElementById('dd-client');
+  if(sc) sc.innerHTML='<option value="">— Choisir —</option>'+cl.map(function(c){
+    return '<option value="'+c.id+'">'+escHtml((c.nom||'')+' '+(c.prenoms||''))+'</option>'; }).join('');
+  var opts=_dspD().map(function(d){ return '<option value="'+d.id+'">'+escHtml(d.ref+' — '+_dspNom(d)+' — '+(d.bien||''))+'</option>'; }).join('');
+  ['dsp-pv-dossier','dsp-sq-dossier','dsp-pt-dossier'].forEach(function(i){
+    var e=document.getElementById(i); if(!e) return;
+    var cur=e.value; e.innerHTML=opts; if(cur) e.value=cur;
+  });
+  var fp=document.getElementById('dsp-filter-pays');
+  if(fp){ var cur=fp.value;
+    var pays=[...new Set(_dspD().map(function(d){return (d.pays||'').trim();}).filter(Boolean))].sort();
+    fp.innerHTML='<option value="">— Tous pays —</option>'+pays.map(function(p){return '<option value="'+escHtml(p)+'">'+escHtml(p)+'</option>';}).join('');
+    if(cur) fp.value=cur; }
+}
+function dspRenderDossiers(){
+  var el=document.getElementById('dsp-dossiers-table'); if(!el) return;
+  var s=((document.getElementById('dsp-search')||{}).value||'').toLowerCase();
+  var fp=(document.getElementById('dsp-filter-pays')||{}).value||'';
+  var list=_dspD().filter(function(d){
+    if(fp&&(d.pays||'').trim()!==fp) return false;
+    if(!s) return true;
+    return (d.ref+' '+(d.pays||'')+' '+(d.bien||'')+' '+_dspNom(d)).toLowerCase().indexOf(s)>=0;
+  });
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px;">Aucun dossier diaspora. Cliquez « + Dossier diaspora ».</div>'; return; }
+  var bg={actif:'badge-vert',suspendu:'badge-or',livre:'badge-gris'};
+  el.innerHTML='<table><thead><tr><th>Réf</th><th>Investisseur</th><th>Pays</th><th>Devise</th><th>Bien</th><th>Projet</th><th>Séquestré</th><th>Bloqué</th><th>Transparence</th><th>Statut</th><th></th></tr></thead><tbody>'
+    +list.map(function(d){
+      var so=_dspSolde(d), sc=_dspScore(d);
+      var col=sc>=70?'var(--vert)':(sc>=40?'var(--or)':'var(--rouge)');
+      return '<tr><td><strong>'+escHtml(d.ref)+'</strong></td><td>'+escHtml(_dspNom(d))+'</td>'
+        +'<td>'+escHtml(d.pays||'—')+'</td><td>'+escHtml(d.devise||'XOF')+'</td>'
+        +'<td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtml(d.bien||'')+'</td>'
+        +'<td style="text-align:right;">'+fmtF(d.montant||0)+'</td>'
+        +'<td style="text-align:right;color:var(--vert);">'+fmtF(so.verse)+'</td>'
+        +'<td style="text-align:right;color:var(--bleu);">'+fmtF(so.bloque)+'</td>'
+        +'<td style="text-align:right;font-weight:bold;color:'+col+';">'+sc+'/100</td>'
+        +'<td><span class="badge '+(bg[d.statut]||'badge-gris')+'">'+escHtml(d.statut||'')+'</span></td>'
+        +'<td><button class="btn btn-secondary btn-sm btn-icon" onclick="dspOpenDossier(\''+d.id+'\')" title="Modifier">✏️</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function dspEnter(){
+  dspFillSelects(); dspRenderKPIs(); dspRenderDossiers();
+  dspRenderPreuves(); dspRenderSequestre(); dspRenderParts(); dspRenderAncrage();
+}
+
 async function saveReleveBank() {
   var date = document.getElementById('rb-date').value;
   var mois = document.getElementById('rb-mois').value;
