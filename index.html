@@ -22415,7 +22415,11 @@ function switchTab(context, tab) {
   else if (context === 'af-op')            prefix = 'tab-af-op-';
   else if (context === 'formations')       prefix = 'tab-formations-';
   else if (context === 'plf')              prefix = 'tab-plf-';
-  else return;
+  /* Convention par défaut : tab-{contexte}-{onglet}. Les cas listés ci-dessus
+     sont des exceptions historiques ('users', 'rapprochement') ou de simples
+     redondances. Sans ce repli, tout nouveau module devait être déclaré ici,
+     faute de quoi ses onglets restaient inertes sans erreur visible. */
+  else prefix = 'tab-' + context + '-';
 
   /* Masquer tous les panneaux du contexte */
   document.querySelectorAll('[id^="' + prefix + '"]').forEach(function(el) {
