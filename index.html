@@ -33812,7 +33812,8 @@ var ALL_MODULES = [
   'Rapports Commerciaux','Messagerie','Parametres',
   'Filiere Fonciere','Acquisition & Amenagement Foncier','Etude de Prix & Debourse',
   'Achats & Commandes','Stock Materiaux','Validations','Reception & Livraison',
-  'Portail','Portail Apporteur','Bilan de Promotion','Partenaires Lotissement'
+  'Portail','Portail Apporteur','Bilan de Promotion','Partenaires Lotissement',
+  'Gestion Locative','Investisseurs Diaspora'
 ];
 
 // ── Rôles système (non modifiables, non supprimables) ────────────────────────
@@ -33825,7 +33826,8 @@ var SYSTEM_ROLES = {
   comptable:  { id:'comptable',  label:'Comptable',      icon:'💼', level:2, system:true,
     permissions: Object.fromEntries(ALL_MODULES.map(function(m){
       return [m, ['Tableau de bord','Accueil','DQE & Cout de revient','Souscripteurs','Paiements',
-                  'Relances','Comptabilite','Tresorerie','Caisse','Paie','Declarations & Teledeclaration','Journaliers & Temporaires','Messagerie'].includes(m)]; })) },
+                  'Relances','Comptabilite','Tresorerie','Caisse','Paie','Declarations & Teledeclaration','Journaliers & Temporaires','Messagerie',
+                  'Gestion Locative','Investisseurs Diaspora'].includes(m)]; })) },
   commercial: { id:'commercial', label:'Commercial',     icon:'🎯', level:1, system:true,
     permissions: Object.fromEntries(ALL_MODULES.map(function(m){
       return [m, ['Tableau de bord','Accueil','Programmes','Pipeline Leads','Plan Action Commercial',
@@ -33874,7 +33876,17 @@ async function loadCustomRoles() {
     rows.forEach(function(r){
       if (r.is_override && r.role_id && SYSTEM_ROLES[r.role_id]) {
         var base = SYSTEM_ROLES[r.role_id];
-        base.permissions  = r.permissions || base.permissions;
+        /* Une surcharge enregistrée avant l'ajout d'un module ne le contient pas :
+           remplacer en bloc rendrait ce module inaccessible à tous (undefined → refus).
+           Les modules absents reprennent donc la valeur système par défaut. */
+        if (r.permissions) {
+          var _def = (_SYSTEM_ROLES_DEFAUT[r.role_id] || {}).permissions || {};
+          var _fusion = {};
+          ALL_MODULES.forEach(function(m){
+            _fusion[m] = (r.permissions[m] !== undefined) ? !!r.permissions[m] : !!_def[m];
+          });
+          base.permissions = _fusion;
+        }
         base.label         = r.label || base.label;
         base.icon          = r.icon  || base.icon;
         base.level         = (r.level !== undefined && r.level !== null) ? r.level : base.level;
@@ -33915,7 +33927,8 @@ var PAGE_MODULE = {
   comptabilite:'Comptabilite', 'compta':'Comptabilite',
   tresorerie:'Tresorerie', 'tresorerie-page':'Tresorerie',
   'rh-employes':'Paie', 'rh-paie':'Paie', 'rh-pointage':'Journaliers & Temporaires',
-  clients:'Souscripteurs', lots:'Lots & Reservations', programmes:'Programmes'
+  clients:'Souscripteurs', lots:'Lots & Reservations', programmes:'Programmes',
+  locatif:'Gestion Locative', diaspo:'Investisseurs Diaspora'
 };
 var ACTIONS_LIB = { c:'Créer', m:'Modifier', s:'Supprimer', v:'Valider' };
 /* Rattachement des stores sensibles à leur module, pour appliquer les droits
@@ -34015,6 +34028,9 @@ function userPeutSupprimer() {
 function userCanAccess(module) {
   if (!APP.currentUser) return false;
   var role = APP.currentUser.role;
+  /* L'administrateur conserve l'accès complet même si sa surcharge enregistrée
+     est antérieure à l'ajout d'un module (cohérent avec hasRole). */
+  if (role === 'admin') return true;
   var allRoles = getAllRoles();
   if (!allRoles[role]) {
     /* Rôle inconnu de ce poste — presque toujours un rôle personnalisé pas
@@ -69424,7 +69440,9 @@ var PAGE_MODULE_MAP = {
   'partenaire-lot-fiche': 'Partenaires Lotissement',
   'portail-partenaire-lot': null,  /* accès libre (portail du partenaire foncier lui-même, auth séparée) */
   'rh-cockpit':         'RH Employes',
-  'audit-integrite':    'Parametres'
+  'audit-integrite':    'Parametres',
+  'locatif':            'Gestion Locative',
+  'diaspo':             'Investisseurs Diaspora'
 };
 
 /* ── 2. hasRole() corrigé — inclut manager + custom roles ── */
