@@ -10695,15 +10695,19 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-secondary btn-sm" onclick="deconnecterSouscripteur()">🚪 Déconnexion</button>
         </div>
 
+        <!-- Onglets réorganisés selon le principe de marche en avant :
+             chaque étape suit logiquement la précédente, sans jamais revenir en arrière.
+             1. Vue d'ensemble → 2. Ce qui a été signé → 3. Ce qui est dû → 4. Payer →
+             5. Preuve de paiement → 6. Ce que ça construit → 7. Vérification de confiance → 8. Archives -->
         <div class="tab-nav">
           <button class="tab-btn active" onclick="switchPortalTab('dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchPortalTab('travaux')">🏗️ Avancement Travaux</button>
           <button class="tab-btn" onclick="switchPortalTab('contrat')">📄 Contrat & lots</button>
           <button class="tab-btn" onclick="switchPortalTab('echeances')">📅 Échéancier</button>
-          <button class="tab-btn" onclick="switchPortalTab('versements')">💳 Mes versements</button>
-          <button class="tab-btn" onclick="switchPortalTab('documents')">📁 Documents</button>
           <button class="tab-btn" onclick="switchPortalTab('paiement')">💸 Faire un versement</button>
+          <button class="tab-btn" onclick="switchPortalTab('versements')">💳 Mes versements</button>
+          <button class="tab-btn" onclick="switchPortalTab('travaux')">🏗️ Avancement Travaux</button>
           <button class="tab-btn" id="portal-tab-btn-diaspora" style="display:none;" onclick="switchPortalTab('diaspora')">🌍 Espace Diaspora</button>
+          <button class="tab-btn" onclick="switchPortalTab('documents')">📁 Documents</button>
         </div>
 
         <!-- Dashboard -->
