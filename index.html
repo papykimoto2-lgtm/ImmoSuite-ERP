@@ -10703,6 +10703,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="tab-btn" onclick="switchPortalTab('versements')">💳 Mes versements</button>
           <button class="tab-btn" onclick="switchPortalTab('documents')">📁 Documents</button>
           <button class="tab-btn" onclick="switchPortalTab('paiement')">💸 Faire un versement</button>
+          <button class="tab-btn" id="portal-tab-btn-diaspora" style="display:none;" onclick="switchPortalTab('diaspora')">🌍 Espace Diaspora</button>
         </div>
 
         <!-- Dashboard -->
@@ -10832,6 +10833,15 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div class="card-title">📋 Mes demandes de versement</div>
             <div id="portal-demandes-list" style="margin-top:10px;"></div>
           </div>
+        </div>
+
+        <!-- Espace Diaspora (lecture seule) -->
+        <div class="tab-pane" id="portal-tab-diaspora">
+          <div class="alert alert-info" style="margin-bottom:14px;">
+            🔐 Confiance vérifiable à distance — chaque preuve de votre dossier est horodatée, hachée et chaînée.
+            Vos fonds ne sont libérés à votre promoteur que lorsqu'un jalon est franchi <strong>et</strong> prouvé.
+          </div>
+          <div id="portal-diaspora-content"></div>
         </div>
       </div>
 
@@ -53258,6 +53268,90 @@ function dspEnter(){
   dspRenderPreuves(); dspRenderSequestre(); dspRenderParts(); dspRenderAncrage();
 }
 
+/* ─── Espace Diaspora — vue investisseur (lecture seule, portail souscripteur) ───
+   Aucune action de saisie ici : l'investisseur consulte, il ne modifie rien.
+   Filtré strictement par client_id === SESSION_SOUSCRIPTEUR.id.        */
+function portalRenderDiaspora(){
+  var el=document.getElementById('portal-diaspora-content');
+  if(!el||!SESSION_SOUSCRIPTEUR) return;
+  var c=SESSION_SOUSCRIPTEUR;
+  var mine=_dspD().filter(function(d){ return d.client_id===c.id; });
+  if(!mine.length){ el.innerHTML='<div class="alert alert-info">Aucun dossier diaspora associé à votre compte.</div>'; return; }
+  var ico={photo:'📷',jalon:'🎯',document:'📄',constat:'⚖️',paiement:'💰'};
+  var ancr=_dspA().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  el.innerHTML=mine.map(function(d){
+    var s=_dspSolde(d), sc=_dspScore(d);
+    var col=sc>=70?'var(--vert)':(sc>=40?'var(--or)':'var(--rouge)');
+    var jalons=_dspJ().filter(function(j){ return j.dossier_id===d.id; }).sort(function(a,b){ return (a.ordre||0)-(b.ordre||0); });
+    var preuves=_dspP().filter(function(p){ return p.dossier_id===d.id; }).sort(function(a,b){ return (b.index||0)-(a.index||0); });
+
+    return '<div class="card" style="margin-bottom:16px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'
+        +'<div><div style="font-weight:700;font-size:15px;">'+escHtml(d.ref)+' — '+escHtml(d.bien||'')+'</div>'
+        +'<div style="font-size:12px;color:var(--blanc-dim);">'+escHtml(d.pays||'—')+' · '+escHtml(d.devise||'XOF')+' · statut : '+escHtml(d.statut||'—')+'</div></div>'
+        +'<div style="text-align:right;"><div style="font-size:11px;color:var(--blanc-dim);">Indice de transparence</div>'
+        +'<div style="font-weight:800;font-size:20px;color:'+col+';">'+sc+'/100</div></div>'
+      +'</div>'
+
+      +'<div class="kpi-grid" style="margin-top:14px;">'
+        +[['Versé au séquestre',fmtF(s.verse)],['Libéré à ce jour',fmtF(s.libere)],['Encore bloqué',fmtF(s.bloque)]]
+          .map(function(k){ return '<div class="kpi-card"><div class="kpi-label">'+k[0]+'</div><div class="kpi-value or" style="font-size:15px;">'+k[1]+' FCFA</div></div>'; }).join('')
+      +'</div>'
+
+      +'<div style="margin-top:16px;"><div class="card-title">🎯 Jalons de libération</div>'
+      +(jalons.length ? ('<table style="margin-top:8px;"><thead><tr><th>#</th><th>Jalon</th><th>Montant</th><th>Statut</th><th>Libéré le</th></tr></thead><tbody>'
+        +jalons.map(function(j){
+          var lib=j.statut==='libere';
+          return '<tr><td>'+(j.ordre||'')+'</td><td>'+escHtml(j.label)+'</td>'
+            +'<td style="text-align:right;">'+fmtF(j.montant)+'</td>'
+            +'<td><span class="badge '+(lib?'badge-vert':'badge-or')+'">'+(lib?'Libéré':'En attente')+'</span></td>'
+            +'<td>'+(j.libere_le?dateShort(j.libere_le):'—')+'</td></tr>';
+        }).join('')+'</tbody></table>')
+        : '<div style="color:var(--blanc-dim);font-size:12px;padding:8px 0;">Aucun jalon défini pour l\'instant.</div>')
+      +'</div>'
+
+      +'<div style="margin-top:16px;"><div class="card-title">🔐 Chaîne de preuve ('+preuves.length+' preuve(s) scellée(s))</div>'
+      +(preuves.length ? ('<table style="margin-top:8px;"><thead><tr><th>#</th><th>Type</th><th>Description</th><th>Date</th><th>Empreinte</th></tr></thead><tbody>'
+        +preuves.slice(0,10).map(function(p){
+          return '<tr><td>'+p.index+'</td><td>'+(ico[p.type]||'📌')+'</td>'
+            +'<td style="font-size:11px;">'+escHtml(p.description)+'</td>'
+            +'<td style="font-size:11px;">'+escHtml((p.horodatage||'').replace('T',' ').slice(0,16))+'</td>'
+            +'<td style="font-family:monospace;font-size:10px;color:var(--or);">'+p.hash.slice(0,14)+'…</td></tr>';
+        }).join('')+'</tbody></table>'
+        +(preuves.length>10?'<div style="font-size:11px;color:var(--blanc-dim);margin-top:6px;">+ '+(preuves.length-10)+' preuve(s) plus ancienne(s)…</div>':''))
+        : '<div style="color:var(--blanc-dim);font-size:12px;padding:8px 0;">Aucune preuve scellée pour l\'instant.</div>')
+      +'</div>'
+
+      +'<div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">'
+        +'<div style="font-size:12px;color:var(--blanc-dim);">'+(ancr.length?('Registre certifié — dernier ancrage : '+escHtml(ancr[0].ref)+' du '+dateShort(ancr[0].date)):'Aucun certificat d\'ancrage disponible pour le moment.')+'</div>'
+        +(ancr.length?('<button class="btn btn-secondary btn-sm" onclick="portalImprimerCertificat(\''+d.id+'\')">📜 Voir / imprimer le certificat</button>'):'')
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+function portalImprimerCertificat(dossierId){
+  var d=_dspD().find(function(x){ return x.id===dossierId; }); if(!d) return;
+  var a=_dspA().slice().sort(function(x,y){ return (y.date||'').localeCompare(x.date||''); })[0];
+  if(!a){ toast('Aucun certificat disponible.','error'); return; }
+  var html='<h3 style="text-align:center;">CERTIFICAT D\'ANCRAGE DE PREUVE</h3>'
+    +'<div style="text-align:center;font-size:12px;color:#666;margin-bottom:14px;">Dossier '+escHtml(d.ref)+' — '+escHtml(_dspNom(d))+'</div>'
+    +'<table style="width:100%;font-size:13px;"><tbody>'
+    +'<tr><td style="padding:4px;"><b>Référence</b></td><td>'+escHtml(a.ref)+'</td></tr>'
+    +'<tr><td style="padding:4px;"><b>Date de génération</b></td><td>'+escHtml((a.date||'').replace('T',' ').slice(0,19))+' UTC</td></tr>'
+    +'<tr><td style="padding:4px;"><b>Nombre de preuves scellées (registre global)</b></td><td>'+a.blocs+'</td></tr>'
+    +'<tr><td style="padding:4px;"><b>Algorithme</b></td><td>SHA-256, chaînage séquentiel</td></tr>'
+    +'<tr><td style="padding:4px;vertical-align:top;"><b>Empreinte racine</b></td><td style="font-family:monospace;font-size:11px;word-break:break-all;">'+escHtml(a.racine)+'</td></tr>'
+    +'</tbody></table>'
+    +'<div style="margin-top:14px;font-size:11px;line-height:1.6;border-top:1px solid #D4AF37;padding-top:10px;color:#333;">'
+    +'Ce certificat atteste que les preuves de votre dossier, scellées avant la date ci-dessus, font partie d\'un registre chaîné dont toute altération ultérieure serait détectable.'
+    +'</div>';
+  if(typeof imprimerHTML==='function'){ imprimerHTML(html,'Certificat d\'ancrage — '+d.ref); return; }
+  var w=window.open('','_blank');
+  if(!w){ toast('Autorisez les fenêtres surgissantes.','error'); return; }
+  w.document.write('<html><head><title>Certificat</title><style>body{font-family:Georgia,serif;padding:40px;}table{width:100%;}</style></head><body>'+html+'</body></html>');
+  w.document.close(); w.print();
+}
+
 async function saveReleveBank() {
   var date = document.getElementById('rb-date').value;
   var mois = document.getElementById('rb-mois').value;
@@ -57187,7 +57281,7 @@ function goToPortail() {
 }
 
 function switchPortalTab(tab) {
-  var tabs = ['dashboard','travaux','contrat','echeances','versements','documents','paiement'];
+  var tabs = ['dashboard','travaux','contrat','echeances','versements','documents','paiement','diaspora'];
   tabs.forEach(function(t) {
     var el = document.getElementById('portal-tab-' + t);
     if (el) el.classList.remove('active');
@@ -57202,12 +57296,21 @@ function switchPortalTab(tab) {
   if (tab === 'echeances')  renderEcheancierSouscripteur();
   if (tab === 'paiement')   renderDemandesPortail();
   if (tab === 'travaux' && typeof portalRenderTravaux === 'function') portalRenderTravaux();
+  if (tab === 'diaspora' && typeof portalRenderDiaspora === 'function') portalRenderDiaspora();
 }
 
 /* ─── Chargement principal du portail ───────────────── */
 function chargerPortailSouscripteur() {
   if (!SESSION_SOUSCRIPTEUR) { ouvrirLoginSouscripteur(); return; }
   var c = SESSION_SOUSCRIPTEUR;
+
+  /* Onglet Espace Diaspora — visible uniquement si un dossier diaspora est lié à ce client */
+  var dspBtn = document.getElementById('portal-tab-btn-diaspora');
+  if (dspBtn && typeof _dspD === 'function') {
+    var monDossier = _dspD().some(function(d){ return d.client_id === c.id; });
+    dspBtn.style.display = monDossier ? '' : 'none';
+    if (monDossier && typeof portalRenderDiaspora === 'function') portalRenderDiaspora();
+  }
 
   /* Sous-titre */
   var el = document.getElementById('portail-souscripteur-nom');
