@@ -20449,6 +20449,51 @@ function saveIAConfig() {
 
 var SB_URL_DEFAUT = '';
 var SB_KEY_DEFAUT = '';
+/* ══════════════════════════════════════════════════════════════════
+   SESSION DU PERSONNEL
+   La clé anonyme est publique : elle figure en clair dans le portail
+   déployé. L'utiliser comme jeton d'accès revient à donner à tout
+   visiteur les droits d'un salarié. Le jeton ci-dessous, émis par
+   l'Edge Function staff-login, porte le claim que les politiques RLS
+   exigent pour ouvrir les données internes.
+   Tant qu'aucune session n'est ouverte, on retombe sur la clé anonyme :
+   le comportement reste celui d'avant la migration.
+══════════════════════════════════════════════════════════════════ */
+var STAFF = { token:null, expire:0, user:null };
+function staffCharger(){
+  try{
+    var raw=localStorage.getItem('sb_staff');
+    if(!raw) return;
+    var o=JSON.parse(raw);
+    if(o && o.token && o.expire>Date.now()){ STAFF=o; }
+    else localStorage.removeItem('sb_staff');
+  }catch(e){}
+}
+/* Jeton présenté à PostgREST : session du personnel si elle est ouverte. */
+function sbAuth(){
+  if(STAFF.token && STAFF.expire>Date.now()) return STAFF.token;
+  return SB.key;
+}
+async function staffLogin(login, motdepasse){
+  if(!SB.url||!SB.key) throw new Error('Configurez Supabase avant.');
+  var r=await fetch(SB.url.replace(/\/+$/,'')+'/functions/v1/staff-login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':SB.key,'Authorization':'Bearer '+sbAuth()},
+    body:JSON.stringify({login:login, motdepasse:motdepasse})
+  });
+  if(!r.ok) throw new Error('Identifiants refusés');
+  var d=await r.json();
+  if(!d.token) throw new Error('Réponse invalide');
+  STAFF={ token:d.token, expire:Date.now()+((d.expires_in||43200)*1000)-60000, user:d.user||null };
+  localStorage.setItem('sb_staff', JSON.stringify(STAFF));
+  return d.user;
+}
+function staffLogout(){
+  STAFF={token:null,expire:0,user:null};
+  localStorage.removeItem('sb_staff');
+}
+function staffActif(){ return !!(STAFF.token && STAFF.expire>Date.now()); }
+
 function getSBConfig() {
   var u = (localStorage.getItem('sb_url') || '').trim();
   var k = (localStorage.getItem('sb_key') || '').trim();
@@ -20505,7 +20550,7 @@ async function sbFetch(path, method, body, prefer) {
       headers: {
         'Content-Type': 'application/json',
         'apikey': SB.key,
-        'Authorization': 'Bearer ' + SB.key,
+        'Authorization': 'Bearer ' + sbAuth(),
         'Prefer': prefer || 'return=representation'
       }
     };
@@ -21775,6 +21820,7 @@ function renderSyncQueue(){
 
 /* Démarre la synchro automatique : envoi des changements toutes les 30 s + reprise de la file. */
 function demarrerSyncAuto() {
+  try{ staffCharger(); }catch(e){}
   try { if (typeof payOnlineStartPolling === 'function') payOnlineStartPolling(); } catch(e){}
   if (window._autoSyncTimer) return;
   window._autoSyncTimer = setInterval(function(){
@@ -41002,7 +41048,7 @@ async function payOnlineGenerer(){
   try{
     var base=(cfg.edge_base||(SB.url+'/functions/v1')).replace(/\/+$/,'');
     var resp=await fetch(base+'/pay-initiate',{ method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SB.key,'Authorization':'Bearer '+SB.key},
+      headers:{'Content-Type':'application/json','apikey':SB.key,'Authorization':'Bearer '+sbAuth()},
       body:JSON.stringify({ provider:cfg.provider, ref:ref, client_id:cid,
         client_nom:((client.nom||'')+' '+(client.prenoms||'')).trim(), client_tel:client.tel||'',
         client_email:client.email||'', montant:montant, type:type, description:desc,
@@ -70911,7 +70957,7 @@ async function msgPullFiltre(since) {
   try {
     var resp = await fetch(SB.url + '/functions/v1/messagerie-pull', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key },
+      headers: { 'Content-Type': 'application/json', 'apikey': SB.key, 'Authorization': 'Bearer ' + sbAuth() },
       body: JSON.stringify({ user_id: userId, since: since, token: (DATA.params && DATA.params.messagerie_session_token) || '' })
     });
     if (!resp.ok) { MSG._pullFnUp = false; MSG._pullFnSince = Date.now(); return null; }
@@ -71405,7 +71451,7 @@ async function msgUploadFichier(convId, msgId, f) {
   var path = (convId || 'divers') + '/' + (msgId || 'm') + '/' + (f.id || ('f' + Date.now())) + '_' + _msgSafeName(f.nom);
   var resp = await fetch(SB.url + '/storage/v1/object/' + MSG_PJ_BUCKET + '/' + encodeURI(path), {
     method: 'POST',
-    headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': f.type || 'application/octet-stream', 'x-upsert': 'true' },
+    headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + sbAuth(), 'Content-Type': f.type || 'application/octet-stream', 'x-upsert': 'true' },
     body: _b64ToBytes(f.data)
   });
   if (!resp.ok) throw new Error('upload ' + resp.status);
@@ -71438,7 +71484,7 @@ async function msgSignedUrl(bucket, path) {
   try {
     var resp = await fetch(SB.url + '/storage/v1/object/sign/' + bucket + '/' + encodeURI(path), {
       method: 'POST',
-      headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': 'application/json' },
+      headers: { 'apikey': SB.key, 'Authorization': 'Bearer ' + sbAuth(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiresIn: 3600 })
     });
     if (!resp.ok) return '';
