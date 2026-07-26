@@ -12928,6 +12928,9 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="tab-btn" onclick="switchTab('locatif','candidatures')">🎯 Candidatures</button>
           <button class="tab-btn" onclick="switchTab('locatif','biens')">🏘️ Biens locatifs</button>
           <button class="tab-btn" onclick="switchTab('locatif','artisans')">👷 Artisans</button>
+          <button class="tab-btn" onclick="switchTab('locatif','demarcheurs')">🧭 Démarcheurs</button>
+          <button class="tab-btn" onclick="switchTab('locatif','etatslieux')">📋 États des lieux</button>
+          <button class="tab-btn" onclick="switchTab('locatif','restitution')">💼 Restitution caution</button>
           <button class="tab-btn" onclick="switchTab('locatif','charges')">🔥 Charges</button>
           <button class="tab-btn" onclick="switchTab('locatif','recouvrement')">⚠️ Recouvrement</button>
           <button class="tab-btn" onclick="switchTab('locatif','revision')">📈 Révision loyers</button>
@@ -13055,6 +13058,60 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <button class="btn btn-primary btn-sm" onclick="locAppliquerRevision()">✅ Appliquer aux baux éligibles</button>
           </div>
           <div class="table-wrap" style="margin-top:12px;"><div id="loc-revision-table"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-demarcheurs">
+          <div class="alert alert-info">Un démarcheur immobilier <b>agréé</b> (carte professionnelle) peut légalement percevoir une commission sur les frais d'agence. Un démarcheur <b>non agréé</b> est référencé à titre informatif — aucune commission ne peut lui être versée automatiquement (réglementation ivoirienne de la profession d'agent immobilier).</div>
+          <div class="card" style="margin-bottom:14px;">
+            <h3 style="margin-bottom:10px;">➕ Nouveau démarcheur</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Nom *</label><input type="text" id="dem-nom" class="form-control" placeholder="Nom du démarcheur"></div>
+              <div class="form-group"><label>Téléphone</label><input type="text" id="dem-tel" class="form-control" placeholder="+225..."></div>
+              <div class="form-group"><label>Email</label><input type="text" id="dem-email" class="form-control"></div>
+              <div class="form-group"><label>Statut *</label><select id="dem-type" class="form-control" onchange="demMajChampsAgrement()">
+                <option value="agree">✅ Agréé (carte professionnelle)</option>
+                <option value="non_agree">⚠️ Non agréé</option></select></div>
+              <div class="form-group" id="dem-agrement-wrap"><label>N° d'agrément</label><input type="text" id="dem-agrement" class="form-control" placeholder="Ex : CNI-2024-00123"></div>
+              <div class="form-group" id="dem-taux-wrap"><label>Taux de commission sur frais d'agence (%)</label><input type="number" step="0.1" id="dem-taux" class="form-control" placeholder="50"></div>
+              <div class="form-group span-2"><label>Notes</label><input type="text" id="dem-notes" class="form-control"></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="demCreer()">Enregistrer le démarcheur</button>
+          </div>
+          <div class="table-wrap"><div id="dem-liste"></div></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-etatslieux">
+          <div class="alert alert-info">Constat contradictoire obligatoire à l'entrée et à la sortie — base légale de toute retenue sur le dépôt de garantie en cas de litige.</div>
+          <div class="card" style="margin-bottom:14px;">
+            <h3 style="margin-bottom:10px;">📋 Nouvel état des lieux</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Bail *</label><select id="edl-bail" class="form-control"></select></div>
+              <div class="form-group"><label>Type *</label><select id="edl-type" class="form-control">
+                <option value="entree">Entrée (avant location)</option><option value="sortie">Sortie (après location)</option></select></div>
+              <div class="form-group"><label>Date *</label><input type="date" id="edl-date" class="form-control"></div>
+              <div class="form-group"><label>Relevé compteur eau</label><input type="text" id="edl-eau" class="form-control"></div>
+              <div class="form-group"><label>Relevé compteur électricité</label><input type="text" id="edl-elec" class="form-control"></div>
+              <div class="form-group"><label>Clés remises</label><input type="number" id="edl-cles" class="form-control" placeholder="2"></div>
+              <div class="form-group span-2"><label>Pièces — une par ligne : <code>Pièce | État (bon/moyen/mauvais) | Observations</code></label>
+                <textarea id="edl-pieces" class="form-control" rows="5" placeholder="Salon | bon | RAS&#10;Cuisine | moyen | Robinet évier qui goutte&#10;Chambre 1 | bon | RAS&#10;Salle de bain | mauvais | Carrelage fissuré, faïence décollée"></textarea>
+              </div>
+              <div class="form-group span-2"><label>Notes générales</label><textarea id="edl-notes" class="form-control" rows="2"></textarea></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="edlCreer()">Enregistrer l'état des lieux</button>
+          </div>
+          <div id="edl-liste"></div>
+        </div>
+
+        <div class="tab-pane" id="tab-locatif-restitution">
+          <div class="alert alert-info">Le décompte compare l'état des lieux d'entrée et de sortie : les pièces dégradées justifient une retenue sur le dépôt de garantie, au-delà de l'usure normale.</div>
+          <div class="card" style="margin-bottom:14px;">
+            <h3 style="margin-bottom:10px;">💼 Générer un décompte de restitution</h3>
+            <div class="form-grid">
+              <div class="form-group"><label>Bail *</label><select id="rest-bail" class="form-control" onchange="restChargerComparaison()"></select></div>
+            </div>
+            <div id="rest-comparaison"></div>
+          </div>
+          <div id="rest-liste"></div>
         </div>
       </div>
 
@@ -15620,6 +15677,9 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         <div class="form-group"><label>Provision charges / échéance (FCFA)</label><input type="number" class="form-control" id="lb-charges" value="0"></div>
         <div class="form-group"><label>Jour d'échéance</label><input type="number" min="1" max="28" class="form-control" id="lb-jour" value="5"></div>
         <div class="form-group"><label>Dépôt de garantie (FCFA)</label><input type="number" class="form-control" id="lb-depot"></div>
+        <div class="form-group"><label>Démarcheur</label><select class="form-control" id="lb-demarcheur" onchange="locMajFraisAgence()">
+          <option value="">— Aucun / vente directe —</option></select></div>
+        <div class="form-group"><label>Frais d'agence (FCFA)</label><input type="number" class="form-control" id="lb-frais-agence" placeholder="0"></div>
         <div class="form-group"><label>Taux de révision annuel (%)</label><input type="number" step="0.1" class="form-control" id="lb-revision" value="0"></div>
         <div class="form-group"><label>Retenue à la source BIC (%)</label><input type="number" step="0.1" class="form-control" id="lb-rs" value="0" title="Bailleur personne physique : retenue applicable selon le CGI ivoirien"></div>
         <div class="form-group"><label>Latitude GPS</label><input type="number" step="0.000001" class="form-control" id="lb-lat" placeholder="Ex : 5.345000"></div>
@@ -19467,6 +19527,9 @@ var DATA = {
   declarations_versement_foncier: [],
   coproprietes: [],
   lots_copro: [],
+  demarcheurs: [],
+  etats_lieux_bail: [],
+  restitutions_caution: [],
   budgets_copro: [],
   appels_charges_copro: [],
   ag_copro: [],
@@ -19633,6 +19696,7 @@ var ALL_STORES = [
   /* v140 — Déclarations de versement (portail acquéreur foncier) */
   'declarations_versement_foncier',
   'coproprietes','lots_copro','budgets_copro','appels_charges_copro','ag_copro','fonds_travaux_copro',
+  'demarcheurs','etats_lieux_bail','restitutions_caution',
   /* v117 */ 'lot_unites',
   /* v114 — Acquisition & aménagement foncier */
   'af_operations','af_agents','af_relances',
@@ -20002,6 +20066,7 @@ async function loadAllData() {
   /* v140 — Déclarations de versement portail acquéreur foncier */
   'declarations_versement_foncier',
   'coproprietes','lots_copro','budgets_copro','appels_charges_copro','ag_copro','fonds_travaux_copro',
+  'demarcheurs','etats_lieux_bail','restitutions_caution',
   /* v135 — Mobilité interne RH */
   'mobilites_rh',
   /* v136 — Module Caisse */
@@ -21385,6 +21450,9 @@ var SUPA_STORE_MAP = [
   ['pi_cessions_foncieres','cessions_foncieres'],
   ['pi_declarations_versement_foncier','declarations_versement_foncier'],
   ['pi_coproprietes','coproprietes'],
+  ['pi_demarcheurs','demarcheurs'],
+  ['pi_etats_lieux_bail','etats_lieux_bail'],
+  ['pi_restitutions_caution','restitutions_caution'],
   ['pi_lots_copro','lots_copro'],
   ['pi_budgets_copro','budgets_copro'],
   ['pi_appels_charges_copro','appels_charges_copro'],
@@ -21547,7 +21615,7 @@ function _libelleStore(store) {
     conceptions:'Conceptions/Études', plans_arch:'Plans architecturaux', nomenclatures:'Nomenclatures DQE',
     prix_unitaire:'Prix unitaires', devis_fournisseurs:'Devis fournisseurs', biens_amort:'Immobilisations',
     releves_bank:'Relevés bancaires', rapprochements:'Rapprochements', dossiersJuridiques:'Dossiers juridiques', docs_juridiques:'Documents juridiques',
-    custom_roles:'Rôles personnalisés', portail_messages:'Messages portail', portail_medias:'Médias portail', declarations_versement_foncier:'Déclarations de versement (foncier)', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux',
+    custom_roles:'Rôles personnalisés', portail_messages:'Messages portail', portail_medias:'Médias portail', declarations_versement_foncier:'Déclarations de versement (foncier)', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', demarcheurs:'Démarcheurs', etats_lieux_bail:'États des lieux', restitutions_caution:'Restitutions de caution',
     visites_rdv:'Rendez-vous/Visites', visites_log:'Registre des visites', visites_blacklist:'Liste noire visites',
     logs_connexion:'Journaux de connexion', historique_actions:'Historique des actions',
     relances:'Relances CRM', itineraires:'Itinéraires', etapes_itineraire:'Étapes itinéraire', cr_visites:'Comptes-rendus visites', ordres_mission:'Ordres de mission',
@@ -23245,6 +23313,9 @@ function switchTab(context, tab) {
     if (tab==='candidatures' && typeof candRender==='function') { candRender(); candVeille(); }
     if (tab==='travaux' && typeof otRender==='function') { otFillSelects(); otRender(); }
     if (tab==='artisans' && typeof otRenderArtisans==='function') otRenderArtisans();
+    if (tab==='demarcheurs' && typeof demRender==='function') demRender();
+    if (tab==='etatslieux' && typeof edlRender==='function') { edlFillSelects(); edlRender(); }
+    if (tab==='restitution' && typeof restRenderListe==='function') { restFillSelects(); restRenderListe(); }
   }
   if (context==='copropriete' && typeof coproSwitchTab==='function') { coproSwitchTab(tab); }
   if (context==='foncier' && tab==='workflow' && typeof tfwInit==='function') { tfwInit(); }
@@ -34273,7 +34344,7 @@ var STORE_LABELS = {
   conv_agrement:'Conventions d\u2019agrément', previsionnels:'Prévisionnels / business plans',
   amenageurs:'Aménageurs', conventions_amenagement:'Conventions d\u2019aménagement',
   situations_amenagement:'Situations d\u2019aménagement', avenants_amenagement:'Avenants d\u2019aménagement',
-  declarations_versement_foncier:'Déclarations de versement foncier', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', sig_couches:'Couches SIG / cartographie',
+  declarations_versement_foncier:'Déclarations de versement foncier', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', demarcheurs:'Démarcheurs', etats_lieux_bail:'États des lieux', restitutions_caution:'Restitutions de caution', sig_couches:'Couches SIG / cartographie',
   /* Partenaires lotissement */
   partenaires_lot:'Partenaires lotissement', dossiers_lot:'Dossiers de lotissement',
   rapports_lot:'Rapports d\u2019avancement lotissement',
@@ -52277,7 +52348,7 @@ function rapprochAutoScore(){
    165 « Dépôts et cautionnements reçus » : le dépôt de garantie est une dette
      financière restituable, pas une avance client (4191). */
 var LOC_CPT = { locataire:'41110000', loyers:'70730000', charges_prov:'41910000', tva:'44320000', depot:'16500000', rs:'44720000',
-  mandant:'46710000', commission:'70640000',
+  mandant:'46710000', commission:'70640000', frais_agence:'70680000', demarcheur_commission:'62220000',
   /* 6152 « Entretien et réparations des biens immobiliers » — SYSCOHADA révisé.
      4011 « Fournisseurs » pour la dette envers l'artisan. */
   travaux:'61520000', fournisseur:'40110000', refact_locataire:'70780000' };
@@ -52365,6 +52436,17 @@ function locFillSelects(){
     .filter(function(p){return p.statut!=='resilie';})
     .sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');})
     .map(function(p){ return '<option value="'+p.id+'">'+escHtml(p.nom+' ('+(p.type==='entreprise'?'Entreprise':'Particulier')+' — '+(parseFloat(p.honoraires)||0)+'% honoraires)')+'</option>'; }).join('');
+  var sd=document.getElementById('lb-demarcheur');
+  if(sd){ var curD=sd.value; sd.innerHTML='<option value="">— Aucun / vente directe —</option>'+(DATA.demarcheurs||[])
+    .sort(function(a,b){return (a.nom||'').localeCompare(b.nom||'');})
+    .map(function(d){ return '<option value="'+d.id+'">'+escHtml(d.nom)+(d.type==='agree'?' ✅':' ⚠️ non agréé')+'</option>'; }).join('');
+    if(curD) sd.value=curD; }
+}
+function locMajFraisAgence(){
+  var did=(document.getElementById('lb-demarcheur')||{}).value;
+  var d=(DATA.demarcheurs||[]).find(function(x){return x.id===did;});
+  var el=document.getElementById('lb-frais-agence');
+  if(d && el && !el.value && d.frais_agence_defaut) el.value=d.frais_agence_defaut;
 }
 /* Libellé du champ loyer adapté à la périodicité choisie (mensuel/trimestriel/semestriel/annuel) */
 function locMajLabelLoyer(){
@@ -52420,6 +52502,7 @@ function locOpenBail(id){
   v('lb-nature',b?b.nature:'habitation'); v('lb-debut',b?b.debut:today()); v('lb-duree',b?b.duree:12);
   v('lb-loyer',b?b.loyer:''); v('lb-charges',b?b.charges:0); v('lb-jour',b?b.jour:5);
   v('lb-depot',b?b.depot:''); v('lb-revision',b?b.revision:0); v('lb-rs',b?b.rs:0);
+  v('lb-demarcheur',b?(b.demarcheur_id||''):''); v('lb-frais-agence',b?(b.frais_agence||''):'');
   v('lb-statut',b?b.statut:'actif'); v('lb-notes',b?b.notes:'');
   v('lb-lat',b&&b.lat!=null?b.lat:''); v('lb-lng',b&&b.lng!=null?b.lng:'');
   var t=document.getElementById('modal-loc-bail-title'); if(t) t.textContent=b?('Bail '+b.ref):'Nouveau bail';
@@ -52490,6 +52573,7 @@ async function locSaveBail(){
   b.duree=parseInt(g('lb-duree'),10)||12; b.loyer=loyer; b.charges=parseFloat(g('lb-charges'))||0;
   b.jour=Math.min(28,Math.max(1,parseInt(g('lb-jour'),10)||5)); b.depot=parseFloat(g('lb-depot'))||0;
   b.revision=parseFloat(g('lb-revision'))||0; b.rs=parseFloat(g('lb-rs'))||0;
+  b.demarcheur_id=g('lb-demarcheur')||''; b.frais_agence=parseFloat(g('lb-frais-agence'))||0;
   b.statut=g('lb-statut'); b.notes=g('lb-notes'); b.fin=_locFin(b);
   b.photos=_lbPhotos.slice();
   var latV=parseFloat(g('lb-lat')), lngV=parseFloat(g('lb-lng'));
@@ -52501,6 +52585,7 @@ async function locSaveBail(){
     try{ await _cliAjouterQualite(b.locataire_id,'locataire'); }catch(e){}
   }
   if(isNew && b.depot>0) await _locEcritureDepot(b);
+  if(isNew && b.frais_agence>0) await _locEcritureFraisAgence(b);
   closeModal('modal-loc-bail');
   locEnter();
   toast(isNew?('Bail '+b.ref+' créé.'):'Bail mis à jour.','success');
@@ -52516,6 +52601,46 @@ async function _locEcritureDepot(b){
   if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
   await dbPut('ecritures',ecr);
   if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+}
+async function _locEcritureFraisAgence(b){
+  var treso=(typeof _compteTresoVersement==='function')?_compteTresoVersement('virement'):'52100000';
+  var ecr={ id:'ecr_fa_'+b.id, ref:'FA-'+b.ref, date:b.debut, piece:b.ref,
+    libelle:"Frais d'agence — "+b.ref+' — '+_locNom(b), montant:b.frais_agence, type:'produit', mode:'virement',
+    lignes:[ {compte:treso,sens:'D',montant:b.frais_agence,libelle:"Encaissement frais d'agence"},
+             {compte:_locCpt('frais_agence'),sens:'C',montant:b.frais_agence,libelle:"Produit frais d'agence"} ],
+    created_at:today() };
+  var i=DATA.ecritures.findIndex(function(e){return e.id===ecr.id;});
+  if(i>=0) DATA.ecritures[i]=ecr; else DATA.ecritures.push(ecr);
+  await dbPut('ecritures',ecr);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecr);
+
+  if(!b.demarcheur_id) return;
+  var d=(DATA.demarcheurs||[]).find(function(x){return x.id===b.demarcheur_id;});
+  if(!d) return;
+  if(d.type!=='agree'){
+    toast('⚠️ Démarcheur non agréé : aucune commission générée automatiquement (réglementation ivoirienne — carte professionnelle requise pour percevoir une commission). Référencement enregistré à titre informatif uniquement.','error',7000);
+    return;
+  }
+  var taux=parseFloat(d.taux_frais_agence)||0;
+  var montantComm=Math.round(b.frais_agence*taux/100);
+  if(montantComm<=0) return;
+  var comm={ id:uid(), bail_id:b.id, client_id:b.locataire_id, client_nom:_locNom(b),
+    demarcheur_id:d.id, beneficiaire:d.nom, beneficiaire_tel:d.tel||'',
+    type_beneficiaire:'demarcheur', type_versement:'frais_agence', taux:taux,
+    montant_base:b.frais_agence, montant_comm:montantComm, date_versement:b.debut,
+    date_generation:today(), statut:'a_payer', notes:'' };
+  if(!DATA.commissions) DATA.commissions=[];
+  DATA.commissions.push(comm);
+  await dbPut('commissions',comm);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_commissions',comm);
+  var ecrC={ id:'ecr_com_dem_'+comm.id, ref:'COMDEM-'+b.ref, date:b.debut, piece:b.ref,
+    libelle:'Commission démarcheur '+d.nom+' — '+b.ref, montant:montantComm, type:'charge', mode:'virement',
+    lignes:[ {compte:_locCpt('demarcheur_commission'),sens:'D',montant:montantComm,libelle:'Charge commission démarcheur'},
+             {compte:_locCpt('fournisseur'),sens:'C',montant:montantComm,libelle:'Commission démarcheur à payer'} ],
+    created_at:today() };
+  DATA.ecritures.push(ecrC); await dbPut('ecritures',ecrC);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures',ecrC);
+  if(typeof buildBalance==='function') buildBalance();
 }
 function _locNom(b){
   var c=(DATA.clients||[]).find(function(x){return x.id===b.locataire_id;});
@@ -56763,6 +56888,196 @@ function copRenderKPIs(){
   var totRegle=(DATA.appels_charges_copro||[]).reduce(function(s,a){ return s+(a.lignes||[]).reduce(function(ss,l){ return ss+(parseFloat(l.regle)||0); },0); },0);
   function kpi(l,v){ return '<div class="card" style="padding:12px;text-align:center;"><div style="font-size:11px;color:#6B6B9A;">'+l+'</div><div style="font-size:18px;font-weight:700;">'+v+'</div></div>'; }
   el.innerHTML = kpi('Immeubles', nbIm) + kpi('Lots', nbLots) + kpi('Charges appelées', fcfa(totAppele)) + kpi('Charges encaissées', fcfa(totRegle));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GESTION LOCATIVE — Démarcheurs, États des lieux, Restitution caution
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Démarcheurs (agréés / non agréés) ── */
+function demMajChampsAgrement(){
+  var t=(document.getElementById('dem-type')||{}).value;
+  var wA=document.getElementById('dem-agrement-wrap'), wT=document.getElementById('dem-taux-wrap');
+  if(wA) wA.style.display = t==='agree' ? '' : 'none';
+  if(wT) wT.style.display = t==='agree' ? '' : 'none';
+}
+async function demCreer(){
+  var nom=((document.getElementById('dem-nom')||{}).value||'').trim();
+  if(!nom){ toast('Indiquez le nom du démarcheur.','error'); return; }
+  var d={ id:uid(), nom:nom,
+    tel:((document.getElementById('dem-tel')||{}).value||'').trim(),
+    email:((document.getElementById('dem-email')||{}).value||'').trim(),
+    type:(document.getElementById('dem-type')||{}).value||'non_agree',
+    num_agrement:((document.getElementById('dem-agrement')||{}).value||'').trim(),
+    taux_frais_agence: parseFloat((document.getElementById('dem-taux')||{}).value)||0,
+    notes:((document.getElementById('dem-notes')||{}).value||'').trim(),
+    created_at:new Date().toISOString() };
+  DATA.demarcheurs.push(d);
+  await dbPut('demarcheurs', d);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_demarcheurs', d);
+  ['dem-nom','dem-tel','dem-email','dem-agrement','dem-taux','dem-notes'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  toast('✅ Démarcheur enregistré.','success');
+  demRender();
+}
+function demRender(){
+  var el=document.getElementById('dem-liste'); if(!el) return;
+  var list=DATA.demarcheurs||[];
+  if(!list.length){ el.innerHTML='<div class="card"><p style="color:#6B6B9A;">Aucun démarcheur enregistré.</p></div>'; return; }
+  el.innerHTML='<table><thead><tr><th>Nom</th><th>Contact</th><th>Statut</th><th>N° agrément</th><th>Taux comm.</th><th></th></tr></thead><tbody>'
+    +list.map(function(d){
+      return '<tr><td>'+escHtml(d.nom)+'</td><td>'+escHtml(d.tel||d.email||'—')+'</td>'
+        +'<td>'+(d.type==='agree'?'<span class="pill p-vert">✅ Agréé</span>':'<span class="pill p-or">⚠️ Non agréé</span>')+'</td>'
+        +'<td>'+escHtml(d.num_agrement||'—')+'</td><td>'+(d.type==='agree'?(d.taux_frais_agence||0)+'%':'—')+'</td>'
+        +'<td><button class="btn btn-danger btn-sm" onclick="demSupprimer(\''+d.id+'\')">🗑️</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+async function demSupprimer(id){
+  if(!confirm('Supprimer ce démarcheur ?')) return;
+  DATA.demarcheurs=(DATA.demarcheurs||[]).filter(function(d){ return d.id!==id; });
+  if(typeof deleteRecord==='function') await deleteRecord('demarcheurs', id);
+  else { await dbDelete('demarcheurs', id); if(typeof deleteFromSupabase==='function') deleteFromSupabase('pi_demarcheurs', id); }
+  demRender();
+}
+
+/* ── États des lieux (entrée / sortie) ── */
+function edlFillSelects(){
+  var sel=document.getElementById('edl-bail'); if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML=_locBaux().map(function(b){ return '<option value="'+b.id+'">'+escHtml(b.ref+' — '+(b.bien||''))+'</option>'; }).join('');
+  if(cur) sel.value=cur;
+}
+function _edlParsePieces(txt){
+  return String(txt||'').split('\n').map(function(l){
+    var p=l.split('|'); var nom=(p[0]||'').trim(); if(!nom) return null;
+    var etat=(p[1]||'').trim().toLowerCase()||'bon';
+    if(['bon','moyen','mauvais'].indexOf(etat)===-1) etat='bon';
+    return { nom:nom, etat:etat, observations:(p[2]||'').trim() };
+  }).filter(Boolean);
+}
+async function edlCreer(){
+  var bailId=(document.getElementById('edl-bail')||{}).value;
+  var type=(document.getElementById('edl-type')||{}).value;
+  var date=(document.getElementById('edl-date')||{}).value;
+  if(!bailId){ toast('Choisissez un bail.','error'); return; }
+  if(!date){ toast('Indiquez la date.','error'); return; }
+  var pieces=_edlParsePieces((document.getElementById('edl-pieces')||{}).value);
+  if(!pieces.length){ toast('Décrivez au moins une pièce.','error'); return; }
+  var edl={ id:uid(), bail_id:bailId, type:type, date:date,
+    eau:((document.getElementById('edl-eau')||{}).value||'').trim(),
+    elec:((document.getElementById('edl-elec')||{}).value||'').trim(),
+    cles:parseInt((document.getElementById('edl-cles')||{}).value,10)||0,
+    pieces:pieces, notes:((document.getElementById('edl-notes')||{}).value||'').trim(),
+    created_at:new Date().toISOString() };
+  DATA.etats_lieux_bail.push(edl);
+  await dbPut('etats_lieux_bail', edl);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_etats_lieux_bail', edl);
+  document.getElementById('edl-pieces').value=''; document.getElementById('edl-notes').value='';
+  toast('✅ État des lieux ('+(type==='entree'?'entrée':'sortie')+') enregistré.','success');
+  edlRender();
+}
+function _edlBailLabel(bailId){
+  var b=_locBaux().find(function(x){ return x.id===bailId; });
+  return b?(b.ref+' — '+(b.bien||'')):'—';
+}
+function edlRender(){
+  var el=document.getElementById('edl-liste'); if(!el) return;
+  var list=DATA.etats_lieux_bail||[];
+  if(!list.length){ el.innerHTML='<div class="card"><p style="color:#6B6B9A;">Aucun état des lieux enregistré.</p></div>'; return; }
+  el.innerHTML=list.slice().reverse().map(function(edl){
+    var rows=(edl.pieces||[]).map(function(p){
+      var cls=p.etat==='bon'?'p-vert':(p.etat==='moyen'?'p-or':'p-rouge');
+      return '<tr><td>'+escHtml(p.nom)+'</td><td><span class="pill '+cls+'">'+escHtml(p.etat)+'</span></td><td>'+escHtml(p.observations||'—')+'</td></tr>';
+    }).join('');
+    return '<div class="card" style="margin-bottom:12px;"><strong>'+(edl.type==='entree'?'📥 Entrée':'📤 Sortie')+' — '+escHtml(_edlBailLabel(edl.bail_id))+' — '+dateShort(edl.date)+'</strong>'
+      +'<div style="font-size:12px;color:#6B6B9A;margin:4px 0 8px;">Eau : '+escHtml(edl.eau||'—')+' · Électricité : '+escHtml(edl.elec||'—')+' · Clés remises : '+edl.cles+'</div>'
+      +'<table><thead><tr><th>Pièce</th><th>État</th><th>Observations</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +(edl.notes?'<div style="font-size:12px;margin-top:8px;">'+escHtml(edl.notes)+'</div>':'')+'</div>';
+  }).join('');
+}
+
+/* ── Restitution de la caution (comparaison entrée / sortie) ── */
+function restFillSelects(){
+  var sel=document.getElementById('rest-bail'); if(!sel) return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">— Choisir —</option>'+_locBaux().map(function(b){ return '<option value="'+b.id+'">'+escHtml(b.ref+' — '+(b.bien||''))+'</option>'; }).join('');
+  if(cur) sel.value=cur;
+}
+function restChargerComparaison(){
+  var bailId=(document.getElementById('rest-bail')||{}).value;
+  var el=document.getElementById('rest-comparaison');
+  if(!bailId){ el.innerHTML=''; return; }
+  var b=_locBaux().find(function(x){ return x.id===bailId; });
+  var edls=(DATA.etats_lieux_bail||[]).filter(function(e){ return e.bail_id===bailId; });
+  var entree=edls.filter(function(e){ return e.type==='entree'; }).sort(function(a,b2){ return (b2.date||'').localeCompare(a.date||''); })[0];
+  var sortie=edls.filter(function(e){ return e.type==='sortie'; }).sort(function(a,b2){ return (b2.date||'').localeCompare(a.date||''); })[0];
+  if(!entree || !sortie){
+    el.innerHTML='<div class="alert alert-warning" style="margin-top:10px;">Il manque l\'état des lieux '+(entree?'de sortie':'d\'entrée')+' pour ce bail — enregistrez-le dans l\'onglet « États des lieux » avant de générer le décompte.</div>';
+    return;
+  }
+  /* Dégradations = pièces dont l'état s'est dégradé entre entrée et sortie */
+  var rangEtat={bon:0,moyen:1,mauvais:2};
+  var degradations=[];
+  (sortie.pieces||[]).forEach(function(ps){
+    var pe=(entree.pieces||[]).find(function(x){ return x.nom.toLowerCase()===ps.nom.toLowerCase(); });
+    var rangE=pe?rangEtat[pe.etat]:0, rangS=rangEtat[ps.etat];
+    if(rangS>rangE){ degradations.push({ piece:ps.nom, avant:pe?pe.etat:'—', apres:ps.etat, observations:ps.observations }); }
+  });
+  var quit=_locQ().filter(function(q){ return q.bail_id===bailId; });
+  var impayes=quit.filter(function(q){ return _locStatutQ(q)!=='solde'; }).reduce(function(s,q){ return s+_locDu(q); },0);
+  var rowsDeg=degradations.map(function(d,i){
+    return '<tr><td>'+escHtml(d.piece)+'</td><td>'+escHtml(d.avant)+' → '+escHtml(d.apres)+'</td><td>'+escHtml(d.observations||'')+'</td>'
+      +'<td><input type="number" class="form-control" id="rest-ret-'+i+'" placeholder="Montant retenu"></td></tr>';
+  }).join('');
+  el.innerHTML='<div class="alert alert-info" style="margin-top:10px;">Dépôt de garantie versé : <strong>'+fcfa(b.depot||0)+'</strong> · Impayés locataire : <strong style="color:#dc3545;">'+fcfa(impayes)+'</strong></div>'
+    +(degradations.length
+      ? ('<table style="margin-top:8px;"><thead><tr><th>Pièce</th><th>Évolution</th><th>Observations</th><th>Retenue (FCFA)</th></tr></thead><tbody>'+rowsDeg+'</tbody></table>')
+      : '<div class="alert alert-success" style="margin-top:8px;">Aucune dégradation constatée par rapport à l\'entrée.</div>')
+    +'<input type="hidden" id="rest-nb-deg" value="'+degradations.length+'">'
+    +'<input type="hidden" id="rest-impayes" value="'+impayes+'">'
+    +'<button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="restGenererDecompte(\''+bailId+'\')">📄 Générer le décompte de restitution</button>';
+}
+async function restGenererDecompte(bailId){
+  var b=_locBaux().find(function(x){ return x.id===bailId; });
+  var nbDeg=parseInt((document.getElementById('rest-nb-deg')||{}).value,10)||0;
+  var impayes=parseFloat((document.getElementById('rest-impayes')||{}).value)||0;
+  var retenues=[];
+  for(var i=0;i<nbDeg;i++){ retenues.push(parseFloat((document.getElementById('rest-ret-'+i)||{}).value)||0); }
+  var totalRetenues=retenues.reduce(function(s,r){ return s+r; },0);
+  var depot=parseFloat(b.depot)||0;
+  var solde=Math.max(0, depot - impayes - totalRetenues);
+  var rest={ id:uid(), bail_id:bailId, depot:depot, impayes:impayes, retenues_degradations:totalRetenues,
+    solde_a_restituer:solde, date:today(), created_at:new Date().toISOString() };
+  DATA.restitutions_caution.push(rest);
+  await dbPut('restitutions_caution', rest);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_restitutions_caution', rest);
+  try {
+    var treso=(typeof _compteTresoVersement==='function')?_compteTresoVersement('virement'):'52100000';
+    var lignes=[ {compte:_locCpt('depot'),sens:'D',montant:depot,libelle:'Solde du dépôt de garantie (4194)'} ];
+    if(solde>0) lignes.push({compte:treso,sens:'C',montant:solde,libelle:'Remboursement au locataire'});
+    if(totalRetenues>0) lignes.push({compte:_locCpt('refact_locataire'),sens:'C',montant:totalRetenues,libelle:'Retenue dégradations locatives'});
+    if(impayes>0) lignes.push({compte:_locCpt('loyers'),sens:'C',montant:impayes,libelle:'Compensation loyers impayés'});
+    var ecr={ id:'ecr_rest_'+rest.id, ref:'REST-'+b.ref, date:rest.date, piece:'REST-'+b.ref,
+      libelle:'Restitution caution — '+b.ref+' — '+_locNom(b), montant:depot, type:'passif', mode:'virement',
+      lignes:lignes, created_at:today() };
+    DATA.ecritures.push(ecr); await dbPut('ecritures',ecr);
+    if(typeof syncToSupabase==='function') syncToSupabase('pi_ecritures', ecr);
+    if(typeof buildBalance==='function') buildBalance();
+  } catch(e){}
+  b.statut='resilie';
+  await _locSave('baux', b, 'pi_baux');
+  toast('✅ Décompte généré — solde à restituer : '+fcfa(solde)+'.','success');
+  restRenderListe(); locRenderKPIs();
+}
+function restRenderListe(){
+  var el=document.getElementById('rest-liste'); if(!el) return;
+  var list=DATA.restitutions_caution||[];
+  if(!list.length){ el.innerHTML='<div class="card"><p style="color:#6B6B9A;">Aucun décompte de restitution généré.</p></div>'; return; }
+  el.innerHTML='<table><thead><tr><th>Bail</th><th>Dépôt</th><th>Impayés</th><th>Retenues dégradations</th><th>Solde restitué</th><th>Date</th></tr></thead><tbody>'
+    +list.slice().reverse().map(function(r){
+      return '<tr><td>'+escHtml(_edlBailLabel(r.bail_id))+'</td><td style="text-align:right;">'+fcfa(r.depot)+'</td>'
+        +'<td style="text-align:right;color:#dc3545;">'+fcfa(r.impayes)+'</td><td style="text-align:right;color:#dc3545;">'+fcfa(r.retenues_degradations)+'</td>'
+        +'<td style="text-align:right;font-weight:700;color:#16a34a;">'+fcfa(r.solde_a_restituer)+'</td><td>'+dateShort(r.date)+'</td></tr>';
+    }).join('')+'</tbody></table>';
 }
 
 
