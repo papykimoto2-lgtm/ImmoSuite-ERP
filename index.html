@@ -12918,22 +12918,45 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 
         <div id="loc-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
 
-        <div class="tab-nav" style="margin-bottom:14px;">
-          <button class="tab-btn active" onclick="switchTab('locatif','baux')">📄 Baux</button>
-          <button class="tab-btn" onclick="switchTab('locatif','proprietaires')">🧑‍💼 Propriétaires (mandats)</button>
-          <button class="tab-btn" onclick="switchTab('locatif','quittances')">🧾 Quittances</button>
-          <button class="tab-btn" onclick="switchTab('locatif','reversements')">💸 Reversements propriétaires</button>
-          <button class="tab-btn" onclick="switchTab('locatif','signalements')">🔧 Signalements <span id="sig-badge-nb" style="display:none;background:#dc3545;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;"></span></button>
-          <button class="tab-btn" onclick="switchTab('locatif','travaux')">🛠️ Ordres de travail</button>
-          <button class="tab-btn" onclick="switchTab('locatif','candidatures')">🎯 Candidatures</button>
-          <button class="tab-btn" onclick="switchTab('locatif','biens')">🏘️ Biens locatifs</button>
-          <button class="tab-btn" onclick="switchTab('locatif','artisans')">👷 Artisans</button>
-          <button class="tab-btn" onclick="switchTab('locatif','demarcheurs')">🧭 Démarcheurs</button>
-          <button class="tab-btn" onclick="switchTab('locatif','etatslieux')">📋 États des lieux</button>
-          <button class="tab-btn" onclick="switchTab('locatif','restitution')">💼 Restitution caution</button>
-          <button class="tab-btn" onclick="switchTab('locatif','charges')">🔥 Charges</button>
-          <button class="tab-btn" onclick="switchTab('locatif','recouvrement')">⚠️ Recouvrement</button>
-          <button class="tab-btn" onclick="switchTab('locatif','revision')">📈 Révision loyers</button>
+        <!-- Parcours en marche en avant, même logique que Paramètres système :
+             référentiels d'abord, puis acquisition du locataire, puis vie du
+             bail, puis sortie — jamais de retour en arrière dans le flux. -->
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Référentiels</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('locatif','biens')" title="Parc de biens proposés à la location"><i>🏘️</i>Biens locatifs</button>
+              <button class="tab-btn" onclick="switchTab('locatif','proprietaires')" title="Mandants ayant confié un bien en gestion"><i>🧑‍💼</i>Propriétaires (mandats)</button>
+              <button class="tab-btn" onclick="switchTab('locatif','demarcheurs')" title="Démarcheurs agréés et non agréés"><i>🧭</i>Démarcheurs</button>
+              <button class="tab-btn" onclick="switchTab('locatif','artisans')" title="Annuaire des intervenants travaux"><i>👷</i>Artisans</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Acquisition</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('locatif','candidatures')" title="Prospects intéressés par un bien"><i>🎯</i>Candidatures</button>
+              <button class="tab-btn active" onclick="switchTab('locatif','baux')" title="Signature et suivi des contrats de bail"><i>📄</i>Baux</button>
+              <button class="tab-btn" onclick="switchTab('locatif','etatslieux')" title="Constat contradictoire à l'entrée"><i>📋</i>États des lieux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Vie du bail</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('locatif','quittances')" title="Émission et encaissement des loyers"><i>🧾</i>Quittances</button>
+              <button class="tab-btn" onclick="switchTab('locatif','recouvrement')" title="Relances et paliers d'impayés"><i>⚠️</i>Recouvrement</button>
+              <button class="tab-btn" onclick="switchTab('locatif','revision')" title="Révision annuelle du loyer"><i>📈</i>Révision loyers</button>
+              <button class="tab-btn" onclick="switchTab('locatif','charges')" title="Régularisation provisions vs charges réelles"><i>🔥</i>Charges</button>
+              <button class="tab-btn" onclick="switchTab('locatif','signalements')" title="Incidents remontés par les locataires"><i>🔧</i>Signalements <span id="sig-badge-nb" style="display:none;background:#dc3545;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;"></span></button>
+              <button class="tab-btn" onclick="switchTab('locatif','travaux')" title="Ordres de travail issus des signalements"><i>🛠️</i>Ordres de travail</button>
+              <button class="tab-btn" onclick="switchTab('locatif','reversements')" title="Reversement de la part propriétaire"><i>💸</i>Reversements</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">4</span>Fin de bail</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('locatif','restitution')" title="Décompte et restitution du dépôt de garantie"><i>💼</i>Restitution caution</button>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane active" id="tab-locatif-baux">
@@ -19530,6 +19553,7 @@ var DATA = {
   demarcheurs: [],
   etats_lieux_bail: [],
   restitutions_caution: [],
+  relances_locatives: [],
   budgets_copro: [],
   appels_charges_copro: [],
   ag_copro: [],
@@ -19697,6 +19721,7 @@ var ALL_STORES = [
   'declarations_versement_foncier',
   'coproprietes','lots_copro','budgets_copro','appels_charges_copro','ag_copro','fonds_travaux_copro',
   'demarcheurs','etats_lieux_bail','restitutions_caution',
+  'relances_locatives',
   /* v117 */ 'lot_unites',
   /* v114 — Acquisition & aménagement foncier */
   'af_operations','af_agents','af_relances',
@@ -20067,6 +20092,7 @@ async function loadAllData() {
   'declarations_versement_foncier',
   'coproprietes','lots_copro','budgets_copro','appels_charges_copro','ag_copro','fonds_travaux_copro',
   'demarcheurs','etats_lieux_bail','restitutions_caution',
+  'relances_locatives',
   /* v135 — Mobilité interne RH */
   'mobilites_rh',
   /* v136 — Module Caisse */
@@ -21453,6 +21479,7 @@ var SUPA_STORE_MAP = [
   ['pi_demarcheurs','demarcheurs'],
   ['pi_etats_lieux_bail','etats_lieux_bail'],
   ['pi_restitutions_caution','restitutions_caution'],
+  ['pi_relances_locatives','relances_locatives'],
   ['pi_lots_copro','lots_copro'],
   ['pi_budgets_copro','budgets_copro'],
   ['pi_appels_charges_copro','appels_charges_copro'],
@@ -21615,7 +21642,7 @@ function _libelleStore(store) {
     conceptions:'Conceptions/Études', plans_arch:'Plans architecturaux', nomenclatures:'Nomenclatures DQE',
     prix_unitaire:'Prix unitaires', devis_fournisseurs:'Devis fournisseurs', biens_amort:'Immobilisations',
     releves_bank:'Relevés bancaires', rapprochements:'Rapprochements', dossiersJuridiques:'Dossiers juridiques', docs_juridiques:'Documents juridiques',
-    custom_roles:'Rôles personnalisés', portail_messages:'Messages portail', portail_medias:'Médias portail', declarations_versement_foncier:'Déclarations de versement (foncier)', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', demarcheurs:'Démarcheurs', etats_lieux_bail:'États des lieux', restitutions_caution:'Restitutions de caution',
+    custom_roles:'Rôles personnalisés', portail_messages:'Messages portail', portail_medias:'Médias portail', declarations_versement_foncier:'Déclarations de versement (foncier)', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', demarcheurs:'Démarcheurs', etats_lieux_bail:'États des lieux', restitutions_caution:'Restitutions de caution', relances_locatives:'Relances loyers impayés',
     visites_rdv:'Rendez-vous/Visites', visites_log:'Registre des visites', visites_blacklist:'Liste noire visites',
     logs_connexion:'Journaux de connexion', historique_actions:'Historique des actions',
     relances:'Relances CRM', itineraires:'Itinéraires', etapes_itineraire:'Étapes itinéraire', cr_visites:'Comptes-rendus visites', ordres_mission:'Ordres de mission',
@@ -34344,7 +34371,7 @@ var STORE_LABELS = {
   conv_agrement:'Conventions d\u2019agrément', previsionnels:'Prévisionnels / business plans',
   amenageurs:'Aménageurs', conventions_amenagement:'Conventions d\u2019aménagement',
   situations_amenagement:'Situations d\u2019aménagement', avenants_amenagement:'Avenants d\u2019aménagement',
-  declarations_versement_foncier:'Déclarations de versement foncier', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', demarcheurs:'Démarcheurs', etats_lieux_bail:'États des lieux', restitutions_caution:'Restitutions de caution', sig_couches:'Couches SIG / cartographie',
+  declarations_versement_foncier:'Déclarations de versement foncier', coproprietes:'Copropriétés', lots_copro:'Lots copropriété', budgets_copro:'Budgets copropriété', appels_charges_copro:'Appels de charges', ag_copro:'Assemblées générales', fonds_travaux_copro:'Fonds travaux', demarcheurs:'Démarcheurs', etats_lieux_bail:'États des lieux', restitutions_caution:'Restitutions de caution', relances_locatives:'Relances loyers impayés', sig_couches:'Couches SIG / cartographie',
   /* Partenaires lotissement */
   partenaires_lot:'Partenaires lotissement', dossiers_lot:'Dossiers de lotissement',
   rapports_lot:'Rapports d\u2019avancement lotissement',
@@ -52946,21 +52973,135 @@ function locRenderRecouvrement(){
     .filter(function(q){ return q._j>0; })
     .sort(function(a,b){ return b._j-a._j; });
   if(!imp.length){ el.innerHTML='<div style="text-align:center;color:var(--vert);padding:20px;">✅ Aucun impayé en retard.</div>'; return; }
-  el.innerHTML='<table><thead><tr><th>Quittance</th><th>Locataire</th><th>Bien</th><th>Échéance</th><th>Retard</th><th>Reste dû</th><th>Palier</th><th>Actions</th></tr></thead><tbody>'
+  el.innerHTML='<table><thead><tr><th>Quittance</th><th>Locataire</th><th>Bien</th><th>Échéance</th><th>Retard</th><th>Reste dû</th><th>Palier</th><th>Dernière relance</th><th>Actions</th></tr></thead><tbody>'
     +imp.map(function(q){
       var b=_locBaux().find(function(x){return x.id===q.bail_id;})||{};
       var p=_locPalier(q._j);
       var c=(DATA.clients||[]).find(function(x){return x.id===q.locataire_id;})||{};
       var tel=(c.tel||'').replace(/[^0-9]/g,''); if(tel&&tel.length<=10) tel='225'+tel;
       var msg='Bonjour '+_locNom(b)+', votre loyer '+q.periode+' ('+fmtF(_locDu(q))+' FCFA) reste impayé depuis '+q._j+' jours. Merci de régulariser.';
-      var wa=tel?('<a class="btn btn-secondary btn-sm btn-icon" href="https://wa.me/'+tel+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" title="Relancer WhatsApp">🟢</a> '):'';
+      var wa=tel?('<a class="btn btn-secondary btn-sm btn-icon" href="https://wa.me/'+tel+'?text='+encodeURIComponent(msg)+'" target="_blank" rel="noopener" title="Relancer WhatsApp" onclick="locLoggerRelance(\''+q.id+'\','+p.n+',\'whatsapp\')">🟢</a> '):'';
+      var derniere=(DATA.relances_locatives||[]).filter(function(r){ return r.quittance_id===q.id; }).sort(function(a,b2){ return (b2.date||'').localeCompare(a.date||''); })[0];
+      var docBtn = p.n>=3
+        ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="locImprimerMiseEnDemeure(\''+q.id+'\')" title="Mise en demeure">📄</button> '
+        : '';
+      if(p.n>=4) docBtn += '<button class="btn btn-secondary btn-sm btn-icon" onclick="locImprimerCommandement(\''+q.id+'\')" title="Commandement de payer">⚖️</button> ';
+      if(b.dossier_juridique_id) docBtn += '<button class="btn btn-secondary btn-sm btn-icon" onclick="locOuvrirDossierLie(\''+b.id+'\')" title="Ouvrir le dossier juridique lié">📂</button> ';
       return '<tr><td><strong>'+escHtml(q.ref)+'</strong></td><td>'+escHtml(_locNom(b))+'</td>'
         +'<td style="font-size:11px;">'+escHtml(b.bien||'—')+'</td><td>'+dateShort(q.echeance)+'</td>'
         +'<td style="text-align:right;color:var(--rouge);font-weight:bold;">'+q._j+' j</td>'
         +'<td style="text-align:right;font-weight:bold;">'+fmtF(_locDu(q))+'</td>'
         +'<td><span class="badge '+p.cls+'">'+p.label+'</span></td>'
-        +'<td style="white-space:nowrap;">'+wa+'<button class="btn btn-secondary btn-sm btn-icon" onclick="locOpenEncaisser(\''+q.id+'\')" title="Encaisser">💰</button></td></tr>';
+        +'<td style="font-size:11px;">'+(derniere?(dateShort(derniere.date)+' · '+_locPalier(derniere.palier).label):'<span style="color:var(--dim);">Aucune</span>')+'</td>'
+        +'<td style="white-space:nowrap;">'+wa+docBtn+'<button class="btn btn-secondary btn-sm btn-icon" onclick="locOpenEncaisser(\''+q.id+'\')" title="Encaisser">💰</button></td></tr>';
+    }).join('')+'</tbody></table>'
+    +'<div style="margin-top:16px;"><h4 style="font-size:13px;margin-bottom:8px;">📜 Historique des relances envoyées</h4>'+locRenderHistoriqueRelances()+'</div>';
+}
+async function locLoggerRelance(quittanceId, palier, canal){
+  var q=_locQ().find(function(x){ return x.id===quittanceId; });
+  var r={ id:uid(), quittance_id:quittanceId, bail_id:q?q.bail_id:'', palier:palier, canal:canal,
+    date:new Date().toISOString(), envoye_par:(APP.currentUser&&APP.currentUser.nom)||'—' };
+  DATA.relances_locatives.push(r);
+  await dbPut('relances_locatives', r);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_relances_locatives', r);
+  locRenderRecouvrement();
+}
+function locRenderHistoriqueRelances(){
+  var list=(DATA.relances_locatives||[]).slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); }).slice(0,30);
+  if(!list.length) return '<div style="color:var(--dim);font-size:12px;">Aucune relance enregistrée pour le moment.</div>';
+  return '<table><thead><tr><th>Date</th><th>Quittance</th><th>Palier</th><th>Canal</th><th>Envoyé par</th></tr></thead><tbody>'
+    +list.map(function(r){
+      var q=_locQ().find(function(x){ return x.id===r.quittance_id; });
+      return '<tr><td style="font-size:11px;">'+new Date(r.date).toLocaleString('fr-FR')+'</td><td>'+escHtml(q?q.ref:'—')+'</td>'
+        +'<td><span class="badge '+_locPalier(r.palier).cls+'">'+_locPalier(r.palier).label+'</span></td>'
+        +'<td>'+(r.canal==='whatsapp'?'🟢 WhatsApp':(r.canal==='pdf_mise_en_demeure'?'📄 Mise en demeure':'⚖️ Commandement'))+'</td>'
+        +'<td style="font-size:11px;">'+escHtml(r.envoye_par||'—')+'</td></tr>';
     }).join('')+'</tbody></table>';
+}
+function _locImprimerDoc(titre, corps){
+  var w=window.open('','_blank');
+  if(!w){ toast('Autorisez les fenêtres surgissantes pour imprimer.','error'); return; }
+  w.document.write('<html><head><meta charset="UTF-8"><title>'+escHtml(titre)+'</title>'
+    +'<style>body{font-family:Georgia,serif;padding:40px;color:#222;line-height:1.7;}h2{margin-bottom:4px;}'
+    +'.entete{margin-bottom:24px;}.signature{margin-top:60px;}table{width:100%;border-collapse:collapse;margin-top:14px;}'
+    +'td{padding:6px 0;}.tot{border-top:2px solid #0f4c81;font-weight:700;}</style></head><body>'+corps+'</body></html>');
+  w.document.close(); w.focus(); w.print();
+}
+async function locImprimerMiseEnDemeure(quittanceId){
+  var q=_locQ().find(function(x){ return x.id===quittanceId; }); if(!q) return;
+  var b=_locBaux().find(function(x){ return x.id===q.bail_id; })||{};
+  var soc=(DATA.params&&DATA.params.societe)||'la société';
+  var du=_locDu(q);
+  var corps='<div class="entete"><strong>'+escHtml(soc)+'</strong><br>'+new Date().toLocaleDateString('fr-FR')+', Abidjan</div>'
+    +'<h2>MISE EN DEMEURE DE PAYER</h2>'
+    +'<p>Lettre recommandée avec accusé de réception / remise en main propre</p>'
+    +'<p>Madame, Monsieur <strong>'+escHtml(_locNom(b))+'</strong>,</p>'
+    +'<p>Vous êtes locataire du bien situé « '+escHtml(b.bien||'')+'» en vertu du bail '+escHtml(b.ref||'')+' du '+dateShort(b.debut)+'.</p>'
+    +'<p>Malgré nos relances amiables et formelles, le loyer de la période <strong>'+escHtml(q.periode)+'</strong> demeure impayé à ce jour, soit un retard de <strong>'+(q._j||_locRetard(q))+' jours</strong>.</p>'
+    +'<table><tbody><tr><td>Montant dû</td><td style="text-align:right;font-weight:700;">'+fcfa(du)+'</td></tr></tbody></table>'
+    +'<p style="margin-top:16px;">Nous vous mettons en demeure de régulariser cette somme dans un délai de <strong>huit (8) jours</strong> à compter de la réception de la présente, faute de quoi nous nous réservons le droit d\'engager toute action judiciaire utile, y compris la résiliation du bail et l\'expulsion, conformément à la loi n°2018-575 relative au bail à usage d\'habitation en Côte d\'Ivoire.</p>'
+    +'<div class="signature">Fait pour valoir ce que de droit.<br><br>_______________________<br>Le bailleur / mandataire</div>';
+  _locImprimerDoc('Mise en demeure — '+q.ref, corps);
+  await locLoggerRelance(quittanceId, 3, 'pdf_mise_en_demeure');
+  await locLierDossierJuridique(b, q, 'haute');
+}
+async function locImprimerCommandement(quittanceId){
+  var q=_locQ().find(function(x){ return x.id===quittanceId; }); if(!q) return;
+  var b=_locBaux().find(function(x){ return x.id===q.bail_id; })||{};
+  var soc=(DATA.params&&DATA.params.societe)||'la société';
+  var du=_locDu(q);
+  var corps='<div class="entete"><strong>'+escHtml(soc)+'</strong><br>'+new Date().toLocaleDateString('fr-FR')+', Abidjan</div>'
+    +'<h2>PROJET DE COMMANDEMENT DE PAYER</h2>'
+    +'<p style="color:#b91c1c;font-size:12px;">⚠️ Document préparatoire — à faire signifier par un huissier de justice pour valeur légale (acte extrajudiciaire).</p>'
+    +'<p>Locataire : <strong>'+escHtml(_locNom(b))+'</strong> — Bien : '+escHtml(b.bien||'')+' — Bail '+escHtml(b.ref||'')+'</p>'
+    +'<p>Nonobstant la mise en demeure qui lui a été précédemment adressée, le locataire n\'a pas régularisé sa dette locative, qui s\'élève à ce jour à :</p>'
+    +'<table><tbody><tr><td>Montant dû (période '+escHtml(q.periode)+')</td><td style="text-align:right;font-weight:700;">'+fcfa(du)+'</td></tr>'
+    +'<tr><td>Retard constaté</td><td style="text-align:right;">'+(q._j||_locRetard(q))+' jours</td></tr></tbody></table>'
+    +'<p style="margin-top:16px;">En conséquence, il est commandé au locataire de payer, sous peine de résiliation de plein droit du bail et d\'expulsion, dans le délai légal applicable en la matière.</p>'
+    +'<div class="signature">Transmis pour signification à l\'huissier instrumentaire.<br><br>_______________________<br>Le bailleur / mandataire</div>';
+  _locImprimerDoc('Commandement de payer (projet) — '+q.ref, corps);
+  await locLoggerRelance(quittanceId, 4, 'pdf_commandement');
+  await locLierDossierJuridique(b, q, 'urgente');
+}
+
+/* ── Liaison automatique avec le Département Juridique ──
+   La mise en demeure ouvre le dossier ; le commandement de payer
+   l'escalade en priorité urgente. Un seul dossier par bail : les
+   relances suivantes mettent à jour montant/échéance/priorité. */
+async function locLierDossierJuridique(b, q, priorite){
+  if(!DATA.dossiersJuridiques) DATA.dossiersJuridiques=[];
+  var d = b.dossier_juridique_id ? DATA.dossiersJuridiques.find(function(x){ return x.id===b.dossier_juridique_id; }) : null;
+  var du=_locDu(q);
+  var dateEch=new Date(); dateEch.setDate(dateEch.getDate()+8);
+  if(d){
+    d.montant=du; d.date_ech=dateEch.toISOString().slice(0,10);
+    if(priorite==='urgente') d.priorite='urgente';
+    if(d.statut==='clos_favorable'||d.statut==='clos_defavorable') d.statut='ouvert';
+    d.notes=(d.notes||'')+'\n'+new Date().toLocaleDateString('fr-FR')+' — Relance '+_locPalier(q._j||_locRetard(q)).label+' (quittance '+q.ref+', '+fcfa(du)+').';
+  } else {
+    d = { id:uid(), ref:'JUR-LOC-'+String(DATA.dossiersJuridiques.length+1).padStart(4,'0'),
+      type:'contentieux', objet:'Recouvrement loyer impayé — bail '+(b.ref||''),
+      interlocuteur:_locNom(b), avocat:'', date_ouv:today(), date_ech:dateEch.toISOString().slice(0,10),
+      priorite:priorite||'haute', statut:'ouvert', montant:du,
+      notes:'Dossier ouvert automatiquement depuis Gestion locative → Recouvrement (bail '+(b.ref||'')+', bien : '+(b.bien||'')+').',
+      bail_id:b.id, created_at:today() };
+    DATA.dossiersJuridiques.push(d);
+    b.dossier_juridique_id=d.id;
+    await _locSave('baux', b, 'pi_baux');
+  }
+  await dbPut('dossiersJuridiques', d);
+  if(typeof syncToSupabase==='function') syncToSupabase('pi_dossiers_juridiques', d);
+  if(typeof renderDossiersJuridiques==='function') renderDossiersJuridiques();
+  toast('📂 Dossier juridique '+d.ref+' '+(b.dossier_juridique_id?'mis à jour':'ouvert')+'.', 'success');
+}
+function locOuvrirDossierLie(bailId){
+  var b=_locBaux().find(function(x){ return x.id===bailId; });
+  if(!b || !b.dossier_juridique_id){ toast('Aucun dossier juridique lié à ce bail.','error'); return; }
+  goTo('juridique');
+  setTimeout(function(){
+    if(typeof switchTab==='function') switchTab('juridique','contentieux');
+    if(typeof openDossierJuridique==='function') openDossierJuridique(b.dossier_juridique_id);
+  }, 80);
 }
 /* ─── Rendus tableaux ──────────────────────────────────── */
 function locRenderBaux(){
@@ -57024,11 +57165,17 @@ function restChargerComparaison(){
   });
   var quit=_locQ().filter(function(q){ return q.bail_id===bailId; });
   var impayes=quit.filter(function(q){ return _locStatutQ(q)!=='solde'; }).reduce(function(s,q){ return s+_locDu(q); },0);
+  var quitIds=quit.map(function(q){ return q.id; });
+  var relancesGraves=(DATA.relances_locatives||[]).filter(function(r){ return quitIds.indexOf(r.quittance_id)>=0 && r.palier>=3; });
+  var alerteContentieux = relancesGraves.length
+    ? '<div class="alert alert-warning" style="margin-top:10px;">⚠️ '+relancesGraves.length+' relance(s) au stade mise en demeure/commandement de payer déjà émise(s) pour ce bail — vérifiez le contentieux avant de restituer un solde au locataire.</div>'
+    : '';
   var rowsDeg=degradations.map(function(d,i){
     return '<tr><td>'+escHtml(d.piece)+'</td><td>'+escHtml(d.avant)+' → '+escHtml(d.apres)+'</td><td>'+escHtml(d.observations||'')+'</td>'
       +'<td><input type="number" class="form-control" id="rest-ret-'+i+'" placeholder="Montant retenu"></td></tr>';
   }).join('');
   el.innerHTML='<div class="alert alert-info" style="margin-top:10px;">Dépôt de garantie versé : <strong>'+fcfa(b.depot||0)+'</strong> · Impayés locataire : <strong style="color:#dc3545;">'+fcfa(impayes)+'</strong></div>'
+    +alerteContentieux
     +(degradations.length
       ? ('<table style="margin-top:8px;"><thead><tr><th>Pièce</th><th>Évolution</th><th>Observations</th><th>Retenue (FCFA)</th></tr></thead><tbody>'+rowsDeg+'</tbody></table>')
       : '<div class="alert alert-success" style="margin-top:8px;">Aucune dégradation constatée par rapport à l\'entrée.</div>')
