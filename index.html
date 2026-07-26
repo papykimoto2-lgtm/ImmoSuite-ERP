@@ -3042,13 +3042,24 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openPaiementModal()">+ Enregistrer un versement</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('paiements','versements')">📋 Versements</button>
-          <button class="tab-btn" onclick="switchTab('paiements','echeanciers')">📅 Échéanciers</button>
-          <button class="tab-btn" onclick="switchTab('paiements','vefa')">🏗️ Appels VEFA</button>
-          <button class="tab-btn" onclick="switchTab('paiements','momo')">📲 Encaissement Mobile Money</button>
-          <button class="tab-btn" onclick="switchTab('paiements','lien')">🔗 Paiement en ligne</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('paiements','versements')"><i>📋</i>Versements</button>
+              <button class="tab-btn" onclick="switchTab('paiements','echeanciers')"><i>📅</i>Échéanciers</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Encaissement</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('paiements','vefa')"><i>🏗️</i>Appels VEFA</button>
+              <button class="tab-btn" onclick="switchTab('paiements','momo')"><i>📲</i>Mobile Money</button>
+              <button class="tab-btn" onclick="switchTab('paiements','lien')"><i>🔗</i>Paiement en ligne</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-paiements-versements">
           <div class="filters-bar">
@@ -3212,13 +3223,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openLotModal()">+ Nouveau Lot</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('lots','dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchTab('lots','grille')">🗂 Grille des Lots</button>
-          <button class="tab-btn" onclick="switchTab('lots','carte');lcEnter()">🗺️ Carte commercialisation</button>
-          <button class="tab-btn" onclick="switchTab('lots','terrains')">🌍 Terrains</button>
-          <button class="tab-btn" onclick="switchTab('lots','marge');renderMargeLots()">💰 Marge</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Vue d'ensemble</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('lots','dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Commercialisation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('lots','grille')"><i>🗂</i>Grille des Lots</button>
+              <button class="tab-btn" onclick="switchTab('lots','carte');lcEnter()"><i>🗺️</i>Carte commercialisation</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Portefeuille</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('lots','terrains')"><i>🌍</i>Terrains</button>
+              <button class="tab-btn" onclick="switchTab('lots','marge');renderMargeLots()"><i>💰</i>Marge</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-lots-dashboard">
           <div id="lots-dashboard"></div>
@@ -4463,13 +4490,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           </div>
         </div>
         <div class="kpi-grid" id="kpi-stock" style="margin-bottom:18px;"></div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('stock','etat')">📋 État des stocks</button>
-          <button class="tab-btn" onclick="switchTab('stock','mouvements')">🔁 Mouvements</button>
-          <button class="tab-btn" onclick="switchTab('stock','chantier')">🏗️ Consommation par chantier</button>
-          <button class="tab-btn" onclick="switchTab('stock','depot')">🏬 Par dépôt</button>
-          <button class="tab-btn" onclick="switchTab('stock','marge')">💹 Marge chantiers</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('stock','etat')"><i>📋</i>État des stocks</button>
+              <button class="tab-btn" onclick="switchTab('stock','depot')"><i>🏬</i>Par dépôt</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Mouvements</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('stock','mouvements')"><i>🔁</i>Mouvements</button>
+              <button class="tab-btn" onclick="switchTab('stock','chantier')"><i>🏗️</i>Consommation par chantier</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Analyse</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('stock','marge')"><i>💹</i>Marge chantiers</button>
+            </div>
+          </div>
         </div>
+
         <div class="tab-pane active" id="tab-stock-etat">
           <div class="card">
             <div class="table-wrap"><table>
@@ -4708,11 +4751,27 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openBC()">➕ Bon de commande</button>
         </div>
         <div class="kpi-grid" id="kpi-achats" style="margin-bottom:18px;"></div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('achats','bc')">📑 Bons de commande</button>
-          <button class="tab-btn" onclick="switchTab('achats','rec')">📥 Réceptions (BL)</button>
-          <button class="tab-btn" onclick="switchTab('achats','fac')">🧾 Factures fournisseur</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Commande</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('achats','bc')"><i>📑</i>Bons de commande</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Réception</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('achats','rec')"><i>📥</i>Réceptions (BL)</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Facturation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('achats','fac')"><i>🧾</i>Factures fournisseur</button>
+            </div>
+          </div>
         </div>
+
         <div class="tab-pane active" id="tab-achats-bc">
           <div class="card"><div class="table-wrap"><table>
             <thead><tr><th>N°</th><th>Fournisseur</th><th>Date</th><th>Chantier</th><th style="text-align:right;">Montant HT</th><th>Réceptionné</th><th>Statut</th><th></th></tr></thead>
@@ -4811,10 +4870,16 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           </div>
         </div>
         <div class="kpi-grid" id="kpi-validations" style="margin-bottom:18px;"></div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="valSetFilter('en_attente')">⏳ En attente</button>
-          <button class="tab-btn" onclick="valSetFilter('histo')">📜 Historique</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Circuit de validation</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="valSetFilter('en_attente')"><i>⏳</i>En attente</button>
+              <button class="tab-btn" onclick="valSetFilter('histo')"><i>📜</i>Historique</button>
+            </div>
+          </div>
         </div>
+
         <div class="card"><div class="table-wrap"><table>
           <thead><tr><th>Type</th><th>Objet</th><th style="text-align:right;">Montant</th><th>Demandeur</th><th>Date</th><th>Statut</th><th></th></tr></thead>
           <tbody id="tbody-validations"></tbody>
@@ -4835,12 +4900,28 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           </div>
         </div>
         <div class="kpi-grid" id="kpi-recliv" style="margin-bottom:18px;"></div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('recliv','rect')">🏗️ Réceptions de travaux</button>
-          <button class="tab-btn" onclick="switchTab('recliv','liv')">🔑 Livraisons souscripteurs</button>
-          <button class="tab-btn" onclick="switchTab('recliv','dos')">📋 Dossiers de réception (processus)</button>
-          <button class="tab-btn" onclick="switchTab('recliv','garsav')">🛡️ Garanties &amp; SAV</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Réception</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('recliv','rect')"><i>🏗️</i>Réceptions de travaux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Livraison</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('recliv','liv')"><i>🔑</i>Livraisons souscripteurs</button>
+              <button class="tab-btn" onclick="switchTab('recliv','dos')"><i>📋</i>Dossiers de réception</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Après-vente</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('recliv','garsav')"><i>🛡️</i>Garanties &amp; SAV</button>
+            </div>
+          </div>
         </div>
+
         <div class="tab-pane active" id="tab-recliv-rect">
           <div class="card"><div class="table-wrap"><table>
             <thead><tr><th>N°</th><th>Type</th><th>Convention</th><th>Constructeur</th><th>Date</th><th>Réserves</th><th style="text-align:right;">Retenue gar.</th><th>Statut</th><th></th></tr></thead>
@@ -6946,11 +7027,17 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         <div class="kpi-grid" id="portail-ap-kpis" style="margin-bottom:16px;"></div>
 
         <!-- Tabs -->
-        <div class="tab-nav" style="margin-bottom:16px;">
-          <button class="tab-btn active" onclick="switchPortailApTab('dossiers')">📁 Mes dossiers</button>
-          <button class="tab-btn" onclick="switchPortailApTab('commissions')">💰 Commissions</button>
-          <button class="tab-btn" onclick="switchPortailApTab('messagerie')">💬 Messagerie</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchPortailApTab('dossiers')"><i>📁</i>Mes dossiers</button>
+              <button class="tab-btn" onclick="switchPortailApTab('commissions')"><i>💰</i>Commissions</button>
+              <button class="tab-btn" onclick="switchPortailApTab('messagerie')"><i>💬</i>Messagerie</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Tab dossiers -->
         <div id="portail-ap-tab-dossiers">
@@ -7011,14 +7098,30 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openBulletinModal()">+ Bulletin individuel</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('paie','bulletins')">📋 Bulletins du mois</button>
-          <button class="tab-btn" onclick="switchTab('paie','recap')">📊 Récapitulatif</button>
-          <button class="tab-btn" onclick="switchTab('paie','virements')">💳 Ordres de virement</button>
-          <button class="tab-btn" onclick="switchTab('paie','journaliers');quinzInit()" style="color:#d97706;font-weight:700;">🗓️ Journaliers &amp; Temporaires</button>
-          <button class="tab-btn" onclick="switchTab('paie','simulateur');simNBInit()" style="color:#8A52E0;font-weight:700;">🔄 Simulateur Net→Brut</button>
-          <button class="tab-btn" onclick="goTo('rh-livre-paie')">📒 Livre de Paie</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Calcul</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('paie','bulletins')"><i>📋</i>Bulletins du mois</button>
+              <button class="tab-btn" onclick="switchTab('paie','journaliers');quinzInit()" style="color:#d97706;font-weight:700;"><i>🗓️</i>Journaliers &amp; Temporaires</button>
+              <button class="tab-btn" onclick="switchTab('paie','simulateur');simNBInit()" style="color:#8A52E0;font-weight:700;"><i>🔄</i>Simulateur Net→Brut</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Consolidation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('paie','recap')"><i>📊</i>Récapitulatif</button>
+              <button class="tab-btn" onclick="goTo('rh-livre-paie')"><i>📒</i>Livre de Paie</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Paiement</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('paie','virements')"><i>💳</i>Ordres de virement</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-paie-bulletins">
           <div class="payslip-grid" id="payslip-grid">
@@ -7201,14 +7304,30 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           Chaque division est une entité juridique distincte (RCCM, NCC, N° CNPS employeur propres) : sélectionnez une division pour préparer ses déclarations CNPS/ITS/DAS séparément, ou laissez "Toutes divisions" pour une vue consolidée.
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('declarations','tableau-bord')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchTab('declarations','cnps')">🏥 CNPS</button>
-          <button class="tab-btn" onclick="switchTab('declarations','its')">💼 ITS</button>
-          <button class="tab-btn" onclick="switchTab('declarations','das')">📋 DAS Annuelle</button>
-          <button class="tab-btn" onclick="switchTab('declarations','historique')">📂 Historique</button>
-          <button class="tab-btn" onclick="switchTab('declarations','teledeclaration')" style="color:#1D4ED8;font-weight:700;">🌐 Télédéclaration</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('declarations','tableau-bord')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Déclarations</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('declarations','cnps')"><i>🏥</i>CNPS</button>
+              <button class="tab-btn" onclick="switchTab('declarations','its')"><i>💼</i>ITS</button>
+              <button class="tab-btn" onclick="switchTab('declarations','das')"><i>📋</i>DAS Annuelle</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Transmission</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('declarations','teledeclaration')" style="color:#1D4ED8;font-weight:700;"><i>🌐</i>Télédéclaration</button>
+              <button class="tab-btn" onclick="switchTab('declarations','historique')"><i>📂</i>Historique</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-declarations-tableau-bord">
           <div class="kpi-grid" style="margin-bottom:20px;" id="decl-kpi-grid">
@@ -7443,12 +7562,18 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="kpi-card" data-icon="🏭"><div class="kpi-label">Coût total employeur</div><div class="kpi-value" id="lp-kpi-cout">—</div><div class="kpi-delta">brut + charges patronales</div></div>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('livre-paie','journal');renderLPJournal()">📋 Journal Mensuel</button>
-          <button class="tab-btn" onclick="switchTab('livre-paie','annuel');renderLPAnnuel()">📆 Récap. Annuel</button>
-          <button class="tab-btn" onclick="switchTab('livre-paie','individuel');renderLPIndividuel()">👤 Fiche Individuelle</button>
-          <button class="tab-btn" onclick="switchTab('livre-paie','charges');renderLPCharges()">🏛️ Charges Patronales</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Vues du livre de paie</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('livre-paie','journal');renderLPJournal()"><i>📋</i>Journal Mensuel</button>
+              <button class="tab-btn" onclick="switchTab('livre-paie','annuel');renderLPAnnuel()"><i>📆</i>Récap. Annuel</button>
+              <button class="tab-btn" onclick="switchTab('livre-paie','individuel');renderLPIndividuel()"><i>👤</i>Fiche Individuelle</button>
+              <button class="tab-btn" onclick="switchTab('livre-paie','charges');renderLPCharges()"><i>🏛️</i>Charges Patronales</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- TAB 1 : Journal mensuel (tous employés, 1 mois, détail complet) -->
         <div class="tab-pane active" id="tab-livre-paie-journal">
@@ -7551,11 +7676,22 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="kpi-card" data-icon="🗓️"><div class="kpi-label">Jours pris (total année)</div><div class="kpi-value" id="kpi-conges-jours">0</div><div class="kpi-delta">jours calendaires</div></div>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('conges','demandes');renderCongesDemandes()">📋 Demandes</button>
-          <button class="tab-btn" onclick="switchTab('conges','soldes');renderCongesSoldes()">📊 Soldes par employé</button>
-          <button class="tab-btn" onclick="switchTab('conges','planning');renderCongesPlanning()">📅 Planning mensuel</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Demandes</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('conges','demandes');renderCongesDemandes()"><i>📋</i>Demandes</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('conges','soldes');renderCongesSoldes()"><i>📊</i>Soldes par employé</button>
+              <button class="tab-btn" onclick="switchTab('conges','planning');renderCongesPlanning()"><i>📅</i>Planning mensuel</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- TAB 1 : Demandes -->
         <div class="tab-pane active" id="tab-conges-demandes">
@@ -7641,11 +7777,22 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="kpi-card" data-icon="✅"><div class="kpi-label">Recrutements finalisés</div><div class="kpi-value positive" id="kpi-rec-finalises" style="color:var(--vert);">0</div><div class="kpi-delta">ce trimestre</div></div>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('recrutement','postes');renderPostes()">📌 Postes ouverts</button>
-          <button class="tab-btn" onclick="switchTab('recrutement','pipeline');renderPipelineRec()">🔄 Pipeline candidats</button>
-          <button class="tab-btn" onclick="switchTab('recrutement','candidats');renderTousCandidats()">📋 Toutes les candidatures</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Poste</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('recrutement','postes');renderPostes()"><i>📌</i>Postes ouverts</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Sélection</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('recrutement','pipeline');renderPipelineRec()"><i>🔄</i>Pipeline candidats</button>
+              <button class="tab-btn" onclick="switchTab('recrutement','candidats');renderTousCandidats()"><i>📋</i>Toutes les candidatures</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- TAB 1 : Postes -->
         <div class="tab-pane active" id="tab-recrutement-postes">
@@ -7717,11 +7864,17 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <span>Le FDFP (Fonds de Développement de la Formation Professionnelle) finance partiellement les formations sur présentation de dossier. Taxe employeur : 0,4% (TA) + 0,6% (FC) de la masse salariale brute.</span>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('formations','liste');renderFormations()">📋 Sessions de formation</button>
-          <button class="tab-btn" onclick="switchTab('formations','plan');renderPlanFormation()">📆 Plan annuel</button>
-          <button class="tab-btn" onclick="switchTab('formations','fdfp');renderSuiviFDFP()">🏛️ Suivi FDFP</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Formations</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('formations','liste');renderFormations()"><i>📋</i>Sessions de formation</button>
+              <button class="tab-btn" onclick="switchTab('formations','plan');renderPlanFormation()"><i>📆</i>Plan annuel</button>
+              <button class="tab-btn" onclick="switchTab('formations','fdfp');renderSuiviFDFP()"><i>🏛️</i>Suivi FDFP</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- TAB 1 : Liste sessions -->
         <div class="tab-pane active" id="tab-formations-liste">
@@ -7929,17 +8082,47 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="kpi-card" data-icon="💰"><div class="kpi-label">Valeur foncière totale</div><div class="kpi-value or" id="kpi-val-fonciere">0 FCFA</div><div class="kpi-delta">coût d'acquisition</div></div>
           <div class="kpi-card" data-icon="⚖️"><div class="kpi-label">Dossiers contentieux</div><div class="kpi-value negative" id="kpi-contentieux" style="color:var(--rouge);">0</div><div class="kpi-delta negative" style="color:var(--rouge);">à traiter</div></div>
         </div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('foncier','parcelles')">🗺️ Parcelles</button>
-          <button class="tab-btn" onclick="switchTab('foncier','titres')">📜 Titres Fonciers</button>
-          <button class="tab-btn" onclick="switchTab('foncier','workflow')">🧭 Workflow titre</button>
-          <button class="tab-btn" onclick="switchTab('foncier','fisc')">🧮 Fiscalité immo</button>
-          <button class="tab-btn" onclick="switchTab('foncier','mutations')">🔄 Mutations</button>
-          <button class="tab-btn" onclick="switchTab('foncier','cessions');cesRender()">💰 Cessions</button>
-          <button class="tab-btn" onclick="switchTab('foncier','financiers');finRender()">🤝 Financiers</button>
-          <button class="tab-btn" onclick="switchTab('foncier','candidatures-fin');mfRender()">📬 Candidatures <span id="mf-badge" style="display:none;background:#dc3545;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;"></span></button>
-          <button class="tab-btn" onclick="switchTab('foncier','recouvrement');crecRender()">📨 Recouvrement</button>
+        <!-- Parcours en marche en avant, même logique que Paramètres système :
+             on acquiert la parcelle, on sécurise le titre, on la finance,
+             on l'exploite fiscalement, puis on la cède — jamais de retour
+             en arrière dans le flux. -->
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Acquisition</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('foncier','parcelles')" title="Prospection, négociation et portefeuille des parcelles"><i>🗺️</i>Parcelles</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Sécurisation du titre</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('foncier','titres')" title="ACD, TF provisoire et définitif"><i>📜</i>Titres Fonciers</button>
+              <button class="tab-btn" onclick="switchTab('foncier','workflow')" title="Suivi des étapes administratives du titre"><i>🧭</i>Workflow titre</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Financement</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('foncier','financiers');finRender()" title="Partenaires financiers co-investisseurs"><i>🤝</i>Financiers</button>
+              <button class="tab-btn" onclick="switchTab('foncier','candidatures-fin');mfRender()" title="Candidatures reçues au co-financement"><i>📬</i>Candidatures <span id="mf-badge" style="display:none;background:#dc3545;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;"></span></button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">4</span>Exploitation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('foncier','fisc')" title="Taxes et fiscalité immobilière applicables"><i>🧮</i>Fiscalité immo</button>
+              <button class="tab-btn" onclick="switchTab('foncier','mutations')" title="Changements de propriétaire, morcellements"><i>🔄</i>Mutations</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">5</span>Cession</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('foncier','cessions');cesRender()" title="Ventes de parcelles à des acquéreurs"><i>💰</i>Cessions</button>
+              <button class="tab-btn" onclick="switchTab('foncier','recouvrement');crecRender()" title="Relance des versements de cession impayés"><i>📨</i>Recouvrement</button>
+            </div>
+          </div>
         </div>
+
         <div class="tab-pane active" id="tab-foncier-parcelles">
           <div class="filters-bar">
             <input type="text" class="search-input" placeholder="🔍 Localité, TF, ACD, programme..." id="search-parcelles" oninput="_debInput('renderParcelles')">
@@ -8455,12 +8638,23 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <div class="spacer"></div>
           <button class="btn btn-primary" onclick="openDossierJuridique()">+ Nouveau dossier</button>
         </div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('juridique','dossiers')">📂 Dossiers actifs</button>
-          <button class="tab-btn" onclick="switchTab('juridique','contrats')">📝 Contrats</button>
-          <button class="tab-btn" onclick="switchTab('juridique','agrement');renderParamsAgrement()">🏛️ Agrément & Conformité</button>
-          <button class="tab-btn" onclick="switchTab('juridique','contentieux')">⚖️ Contentieux</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Références</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('juridique','contrats')"><i>📝</i>Contrats</button>
+              <button class="tab-btn" onclick="switchTab('juridique','agrement');renderParamsAgrement()"><i>🏛️</i>Agrément &amp; Conformité</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('juridique','dossiers')"><i>📂</i>Dossiers actifs</button>
+              <button class="tab-btn" onclick="switchTab('juridique','contentieux')"><i>⚖️</i>Contentieux</button>
+            </div>
+          </div>
         </div>
+
         <div class="tab-pane active" id="tab-juridique-dossiers">
           <div class="filters-bar">
             <input type="text" class="search-input" placeholder="🔍 Référence, objet, interlocuteur..." id="search-dossiers-jur" oninput="_debInput('renderDossiersJuridiques')">
@@ -8538,12 +8732,28 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openConception()">+ Nouveau projet</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('conception','projets')">📐 Projets de conception</button>
-          <button class="tab-btn" onclick="switchTab('conception','permis')">📜 Permis de construire</button>
-          <button class="tab-btn" onclick="switchTab('conception','plans')">🗂️ Bibliothèque de plans</button>
-          <button class="tab-btn" onclick="switchTab('conception','editeur');archiEditorInit()">✏️ Éditeur de plans</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Étude</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('conception','projets')"><i>📐</i>Projets de conception</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Autorisation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('conception','permis')"><i>📜</i>Permis de construire</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Documentation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('conception','plans')"><i>🗂️</i>Bibliothèque de plans</button>
+              <button class="tab-btn" onclick="switchTab('conception','editeur');archiEditorInit()"><i>✏️</i>Éditeur de plans</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Onglet Projets -->
         <div class="tab-pane active" id="tab-conception-projets">
@@ -8862,13 +9072,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-secondary btn-sm" onclick="exportConventions()">⬇ Export</button>
           <button class="btn btn-primary" onclick="openConvention()">+ Nouvelle convention</button>
         </div>
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('conventions','liste')">📋 Liste des conventions</button>
-          <button class="tab-btn" onclick="switchTab('conventions','situations')">📊 Situations travaux</button>
-          <button class="tab-btn" onclick="switchTab('conventions','avenants')">📝 Avenants</button>
-          <button class="tab-btn" onclick="switchTab('conventions','garanties')">🔒 Retenues de garantie</button>
-          <button class="tab-btn" onclick="switchTab('conventions','cautions')">🛡️ Cautions</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Contrat</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('conventions','liste')"><i>📋</i>Liste des conventions</button>
+              <button class="tab-btn" onclick="switchTab('conventions','avenants')"><i>📝</i>Avenants</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Exécution</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('conventions','situations')"><i>📊</i>Situations travaux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Garanties</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('conventions','garanties')"><i>🔒</i>Retenues de garantie</button>
+              <button class="tab-btn" onclick="switchTab('conventions','cautions')"><i>🛡️</i>Cautions</button>
+            </div>
+          </div>
         </div>
+
         <div class="tab-pane active" id="tab-conventions-liste">
           <div class="filters-bar">
             <input type="text" class="search-input" placeholder="🔍 N° convention, constructeur, programme..." id="search-conventions" oninput="_debInput('renderConventions')">
@@ -8970,13 +9196,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openRapportChantier()">+ Rapport de chantier</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('chantiers','dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchTab('chantiers','gantt')">📅 Planning Gantt</button>
-          <button class="tab-btn" onclick="switchTab('chantiers','rapports')">📋 Rapports hebdomadaires</button>
-          <button class="tab-btn" onclick="switchTab('chantiers','cout')">💰 Coût de revient</button>
-          <button class="tab-btn" onclick="switchTab('chantiers','controle')">🎯 Contrôle budget/réel</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Pilotage</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('chantiers','dashboard')"><i>📊</i>Tableau de bord</button>
+              <button class="tab-btn" onclick="switchTab('chantiers','gantt')"><i>📅</i>Planning Gantt</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Suivi terrain</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('chantiers','rapports')"><i>📋</i>Rapports hebdomadaires</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Analyse financière</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('chantiers','cout')"><i>💰</i>Coût de revient</button>
+              <button class="tab-btn" onclick="switchTab('chantiers','controle')"><i>🎯</i>Contrôle budget/réel</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-chantiers-dashboard">
           <div id="chantiers-dashboard"></div>
@@ -9435,14 +9677,30 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="openCampagne()">+ Nouvelle campagne</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('pac','dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchTab('pac','campagnes')">📣 Campagnes</button>
-          <button class="tab-btn" onclick="switchTab('pac','budget')">💰 Budget Marketing</button>
-          <button class="tab-btn" onclick="switchTab('pac','calendrier')">📅 Calendrier</button>
-          <button class="tab-btn" onclick="switchTab('pac','segments')">👥 Segments cibles</button>
-          <button class="tab-btn" onclick="switchTab('pac','roi')">📈 ROI & Performance</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Pilotage</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('pac','dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Planification</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('pac','segments')"><i>👥</i>Segments cibles</button>
+              <button class="tab-btn" onclick="switchTab('pac','budget')"><i>💰</i>Budget Marketing</button>
+              <button class="tab-btn" onclick="switchTab('pac','campagnes')"><i>📣</i>Campagnes</button>
+              <button class="tab-btn" onclick="switchTab('pac','calendrier')"><i>📅</i>Calendrier</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Résultats</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('pac','roi')"><i>📈</i>ROI &amp; Performance</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Dashboard PAC -->
         <div class="tab-pane active" id="tab-pac-dashboard">
@@ -9900,13 +10158,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         </div>
 
         <!-- Onglets -->
-        <div class="tab-nav" style="margin-bottom:18px;">
-          <button class="tab-btn active" onclick="switchTab('rapports','global')">📊 Vue globale</button>
-          <button class="tab-btn" onclick="switchTab('rapports','fiche')">👤 Fiche individuelle</button>
-          <button class="tab-btn" onclick="switchTab('rapports','objectifs')">🎯 Objectifs</button>
-          <button class="tab-btn" onclick="switchTab('rapports','commissions');renderCommissions();renderCommissionsBenef();">💰 Commissions</button>
-          <button class="tab-btn" onclick="switchTab('rapports','analyse')">📈 Analyses</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('rapports','global')"><i>📊</i>Vue globale</button>
+              <button class="tab-btn" onclick="switchTab('rapports','fiche')"><i>👤</i>Fiche individuelle</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Pilotage</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('rapports','objectifs')"><i>🎯</i>Objectifs</button>
+              <button class="tab-btn" onclick="switchTab('rapports','commissions');renderCommissions();renderCommissionsBenef();"><i>💰</i>Commissions</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Analyse</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('rapports','analyse')"><i>📈</i>Analyses</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- ── ONGLET VUE GLOBALE ── -->
         <div class="tab-pane active" id="tab-rapports-global">
@@ -10145,13 +10419,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary btn-sm" onclick="ouvrirSaisiePointage()">+ Saisie individuelle</button>
         </div>
 
-        <div class="tab-nav" id="pointage-tabs">
-          <button class="tab-btn active" onclick="switchTab('pointage','journalier')">📋 Tableau journalier</button>
-          <button class="tab-btn" onclick="switchTab('pointage','scan')">🎫 Scan Badge</button>
-          <button class="tab-btn" onclick="switchTab('pointage','mensuel')">📊 Récapitulatif mensuel</button>
-          <button class="tab-btn" onclick="switchTab('pointage','impact-paie')">💰 Impact sur la paie</button>
-          <button class="tab-btn" onclick="switchTab('pointage','absences')">🚨 Absences & Retards</button>
+        <div class="steps-nav" id="pointage-tabs" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Saisie</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('pointage','journalier')"><i>📋</i>Tableau journalier</button>
+              <button class="tab-btn" onclick="switchTab('pointage','scan')"><i>🎫</i>Scan Badge</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Consolidation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('pointage','mensuel')"><i>📊</i>Récapitulatif mensuel</button>
+              <button class="tab-btn" onclick="switchTab('pointage','impact-paie')"><i>💰</i>Impact sur la paie</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Contrôle</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('pointage','absences')"><i>🚨</i>Absences &amp; Retards</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- ── TABLEAU JOURNALIER RAPIDE ── -->
         <div class="tab-pane active" id="tab-pointage-journalier">
@@ -10519,13 +10809,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 
         <div id="am-kpis" style="margin-bottom:16px;"></div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('am','liste')">📋 Conventions</button>
-          <button class="tab-btn" onclick="switchTab('am','situations')">📊 Situations travaux</button>
-          <button class="tab-btn" onclick="switchTab('am','avenants')">📝 Avenants</button>
-          <button class="tab-btn" onclick="switchTab('am','garanties')">🔒 Retenues de garantie</button>
-          <button class="tab-btn" onclick="switchTab('am','amenageurs')">🏗️ Aménageurs</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Référentiel</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('am','amenageurs')"><i>🏗️</i>Aménageurs</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Contrat</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('am','liste')"><i>📋</i>Conventions</button>
+              <button class="tab-btn" onclick="switchTab('am','avenants')"><i>📝</i>Avenants</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Exécution</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('am','situations')"><i>📊</i>Situations travaux</button>
+              <button class="tab-btn" onclick="switchTab('am','garanties')"><i>🔒</i>Retenues de garantie</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-am-liste">
           <div class="card"><div class="table-wrap"><table>
@@ -10714,16 +11020,37 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
              chaque étape suit logiquement la précédente, sans jamais revenir en arrière.
              1. Vue d'ensemble → 2. Ce qui a été signé → 3. Ce qui est dû → 4. Payer →
              5. Preuve de paiement → 6. Ce que ça construit → 7. Vérification de confiance → 8. Archives -->
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchPortalTab('dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchPortalTab('contrat')">📄 Contrat & lots</button>
-          <button class="tab-btn" onclick="switchPortalTab('echeances')">📅 Échéancier</button>
-          <button class="tab-btn" onclick="switchPortalTab('paiement')">💸 Faire un versement</button>
-          <button class="tab-btn" onclick="switchPortalTab('versements')">💳 Mes versements</button>
-          <button class="tab-btn" onclick="switchPortalTab('travaux')">🏗️ Avancement Travaux</button>
-          <button class="tab-btn" id="portal-tab-btn-diaspora" style="display:none;" onclick="switchPortalTab('diaspora')">🌍 Espace Diaspora</button>
-          <button class="tab-btn" onclick="switchPortalTab('documents')">📁 Documents</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchPortalTab('dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Mon dossier</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortalTab('contrat')"><i>📄</i>Contrat &amp; lots</button>
+              <button class="tab-btn" onclick="switchPortalTab('echeances')"><i>📅</i>Échéancier</button>
+              <button class="tab-btn" onclick="switchPortalTab('travaux')"><i>🏗️</i>Avancement Travaux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Paiement</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortalTab('paiement')"><i>💸</i>Faire un versement</button>
+              <button class="tab-btn" onclick="switchPortalTab('versements')"><i>💳</i>Mes versements</button>
+              <button class="tab-btn" id="portal-tab-btn-diaspora" style="display:none;" onclick="switchPortalTab('diaspora')"><i>🌍</i>Espace Diaspora</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">4</span>Documents</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortalTab('documents')"><i>📁</i>Documents</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Dashboard -->
         <div class="tab-pane active" id="portal-tab-dashboard">
@@ -10875,13 +11202,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-secondary btn-sm" onclick="deconnecterFoncier()">🚪 Déconnexion</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchPortailFoncierTab('dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchPortailFoncierTab('versements')">💳 Mes versements</button>
-          <button class="tab-btn" onclick="switchPortailFoncierTab('declarer')">💸 Déclarer un versement</button>
-          <button class="tab-btn" onclick="switchPortailFoncierTab('immatriculation')">🏛️ Suivi &amp; Immatriculation</button>
-          <button class="tab-btn" onclick="switchPortailFoncierTab('documents')">📁 Documents</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchPortailFoncierTab('dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Paiement</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortailFoncierTab('versements')"><i>💳</i>Mes versements</button>
+              <button class="tab-btn" onclick="switchPortailFoncierTab('declarer')"><i>💸</i>Déclarer un versement</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Titre</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortailFoncierTab('immatriculation')"><i>🏛️</i>Suivi &amp; Immatriculation</button>
+              <button class="tab-btn" onclick="switchPortailFoncierTab('documents')"><i>📁</i>Documents</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Dashboard -->
         <div class="tab-pane active" id="portalf-tab-dashboard">
@@ -10998,12 +11341,18 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-secondary btn-sm" onclick="goTo('partenaires-lot')">← Retour à la liste</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('plf','info')">ℹ️ Identité</button>
-          <button class="tab-btn" onclick="switchTab('plf','dossiers')">🗺️ Terrains &amp; Dossiers</button>
-          <button class="tab-btn" onclick="switchTab('plf','avancement')">📸 Avancement &amp; Médias</button>
-          <button class="tab-btn" onclick="switchTab('plf','documents')">📁 Documents</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Fiche partenaire</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('plf','info')"><i>ℹ️</i>Identité</button>
+              <button class="tab-btn" onclick="switchTab('plf','dossiers')"><i>🗺️</i>Terrains &amp; Dossiers</button>
+              <button class="tab-btn" onclick="switchTab('plf','avancement')"><i>📸</i>Avancement &amp; Médias</button>
+              <button class="tab-btn" onclick="switchTab('plf','documents')"><i>📁</i>Documents</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-plf-info">
           <div class="card" id="plf-info-card"></div>
@@ -11047,11 +11396,22 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-secondary btn-sm" onclick="deconnecterPartenaireLot()">🚪 Déconnexion</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchPortailPartLotTab('dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchPortailPartLotTab('avancement')">🏗️ Avancement, Photos &amp; Vidéos</button>
-          <button class="tab-btn" onclick="switchPortailPartLotTab('documents')">📁 Documents</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchPortailPartLotTab('dashboard')"><i>📊</i>Tableau de bord</button>
+              <button class="tab-btn" onclick="switchPortailPartLotTab('avancement')"><i>🏗️</i>Avancement, Photos &amp; Vidéos</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Documents</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortailPartLotTab('documents')"><i>📁</i>Documents</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Dashboard -->
         <div class="tab-pane active" id="portpl-tab-dashboard">
@@ -11090,13 +11450,34 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-secondary btn-sm" onclick="deconnecterMandant()">🚪 Déconnexion</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchPortailMandantTab('dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchPortailMandantTab('biens')">🏠 Mes biens &amp; baux</button>
-          <button class="tab-btn" onclick="switchPortailMandantTab('quittances')">🧾 Loyers encaissés</button>
-          <button class="tab-btn" onclick="switchPortailMandantTab('reversements')">💸 Reversements</button>
-          <button class="tab-btn" onclick="switchPortailMandantTab('documents')">📁 Documents</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchPortailMandantTab('dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Patrimoine</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortailMandantTab('biens')"><i>🏠</i>Mes biens &amp; baux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Revenus</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortailMandantTab('quittances')"><i>🧾</i>Loyers encaissés</button>
+              <button class="tab-btn" onclick="switchPortailMandantTab('reversements')"><i>💸</i>Reversements</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">4</span>Documents</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchPortailMandantTab('documents')"><i>📁</i>Documents</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Dashboard -->
         <div class="tab-pane active" id="portmand-tab-dashboard">
@@ -11151,10 +11532,16 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary btn-sm" onclick="ouvrirUploadGlobal()">📁 Téléverser</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchArchiveTab('documents', event)">📄 Documents</button>
-          <button class="tab-btn" onclick="switchArchiveTab('signatures', event)">✍️ Signatures électroniques</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Archivage</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchArchiveTab('documents', event)"><i>📄</i>Documents</button>
+              <button class="tab-btn" onclick="switchArchiveTab('signatures', event)"><i>✍️</i>Signatures électroniques</button>
+            </div>
+          </div>
         </div>
+
 
         <style>
           .ged-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px;}
@@ -11233,13 +11620,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         <div id="accueil-alerte-attente" style="display:none;padding:12px 16px;background:rgba(234,88,12,0.12);border-left:4px solid var(--or);border-radius:8px;margin-bottom:16px;font-size:13px;"></div>
 
         <!-- Tabs -->
-        <div class="tab-nav">
-          <button class="tab-btn active" id="tab-btn-accueil-today"   onclick="switchTab('accueil','today');renderAccueilToday()">📋 Aujourd'hui</button>
-          <button class="tab-btn"        id="tab-btn-accueil-rdv"     onclick="switchTab('accueil','rdv');renderAccueilRDV()">📅 Planning RDV</button>
-          <button class="tab-btn"        id="tab-btn-accueil-historique" onclick="switchTab('accueil','historique');renderAccueilHistorique()">🗂️ Historique</button>
-          <button class="tab-btn"        id="tab-btn-accueil-stats"   onclick="switchTab('accueil','stats');renderAccueilStats()">📊 Statistiques</button>
-          <button class="tab-btn"        id="tab-btn-accueil-blacklist" onclick="switchTab('accueil','blacklist');renderAccueilBlacklist()">🚫 Liste noire</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" id="tab-btn-accueil-today" onclick="switchTab('accueil','today');renderAccueilToday()"><i>📋</i>Aujourd'hui</button>
+              <button class="tab-btn" id="tab-btn-accueil-rdv" onclick="switchTab('accueil','rdv');renderAccueilRDV()"><i>📅</i>Planning RDV</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Analyse</div>
+            <div class="etape-btns">
+              <button class="tab-btn" id="tab-btn-accueil-historique" onclick="switchTab('accueil','historique');renderAccueilHistorique()"><i>🗂️</i>Historique</button>
+              <button class="tab-btn" id="tab-btn-accueil-stats" onclick="switchTab('accueil','stats');renderAccueilStats()"><i>📊</i>Statistiques</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Sécurité</div>
+            <div class="etape-btns">
+              <button class="tab-btn" id="tab-btn-accueil-blacklist" onclick="switchTab('accueil','blacklist');renderAccueilBlacklist()"><i>🚫</i>Liste noire</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- Today -->
         <div class="tab-pane active" id="tab-accueil-today">
@@ -11528,13 +11931,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary btn-sm" onclick="genererDQEPourProgramme()">⚡ Générer DQE</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('dqe','nomenclature')">📋 Nomenclatures</button>
-          <button class="tab-btn" onclick="switchTab('dqe','prix')">💰 Prix unitaires</button>
-          <button class="tab-btn" onclick="switchTab('dqe','devis')">📄 Devis fournisseurs</button>
-          <button class="tab-btn" onclick="switchTab('dqe','analyse')">📊 Analyse &amp; Écarts</button>
-          <button class="tab-btn" onclick="switchTab('dqe','calculateur')">🧮 Calculateur matériaux</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Référentiel</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('dqe','nomenclature')"><i>📋</i>Nomenclatures</button>
+              <button class="tab-btn" onclick="switchTab('dqe','prix')"><i>💰</i>Prix unitaires</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Consultation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('dqe','devis')"><i>📄</i>Devis fournisseurs</button>
+              <button class="tab-btn" onclick="switchTab('dqe','calculateur')"><i>🧮</i>Calculateur matériaux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Contrôle</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('dqe','analyse')"><i>📊</i>Analyse &amp; Écarts</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- ── Onglet Nomenclatures ── -->
         <div class="tab-pane active" id="tab-dqe-nomenclature">
@@ -12297,13 +12716,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary btn-sm" onclick="edsOpenOuvrage()">+ Nouvel ouvrage</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('debourse','bib')">🧱 Bibliothèque d'ouvrages</button>
-          <button class="tab-btn" onclick="switchTab('debourse','ressources');edsRenderRes()">🔩 Ressources &amp; Prix</button>
-          <button class="tab-btn" onclick="switchTab('debourse','etudes')">📐 Études de prix</button>
-          <button class="tab-btn" onclick="switchTab('debourse','suivi')">📊 Suivi budgétaire</button>
-          <button class="tab-btn" onclick="switchTab('debourse','syscohada')">🧾 Imputations SYSCOHADA</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Référentiel</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('debourse','bib')"><i>🧱</i>Bibliothèque d'ouvrages</button>
+              <button class="tab-btn" onclick="switchTab('debourse','ressources');edsRenderRes()"><i>🔩</i>Ressources &amp; Prix</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Étude</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('debourse','etudes')"><i>📐</i>Études de prix</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Suivi</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('debourse','suivi')"><i>📊</i>Suivi budgétaire</button>
+              <button class="tab-btn" onclick="switchTab('debourse','syscohada')"><i>🧾</i>Imputations SYSCOHADA</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- ── Onglet Ressources & Prix ── -->
         <div class="tab-pane" id="tab-debourse-ressources">
@@ -12522,12 +12957,28 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary btn-sm" onclick="afNewOperation()">+ Nouvelle opération</button>
         </div>
 
-        <div class="tab-nav">
-          <button class="tab-btn active" onclick="switchTab('af','pipeline')">🗂 Pipeline</button>
-          <button class="tab-btn" onclick="switchTab('af','agents')">🧑‍💼 Agents du foncier</button>
-          <button class="tab-btn" onclick="switchTab('af','dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchTab('af','relances');afRenderRelances();">🔔 Relances</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Référentiel</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('af','agents')"><i>🧑‍💼</i>Agents du foncier</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Acquisition</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('af','pipeline')"><i>🗂</i>Pipeline</button>
+              <button class="tab-btn" onclick="switchTab('af','relances');afRenderRelances();"><i>🔔</i>Relances</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Pilotage</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('af','dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-af-pipeline">
           <div class="filters-bar" style="margin-bottom:12px;">
@@ -12741,12 +13192,28 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="btn btn-primary" onclick="kycOpen()">+ Fiche de vigilance</button>
         </div>
 
-        <div class="tab-nav" style="margin-bottom:14px;">
-          <button class="tab-btn active" onclick="switchTab('lbcft','alertes')">🚨 Opérations à examiner</button>
-          <button class="tab-btn" onclick="switchTab('lbcft','kyc')">📋 Vigilance clientèle</button>
-          <button class="tab-btn" onclick="switchTab('lbcft','declarations')">🔒 Déclarations de soupçon</button>
-          <button class="tab-btn" onclick="switchTab('lbcft','dispositif')">⚙️ Dispositif interne</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Vigilance</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('lbcft','kyc')"><i>📋</i>Vigilance clientèle</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Contrôle</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('lbcft','alertes')"><i>🚨</i>Opérations à examiner</button>
+              <button class="tab-btn" onclick="switchTab('lbcft','declarations')"><i>🔒</i>Déclarations de soupçon</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Gouvernance</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('lbcft','dispositif')"><i>⚙️</i>Dispositif interne</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-lbcft-alertes">
           <div class="alert alert-info">Ces constats n'établissent pas un soupçon : ils appellent un examen. Toute décision — examen approfondi, écartement motivé, déclaration — doit être tracée : le contrôle vérifie la justification, pas seulement le résultat.</div>
@@ -12810,13 +13277,29 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 
         <div id="dsp-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
 
-        <div class="tab-nav" style="margin-bottom:14px;">
-          <button class="tab-btn active" onclick="switchTab('diaspo','dossiers')">🗂️ Dossiers</button>
-          <button class="tab-btn" onclick="switchTab('diaspo','preuve')">🔐 Chaîne de preuve</button>
-          <button class="tab-btn" onclick="switchTab('diaspo','sequestre')">🔒 Séquestre par jalons</button>
-          <button class="tab-btn" onclick="switchTab('diaspo','parts')">👨‍👩‍👧 Co-investissement</button>
-          <button class="tab-btn" onclick="switchTab('diaspo','ancrage')">⚓ Ancrage &amp; certificat</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Dossier</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('diaspo','dossiers')"><i>🗂️</i>Dossiers</button>
+              <button class="tab-btn" onclick="switchTab('diaspo','parts')"><i>👨‍👩‍👧</i>Co-investissement</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Sécurisation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('diaspo','sequestre')"><i>🔒</i>Séquestre par jalons</button>
+              <button class="tab-btn" onclick="switchTab('diaspo','preuve')"><i>🔐</i>Chaîne de preuve</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Certification</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('diaspo','ancrage')"><i>⚓</i>Ancrage &amp; certificat</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-diaspo-dossiers">
           <div class="filters-bar" style="flex-wrap:wrap;">
@@ -13148,13 +13631,34 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 
         <div id="cop-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
 
-        <div class="tab-nav" style="margin-bottom:14px;">
-          <button class="tab-btn active" onclick="switchTab('copropriete','immeubles')">🏢 Immeubles &amp; lots</button>
-          <button class="tab-btn" onclick="switchTab('copropriete','budgets')">📋 Budgets</button>
-          <button class="tab-btn" onclick="switchTab('copropriete','appels')">🧾 Appels de charges</button>
-          <button class="tab-btn" onclick="switchTab('copropriete','ag')">🗳️ Assemblées générales</button>
-          <button class="tab-btn" onclick="switchTab('copropriete','fonds')">🛠️ Fonds travaux</button>
+        <div class="steps-nav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Référentiel</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('copropriete','immeubles')"><i>🏢</i>Immeubles &amp; lots</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Budget</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('copropriete','budgets')"><i>📋</i>Budgets</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Exécution</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('copropriete','appels')"><i>🧾</i>Appels de charges</button>
+              <button class="tab-btn" onclick="switchTab('copropriete','fonds')"><i>🛠️</i>Fonds travaux</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">4</span>Gouvernance</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('copropriete','ag')"><i>🗳️</i>Assemblées générales</button>
+            </div>
+          </div>
         </div>
+
 
         <div class="tab-pane active" id="tab-copropriete-immeubles">
           <div class="card" style="margin-bottom:14px;">
@@ -13486,17 +13990,43 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         </div>
 
         <!-- ── ONGLETS PRINCIPAUX ── -->
-        <div class="tab-nav" id="rd-main-tabnav">
-          <button class="tab-btn active" onclick="switchTab('rd','dashboard')">📊 Tableau de bord</button>
-          <button class="tab-btn" onclick="switchTab('rd','planifier')">📅 Planifier</button>
-          <button class="tab-btn" onclick="switchTab('rd','convocation')">📨 Convocations</button>
-          <button class="tab-btn" onclick="switchTab('rd','preparation')">📋 Préparation</button>
-          <button class="tab-btn" onclick="switchTab('rd','realisation')">🎙️ Réunion</button>
-          <button class="tab-btn" onclick="switchTab('rd','pv')">📄 PV & Actions</button>
-          <button class="tab-btn" onclick="switchTab('rd','diffusion')">📤 Diffusion</button>
-          <button class="tab-btn" onclick="switchTab('rd','suivi')">✅ Suivi Actions</button>
-          <button class="tab-btn" onclick="switchTab('rd','analyse360')">🔍 Analyse 360°</button>
+        <div class="steps-nav" id="rd-main-tabnav" style="margin-bottom:18px;">
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">1</span>Pilotage</div>
+            <div class="etape-btns">
+              <button class="tab-btn active" onclick="switchTab('rd','dashboard')"><i>📊</i>Tableau de bord</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">2</span>Organisation</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('rd','planifier')"><i>📅</i>Planifier</button>
+              <button class="tab-btn" onclick="switchTab('rd','convocation')"><i>📨</i>Convocations</button>
+              <button class="tab-btn" onclick="switchTab('rd','preparation')"><i>📋</i>Préparation</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">3</span>Tenue</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('rd','realisation')"><i>🎙️</i>Réunion</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">4</span>Suites</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('rd','pv')"><i>📄</i>PV &amp; Actions</button>
+              <button class="tab-btn" onclick="switchTab('rd','diffusion')"><i>📤</i>Diffusion</button>
+              <button class="tab-btn" onclick="switchTab('rd','suivi')"><i>✅</i>Suivi Actions</button>
+            </div>
+          </div>
+          <div class="etape">
+            <div class="etape-hd"><span class="etape-num">5</span>Analyse</div>
+            <div class="etape-btns">
+              <button class="tab-btn" onclick="switchTab('rd','analyse360')"><i>🔍</i>Analyse 360°</button>
+            </div>
+          </div>
         </div>
+
 
         <!-- ════════ TAB : DASHBOARD ════════ -->
         <div class="tab-pane active" id="tab-rd-dashboard">
@@ -23372,7 +23902,7 @@ function switchTab(context, tab) {
     var activePane = document.getElementById(prefix + tab);
     if (activePane) activePane.classList.add('active');
     // Mettre à jour la classe active sur les boutons — ciblage précis
-    document.querySelectorAll('#page-crm-rapports .tab-nav .tab-btn').forEach(function(btn) {
+    document.querySelectorAll('#page-crm-rapports .tab-btn').forEach(function(btn) {
       btn.classList.remove('active');
       var oc = btn.getAttribute('onclick') || '';
       if (oc.indexOf("switchTab('rapports','" + tab + "')") !== -1) {
