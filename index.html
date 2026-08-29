@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v14.113 · 2026-08-27 — CORRECTIF : le repli « type non reconnu → gabarit F2 » (v14.112) rebaptisait silencieusement le type réel du lot en « F2 » dans le tableau — un lot dont le type ne correspondait à aucune nomenclature affichait littéralement « F2 » comme si c\'était sa vraie catégorie, alors qu\'il ne l\'était pas. Corrigé : le tableau affiche maintenant le type RÉELLEMENT saisi sur le lot, avec la mention « (gabarit F2) » seulement quand un repli a eu lieu — le vrai type n\'est plus jamais masqué. Corrigé aussi : la comparaison avec les nomenclatures existantes ignorait la casse et les espaces — une nomenclature créée pour "Villa T4" ne correspondait pas à un lot valant "villa t4", retombant à tort sur le gabarit par défaut alors que le DQE avait bien été réalisé. Comparaison normalisée ajoutée en complément de l\'exacte. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
+window.IMMOSUITE_VERSION = 'v14.116 · 2026-08-27 — CORRECTIF : aucun bouton Modifier n\'existait sur la liste des fournisseurs (page ET modale rapide) — seule la suppression était possible, ce qui aurait cassé le lien avec les BC/mouvements de stock déjà rattachés à la fiche en cas de recréation. Ajout du bouton ✏️ Modifier sur les deux listes : précharge la fiche dans le formulaire, le bouton Enregistrer bascule en « mise à jour » de l\'enregistrement existant (même id conservé) au lieu de toujours créer un nouveau fournisseur. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -5047,10 +5047,13 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               <div class="form-group" id="fo-wrap-ncc"><label>NCC</label><input class="form-control" id="fo-ncc"></div>
               <div class="form-group" id="fo-wrap-cni" style="display:none;"><label>N° CNI / Pièce</label><input class="form-control" id="fo-cni"></div>
               <div class="form-group"><label>Contact / Tél</label><input class="form-control" id="fo-contact"></div>
+              <div class="form-group"><label>Email</label><input type="email" class="form-control" id="fo-email"></div>
+              <div class="form-group span-2"><label>Adresse</label><input class="form-control" id="fo-adresse"></div>
               <div class="form-group"><label>Compte (401x)</label><input class="form-control" id="fo-compte" placeholder="401"></div>
+              <div class="form-group"><label>Délai de livraison habituel (jours)</label><input type="number" class="form-control" id="fo-delai" min="0" placeholder="Ex : 7"></div>
               <div class="form-group span-2"><label style="font-weight:normal;font-size:12px;"><input type="checkbox" id="fo-airsi" style="margin-right:6px;"> Soumis à l'AIRSI (retenue à la source)</label></div>
             </div>
-            <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="saveFournisseur()">Ajouter le fournisseur</button>
+            <button class="btn btn-primary btn-sm" id="fo-btn-save" style="margin-top:8px;" onclick="saveFournisseur()">Ajouter le fournisseur</button>
             <div id="fo-liste" style="margin-top:12px;"></div>
           </div>
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-fournisseurs')">Fermer</button></div>
@@ -5163,7 +5166,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
               <div class="form-group"><label>N°</label><input class="form-control" id="bc-numero" placeholder="auto"></div>
               <div class="form-group"><label>Date</label><input type="date" class="form-control" id="bc-date"></div>
-              <div class="form-group"><label>Fournisseur *</label><select class="form-control" id="bc-fournisseur"></select></div>
+              <div class="form-group"><label>Fournisseur *</label><select class="form-control" id="bc-fournisseur" onchange="bcPrefillDelai()"></select></div>
               <div class="form-group"><label>Chantier (convention)</label><select class="form-control" id="bc-chantier"></select></div>
               <div class="form-group"><label>Division (si sans chantier)</label><select class="form-control" id="bc-division"><option value="">— déduite du chantier —</option></select></div>
               <div class="form-group"><label>Dépôt de réception</label><select class="form-control" id="bc-depot"></select></div>
@@ -5250,10 +5253,13 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div class="form-group" id="fpg-wrap-ncc"><label>NCC</label><input class="form-control" id="fpg-ncc"></div>
             <div class="form-group" id="fpg-wrap-cni" style="display:none;"><label>N° CNI / Pièce</label><input class="form-control" id="fpg-cni"></div>
             <div class="form-group"><label>Contact / Tél</label><input class="form-control" id="fpg-contact"></div>
+            <div class="form-group"><label>Email</label><input type="email" class="form-control" id="fpg-email"></div>
+            <div class="form-group span-2"><label>Adresse</label><input class="form-control" id="fpg-adresse"></div>
             <div class="form-group"><label>Compte (401x)</label><input class="form-control" id="fpg-compte" placeholder="401"></div>
+            <div class="form-group"><label>Délai de livraison habituel (jours)</label><input type="number" class="form-control" id="fpg-delai" min="0" placeholder="Ex : 7"></div>
             <div class="form-group span-2"><label style="font-weight:normal;font-size:12px;"><input type="checkbox" id="fpg-airsi" style="margin-right:6px;"> Soumis à l'AIRSI (retenue à la source)</label></div>
           </div>
-          <div style="margin-top:10px;text-align:right;"><button class="btn btn-primary" onclick="saveFournisseurPage()">💾 Enregistrer</button></div>
+          <div style="margin-top:10px;text-align:right;"><button class="btn btn-primary" id="fpg-btn-save" onclick="saveFournisseurPage()">💾 Enregistrer</button></div>
         </div>
         <div class="card">
           <input type="text" class="search-input" placeholder="🔍 Nom, RCCM, NCC, CNI, contact..." id="fpg-search" oninput="_debInput('renderFournisseursPageListe')" style="margin-bottom:12px;">
@@ -13091,6 +13097,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <button class="btn btn-secondary btn-sm" onclick="exporterNomenclatureCSV()">⬇ CSV</button>
             <button class="btn btn-secondary btn-sm" onclick="printPreviewDQE()" title="Aperçu avant impression">🖨️ Aperçu & imprimer</button>
             <button class="btn btn-secondary btn-sm" id="dqe-btn-vue-ouvrage" onclick="dqeToggleVueOuvrage()" title="Regrouper par corps d'état, avec le détail matériau/main-d'œuvre/matériel de chaque prix">🏗️ Par ouvrage & sous-détail</button>
+            <button class="btn btn-primary btn-sm" onclick="genererBCDepuisDQE()" title="Regroupe tous les matériaux de ce DQE (et de ses ouvrages liés) en un bon de commande, quantités agrégées par ressource">🛒 Générer un bon de commande</button>
           </div>
           <div class="card" id="dqe-card-liste">
             <div class="table-wrap">
@@ -87737,6 +87744,7 @@ function edsRenderBib() {
         '<td style="text-align:right;">' + fmtF(d.st) + '</td>' +
         '<td style="text-align:right;font-weight:700;color:var(--vert,#1A6B3A);">' + fmtF(d.total) + '</td>' +
         '<td><button class="btn btn-secondary btn-sm" onclick="edsOpenOuvrage(\'' + o.id + '\')">✎</button> ' +
+        '<button class="btn btn-secondary btn-sm" onclick="genererBCDepuisOuvrage(\'' + o.id + '\')" title="Générer un bon de commande pour les matériaux de cet ouvrage">🛒</button> ' +
         '<button class="btn btn-secondary btn-sm" onclick="edsDeleteOuvrage(\'' + o.id + '\')">🗑</button></td>' +
         '</tr>';
     }).join('');
@@ -94420,6 +94428,118 @@ function bcLineSet(i,field,val){
 }
 function bcAddLine(){ bcLines.push({res_id:'',designation:'',unite:'',qte:1,pu:0}); bcRenderLines(); }
 function bcRemoveLine(i){ bcLines.splice(i,1); bcRenderLines(); }
+/* Utilise le délai de livraison habituel du fournisseur (nouveau champ) pour
+   préremplir la date souhaitée — n'écrase jamais une date déjà choisie
+   manuellement, seulement si le champ est encore vide. */
+function bcPrefillDelai(){
+  var fid = (document.getElementById('bc-fournisseur')||{}).value;
+  var elDelai = document.getElementById('bc-delai');
+  if (!fid || !elDelai || elDelai.value) return;
+  var f = (DATA.fournisseurs||[]).find(function(x){ return x.id===fid; });
+  if (f && f.delai_livraison) {
+    var d = new Date(); d.setDate(d.getDate() + f.delai_livraison);
+    elDelai.value = d.toISOString().slice(0,10);
+  }
+}
+
+/* ── Générer un bon de commande depuis le DQE ────────────────────────────
+   Parcourt toutes les lignes de nomenclature du type sélectionné, et pour
+   chacune : si elle est liée à un ouvrage (Déboursé Sec), déplie ses
+   composants matériau et cumule les quantités par ressource ; sinon,
+   tente de rattacher directement le libellé « Matériau / Prestation » à une
+   ressource du catalogue (même correspondance normalisée que _typeKey) ;
+   à défaut, garde une ligne libre. Les quantités sont multipliées par le
+   nombre d'unités à commander (1 logement par défaut, ajustable). Un même
+   matériau utilisé dans plusieurs postes/ouvrages n'apparaît qu'une seule
+   fois, quantité totale — c'est tout l'intérêt face à un DQE ligne par
+   ligne, pas exploitable tel quel pour passer commande. */
+function genererBCDepuisDQE() {
+  var type = (document.getElementById('dqe-type-logement') || {}).value || 'F2';
+  var nomens = dqeNomenclaturesPourType(type).nomens;
+  if (!nomens.length) { toast('Aucun poste chiffré pour ce type — rien à commander.', 'error'); return; }
+  var nb = parseInt(prompt('Générer le bon de commande pour combien d\'unités de "' + type + '" ?', '1'), 10);
+  if (!nb || nb < 1) return;
+
+  var parRessource = {};   // res_id -> quantité cumulée
+  var lignesLibres = [];   // sans ressource identifiable
+  function ajouterRessource(resId, qte) {
+    parRessource[resId] = (parRessource[resId] || 0) + qte;
+  }
+  function trouverRessourceParLibelle(lib) {
+    var norm = (lib || '').trim().toLowerCase();
+    if (!norm) return null;
+    return (DATA.eds_ressources || []).find(function(r) { return (r.libelle || '').trim().toLowerCase() === norm; }) || null;
+  }
+
+  nomens.forEach(function(n) {
+    var qteLigne = (parseFloat(n.quantite) || 0) * nb;
+    if (n.ouvrage_id) {
+      var ouvrage = (DATA.eds_ouvrages || []).find(function(o) { return o.id === n.ouvrage_id; });
+      if (ouvrage) {
+        (ouvrage.composants || []).filter(function(c) { return c.type === 'materiau'; }).forEach(function(c) {
+          var qteComposant = (parseFloat(c.qte) || 0) * qteLigne;
+          if (c.res_id) ajouterRessource(c.res_id, qteComposant);
+          else {
+            var rTrouve = trouverRessourceParLibelle(c.designation || c.libelle);
+            if (rTrouve) ajouterRessource(rTrouve.id, qteComposant);
+            else lignesLibres.push({ designation: c.designation || c.libelle || 'Composant', unite: c.unite || '', qte: qteComposant, pu: (typeof edsResPU === 'function' ? edsResPU(c) : (parseFloat(c.pu) || 0)) });
+          }
+        });
+        return;
+      }
+    }
+    /* Ligne directe (pas d'ouvrage) : tenter le rattachement au catalogue. */
+    var rDirect = trouverRessourceParLibelle(n.materiau);
+    if (rDirect) ajouterRessource(rDirect.id, qteLigne);
+    else lignesLibres.push({ designation: n.materiau || '(sans désignation)', unite: n.unite || '', qte: qteLigne, pu: n.quantite ? Math.round((n.prix_forfait || 0) / n.quantite) : 0 });
+  });
+
+  var lignesGenerees = Object.keys(parRessource).map(function(resId) {
+    var r = (DATA.eds_ressources || []).find(function(x) { return x.id === resId; });
+    return { res_id: resId, designation: '', unite: r ? r.unite : '', qte: Math.round(parRessource[resId] * 100) / 100, pu: r ? (r.pu || 0) : 0 };
+  }).concat(lignesLibres.map(function(l) {
+    return { res_id: '__libre__', designation: l.designation, unite: l.unite, qte: Math.round(l.qte * 100) / 100, pu: Math.round(l.pu) };
+  }));
+
+  if (!lignesGenerees.length) { toast('Aucun matériau exploitable dans ce DQE (uniquement main-d\'œuvre/forfaits ?).', 'error'); return; }
+
+  openBC(null);
+  bcLines = lignesGenerees;
+  bcRenderLines();
+  var notesEl = document.getElementById('bc-notes');
+  if (notesEl) notesEl.value = 'Généré depuis DQE — type ' + type + ' × ' + nb + ' unité(s)';
+  toast('🛒 ' + lignesGenerees.length + ' ligne(s) générée(s) depuis le DQE — vérifiez fournisseur et prix avant d\'enregistrer.', 'success');
+}
+
+/* ── Générer un bon de commande depuis un ouvrage du Déboursé Sec ────────
+   Version allégée pour un usage direct depuis Déboursé Sec, sans passer
+   par un type de logement complet : un seul ouvrage, ses composants
+   matériau, la quantité d'ouvrages à réaliser. */
+function genererBCDepuisOuvrage(ouvrageId) {
+  var o = (DATA.eds_ouvrages || []).find(function(x) { return x.id === ouvrageId; });
+  if (!o) { toast('Ouvrage introuvable.', 'error'); return; }
+  var mats = (o.composants || []).filter(function(c) { return c.type === 'materiau'; });
+  if (!mats.length) { toast('Cet ouvrage n\'a aucun composant matériau — rien à commander.', 'error'); return; }
+  var qteOuvrages = parseFloat(prompt('Quantité de "' + (o.designation || o.code) + '" (' + (o.unite || '') + ') à réaliser ?', '1'));
+  if (!qteOuvrages || qteOuvrages <= 0) return;
+
+  var lignesGenerees = mats.map(function(c) {
+    var qte = Math.round((parseFloat(c.qte) || 0) * qteOuvrages * 100) / 100;
+    if (c.res_id) {
+      var r = (DATA.eds_ressources || []).find(function(x) { return x.id === c.res_id; });
+      return { res_id: c.res_id, designation: '', unite: r ? r.unite : (c.unite || ''), qte: qte, pu: r ? (r.pu || 0) : (parseFloat(c.pu) || 0) };
+    }
+    return { res_id: '__libre__', designation: c.designation || c.libelle || 'Composant', unite: c.unite || '', qte: qte, pu: Math.round(parseFloat(c.pu) || 0) };
+  });
+
+  openBC(null);
+  bcLines = lignesGenerees;
+  bcRenderLines();
+  var notesEl = document.getElementById('bc-notes');
+  if (notesEl) notesEl.value = 'Généré depuis Déboursé Sec — ' + (o.designation || o.code) + ' × ' + qteOuvrages + ' ' + (o.unite || '');
+  toast('🛒 ' + lignesGenerees.length + ' ligne(s) générée(s) depuis l\'ouvrage — vérifiez fournisseur et prix avant d\'enregistrer.', 'success');
+}
+
 function openBC(id){
   stockEnsureDepots();
   document.getElementById('bc-fournisseur').innerHTML=fournisseurOptions('');
@@ -95205,38 +95325,89 @@ function renderFournisseursPageListe() {
       + '<td style="font-size:12px;">' + escHtml(fr.contact || '—') + '</td>'
       + '<td style="font-size:12px;">' + escHtml(fr.compte || '—') + '</td>'
       + '<td>' + (fr.airsi ? '<span class="badge badge-or" style="font-size:9px;">AIRSI</span>' : '—') + '</td>'
-      + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\'' + fr.id + '\')">🗑</button></td>'
+      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="editFournisseur(\'' + fr.id + '\',\'fpg\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\'' + fr.id + '\')">🗑</button></td>'
       + '</tr>';
   }).join('');
 }
 
-async function saveFournisseurPage() {
-  var typeTiers = document.getElementById('fpg-typetiers').value;
+/* [FIX doublon] La page et la modale « Nouveau fournisseur » dupliquaient
+   intégralement la même logique de sauvegarde sous deux noms de fonction
+   différents (saveFournisseur / saveFournisseurPage) — un correctif ou un
+   nouveau champ ajouté dans l'un n'était jamais répercuté dans l'autre.
+   Une seule fonction commune, paramétrée par le préfixe des champs (« fo »
+   pour la modale, « fpg » pour la page). */
+/* [FIX] Aucun bouton Modifier n'existait sur la liste des fournisseurs — la
+   fiche n'était éditable qu'en la supprimant et en la recréant, perdant
+   son id (donc son lien avec les BC/mouvements de stock déjà rattachés).
+   État d'édition partagé entre les deux formulaires (page + modale), pas
+   de risque de collision avec APP.editingId utilisé ailleurs. */
+var _fournisseurEnEdition = { id: null, pfx: null };
+function editFournisseur(id, pfx) {
+  var fr = (DATA.fournisseurs || []).find(function(x) { return x.id === id; });
+  if (!fr) return;
+  _fournisseurEnEdition = { id: id, pfx: pfx };
+  var set = function(field, val) { var e = document.getElementById(pfx + '-' + field); if (e) e.value = val || ''; };
+  var typeEl = document.getElementById(pfx + '-typetiers'); if (typeEl) typeEl.value = fr.type_tiers || 'entreprise';
+  fournisseurTypeToggle();
+  set('nom', fr.nom); set('rccm', fr.rccm); set('ncc', fr.ncc); set('cni', fr.cni);
+  set('contact', fr.contact); set('email', fr.email); set('adresse', fr.adresse);
+  set('compte', fr.compte); set('delai', fr.delai_livraison);
+  var airEl = document.getElementById(pfx + '-airsi'); if (airEl) airEl.checked = !!fr.airsi;
+  var btn = document.getElementById(pfx + '-btn-save');
+  if (btn) btn.textContent = '💾 Enregistrer les modifications';
+  if (pfx === 'fo') { openFournisseurs(); document.getElementById('fo-nom').focus(); }
+  else document.getElementById('fpg-nom').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function _annulerEditionFournisseur(pfx) {
+  _fournisseurEnEdition = { id: null, pfx: null };
+  var btn = document.getElementById(pfx + '-btn-save');
+  if (btn) btn.textContent = pfx === 'fpg' ? '💾 Enregistrer' : 'Ajouter le fournisseur';
+}
+
+async function _saveFournisseurCommun(pfx) {
+  var g = function(id) { var e = document.getElementById(pfx + '-' + id); return e ? e.value.trim() : ''; };
+  var typeTiers = document.getElementById(pfx + '-typetiers').value;
   var phys = (typeTiers === 'physique');
-  var nom = document.getElementById('fpg-nom').value.trim();
-  if (!nom) { toast(phys ? 'Nom et prénoms requis.' : 'Raison sociale requise.', 'error'); return; }
-  var fr = {
-    id: uid(), type_tiers: typeTiers, nom: nom,
-    rccm: phys ? '' : document.getElementById('fpg-rccm').value.trim(),
-    ncc: phys ? '' : document.getElementById('fpg-ncc').value.trim(),
-    cni: phys ? document.getElementById('fpg-cni').value.trim() : '',
-    contact: document.getElementById('fpg-contact').value.trim(),
-    compte: (document.getElementById('fpg-compte').value.trim() || requireCompteDefaut('fournisseur')),
-    airsi: (document.getElementById('fpg-airsi') || {}).checked || false, created_at: today()
-  };
+  var nom = g('nom');
+  if (!nom) { toast(phys ? 'Nom et prénoms requis.' : 'Raison sociale requise.', 'error'); return null; }
+  var enEdition = _fournisseurEnEdition.id && _fournisseurEnEdition.pfx === pfx;
+  var fr = enEdition
+    ? (DATA.fournisseurs || []).find(function(x) { return x.id === _fournisseurEnEdition.id; })
+    : null;
+  if (enEdition && !fr) { enEdition = false; } // fiche supprimée entre-temps : repli sur création
+  if (!fr) { fr = { id: uid(), created_at: today() }; }
+  fr.type_tiers = typeTiers;
+  fr.nom = nom;
+  fr.rccm = phys ? '' : g('rccm');
+  fr.ncc = phys ? '' : g('ncc');
+  fr.cni = phys ? g('cni') : '';
+  fr.contact = g('contact');
+  fr.email = g('email');
+  fr.adresse = g('adresse');
+  fr.delai_livraison = (function(){ var v = parseInt(g('delai'), 10); return isNaN(v) ? null : v; })();
+  fr.compte = (g('compte') || requireCompteDefaut('fournisseur'));
+  fr.airsi = (document.getElementById(pfx + '-airsi') || {}).checked || false;
   if (!DATA.fournisseurs) DATA.fournisseurs = [];
-  DATA.fournisseurs.push(fr);
+  if (!enEdition) DATA.fournisseurs.push(fr);
   await dbPut('fournisseurs', fr);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_fournisseurs', fr);
-  ['fpg-nom', 'fpg-rccm', 'fpg-ncc', 'fpg-cni', 'fpg-contact', 'fpg-compte'].forEach(function(id) { document.getElementById(id).value = ''; });
-  var _fa = document.getElementById('fpg-airsi'); if (_fa) _fa.checked = false;
-  document.getElementById('fpg-typetiers').value = 'entreprise';
+  ['nom', 'rccm', 'ncc', 'cni', 'contact', 'email', 'adresse', 'delai', 'compte'].forEach(function(id) {
+    var e = document.getElementById(pfx + '-' + id); if (e) e.value = '';
+  });
+  var airEl = document.getElementById(pfx + '-airsi'); if (airEl) airEl.checked = false;
+  var typeEl = document.getElementById(pfx + '-typetiers'); if (typeEl) typeEl.value = 'entreprise';
   fournisseurTypeToggle();
+  _annulerEditionFournisseur(pfx);
+  renderFournisseursListe();
   renderFournisseursPageListe();
   renderDlFournisseurs();
   var selF = document.getElementById('se-fournisseur'); if (selF) selF.innerHTML = fournisseurOptions(fr.id);
-  toast('Fournisseur enregistré.', 'success');
+  var selBC = document.getElementById('bc-fournisseur'); if (selBC) selBC.innerHTML = fournisseurOptions(fr.id);
+  toast(enEdition ? 'Fournisseur mis à jour.' : 'Fournisseur enregistré.', 'success');
+  return fr;
 }
+async function saveFournisseurPage() { return _saveFournisseurCommun('fpg'); }
+async function saveFournisseur() { return _saveFournisseurCommun('fo'); }
 
 function openFournisseurs(){
   ['fo-nom','fo-rccm','fo-ncc','fo-contact','fo-cni'].forEach(function(id){document.getElementById(id).value='';});
@@ -95252,27 +95423,7 @@ function renderFournisseursListe(){
   var z=document.getElementById('fo-liste'); if(!z) return;
   var l=DATA.fournisseurs||[];
   if(!l.length){ z.innerHTML='<div style="font-size:11px;color:var(--blanc-dim);">Aucun fournisseur.</div>'; return; }
-  z.innerHTML=l.map(function(fr){ var phys=fr.type_tiers==='physique'; return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;border-bottom:1px solid var(--bord);padding:5px 0;"><span>'+(phys?'👤':'🏢')+' <strong>'+fr.nom+'</strong>'+(phys?(fr.cni?(' · '+fr.cni):''):(fr.ncc?(' · NCC '+fr.ncc):''))+(fr.compte?(' · '+fr.compte):'')+(fr.airsi?' <span class="badge badge-or" style="font-size:9px;">AIRSI</span>':'')+'</span><button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\''+fr.id+'\')">🗑</button></div>'; }).join('');
-}
-async function saveFournisseur(){
-  var typeTiers=document.getElementById('fo-typetiers').value;
-  var phys=(typeTiers==='physique');
-  var nom=document.getElementById('fo-nom').value.trim();
-  if(!nom){ toast(phys?'Nom et prénoms requis.':'Raison sociale requise.','error'); return; }
-  var fr={ id:uid(), type_tiers:typeTiers, nom:nom,
-    rccm: phys?'':document.getElementById('fo-rccm').value.trim(),
-    ncc: phys?'':document.getElementById('fo-ncc').value.trim(),
-    cni: phys?document.getElementById('fo-cni').value.trim():'',
-    contact:document.getElementById('fo-contact').value.trim(),
-    compte:(document.getElementById('fo-compte').value.trim()||requireCompteDefaut('fournisseur')),
-    airsi:(document.getElementById('fo-airsi')||{}).checked||false, created_at:today() };
-  if(!DATA.fournisseurs) DATA.fournisseurs=[];
-  DATA.fournisseurs.push(fr); await dbPut('fournisseurs',fr); if(typeof syncToSupabase==='function')syncToSupabase('pi_fournisseurs',fr);
-  ['fo-nom','fo-rccm','fo-ncc','fo-contact','fo-cni'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('fo-compte').value=''; var _fa2=document.getElementById('fo-airsi'); if(_fa2)_fa2.checked=false;
-  renderFournisseursListe();
-  renderDlFournisseurs();
-  var selF=document.getElementById('se-fournisseur'); if(selF) selF.innerHTML=fournisseurOptions(fr.id);
-  toast('Fournisseur ajouté.','success');
+  z.innerHTML=l.map(function(fr){ var phys=fr.type_tiers==='physique'; return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;border-bottom:1px solid var(--bord);padding:5px 0;"><span>'+(phys?'👤':'🏢')+' <strong>'+fr.nom+'</strong>'+(phys?(fr.cni?(' · '+fr.cni):''):(fr.ncc?(' · NCC '+fr.ncc):''))+(fr.compte?(' · '+fr.compte):'')+(fr.airsi?' <span class="badge badge-or" style="font-size:9px;">AIRSI</span>':'')+'</span><span><button class="btn btn-secondary btn-sm btn-icon" onclick="editFournisseur(\''+fr.id+'\',\'fo\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\''+fr.id+'\')">🗑</button></span></div>'; }).join('');
 }
 async function deleteFournisseur(id){
   if(!confirm('Supprimer ce fournisseur ?')) return;
