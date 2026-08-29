@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v14.112 · 2026-08-27 — CORRECTIF MAJEUR : la revue « État du programme avant validation » (Générer DQE) et la validation qui l\'accompagne ne distinguaient jamais un lot terrain nu d\'un lot logement — un lot sans type explicite retombait par défaut sur « F2 » et se voyait attribuer un coût de construction (villa/appartement) alors qu\'un terrain n\'a par définition aucun coût DQE construction. Sur un programme 100% lotissement (ex. Parcelle Test), tous les lots auraient reçu un coût de revient fictif lors de la validation. Corrigé : les lots terrain sont désormais exclus du tableau de costification et jamais écrits avec un coût DQE — un encart bleu indique combien de lots terrain ont été exclus et rappelle que leur coût de revient réel (foncier + aménagement) se suit dans le Bilan de Promotion. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
+window.IMMOSUITE_VERSION = 'v14.113 · 2026-08-27 — CORRECTIF : le repli « type non reconnu → gabarit F2 » (v14.112) rebaptisait silencieusement le type réel du lot en « F2 » dans le tableau — un lot dont le type ne correspondait à aucune nomenclature affichait littéralement « F2 » comme si c\'était sa vraie catégorie, alors qu\'il ne l\'était pas. Corrigé : le tableau affiche maintenant le type RÉELLEMENT saisi sur le lot, avec la mention « (gabarit F2) » seulement quand un repli a eu lieu — le vrai type n\'est plus jamais masqué. Corrigé aussi : la comparaison avec les nomenclatures existantes ignorait la casse et les espaces — une nomenclature créée pour "Villa T4" ne correspondait pas à un lot valant "villa t4", retombant à tort sur le gabarit par défaut alors que le DQE avait bien été réalisé. Comparaison normalisée ajoutée en complément de l\'exacte. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -75105,8 +75105,17 @@ function buildEcartDQE() {
 function _typeKey(type) {
   if (!type) return 'F2';
   var raw = (type||'').trim();
-  /* Si une nomenclature (ou un type personnalisé) existe pour ce type exact, le respecter. */
-  if ((DATA.nomenclatures||[]).some(function(n){ return n.type_logement === raw; })) return raw;
+  /* [FIX] La comparaison était sensible à la casse et aux espaces — une
+     nomenclature créée pour "Villa T4" ne correspondait jamais à un lot
+     dont le type valait "villa t4" ou "Villa T4 " (espace en trop), qui
+     retombait alors silencieusement sur le gabarit F2 par défaut, sans
+     aucun signe que la nomenclature pourtant réalisée n'était pas prise en
+     compte. Comparaison normalisée (casse + espaces) en plus de l'exacte. */
+  var rawNorm = raw.toLowerCase().replace(/\s+/g, ' ');
+  var matchExact = (DATA.nomenclatures||[]).find(function(n){ return n.type_logement === raw; });
+  if (matchExact) return raw;
+  var matchNorm = (DATA.nomenclatures||[]).find(function(n){ return (n.type_logement||'').trim().toLowerCase().replace(/\s+/g,' ') === rawNorm; });
+  if (matchNorm) return matchNorm.type_logement;
   if (((DATA.params&&DATA.params.dqe_types_custom)||[]).indexOf(raw) >= 0) return raw;
   /* Sinon, repli sur le mapping classique des 4 modèles par défaut. */
   var t = raw.toUpperCase();
@@ -75164,15 +75173,21 @@ function _dqeRecapProgramme(programmeId) {
     var lots = lotsTousProg.filter(function(l){ return l.nature !== 'terrain'; });
     var groupes = {};
     lots.forEach(function(l){
-      var t = _typeKey(l.type_logement || l.type);
-      if (!groupes[t]) groupes[t] = { type:t, nb:0 };
-      groupes[t].nb++;
+      var raw = (l.type_logement || l.type || '').trim() || '(type non défini)';
+      var t = _typeKey(raw);
+      /* [FIX] Regroupe par le type RÉEL saisi sur le lot, pas par le
+         gabarit de repli — sinon deux types réels différents qui tombent
+         tous les deux sur le même repli (ex. "Villa Témoin" et "Lot" tombant
+         tous les deux sur F2) se retrouvaient fusionnés en une seule ligne
+         "F2" trompeuse, faisant disparaître le vrai libellé saisi. */
+      if (!groupes[raw]) groupes[raw] = { label: raw, typeKey: t, nb:0 };
+      groupes[raw].nb++;
     });
-    lignes = Object.keys(groupes).map(function(t){
-      var g = groupes[t];
-      var isDefault = !(DATA.nomenclatures||[]).some(function(n){ return n.type_logement === t; });
-      var cout = _coutTypeDansProgramme(t, programmeId);
-      return { type:t, nb:g.nb, coutUnitaire:cout, sousTotal:cout*g.nb, isDefault:isDefault };
+    lignes = Object.keys(groupes).map(function(key){
+      var g = groupes[key];
+      var isDefault = g.label !== g.typeKey;   /* le repli a changé le libellé → aucune nomenclature réelle trouvée pour ce type exact */
+      var cout = _coutTypeDansProgramme(g.typeKey, programmeId);
+      return { type: g.label, typeKey: g.typeKey, nb:g.nb, coutUnitaire:cout, sousTotal:cout*g.nb, isDefault:isDefault };
     }).sort(function(a,b){ return a.type.localeCompare(b.type); });
   }
   var total = lignes.reduce(function(s,l){ return s+l.sousTotal; }, 0);
@@ -75202,7 +75217,7 @@ async function genererDQEPourProgramme() {
   if (tbody) {
     tbody.innerHTML = R.lignes.map(function(l){
       return '<tr>'
-        + '<td>' + escHtml(l.type) + '</td>'
+        + '<td>' + escHtml(l.type) + (l.isDefault ? ' <span style="font-size:10px;color:var(--dim);">(gabarit ' + escHtml(l.typeKey) + ')</span>' : '') + '</td>'
         + '<td style="text-align:right;">' + l.nb + '</td>'
         + '<td style="text-align:right;">' + fmtF(l.coutUnitaire) + '</td>'
         + '<td style="text-align:right;font-weight:600;">' + fmtF(l.sousTotal) + '</td>'
