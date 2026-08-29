@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v14.116 · 2026-08-27 — CORRECTIF : aucun bouton Modifier n\'existait sur la liste des fournisseurs (page ET modale rapide) — seule la suppression était possible, ce qui aurait cassé le lien avec les BC/mouvements de stock déjà rattachés à la fiche en cas de recréation. Ajout du bouton ✏️ Modifier sur les deux listes : précharge la fiche dans le formulaire, le bouton Enregistrer bascule en « mise à jour » de l\'enregistrement existant (même id conservé) au lieu de toujours créer un nouveau fournisseur. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
+window.IMMOSUITE_VERSION = 'v14.117 · 2026-08-27 — Revue du bouton « Reporter le prix de vente » (DQE). Trouvé : le même message d\'avertissement « Surface du modèle non renseignée » s\'affichait pour deux causes bien différentes — modèle introuvable pour ce programme/type (le bouton échoue alors silencieusement au clic avec « Aucun modèle enregistré »), et modèle trouvé mais sa surface non remplie (bloque seulement le calcul terrain/VRD/gestion). Deux messages désormais distincts, chacun avec l\'action réelle à faire. Le bouton se désactive maintenant avec une explication au survol quand aucun report n\'est possible du tout, au lieu d\'attendre le clic pour le dire. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -74602,7 +74602,15 @@ function chargerNomenclature() {
       + (nbSansOuvrage ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:4px;">⚠️ ' + nbSansOuvrage + ' poste(s) sans ouvrage — prix par correspondance texte (fragile). <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 8px;margin-left:4px;" onclick="dqeUnifierTousLesPostes()">🔗 Unifier tous les postes</button></div>' : '')
       + '<div style="font-size:11px;color:var(--dim);margin-bottom:4px;"><button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 8px;" onclick="dqeAppliquerPrixIndicatifs()" title="Applique un prix indicatif aux ressources à 0 FCFA dont le libellé correspond à un matériau connu">💡 Appliquer prix indicatifs aux ressources à 0</button></div>'
       + (!_progIdCourant ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Aucun programme sélectionné — terrain, VRD et coût de gestion non calculés (prix de construction seul).</div>'
-        : (!_typeSurface ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Surface du modèle « ' + escHtml(type) + ' » non renseignée — terrain/VRD/gestion non répartis. Complétez la fiche modèle (Montage du programme).</div>' : ''))
+        /* [FIX] Un seul et même message s'affichait pour deux causes bien
+           différentes : « modèle introuvable pour ce type/programme » et
+           « modèle trouvé mais surface non renseignée ». La première fait
+           échouer silencieusement le bouton Reporter le prix de vente plus
+           bas (aucun modèle à reporter), la seconde n'empêche que le calcul
+           terrain/VRD/gestion — deux actions différentes à faire, deux
+           messages différents désormais. */
+        : (!_modeleCourant ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Aucun modèle de logement « ' + escHtml(type) + ' » enregistré pour ce programme — créez-le dans Montage du programme avant de pouvoir reporter ce prix de vente.</div>'
+        : (!_typeSurface ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Surface du modèle « ' + escHtml(type) + ' » non renseignée — terrain/VRD/gestion non répartis. Complétez la fiche modèle (Montage du programme).</div>' : '')))
       + coefBar
       + '<div class="kpi-grid" style="margin-top:4px;">'
       + _c('Déboursé sec (coût direct)', fmtF(debourse)+' FCFA', 'var(--or,#B8732F)')
@@ -74624,7 +74632,18 @@ function chargerNomenclature() {
         + (Q.sourceGestion ? 'Gestion — ' + escHtml(Q.sourceGestion) + '.' : '')
         + ' Réparti au prorata de la surface (' + fmtF(_typeSurface) + ' m² / ' + fmtF(Q.surfaceProgramme) + ' m² du programme).</div>' : '')
       + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-      + '<button class="btn btn-primary btn-sm" onclick="dqeReporterPrixVente()" title="Étape 5 — Valider : enregistre le prix calculé sur le modèle de logement correspondant"><span class="flux-step">⑤</span>📤 Reporter le prix de vente</button>'
+      + (function(){
+          /* Le bouton ne doit être désactivé que si dqeReporterPrixVente()
+             bloquerait réellement — c'est-à-dire zéro modèle valide nulle
+             part (elle propose un choix manuel dès qu'il en existe au
+             moins un, même si aucun ne correspond automatiquement à ce
+             programme/type précis). Une désactivation plus stricte que la
+             fonction elle-même aurait empêché un report pourtant possible. */
+          var aucunModeleValide = !(DATA.modeles_logement||[]).some(function(m){ return m.nom && m.nom !== 'null' && m.nom !== 'undefined'; });
+          return aucunModeleValide
+            ? '<button class="btn btn-secondary btn-sm" disabled title="Aucun modèle de logement enregistré nulle part — créez-en un d\'abord dans Montage du programme"><span class="flux-step">⑤</span>📤 Reporter le prix de vente</button>'
+            : '<button class="btn btn-primary btn-sm" onclick="dqeReporterPrixVente()" title="Étape 5 — Valider : enregistre le prix calculé sur le modèle de logement correspondant"><span class="flux-step">⑤</span>📤 Reporter le prix de vente</button>';
+        })()
       + '<span style="font-size:11px;color:var(--blanc-dim);">Le montant calculé devient le prix catalogue du modèle ; l\'ancien prix est conservé en historique.</span>'
       + '</div>'
       + (isDefault ? '<div class="alert alert-info" style="margin-top:8px;font-size:12px;">ℹ️ Données par défaut — cliquez sur <strong>+ Ajouter poste</strong> pour personnaliser cette nomenclature.</div>' : '');
