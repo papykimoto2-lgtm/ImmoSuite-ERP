@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v14.111 · 2026-08-27 — Éditeur de plans architecturaux : suppression et modification d\'un objet existaient déjà (sélection → panneau propriétés → champs éditables + bouton Supprimer), mais sans raccourci clavier. Ajout des touches Suppr / Retour arrière pour supprimer l\'objet sélectionné, sans intercepter un Retour arrière tapé dans un champ de saisie (ex. le champ Nom du panneau), et seulement quand la page Conception est active. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
+window.IMMOSUITE_VERSION = 'v14.112 · 2026-08-27 — CORRECTIF MAJEUR : la revue « État du programme avant validation » (Générer DQE) et la validation qui l\'accompagne ne distinguaient jamais un lot terrain nu d\'un lot logement — un lot sans type explicite retombait par défaut sur « F2 » et se voyait attribuer un coût de construction (villa/appartement) alors qu\'un terrain n\'a par définition aucun coût DQE construction. Sur un programme 100% lotissement (ex. Parcelle Test), tous les lots auraient reçu un coût de revient fictif lors de la validation. Corrigé : les lots terrain sont désormais exclus du tableau de costification et jamais écrits avec un coût DQE — un encart bleu indique combien de lots terrain ont été exclus et rappelle que leur coût de revient réel (foncier + aménagement) se suit dans le Bilan de Promotion. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -75144,6 +75144,16 @@ function _dqeRecapProgramme(programmeId) {
      uniquement pour les anciens programmes sans modèle déclaré. */
   var modeles = (DATA.modeles_logement || []).filter(function(m){ return m.programme_id === programmeId; });
   var lignes;
+  var lotsTousProg = DATA.lots.filter(function(l){ return !programmeId || l.programme_id === programmeId; });
+  /* [FIX] Un programme de lotissement (terrain nu) n'a par définition AUCUN
+     coût de construction — mais rien ici ne distinguait un lot terrain d'un
+     lot logement : _typeKey() sur un type absent/générique ("Lot") retombe
+     sur 'F2' par défaut, faisant hériter un terrain nu d'un coût DQE de
+     villa/appartement. Sur un programme 100% terrain (ex. lotissement pur),
+     ça aurait chiffré un DQE construction fictif sur chaque lot. Exclus
+     désormais de la costification DQE — leur coût de revient réel (foncier
+     + aménagement) se calcule ailleurs (Bilan de Promotion), pas ici. */
+  var lotsTerrainCount = lotsTousProg.filter(function(l){ return l.nature === 'terrain'; }).length;
   if (modeles.length) {
     lignes = modeles.map(function(m){
       var t = _typeKey(m.nom);
@@ -75151,7 +75161,7 @@ function _dqeRecapProgramme(programmeId) {
       return { type: t, nb: m.nb_unites || 0, coutUnitaire: cout, sousTotal: cout * (m.nb_unites || 0), isDefault: !(DATA.nomenclatures||[]).some(function(n){ return n.type_logement === t; }) };
     }).sort(function(a,b){ return a.type.localeCompare(b.type); });
   } else {
-    var lots = DATA.lots.filter(function(l){ return !programmeId || l.programme_id === programmeId; });
+    var lots = lotsTousProg.filter(function(l){ return l.nature !== 'terrain'; });
     var groupes = {};
     lots.forEach(function(l){
       var t = _typeKey(l.type_logement || l.type);
@@ -75166,8 +75176,8 @@ function _dqeRecapProgramme(programmeId) {
     }).sort(function(a,b){ return a.type.localeCompare(b.type); });
   }
   var total = lignes.reduce(function(s,l){ return s+l.sousTotal; }, 0);
-  var nbLotsReels = DATA.lots.filter(function(l){ return !programmeId || l.programme_id === programmeId; }).length;
-  return { lignes:lignes, total:total, nbLots: modeles.length ? nbLotsReels : nbLotsReels, nbPrevu: modeles.length ? modeles.reduce(function(s,m){ return s+(m.nb_unites||0); },0) : nbLotsReels, source: modeles.length ? 'modeles' : 'lots' };
+  var nbLotsReels = lotsTousProg.length;
+  return { lignes:lignes, total:total, nbLots: modeles.length ? nbLotsReels : nbLotsReels, nbPrevu: modeles.length ? modeles.reduce(function(s,m){ return s+(m.nb_unites||0); },0) : nbLotsReels, source: modeles.length ? 'modeles' : 'lots', lotsTerrainCount: lotsTerrainCount };
 }
 
 async function genererDQEPourProgramme() {
@@ -75185,7 +75195,8 @@ async function genererDQEPourProgramme() {
   var prog = (DATA.programmes||[]).find(function(p){ return p.id === programmeId; });
   var nomEl = document.getElementById('dqe-revue-prog-nom');
   if (nomEl) nomEl.textContent = 'Programme : ' + (prog ? prog.nom : programmeId) + ' — '
-    + (R.source === 'modeles' ? (R.nbPrevu + ' unité(s) prévue(s), ' + R.nbLots + ' lot(s) déjà généré(s)') : (R.nbLots + ' lot(s)'));
+    + (R.source === 'modeles' ? (R.nbPrevu + ' unité(s) prévue(s), ' + R.nbLots + ' lot(s) déjà généré(s)') : (R.nbLots + ' lot(s)'))
+    + (R.lotsTerrainCount ? (' dont ' + R.lotsTerrainCount + ' terrain(s)') : '');
 
   var tbody = document.getElementById('dqe-revue-prog-tbody');
   if (tbody) {
@@ -75204,9 +75215,14 @@ async function genererDQEPourProgramme() {
 
   var alerteEl = document.getElementById('dqe-revue-prog-alerte');
   var nbDefaut = R.lignes.filter(function(l){ return l.isDefault; }).length;
-  if (alerteEl) alerteEl.innerHTML = nbDefaut
-    ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(224,82,82,.09);border-left:3px solid var(--rouge);border-radius:6px;font-size:12px;">⚠️ ' + nbDefaut + ' type(s) sans nomenclature chiffrée — coût estimé sur gabarit par défaut, à confirmer avant validation.</div>'
-    : '';
+  var alerteHtml = '';
+  if (R.lotsTerrainCount) {
+    alerteHtml += '<div style="margin-top:10px;padding:10px 12px;background:rgba(74,148,224,.09);border-left:3px solid #4A94E0;border-radius:6px;font-size:12px;">🗺️ ' + R.lotsTerrainCount + ' lot(s) terrain nu exclu(s) de ce tableau — un terrain n\'a pas de coût de construction DQE. Son coût de revient (foncier + aménagement) se suit dans le Bilan de Promotion.</div>';
+  }
+  if (nbDefaut) {
+    alerteHtml += '<div style="margin-top:10px;padding:10px 12px;background:rgba(224,82,82,.09);border-left:3px solid var(--rouge);border-radius:6px;font-size:12px;">⚠️ ' + nbDefaut + ' type(s) sans nomenclature chiffrée — coût estimé sur gabarit par défaut, à confirmer avant validation.</div>';
+  }
+  if (alerteEl) alerteEl.innerHTML = alerteHtml;
 
   openModal('modal-dqe-revue-programme');
 }
@@ -75218,9 +75234,12 @@ async function dqeValiderProgramme() {
   var ctx = window._dqeRevueProgramme;
   if (!ctx) return;
   var lots = DATA.lots.filter(function(l){ return l.programme_id === ctx.programmeId; });
-  var maj = 0;
+  var maj = 0, ignoresTerrain = 0;
   for (var i = 0; i < lots.length; i++) {
     var lot = lots[i];
+    /* [FIX] Ne jamais écrire un coût de revient DQE construction sur un lot
+       terrain — voir _dqeRecapProgramme. */
+    if (lot.nature === 'terrain') { ignoresTerrain++; continue; }
     var typeKey = _typeKey(lot.type_logement || lot.type);
     var coutDQE = _coutTypeDansProgramme(typeKey, ctx.programmeId);
     if (!lot.cout_revient && coutDQE > 0) {
@@ -75233,7 +75252,7 @@ async function dqeValiderProgramme() {
     }
   }
   closeModal('modal-dqe-revue-programme');
-  toast('✅ DQE validé — ' + maj + ' lot(s) mis à jour.','success');
+  toast('✅ DQE validé — ' + maj + ' lot(s) mis à jour.' + (ignoresTerrain ? ' (' + ignoresTerrain + ' lot(s) terrain ignoré(s), sans coût de construction)' : ''),'success');
   buildEcartDQE();
 }
 
