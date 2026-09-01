@@ -11,7 +11,7 @@
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
-window.IMMOSUITE_VERSION = 'v14.117 · 2026-08-27 — Revue du bouton « Reporter le prix de vente » (DQE). Trouvé : le même message d\'avertissement « Surface du modèle non renseignée » s\'affichait pour deux causes bien différentes — modèle introuvable pour ce programme/type (le bouton échoue alors silencieusement au clic avec « Aucun modèle enregistré »), et modèle trouvé mais sa surface non remplie (bloque seulement le calcul terrain/VRD/gestion). Deux messages désormais distincts, chacun avec l\'action réelle à faire. Le bouton se désactive maintenant avec une explication au survol quand aucun report n\'est possible du tout, au lieu d\'attendre le clic pour le dire. Vérification systématique de non-régression effectuée.';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
+window.IMMOSUITE_VERSION = 'v14.112 · 2026-08-31 — Session majeure : (1) Souscripteurs multi-lots sur un même programme avec échéancier/montant combiné unique (client.lot_ids, client.lot_id conservé comme lot principal pour compatibilité) ; (2) Surface relevée manuellement sur la fiche Lot et surface souscrite sur la fiche Souscripteur, comparées en direct à la surface au plan/aux lots rattachés ; (3) Nouveau module Budget : Compte d\'exploitation prévisionnel (Budget vs Réel comptable, mensualisé, par division), masque de saisie simplifié façon business-plan (24 rubriques dont 11 propres à l\'immobilier, lignes personnalisables), diagnostic de viabilité (résultat + trésorerie cumulée) ; (4) Cockpit étendu au Budget et au Parc Auto (file d\'actions + Pouls de santé) ; (5) Audit de synchronisation : 4 stores écrits/synchronisés mais jamais rechargés corrigés (declarations_versement_financier invisible sur tout autre poste, audit_log, cout_gestion_exercices, conflits_sync) ; (6) 4 sélecteurs de lots (souscription, lots supplémentaires, simulateur fiscal, livraison) désormais rafraîchis après création d\'un lot, localement et après synchro cloud ; (7) Correctif charge Supabase : pull de secours espacé de 60 s à ~6 min (Realtime reste le canal principal) suite à saturation du compute observée le 31/08 (527k requêtes/24h sur instance Nano) ; (8) Parc Auto : bouton "Actualiser les données" + badge "Hors ligne" cliquable avec diagnostic de la cause probable (projet en pause/clé invalide, jamais un vrai bug CORS).';   /* à incrémenter à CHAQUE livraison : sans cela, impossible de savoir quelle version tourne réellement en ligne */
 (function () {
   try {
     if ('serviceWorker' in navigator) {
@@ -2198,6 +2198,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 /* Modal details dossier juridique */
 #modal-jur-details .modal { max-width: 820px; width: 96vw; }
+
+/* Modal Business plan prévisionnel — large, pour voir les 12 mois d'un seul tenant */
+#modal-business-plan .modal { max-width: 1700px; width: 98vw; }
+#modal-business-plan .modal-body { max-height: 78vh; overflow-y: auto; }
+#bp-grid table.data-table { font-size: 10.5px; }
+#bp-grid table.data-table th, #bp-grid table.data-table td { padding: 3px 4px; }
+#bp-grid .bp-input { width: 58px !important; padding: 2px 3px !important; font-size: 10.5px; text-align: right; }
 .jur-detail-header {
   display: flex; align-items: flex-start; gap: 14px;
   padding: 18px; background: var(--card2);
@@ -3171,6 +3178,22 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         </div>
 
         <div class="filters-bar" style="margin-top:-6px;align-items:flex-end;">
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">💰 Montant min (FCFA)</label><input type="number" class="filter-select" id="filter-client-montant-min" placeholder="0" oninput="_debInput('filterClients')"></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">💰 Montant max (FCFA)</label><input type="number" class="filter-select" id="filter-client-montant-max" placeholder="Illimité" oninput="_debInput('filterClients')"></div>
+          <div class="form-group" style="margin:0;"><label style="font-size:11px;">↕️ Trier par</label>
+            <select class="filter-select" id="filter-client-tri" onchange="filterClients()">
+              <option value="">Par défaut</option>
+              <option value="date_desc">Date — plus récent d'abord</option>
+              <option value="date_asc">Date — plus ancien d'abord</option>
+              <option value="alpha_asc">Nom — A → Z</option>
+              <option value="alpha_desc">Nom — Z → A</option>
+              <option value="montant_desc">Montant — décroissant</option>
+              <option value="montant_asc">Montant — croissant</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filters-bar" style="margin-top:-6px;align-items:flex-end;">
           <div class="form-group" style="margin:0;"><label style="font-size:11px;">📅 Souscrit depuis</label><input type="date" class="filter-select" id="filter-client-date-debut" onchange="filterClients()"></div>
           <div class="form-group" style="margin:0;"><label style="font-size:11px;">📅 Jusqu'au</label><input type="date" class="filter-select" id="filter-client-date-fin" onchange="filterClients()"></div>
           <button class="btn btn-secondary btn-sm" onclick="clientsPeriodeReset()">✕ Réinitialiser la période</button>
@@ -3249,6 +3272,20 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               <option value="mobile_money">Mobile Money</option>
             </select>
             <input type="month" class="filter-select" id="filter-mois-paiement" onchange="filterPaiements()">
+          </div>
+          <div class="filters-bar" style="margin-top:-6px;align-items:flex-end;">
+            <div class="form-group" style="margin:0;"><label style="font-size:11px;">💰 Montant min (FCFA)</label><input type="number" class="filter-select" id="filter-paiement-montant-min" placeholder="0" oninput="_debInput('filterPaiements')"></div>
+            <div class="form-group" style="margin:0;"><label style="font-size:11px;">💰 Montant max (FCFA)</label><input type="number" class="filter-select" id="filter-paiement-montant-max" placeholder="Illimité" oninput="_debInput('filterPaiements')"></div>
+            <div class="form-group" style="margin:0;"><label style="font-size:11px;">↕️ Trier par</label>
+              <select class="filter-select" id="filter-paiement-tri" onchange="filterPaiements()">
+                <option value="date_desc">Date — plus récent d'abord</option>
+                <option value="date_asc">Date — plus ancien d'abord</option>
+                <option value="alpha_asc">Client — A → Z</option>
+                <option value="alpha_desc">Client — Z → A</option>
+                <option value="montant_desc">Montant — décroissant</option>
+                <option value="montant_asc">Montant — croissant</option>
+              </select>
+            </div>
           </div>
           <div class="card">
             <div class="table-wrap">
@@ -5047,13 +5084,10 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               <div class="form-group" id="fo-wrap-ncc"><label>NCC</label><input class="form-control" id="fo-ncc"></div>
               <div class="form-group" id="fo-wrap-cni" style="display:none;"><label>N° CNI / Pièce</label><input class="form-control" id="fo-cni"></div>
               <div class="form-group"><label>Contact / Tél</label><input class="form-control" id="fo-contact"></div>
-              <div class="form-group"><label>Email</label><input type="email" class="form-control" id="fo-email"></div>
-              <div class="form-group span-2"><label>Adresse</label><input class="form-control" id="fo-adresse"></div>
               <div class="form-group"><label>Compte (401x)</label><input class="form-control" id="fo-compte" placeholder="401"></div>
-              <div class="form-group"><label>Délai de livraison habituel (jours)</label><input type="number" class="form-control" id="fo-delai" min="0" placeholder="Ex : 7"></div>
               <div class="form-group span-2"><label style="font-weight:normal;font-size:12px;"><input type="checkbox" id="fo-airsi" style="margin-right:6px;"> Soumis à l'AIRSI (retenue à la source)</label></div>
             </div>
-            <button class="btn btn-primary btn-sm" id="fo-btn-save" style="margin-top:8px;" onclick="saveFournisseur()">Ajouter le fournisseur</button>
+            <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="saveFournisseur()">Ajouter le fournisseur</button>
             <div id="fo-liste" style="margin-top:12px;"></div>
           </div>
           <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-fournisseurs')">Fermer</button></div>
@@ -5166,7 +5200,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
               <div class="form-group"><label>N°</label><input class="form-control" id="bc-numero" placeholder="auto"></div>
               <div class="form-group"><label>Date</label><input type="date" class="form-control" id="bc-date"></div>
-              <div class="form-group"><label>Fournisseur *</label><select class="form-control" id="bc-fournisseur" onchange="bcPrefillDelai()"></select></div>
+              <div class="form-group"><label>Fournisseur *</label><select class="form-control" id="bc-fournisseur"></select></div>
               <div class="form-group"><label>Chantier (convention)</label><select class="form-control" id="bc-chantier"></select></div>
               <div class="form-group"><label>Division (si sans chantier)</label><select class="form-control" id="bc-division"><option value="">— déduite du chantier —</option></select></div>
               <div class="form-group"><label>Dépôt de réception</label><select class="form-control" id="bc-depot"></select></div>
@@ -5253,13 +5287,10 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div class="form-group" id="fpg-wrap-ncc"><label>NCC</label><input class="form-control" id="fpg-ncc"></div>
             <div class="form-group" id="fpg-wrap-cni" style="display:none;"><label>N° CNI / Pièce</label><input class="form-control" id="fpg-cni"></div>
             <div class="form-group"><label>Contact / Tél</label><input class="form-control" id="fpg-contact"></div>
-            <div class="form-group"><label>Email</label><input type="email" class="form-control" id="fpg-email"></div>
-            <div class="form-group span-2"><label>Adresse</label><input class="form-control" id="fpg-adresse"></div>
             <div class="form-group"><label>Compte (401x)</label><input class="form-control" id="fpg-compte" placeholder="401"></div>
-            <div class="form-group"><label>Délai de livraison habituel (jours)</label><input type="number" class="form-control" id="fpg-delai" min="0" placeholder="Ex : 7"></div>
             <div class="form-group span-2"><label style="font-weight:normal;font-size:12px;"><input type="checkbox" id="fpg-airsi" style="margin-right:6px;"> Soumis à l'AIRSI (retenue à la source)</label></div>
           </div>
-          <div style="margin-top:10px;text-align:right;"><button class="btn btn-primary" id="fpg-btn-save" onclick="saveFournisseurPage()">💾 Enregistrer</button></div>
+          <div style="margin-top:10px;text-align:right;"><button class="btn btn-primary" onclick="saveFournisseurPage()">💾 Enregistrer</button></div>
         </div>
         <div class="card">
           <input type="text" class="search-input" placeholder="🔍 Nom, RCCM, NCC, CNI, contact..." id="fpg-search" oninput="_debInput('renderFournisseursPageListe')" style="margin-bottom:12px;">
@@ -11536,47 +11567,80 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
 
         <div id="caisse-ecarts-box" style="margin-top:24px;"></div>
 
-        <div id="caisse-ventilation-box" style="margin-top:24px;"></div>
+        <div class="caisse-tabs-header" style="margin-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div class="etape-btns">
+            <button class="tab-btn active" onclick="switchTab('caisse','ventilation')">🧾 Ventilation comptable des mouvements de caisse</button>
+            <button class="tab-btn" onclick="switchTab('caisse','decaissements')">💵 Décaissements à faire</button>
+            <button class="tab-btn" onclick="switchTab('caisse','tiers')">💰 Comptabilité tiers</button>
+            <button class="tab-btn" id="caisse-tab-btn-audit" onclick="switchTab('caisse','audit')" style="display:none;" title="Réservé aux administrateurs">🔍 Audit</button>
+          </div>
+        </div>
+
+        <div class="tab-pane active" id="tab-caisse-ventilation">
+          <div id="caisse-ventilation-box"></div>
+        </div>
 
         <!-- ══ Décaissements à faire — DA validées, en attente de paiement ══ -->
-        <div class="card" style="margin-top:24px;border:1px solid var(--or,#B87333);">
-          <div class="card-title" style="margin-bottom:2px;">💵 Décaissements à faire</div>
-          <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">Demandes d'Achat validées (module Budget) — le compte est déjà connu, aucune ventilation à refaire.</div>
-          <div id="caisse-decaissements-box"></div>
+        <div class="tab-pane" id="tab-caisse-decaissements">
+          <div class="card" style="border:1px solid var(--or,#B87333);">
+            <div class="card-title" style="margin-bottom:2px;">💵 Décaissements à faire</div>
+            <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">Demandes d'Achat validées (module Budget) — le compte est déjà connu, aucune ventilation à refaire.</div>
+            <div id="caisse-decaissements-box"></div>
+          </div>
         </div>
 
         <!-- ══ Balance auxiliaire · balance âgée · échéances (pour planifier les paiements depuis la caisse) ══ -->
-        <div class="card" style="margin-top:24px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
-            <div>
-              <div class="card-title" style="margin-bottom:2px;">💰 Comptabilité tiers</div>
-              <div style="font-size:11px;color:var(--dim);">Balance auxiliaire · balance âgée · échéances</div>
+        <div class="tab-pane" id="tab-caisse-tiers">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+              <div>
+                <div class="card-title" style="margin-bottom:2px;">💰 Comptabilité tiers</div>
+                <div style="font-size:11px;color:var(--dim);">Balance auxiliaire · balance âgée · échéances</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="facAttenteOuvrir()" title="Capture rapide — sans ventilation comptable, le comptable s'en chargera">🧾 Enregistrer une facture fournisseur</button>
+              <input type="text" class="filter-select" id="caisse-tiers-recherche" placeholder="🔍 Rechercher..." style="width:180px;" oninput="caisseRenderBalanceAgee()">
+              <select class="filter-select" id="caisse-tiers-division" style="display:none;" onchange="caisseRenderBalanceAgee()">
+                <option value="">🏢 Toutes divisions</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Imprimer</button>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="facAttenteOuvrir()" title="Capture rapide — sans ventilation comptable, le comptable s'en chargera">🧾 Enregistrer une facture fournisseur</button>
-            <input type="text" class="filter-select" id="caisse-tiers-recherche" placeholder="🔍 Rechercher..." style="width:180px;" oninput="caisseRenderBalanceAgee()">
-            <select class="filter-select" id="caisse-tiers-division" style="display:none;" onchange="caisseRenderBalanceAgee()">
-              <option value="">🏢 Toutes divisions</option>
-            </select>
-            <button class="btn btn-secondary btn-sm" onclick="window.print()">🖨️ Imprimer</button>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;justify-content:space-between;">
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-sm" id="caisse-tiers-btn-aux" onclick="caisseTiersSetVue('aux')" style="border:1px solid var(--or);">Balance auxiliaire</button>
-              <button class="btn btn-sm" id="caisse-tiers-btn-agee" onclick="caisseTiersSetVue('agee')" style="border:1px solid var(--or);background:var(--or);color:#fff;">Balance âgée</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;justify-content:space-between;">
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-sm" id="caisse-tiers-btn-aux" onclick="caisseTiersSetVue('aux')" style="border:1px solid var(--or);">Balance auxiliaire</button>
+                <button class="btn btn-sm" id="caisse-tiers-btn-agee" onclick="caisseTiersSetVue('agee')" style="border:1px solid var(--or);background:var(--or);color:#fff;">Balance âgée</button>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-sm" id="caisse-tiers-btn-clients" onclick="caisseTiersSetType('clients')" style="border:1px solid var(--or);background:var(--or);color:#fff;">Clients</button>
+                <button class="btn btn-sm" id="caisse-tiers-btn-fourn" onclick="caisseTiersSetType('fournisseurs')" style="border:1px solid var(--or);">Fournisseurs</button>
+              </div>
             </div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-sm" id="caisse-tiers-btn-clients" onclick="caisseTiersSetType('clients')" style="border:1px solid var(--or);background:var(--or);color:#fff;">Clients</button>
-              <button class="btn btn-sm" id="caisse-tiers-btn-fourn" onclick="caisseTiersSetType('fournisseurs')" style="border:1px solid var(--or);">Fournisseurs</button>
+            <div class="table-wrap">
+              <table id="caisse-tiers-table">
+                <thead id="caisse-tiers-thead"></thead>
+                <tbody id="caisse-tiers-tbody"></tbody>
+                <tfoot id="caisse-tiers-tfoot"></tfoot>
+              </table>
+            </div>
+            <div style="font-size:10.5px;color:var(--dim);margin-top:8px;">Échéance = date de contrat + délai de règlement du tiers. Postes soldés exclus.</div>
+          </div>
+        </div>
+
+        <!-- ══ Audit — réservé aux administrateurs (visibilité JS, cf. caisseEnter) ══ -->
+        <div class="tab-pane" id="tab-caisse-audit">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+              <div>
+                <div class="card-title" style="margin-bottom:2px;">🔍 Audit de la caisse</div>
+                <div style="font-size:11px;color:var(--dim);">Rupture de chaîne entre sessions · soldes théoriques impossibles · réserves jamais soldées par un retour en caisse</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <select class="filter-select" id="caisse-audit-caisse-id" onchange="renderCaisseAudit()"></select>
+                <button class="btn btn-secondary btn-sm" onclick="imprimerRapportAuditCaisse()">🖨️ Rapport d'audit</button>
+              </div>
             </div>
           </div>
-          <div class="table-wrap">
-            <table id="caisse-tiers-table">
-              <thead id="caisse-tiers-thead"></thead>
-              <tbody id="caisse-tiers-tbody"></tbody>
-              <tfoot id="caisse-tiers-tfoot"></tfoot>
-            </table>
-          </div>
-          <div style="font-size:10.5px;color:var(--dim);margin-top:8px;">Échéance = date de contrat + délai de règlement du tiers. Postes soldés exclus.</div>
+          <div class="kpi-grid" id="caisse-audit-kpi" style="margin-bottom:14px;"></div>
+          <div id="caisse-audit-box"></div>
         </div>
       </div>
 
@@ -13097,7 +13161,6 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <button class="btn btn-secondary btn-sm" onclick="exporterNomenclatureCSV()">⬇ CSV</button>
             <button class="btn btn-secondary btn-sm" onclick="printPreviewDQE()" title="Aperçu avant impression">🖨️ Aperçu & imprimer</button>
             <button class="btn btn-secondary btn-sm" id="dqe-btn-vue-ouvrage" onclick="dqeToggleVueOuvrage()" title="Regrouper par corps d'état, avec le détail matériau/main-d'œuvre/matériel de chaque prix">🏗️ Par ouvrage & sous-détail</button>
-            <button class="btn btn-primary btn-sm" onclick="genererBCDepuisDQE()" title="Regroupe tous les matériaux de ce DQE (et de ses ouvrages liés) en un bon de commande, quantités agrégées par ressource">🛒 Générer un bon de commande</button>
           </div>
           <div class="card" id="dqe-card-liste">
             <div class="table-wrap">
@@ -14696,15 +14759,24 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
           <button class="tab-btn active" onclick="switchTab('budget','previsionnel')">📋 Budget prévisionnel</button>
           <button class="tab-btn" onclick="switchTab('budget','fed')">📝 Engagements de dépense</button>
           <button class="tab-btn" onclick="switchTab('budget','transferts')">🔀 Transferts</button>
+          <button class="tab-btn" onclick="switchTab('budget','exploitation')">📈 Compte d'exploitation prévisionnel</button>
         </div>
 
         <!-- ── Onglet Budget prévisionnel ── -->
         <div class="tab-pane active" id="tab-budget-previsionnel">
           <div class="kpi-grid" id="budget-kpi-previsionnel" style="margin-bottom:14px;"></div>
+          <div class="card" style="margin-bottom:14px;">
+            <div class="form-section-title">📋 Business plans prévisionnels</div>
+            <div style="font-size:12px;color:var(--blanc-dim);margin:6px 0 10px;">Un business plan par division × exercice — cliquez « Ouvrir » pour reprendre la saisie là où vous l'avez laissée.</div>
+            <div id="business-plans-liste-box"></div>
+          </div>
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
               <div style="font-size:12px;color:var(--blanc-dim);">Un budget par compte × division × exercice — soumis puis validé par le DG (ou tout rôle habilité) avant de devenir actif.</div>
-              <button class="btn btn-primary btn-sm" onclick="budgetPrevisionnelOuvrir()">➕ Nouveau budget</button>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="ouvrirMasqueBusinessPlan()">🧾 Masque simplifié (business plan)</button>
+                <button class="btn btn-secondary btn-sm" onclick="budgetPrevisionnelOuvrir()">➕ Ligne comptable détaillée</button>
+              </div>
             </div>
             <div id="budget-previsionnel-box"></div>
           </div>
@@ -14733,6 +14805,25 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div id="budget-transferts-box"></div>
           </div>
         </div>
+
+        <!-- ── Onglet Compte d'exploitation prévisionnel ── -->
+        <div class="tab-pane" id="tab-budget-exploitation">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+              <div style="font-size:12px;color:var(--blanc-dim);">Produits et charges budgétés (comptes classe 7 / classe 6, lignes validées) confrontés au réel comptable, mois par mois, sur l'exercice — pour la division sélectionnée dans le filtre en haut de page. Nécessite un exercice précis (pas « Tous exercices »).</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-primary btn-sm" onclick="ouvrirMasqueBusinessPlan()">🧾 Remplir le business plan (masque simplifié)</button>
+                <label style="font-size:12px;color:var(--blanc-dim);display:flex;align-items:center;gap:6px;"><input type="checkbox" id="cexp-cumul" onchange="renderCompteExploitationPrevisionnel()"> Vue cumulée</label>
+                <button class="btn btn-secondary btn-sm" onclick="imprimerCompteExploitationPrevisionnel()">🖨️ Imprimer</button>
+              </div>
+            </div>
+          </div>
+          <div id="cexp-verdict" style="margin-bottom:14px;padding:14px;border-radius:8px;font-size:14px;font-weight:700;text-align:center;"></div>
+          <div class="kpi-grid" id="cexp-kpi" style="margin-bottom:14px;"></div>
+          <div class="card">
+            <div id="cexp-box" style="overflow-x:auto;"></div>
+          </div>
+        </div>
       </div>
 
       <!-- ═══ PARC AUTO (Logistique) ═══════════════════════════════════ -->
@@ -14743,9 +14834,11 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <div class="page-sub">Véhicules · Carburant · Entretien · Affectations · Échéances</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" onclick="paForcerActualisation()" id="pa-btn-refresh">🔄 Actualiser les données</button>
             <button class="btn btn-primary" onclick="paOpenVehicule()">+ Véhicule</button>
           </div>
         </div>
+        <div id="pa-diag-connexion" style="display:none;margin-top:10px;"></div>
 
         <div id="pa-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px;"></div>
         <div id="pa-alertes-box" style="margin-bottom:14px;"></div>
@@ -14913,6 +15006,79 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             <button class="btn btn-secondary" onclick="closeModal('modal-caisse-budget')">Annuler</button>
             <button class="btn btn-danger" id="cbud-btn-suppr" style="display:none;" onclick="budgetPrevisionnelSupprimer(document.getElementById('cbud-id').value).then(function(){ closeModal('modal-caisse-budget'); budgetRenderPrevisionnel(); })">🗑️ Supprimer</button>
             <button class="btn btn-primary" onclick="budgetPrevisionnelSauverDepuisForm()">💾 Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal : Masque simplifié — Business plan prévisionnel (sans code comptable) -->
+      <div class="modal-overlay" id="modal-business-plan">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <h3>🧾 Business plan prévisionnel</h3>
+            <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-business-plan')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid" style="margin-bottom:14px;">
+              <div class="form-group"><label>Division *</label><select class="form-control" id="bpm-division" onchange="bpChargerExistant()"><option value="">— Toutes divisions (consolidé) —</option></select></div>
+              <div class="form-group"><label>Exercice *</label><input type="number" class="form-control" id="bpm-exercice" min="2020" max="2100" onchange="bpChargerExistant()"></div>
+            </div>
+            <div style="font-size:12px;color:var(--blanc-dim);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <span>Remplissez votre prévision de chiffre d'affaires et de charges, mois par mois — comme un business plan classique. Aucune connaissance comptable requise : le rattachement au plan comptable se fait automatiquement en arrière-plan.</span>
+              <button class="btn btn-secondary btn-sm" onclick="bpOuvrirAjoutLigne()" style="white-space:nowrap;">➕ Ajouter une ligne budgétaire</button>
+            </div>
+            <div id="bpm-grid" style="overflow-x:auto;"></div>
+            <div style="margin-top:12px;padding:10px;background:rgba(184,115,51,0.08);border-radius:6px;font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+              <span>Total produits : <b id="bpm-total-produits" style="color:var(--vert);">0</b> F</span>
+              <span>Total charges : <b id="bpm-total-charges" style="color:var(--rouge);">0</b> F</span>
+              <span>Résultat prévisionnel : <b id="bpm-resultat">0</b> F</span>
+              <span>Marge prévisionnelle : <b id="bpm-marge">0%</b></span>
+            </div>
+            <div id="bpm-verdict" style="margin-top:10px;padding:14px;border-radius:8px;font-size:14px;font-weight:700;text-align:center;"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-business-plan')">Annuler</button>
+            <button class="btn btn-secondary" onclick="bpSauver(false)">💾 Enregistrer (brouillon)</button>
+            <button class="btn btn-primary" onclick="bpSauver(true)">📤 Enregistrer et soumettre pour validation</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal : Répartition mensuelle d'une ligne budgétaire (compte d'exploitation prévisionnel) -->
+      <div class="modal-overlay" id="modal-repartition-mensuelle">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📅 Répartition mensuelle — <span id="rm-compte-label"></span></h3>
+            <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-repartition-mensuelle')">✕</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="rm-id">
+            <div style="font-size:12px;color:var(--blanc-dim);margin-bottom:10px;">Montant annuel : <b id="rm-montant-annuel"></b> F. Par défaut réparti également sur les 12 mois — ajustez selon votre saisonnalité (ex : plus de charges en décembre, plus de ventes en été…).</div>
+            <div id="rm-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+            <div style="text-align:right;margin-top:12px;font-size:13px;">Total réparti : <b id="rm-total"></b> F <span id="rm-ecart" style="margin-left:8px;"></span></div>
+            <div style="margin-top:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="rmRepartirEgal()">↔️ Répartir également</button>
+              <button class="btn btn-secondary btn-sm" onclick="rmReinitialiser()">↩️ Retirer la ventilation (revenir au lissage automatique)</button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-repartition-mensuelle')">Annuler</button>
+            <button class="btn btn-primary" onclick="rmSauver()">💾 Enregistrer la répartition</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal : Suggestion de charge à partir de l'historique -->
+      <div class="modal-overlay" id="modal-suggestion-historique">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>💡 Proposition basée sur l'historique — <span id="sh-rubrique-label"></span></h3>
+            <button class="btn btn-secondary btn-icon" onclick="closeModal('modal-suggestion-historique')">✕</button>
+          </div>
+          <div class="modal-body">
+            <div id="sh-contenu"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-suggestion-historique')">Annuler</button>
           </div>
         </div>
       </div>
@@ -16159,6 +16325,17 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
             </select>
             <div id="c-lot-diag" style="display:none;"></div>
           </div>
+          <div class="form-group span-2">
+            <label>Autres lots de ce souscripteur (même programme, même échéancier/montant total)</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select class="form-control" id="c-lot-supplementaire" style="flex:1;">
+                <option value="">— Ajouter un autre lot —</option>
+              </select>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="ajouterLotSupplementaireClient()" style="white-space:nowrap;">➕ Ajouter</button>
+            </div>
+            <div id="c-lots-supplementaires-liste" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+            <div style="font-size:11px;color:var(--blanc-dim);margin-top:4px;">Un souscripteur peut acquérir plusieurs lots sur le même programme — le montant total et l'échéancier saisis ci-dessous couvrent alors l'ensemble de ces lots.</div>
+          </div>
           <div class="form-group span-2" id="c-nature-badge-wrap" style="display:none;">
             <div id="c-nature-badge" style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;"></div>
           </div>
@@ -16181,6 +16358,11 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               <option value="moyen">Moyen</option>
               <option value="haut">Haut de gamme</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label>Surface souscrite (m²) <span style="font-weight:400;color:var(--blanc-dim);">— pré-remplie depuis le(s) lot(s), modifiable</span></label>
+            <input type="number" class="form-control" id="c-surface" placeholder="0" oninput="clientCompareSurface()">
+            <div id="c-surface-ecart" style="font-size:11px;margin-top:4px;display:none;"></div>
           </div>
           <div class="form-group">
             <label>Prix de vente total (FCFA)</label>
@@ -17338,7 +17520,12 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
         </div>
         <div class="form-group">
           <label>Surface (m²)</label>
-          <input type="number" class="form-control" id="l-surface" oninput="lotRecalcPrixM2();lotRecalcCoutM2()">
+          <input type="number" class="form-control" id="l-surface" oninput="lotRecalcPrixM2();lotRecalcCoutM2();lotCompareSurfaceMesuree()">
+        </div>
+        <div class="form-group">
+          <label>Surface relevée / mesurée sur le terrain (m²) <span style="font-weight:400;color:var(--blanc-dim);">— optionnel, pour comparer avec la surface ci-dessus</span></label>
+          <input type="number" class="form-control" id="l-surface-mesuree" oninput="lotCompareSurfaceMesuree()">
+          <div id="l-surface-ecart" style="font-size:12px;margin-top:5px;display:none;"></div>
         </div>
         <div class="form-group">
           <label>Nombre de pièces</label>
@@ -22610,7 +22797,13 @@ async function loadAllData() {
   /* v146 — Suivi budgétaire caisse */
   'caisse_budgets',
   /* v147 — Circuit budgétaire : DA + transferts */
-  'fiches_engagement_depense', 'transferts_budgetaires'
+  'fiches_engagement_depense', 'transferts_budgetaires',
+  /* [FIX audit synchro] Ces 4 stores étaient écrits (dbPut, certains même
+     synchronisés vers Supabase) mais JAMAIS relus au démarrage — DATA[store]
+     repartait vide à chaque rechargement de page jusqu'au premier pull (ou
+     restait vide indéfiniment pour conflits_sync, purement local). Symptôme
+     exact signalé : « valeurs différentes selon le poste/le moment ». */
+  'audit_log', 'cout_gestion_exercices', 'declarations_versement_financier', 'conflits_sync'
   ];
   /* Chargement en PARALLÈLE plutôt que séquentiel : chaque dbGetAll() ouvre
      sa propre transaction IndexedDB 'readonly' indépendante (voir dbGetAll
@@ -23531,8 +23724,9 @@ function _majBadgeSync(etat) {
     else document.body.appendChild(el);
   }
   if (etat === 'offline') {
-    el.textContent = '⚠ Hors ligne — données locales';
-    el.style.cssText += 'display:inline-flex;background:rgba(234,88,12,0.15);color:#EA580C;';
+    el.textContent = '⚠ Hors ligne — données locales (cliquer pour réessayer)';
+    el.style.cssText += 'display:inline-flex;background:rgba(234,88,12,0.15);color:#EA580C;cursor:pointer;';
+    el.onclick = function(){ if (typeof paForcerActualisation === 'function') paForcerActualisation(); else if (typeof pullFromCloudSilent === 'function') { SB._breakerOpen = false; pullFromCloudSilent(); } };
   } else {
     el.textContent = '☁ Sync rétablie';
     el.style.cssText += 'display:inline-flex;background:rgba(5,150,105,0.15);color:#059669;';
@@ -24071,6 +24265,10 @@ var SUPA_STORE_MAP = [
   ['pi_fiches_engagement_depense',         'fiches_engagement_depense'],
   ['pi_transferts_budgetaires', 'transferts_budgetaires'],
   ['pi_caisse_budgets',         'caisse_budgets'],
+  /* [FIX audit synchro] Poussée depuis portfinDeclarerVersement() mais
+     jamais tirée du cloud faute d'entrée ici — invisible sur tout autre
+     poste que celui qui a créé la déclaration. */
+  ['pi_declarations_versement_financier', 'declarations_versement_financier'],
   ['pi_vehicules',              'vehicules'],
   ['pi_vehicule_carburant',     'vehicule_carburant'],
   ['pi_vehicule_entretiens',    'vehicule_entretiens'],
@@ -25196,25 +25394,38 @@ function demarrerSyncAuto() {
        indisponible sans que _RT le détecte comme déconnecté, ce singleton
        ne serait plus jamais retiré du cloud avant le prochain login. Un
        poste qui reste ouvert des heures sans jamais recharger la page
-       resterait alors sourd aux réglages changés ailleurs. Toutes les 4
-       passes (~2 min) suffit : ce ne sont pas des réglages qui changent
-       à la seconde. */
+       resterait alors sourd aux réglages changés ailleurs. Toutes les
+       ~13 min suffit : ce ne sont pas des réglages qui changent à la
+       seconde (allégé le 31/08 — voir note plus bas). */
     _tickAutoSync++;
     /* Vérification d'une nouvelle version déployée toutes les ~10 min
        (20 passes de 30 s). Coût négligeable : 4 Ko par contrôle. */
     if (_tickAutoSync % 20 === 0) {
       try { _verifierNouvelleVersion(); } catch(e){}
     }
-    if (_tickAutoSync % 4 === 0) {
+    if (_tickAutoSync % 12 === 0) {
       try { if (typeof _pullPlanComptableCloud === 'function') _pullPlanComptableCloud(); } catch(e){}
     }
-    /* Filet de secours général : si le canal Realtime est tombé silencieusement
-       (mobile en arrière-plan, veille, reconnexion ratée) sans que _RT le
-       détecte, aucune donnée entrante (session caisse ouverte par un collègue,
-       nouveau mouvement, etc.) ne remonterait plus jamais sans rechargement
-       manuel de la page. Un pull silencieux toutes les 60 s (2 passes)
-       garantit la fraîcheur même canal Realtime mort. */
-    if (_tickAutoSync % 2 === 0 && navigator.onLine) {
+    /* [FIX charge Supabase 31/08] Filet de secours général : si le canal
+       Realtime est tombé silencieusement (mobile en arrière-plan, veille,
+       reconnexion ratée) sans que _RT le détecte, aucune donnée entrante
+       (session caisse ouverte par un collègue, nouveau mouvement, etc.)
+       ne remonterait plus jamais sans rechargement manuel de la page.
+       AVANT : pull complet (~150 tables, séquentiel) toutes les 60 s SUR
+       CHAQUE POSTE. Avec plusieurs postes ouverts simultanément, ça
+       s'additionne en continu sur le compute — observé le 31/08 : 527k
+       requêtes/24h sur une instance Nano, connexions Postgres saturées,
+       toute l'application indisponible pendant ~1h.
+       Le Realtime reste le mécanisme PRINCIPAL (quasi instantané, un seul
+       websocket par poste, coût négligeable) — ce pull périodique n'est
+       qu'un filet de secours pour le cas où il tombe en panne silencieuse.
+       Un filet qui se déclenche toutes les ~6 min (12 passes) reste largement
+       suffisant pour ce rôle, tout en divisant par ~6 la charge de fond
+       générée par cette route. Si le besoin réel était une fraîcheur
+       infra-minute y compris quand Realtime est cassé, il vaudrait mieux
+       agrandir le compute Supabase (Nano → Micro/Small) que ré-accélérer
+       ce filet. */
+    if (_tickAutoSync % 12 === 0 && navigator.onLine) {
       try { if (typeof pullFromCloudSilent === 'function') pullFromCloudSilent(); } catch(e){}
     }
     /* Vérifie si cette session a été invalidée à distance (Paramétrage →
@@ -25617,6 +25828,51 @@ async function pullFromCloudSilent() {
       .forEach(function(fn){
         if (typeof window[fn] === 'function') { try { window[fn](); } catch(e){} }
       });
+    /* [FIX écart entre postes] Ces écrans (Cockpit budgétaire, Compte
+       d'exploitation prévisionnel, alertes Parc Auto…) ne sont PAS dans la
+       liste ci-dessus, donc un poste resté ouvert sur l'une de ces pages
+       continuait d'afficher des chiffres figés à l'instant du chargement,
+       même après une synchro réussie en arrière-plan — jusqu'à ce que
+       l'utilisateur change de page puis y revienne. Symptôme exact : « le
+       tableau de bord ne montre pas la même valeur sur deux postes ».
+       On ne rappelle QUE les fonctions d'affichage (jamais les fonctions
+       d'initialisation de filtre du type budgetInitFiltres) pour ne pas
+       réinitialiser sous les yeux de l'utilisateur une division/un exercice
+       qu'il avait sélectionné — uniquement si la page concernée est
+       actuellement affichée. */
+    try {
+      var pageActive = APP.currentPage;
+      if (pageActive === 'budget') {
+        if (typeof budgetRenderDashboard === 'function') budgetRenderDashboard();
+        if (typeof budgetRenderPrevisionnel === 'function') budgetRenderPrevisionnel();
+        if (typeof budgetRenderFed === 'function') budgetRenderFed();
+        if (typeof budgetRenderTransferts === 'function') budgetRenderTransferts();
+        if (typeof renderCompteExploitationPrevisionnel === 'function') renderCompteExploitationPrevisionnel();
+      }
+      if (pageActive === 'parc-auto' && typeof paRenderAlertes === 'function') paRenderAlertes();
+      if (pageActive === 'relances' && typeof detectRelances === 'function') detectRelances();
+      if (pageActive === 'commercialisation' && typeof renderCommercialisation === 'function') renderCommercialisation();
+      /* [FIX même famille] Sélecteurs de lots ouverts au moment d'un pull —
+         un lot créé sur un autre poste doit apparaître sans qu'il faille
+         fermer/rouvrir le formulaire en cours. */
+      if (typeof updateLotsByProgramme === 'function' && document.getElementById('c-lot') && document.getElementById('c-programme')) {
+        updateLotsByProgramme(true);
+      }
+      if (typeof updateLotsSupplementairesSelect === 'function' && document.getElementById('c-lot-supplementaire')) {
+        updateLotsSupplementairesSelect();
+      }
+      if (typeof fiscPopulate === 'function' && document.getElementById('fisc-vte-lot')) {
+        fiscPopulate();
+      }
+      /* La barre de navigation (badges compteurs) doit rester juste même
+         hors de la page concernée — sinon le badge Parc Auto/Budget affiche
+         un nombre périmé jusqu'au prochain rechargement complet. */
+      if (typeof paCalculerAlertes === 'function') {
+        var badgePA = document.getElementById('badge-parc-auto');
+        if (badgePA) { var nAl = paCalculerAlertes().length; badgePA.textContent = String(nAl); badgePA.style.display = nAl ? 'inline-block' : 'none'; }
+      }
+      if (typeof iaaRefreshAlertes === 'function') iaaRefreshAlertes();
+    } catch(e){}
     /* Rôles/permissions peuvent arriver après le premier rendu de la sidebar
        (custom_roles créé/modifié sur un autre poste, pas encore synchronisé
        au moment du login). Sans ce recalcul, des modules autorisés restent
@@ -27031,6 +27287,12 @@ function switchTab(context, tab) {
   if (context==='conventions' && tab==='cautions' && typeof cauInit==='function') { cauInit(); }
   if (context==='paiements' && tab==='momo' && typeof momoInit==='function') { momoInit(); }
   if (context==='paiements' && tab==='lien' && typeof payOnlineInit==='function') { payOnlineInit(); }
+  if (context==='caisse') {
+    if (tab==='ventilation' && typeof caisseRenderVentilation==='function') caisseRenderVentilation();
+    if (tab==='decaissements' && typeof caisseRenderDecaissementsAFaire==='function') caisseRenderDecaissementsAFaire();
+    if (tab==='tiers' && typeof caisseRenderBalanceAgee==='function') caisseRenderBalanceAgee();
+    if (tab==='audit' && typeof renderCaisseAudit==='function') renderCaisseAudit();
+  }
   if (context==='lbcft') {
     if (tab==='alertes' && typeof lbcRenderAlertes==='function') lbcRenderAlertes();
     if (tab==='kyc' && typeof lbcRenderKyc==='function') lbcRenderKyc();
@@ -27168,6 +27430,7 @@ function switchTab(context, tab) {
     if (tab === 'previsionnel' && typeof budgetRenderPrevisionnel === 'function') budgetRenderPrevisionnel();
     if (tab === 'fed' && typeof budgetRenderFed === 'function') budgetRenderFed();
     if (tab === 'transferts' && typeof budgetRenderTransferts === 'function') budgetRenderTransferts();
+    if (tab === 'exploitation' && typeof renderCompteExploitationPrevisionnel === 'function') renderCompteExploitationPrevisionnel();
   }
 
   /* Mettre à jour les boutons .tab-btn du même contexte */
@@ -27953,7 +28216,7 @@ function cmrcBuildActions(leads, ticketMoyen) {
 
   /* 4. Réservations à confirmer (lots réservés non transformés en souscription). */
   var reservesNonClients = DATA.lots.filter(function(l){
-    return l.statut==='reserve' && !DATA.clients.some(function(c){ return c.lot_id===l.id; });
+    return l.statut==='reserve' && !l.client_id;
   });
   if (reservesNonClients.length) {
     actions.push({prio:2, icon:'📝', titre:reservesNonClients.length+' lot(s) réservé(s) sans dossier souscripteur', detail:'Finaliser la convention avant expiration de la réservation', action:"goTo('lots')"});
@@ -29309,24 +29572,27 @@ function openClientModal(id) {
 
 function clearClientForm() {
   ['c-nom','c-prenoms','c-ddn','c-nationalite','c-profession','c-tel','c-email','c-adresse',
-   'c-piece-num','c-montant-total','c-apport','c-duree','c-date-debut','c-date-souscription','c-mensualite','c-type-logement',
+   'c-piece-num','c-montant-total','c-apport','c-duree','c-date-debut','c-date-souscription','c-mensualite','c-type-logement','c-surface',
    'c-commercial','c-apporteur'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = el.id === 'c-nationalite' ? 'Ivoirienne' : el.id === 'c-duree' ? '60' : el.id === 'c-apport' ? '0' : '';
   });
+  var svEcart = document.getElementById('c-surface-ecart'); if (svEcart) svEcart.style.display = 'none';
   document.getElementById('doc-btns').style.display = 'none';
   document.getElementById('doc-btns').innerHTML = '';
   var modeEl = document.getElementById('c-mode-livraison'); if (modeEl) modeEl.value = 'gros_oeuvre';
   var standEl = document.getElementById('c-standing'); if (standEl) standEl.value = 'economique';
   var natManEl = document.getElementById('c-nature-manuel'); if (natManEl) natManEl.value = 'auto';
   updateNatureBienUI(null);
+  APP._clientLotsSupplementaires = [];
+  if (typeof renderLotsSupplementairesListe === 'function') renderLotsSupplementairesListe();
 }
 
 function fillClientForm(c) {
   var map = { 'c-nom': 'nom', 'c-prenoms': 'prenoms', 'c-ddn': 'ddn', 'c-nationalite': 'nationalite',
     'c-profession': 'profession', 'c-tel': 'tel', 'c-email': 'email', 'c-adresse': 'adresse',
     'c-piece-num': 'piece_num', 'c-montant-total': 'montant_total', 'c-apport': 'apport',
-    'c-duree': 'duree', 'c-date-debut': 'date_debut', 'c-date-souscription': 'date_souscription', 'c-type-logement': 'type_logement'
+    'c-duree': 'duree', 'c-date-debut': 'date_debut', 'c-date-souscription': 'date_souscription', 'c-type-logement': 'type_logement', 'c-surface': 'surface'
   };
   Object.keys(map).forEach(function(id) {
     var el = document.getElementById(id);
@@ -29339,6 +29605,11 @@ function fillClientForm(c) {
   setSelectValue('c-programme', c.programme_id);
   setSelectValue('c-commercial', c.commercial_id || '');
   setSelectValue('c-apporteur', c.apporteur_id || '');
+  /* [multi-lot] Préremplit la liste des lots supplémentaires (tous les
+     lot_ids sauf le lot principal lot_id) pour affichage/modification. */
+  APP._clientLotsSupplementaires = (typeof _lotIdsDeClient === 'function' ? _lotIdsDeClient(c) : (c.lot_ids||[])).filter(function(lid){ return lid !== c.lot_id; });
+  if (typeof renderLotsSupplementairesListe === 'function') renderLotsSupplementairesListe();
+  if (typeof clientCompareSurface === 'function') clientCompareSurface();
   /* [FIX] Reflète l'état réel du dossier dans le sélecteur manuel : si
      nature_bien diverge de ce que le lot rattaché indiquerait tout seul (ou
      si aucun lot n'est rattaché mais que nature_bien est déjà connu — ex.
@@ -29420,44 +29691,63 @@ function ouvrirVersementApport(clientId, montantSuggere) {
 }
 
 /* Statut du lot selon le % encaissé : réservé jusqu'au seuil d'immobilisation, puis vendu */
+/* [multi-lot] Un souscripteur peut désormais avoir plusieurs lots sur un même
+   programme (c.lot_ids, tableau), avec UN SEUL échéancier/montant_total
+   combiné — c.lot_id reste le lot PRINCIPAL (1er de la liste), lu tel quel
+   par les ~50 endroits de l'app qui n'affichent/ne calculent qu'« un » lot
+   (fiche client, contrat, audits…) : aucun de ces usages n'est cassé.
+   Le statut réservé/vendu, calculé UNE FOIS sur le % payé du montant total
+   combiné, s'applique identiquement à CHAQUE lot du souscripteur — cohérent
+   avec le principe d'un seul échéancier pour l'ensemble. */
+function _lotIdsDeClient(c) {
+  if (Array.isArray(c.lot_ids) && c.lot_ids.length) return c.lot_ids;
+  return c.lot_id ? [c.lot_id] : [];
+}
 async function majStatutLotClient(clientId) {
   var c = DATA.clients.find(function(x){ return x.id === clientId; });
-  if (!c || !c.lot_id) return;
-  var lot = DATA.lots.find(function(l){ return l.id === c.lot_id; });
-  if (!lot) return;
+  if (!c) return;
+  var lotIds = _lotIdsDeClient(c);
+  if (!lotIds.length) return;
   var seuil = parseFloat((DATA.params||{}).seuil_immobilisation_pct) || 70;
   var total = parseFloat(c.montant_total) || 0;
   var paye = totalPayePrix(clientId);
   var pct = total > 0 ? (paye / total * 100) : 0;
   var nouveau = pct >= seuil ? 'vendu' : 'reserve';
-  if (lot.statut !== nouveau || lot.client_id !== clientId) {
-    /* CORRECTIF : date_reservation n'était jamais écrite alors qu'elle est lue
-       ailleurs (ancienneté des réservations, alerte de délai de validité). On la
-       fixe à la première mise en réservation, et on la réinitialise si le lot
-       change de souscripteur (nouvelle réservation) ou repasse dispo → reserve. */
-    if (nouveau === 'reserve' && (lot.statut !== 'reserve' || lot.client_id !== clientId || !lot.date_reservation)) {
-      lot.date_reservation = today();
+  var dernierStatut = nouveau;
+  for (var i = 0; i < lotIds.length; i++) {
+    var lot = DATA.lots.find(function(l){ return l.id === lotIds[i]; });
+    if (!lot) continue;
+    if (lot.statut !== nouveau || lot.client_id !== clientId) {
+      /* CORRECTIF : date_reservation n'était jamais écrite alors qu'elle est lue
+         ailleurs (ancienneté des réservations, alerte de délai de validité). On la
+         fixe à la première mise en réservation, et on la réinitialise si le lot
+         change de souscripteur (nouvelle réservation) ou repasse dispo → reserve. */
+      if (nouveau === 'reserve' && (lot.statut !== 'reserve' || lot.client_id !== clientId || !lot.date_reservation)) {
+        lot.date_reservation = today();
+      }
+      if (nouveau === 'vendu') { lot.date_vente = lot.date_vente || today(); }
+      /* 4.5 - Historique des changements de statut : traçabilité en cas de litige (double vente, erreur de saisie) */
+      lot.historique_statuts = (lot.historique_statuts || []).concat([{
+        date: new Date().toISOString(), ancien: lot.statut || null, nouveau: nouveau,
+        client_id: clientId, user: (APP.currentUser && (APP.currentUser.nom || APP.currentUser.login)) || 'system'
+      }]);
+      lot.statut = nouveau; lot.client_id = clientId;
+      await dbPut('lots', lot);
+      if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
     }
-    if (nouveau === 'vendu') { lot.date_vente = lot.date_vente || today(); }
-    /* 4.5 - Historique des changements de statut : traçabilité en cas de litige (double vente, erreur de saisie) */
-    lot.historique_statuts = (lot.historique_statuts || []).concat([{
-      date: new Date().toISOString(), ancien: lot.statut || null, nouveau: nouveau,
-      client_id: clientId, user: (APP.currentUser && (APP.currentUser.nom || APP.currentUser.login)) || 'system'
-    }]);
-    lot.statut = nouveau; lot.client_id = clientId;
-    await dbPut('lots', lot);
-    if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', lot);
+    /* Reconnaissance comptable du produit à la vente — terrain OU logement,
+       selon la nature réelle du lot (les deux cas doivent être couverts).
+       Faite PAR LOT (chaque lot est un actif distinct) même si le paiement
+       qui déclenche le seuil est combiné sur l'ensemble des lots. */
+    if (lot.nature === 'terrain') {
+      if (nouveau === 'vendu') { await comptabiliserVenteTerrain(lot); }
+      else { await supprimerVenteTerrain(lot.id); }
+    } else {
+      if (nouveau === 'vendu') { await comptabiliserVenteLogement(lot); }
+      else { await supprimerVenteLogement(lot.id); }
+    }
   }
-  /* Reconnaissance comptable du produit à la vente — terrain OU logement,
-     selon la nature réelle du lot (les deux cas doivent être couverts). */
-  if (lot.nature === 'terrain') {
-    if (nouveau === 'vendu') { await comptabiliserVenteTerrain(lot); }
-    else { await supprimerVenteTerrain(lot.id); }
-  } else {
-    if (nouveau === 'vendu') { await comptabiliserVenteLogement(lot); }
-    else { await supprimerVenteLogement(lot.id); }
-  }
-  return nouveau;
+  return dernierStatut;
 }
 
 /* Statistiques lots par statut — source unique pour les KPI « Lots vendus »
@@ -29548,8 +29838,10 @@ async function saveClient() {
   // ── Verrou anti-double-réservation : re-vérifié ici (indépendamment du filtrage
   //    du <select>) car le DOM peut être obsolète (import concurrent, sync distante). ──
   var _lotIdChoisi = document.getElementById('c-lot') ? document.getElementById('c-lot').value : '';
-  if (_lotIdChoisi) {
-    var _lotVerif = DATA.lots.find(function(l) { return l.id === _lotIdChoisi; });
+  var _lotIdsSupplémentaires = (APP._clientLotsSupplementaires || []).slice();
+  var _tousLotIdsChoisis = _lotIdChoisi ? [_lotIdChoisi].concat(_lotIdsSupplémentaires) : _lotIdsSupplémentaires.slice();
+  for (var _li = 0; _li < _tousLotIdsChoisis.length; _li++) {
+    var _lotVerif = DATA.lots.find(function(l) { return l.id === _tousLotIdsChoisis[_li]; });
     if (_lotVerif && _lotVerif.client_id && _lotVerif.client_id !== APP.editingId) {
       var _proprietaire = DATA.clients.find(function(c) { return c.id === _lotVerif.client_id; });
       var _nomProprietaire = _proprietaire ? ((_proprietaire.prenoms || '') + ' ' + (_proprietaire.nom || '')).trim() : 'un autre souscripteur';
@@ -29561,8 +29853,9 @@ async function saveClient() {
   APP._savingClient = true;
   var id = APP.editingId || uid();
   var _ancienLotId = null;
+  var _ancienLotIds = [];
   var _dossier = '';
-  if (APP.editingId) { var _exC = DATA.clients.find(function(c){ return c.id === id; }); if (_exC) { _ancienLotId = _exC.lot_id || null; _dossier = _exC.dossier || ''; } }
+  if (APP.editingId) { var _exC = DATA.clients.find(function(c){ return c.id === id; }); if (_exC) { _ancienLotId = _exC.lot_id || null; _ancienLotIds = _lotIdsDeClient(_exC); _dossier = _exC.dossier || ''; } }
   if (!_dossier) _dossier = genererCodeDossier();
   var client = {
     id: id,
@@ -29579,6 +29872,8 @@ async function saveClient() {
     piece_num: document.getElementById('c-piece-num').value,
     programme_id: document.getElementById('c-programme').value,
     lot_id: document.getElementById('c-lot').value,
+    lot_ids: _tousLotIdsChoisis,
+    surface: parseFloat(document.getElementById('c-surface').value) || 0,
     /* Distingue une souscription pour un bien bâti (maison/appartement) d'une
        souscription pour un terrain nu (parcelle). Priorité : 1) choix manuel
        explicite (« Nature du bien »), 2) nature du lot rattaché, 3) sinon
@@ -29629,13 +29924,14 @@ async function saveClient() {
       APP.editingId = client.id; /* évite un 2e enregistrement en doublon */
     }
 
-    /* ── Interconnexion lot : libérer l'ancien lot, réserver le nouveau ── */
-    if (_ancienLotId && _ancienLotId !== client.lot_id) {
-      var oldLot = DATA.lots.find(function(l){ return l.id === _ancienLotId; });
+    /* ── Interconnexion lots : libérer ceux retirés, réserver les nouveaux ── */
+    var _lotsALiberer = _ancienLotIds.filter(function(lid){ return _tousLotIdsChoisis.indexOf(lid) === -1; });
+    for (var _lr = 0; _lr < _lotsALiberer.length; _lr++) {
+      var oldLot = DATA.lots.find(function(l){ return l.id === _lotsALiberer[_lr]; });
       if (oldLot) { oldLot.statut = 'disponible'; oldLot.client_id = null; await dbPut('lots', oldLot); if (typeof syncToSupabase === 'function') syncToSupabase('pi_lots', oldLot); }
     }
-    if (client.lot_id) {
-      var lot = DATA.lots.find(function(l) { return l.id === client.lot_id; });
+    for (var _ln = 0; _ln < _tousLotIdsChoisis.length; _ln++) {
+      var lot = DATA.lots.find(function(l) { return l.id === _tousLotIdsChoisis[_ln]; });
       if (lot) { lot.client_id = id; await dbPut('lots', lot); }
     }
 
@@ -29776,6 +30072,9 @@ function renderClients() {
   var filterCA = (document.getElementById('filter-commercial-client')||{}).value || '';
   var dDeb = (document.getElementById('filter-client-date-debut')||{}).value || '';
   var dFin = (document.getElementById('filter-client-date-fin')||{}).value || '';
+  var montantMin = parseFloat((document.getElementById('filter-client-montant-min')||{}).value) || null;
+  var montantMax = parseFloat((document.getElementById('filter-client-montant-max')||{}).value) || null;
+  var tri = (document.getElementById('filter-client-tri')||{}).value || '';
 
   /* Index O(1)/O(n) construits UNE SEULE FOIS pour tout l'écran — remplacent
      des appels répétés PAR CLIENT (jusqu'à 2× par client, en comptant le
@@ -29810,8 +30109,28 @@ function renderClients() {
     var filtStat = !filterStat || statut === filterStat;
     var dateRef = (c.date_souscription || c.date_debut || c.created_at || '').slice(0, 10);
     var matchPeriode = (!dDeb || dateRef >= dDeb) && (!dFin || dateRef <= dFin);
-    return match && prog && stand && filtStat && ca && matchPeriode;
+    var montant = parseFloat(c.montant_total) || 0;
+    var matchMontant = (montantMin===null || montant >= montantMin) && (montantMax===null || montant <= montantMax);
+    return match && prog && stand && filtStat && ca && matchPeriode && matchMontant;
   });
+
+  /* [Tri] Appliqué APRÈS le filtrage — la date de référence est la même que
+     celle utilisée pour le filtre période (souscription, sinon début, sinon
+     création), pour rester cohérent entre les deux. */
+  if (tri) {
+    var dateDe = function(c){ return (c.date_souscription || c.date_debut || c.created_at || ''); };
+    var nomDe = function(c){ return ((c.nom||'') + ' ' + (c.prenoms||'')).trim().toLowerCase(); };
+    var montantDe = function(c){ return parseFloat(c.montant_total) || 0; };
+    var comparateurs = {
+      date_desc:    function(a,b){ return dateDe(b).localeCompare(dateDe(a)); },
+      date_asc:     function(a,b){ return dateDe(a).localeCompare(dateDe(b)); },
+      alpha_asc:    function(a,b){ return nomDe(a).localeCompare(nomDe(b)); },
+      alpha_desc:   function(a,b){ return nomDe(b).localeCompare(nomDe(a)); },
+      montant_desc: function(a,b){ return montantDe(b) - montantDe(a); },
+      montant_asc:  function(a,b){ return montantDe(a) - montantDe(b); }
+    };
+    if (comparateurs[tri]) list.sort(comparateurs[tri]);
+  }
 
   var periodeInfoBox = document.getElementById('clients-periode-info');
   if (periodeInfoBox) {
@@ -31104,6 +31423,9 @@ function renderVersements() {
   var search = (document.getElementById('search-paiements').value || '').toLowerCase();
   var filterMode = document.getElementById('filter-mode-paiement').value;
   var filterMois = document.getElementById('filter-mois-paiement').value;
+  var montantMin = parseFloat((document.getElementById('filter-paiement-montant-min')||{}).value) || null;
+  var montantMax = parseFloat((document.getElementById('filter-paiement-montant-max')||{}).value) || null;
+  var tri = (document.getElementById('filter-paiement-tri')||{}).value || 'date_desc';
 
   var list = DATA.versements.filter(function(v) {
     var client = DATA.clients.find(function(c) { return c.id === v.client_id; });
@@ -31111,8 +31433,25 @@ function renderVersements() {
     var matchSearch = !search || nom.indexOf(search) !== -1 || (v.ref || '').toLowerCase().indexOf(search) !== -1;
     var matchMode = !filterMode || v.mode === filterMode;
     var matchMois = !filterMois || (v.date && v.date.startsWith(filterMois));
-    return matchSearch && matchMode && matchMois;
-  }).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+    var montant = parseFloat(v.montant) || 0;
+    var matchMontant = (montantMin===null || montant >= montantMin) && (montantMax===null || montant <= montantMax);
+    return matchSearch && matchMode && matchMois && matchMontant;
+  });
+
+  /* [Tri] Même modèle que le module Souscripteurs — appliqué après le
+     filtrage, sélectionnable par l'utilisateur (auparavant fixé en dur sur
+     date décroissante ; ce comportement reste la valeur par défaut). */
+  var nomClientDe = function(v){ var c = DATA.clients.find(function(x){ return x.id===v.client_id; }); return c ? (c.nom+' '+c.prenoms).trim().toLowerCase() : ''; };
+  var montantDe = function(v){ return parseFloat(v.montant) || 0; };
+  var comparateurs = {
+    date_desc:    function(a,b){ return new Date(b.date) - new Date(a.date); },
+    date_asc:     function(a,b){ return new Date(a.date) - new Date(b.date); },
+    alpha_asc:    function(a,b){ return nomClientDe(a).localeCompare(nomClientDe(b)); },
+    alpha_desc:   function(a,b){ return nomClientDe(b).localeCompare(nomClientDe(a)); },
+    montant_desc: function(a,b){ return montantDe(b) - montantDe(a); },
+    montant_asc:  function(a,b){ return montantDe(a) - montantDe(b); }
+  };
+  list.sort(comparateurs[tri] || comparateurs.date_desc);
 
   var tbody = document.getElementById('tbody-versements');
   if (!list.length) {
@@ -32769,6 +33108,8 @@ function openLotModal(id) {
     document.getElementById('l-ilot').value = l.ilot || '';
     populateTypeLogementOptions(l.type || '');
     document.getElementById('l-surface').value = l.surface || '';
+    document.getElementById('l-surface-mesuree').value = l.surface_mesuree || '';
+    if (typeof lotCompareSurfaceMesuree === 'function') lotCompareSurfaceMesuree();
     document.getElementById('l-pieces').value = l.pieces || '';
     document.getElementById('l-prix').value = l.prix || '';
     setSelectValue('l-prix-mode', l.prix_mode || 'forfait');
@@ -32792,7 +33133,7 @@ function openLotModal(id) {
 }
 
 function clearLotForm() {
-  ['l-numero','l-ilot','l-surface','l-pieces','l-prix','l-prix-m2','l-cout-revient','l-cout-m2','l-notes'].forEach(function(id) {
+  ['l-numero','l-ilot','l-surface','l-surface-mesuree','l-pieces','l-prix','l-prix-m2','l-cout-revient','l-cout-m2','l-notes'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -32801,6 +33142,30 @@ function clearLotForm() {
   var cmo=document.getElementById('l-cout-mode'); if(cmo) cmo.value='forfait';
   var tv=document.getElementById('l-terrain-tva'); if(tv) tv.checked=false;
   lotNatureUI(); lotRecalcPrixM2(); lotRecalcCoutM2();
+  if (typeof lotCompareSurfaceMesuree === 'function') lotCompareSurfaceMesuree();
+}
+
+/* Comparaison en direct : surface au plan (l-surface, celle utilisée pour le
+   prix/m² et les calculs de quote-part) vs surface relevée manuellement sur
+   le terrain (l-surface-mesuree). Un écart significatif peut révéler une
+   erreur d'import du plan de morcellement ou un bornage à corriger — signalé
+   mais jamais bloquant (l'utilisateur reste maître de sa saisie). */
+function lotCompareSurfaceMesuree() {
+  var elEcart = document.getElementById('l-surface-ecart'); if (!elEcart) return;
+  var plan = parseFloat(document.getElementById('l-surface').value) || 0;
+  var mesuree = parseFloat(document.getElementById('l-surface-mesuree').value) || 0;
+  if (!mesuree) { elEcart.style.display = 'none'; return; }
+  if (!plan) { elEcart.style.display = ''; elEcart.style.color = 'var(--blanc-dim)'; elEcart.textContent = 'ℹ️ Aucune surface au plan à comparer pour l\'instant.'; return; }
+  var ecart = mesuree - plan;
+  var ecartPct = (ecart / plan) * 100;
+  elEcart.style.display = '';
+  if (Math.abs(ecartPct) < 1) {
+    elEcart.style.color = 'var(--vert)';
+    elEcart.textContent = '✅ Conforme au plan (écart ' + (ecart>=0?'+':'') + ecart.toFixed(1) + ' m², ' + ecartPct.toFixed(1) + '%).';
+  } else {
+    elEcart.style.color = Math.abs(ecartPct) >= 5 ? 'var(--rouge)' : '#E67E22';
+    elEcart.textContent = (Math.abs(ecartPct) >= 5 ? '🔴 ' : '🟠 ') + 'Écart avec le plan : ' + (ecart>=0?'+':'') + ecart.toFixed(1) + ' m² (' + (ecartPct>=0?'+':'') + ecartPct.toFixed(1) + '%) — ' + (ecart>0 ? 'surface mesurée plus grande' : 'surface mesurée plus petite') + '. Vérifier le bornage ou corriger le plan si confirmé.';
+  }
 }
 
 /* Affiche/masque le bloc TVA terrain selon la nature du lot */
@@ -32920,6 +33285,7 @@ async function saveLot() {
     ilot: document.getElementById('l-ilot').value,
     type: document.getElementById('l-type').value,
     surface: _surface,
+    surface_mesuree: parseFloat(document.getElementById('l-surface-mesuree').value) || null,
     pieces: parseInt(document.getElementById('l-pieces').value) || 0,
     prix: _prix,
     prix_mode: _prixMode,
@@ -32982,6 +33348,25 @@ async function saveLot() {
   renderLots();
   filiereLiveRefresh();
   montageLiveRefresh('lots');
+  /* [FIX] Un lot créé/modifié ici ne rafraîchissait aucun des sélecteurs de
+     lots affichés ailleurs dans l'app (souscription, simulateur fiscal…) —
+     ils restaient figés sur l'état au moment de leur propre ouverture,
+     jusqu'à ce qu'on ferme/rouvre le formulaire concerné. Chaque appel est
+     protégé par la présence de son élément DOM : aucun effet si le module
+     n'est pas actuellement affiché. */
+  if (typeof updateLotsByProgramme === 'function' && document.getElementById('c-lot') && document.getElementById('c-programme')) {
+    updateLotsByProgramme(true);
+  }
+  if (typeof updateLotsSupplementairesSelect === 'function' && document.getElementById('c-lot-supplementaire')) {
+    updateLotsSupplementairesSelect();
+  }
+  if (typeof fiscPopulate === 'function' && document.getElementById('fisc-vte-lot')) {
+    fiscPopulate();
+  }
+  if (typeof rlLotOptions === 'function' && document.getElementById('liv-lot')) {
+    var _livSel = document.getElementById('liv-lot');
+    _livSel.innerHTML = rlLotOptions(_livSel.value);
+  }
 }
 
 function filterLots() { renderLots(); }
@@ -33425,6 +33810,13 @@ function renderLots() {
         + '<div class="lot-type">' + (l.type || 'N/A') + (l.ilot ? ' — Îlot ' + l.ilot : '') + '</div>'
         + '<div style="font-size:11px;color:var(--blanc-dim);margin:2px 0;">' + (prog ? prog.nom : '—') + '</div>'
         + (l.surface ? '<div style="font-size:11px;color:var(--blanc-dim);">' + l.surface + ' m²</div>' : '')
+        + (function(){
+            if (!l.surface_mesuree || !l.surface) return '';
+            var ec = l.surface_mesuree - l.surface, ecPct = (ec / l.surface) * 100;
+            if (Math.abs(ecPct) < 1) return '';
+            var coul = Math.abs(ecPct) >= 5 ? 'var(--rouge)' : '#E67E22';
+            return '<div style="font-size:10px;color:' + coul + ';font-weight:700;" title="Surface relevée : ' + l.surface_mesuree + ' m² (plan : ' + l.surface + ' m²)">⚠ ' + (ec>=0?'+':'') + ec.toFixed(0) + ' m² vs plan</div>';
+          })()
         + livBadge
         + '<div class="lot-prix">' + fcfa(l.prix) + '</div>'
         + '<div style="font-size:11px;margin-top:4px;">' + (statutLabels[l.statut] || l.statut) + '</div>'
@@ -38625,7 +39017,7 @@ function ckActions() {
   /* R5 — Lots réservés sans aucun souscripteur rattaché : une réservation
      fantôme stérilise un lot vendable. */
   var resOrphelins = (DATA.lots||[]).filter(function(l){
-    return l.statut==='reserve' && !(DATA.clients||[]).some(function(c){ return c.lot_id===l.id; });
+    return l.statut==='reserve' && !l.client_id;
   });
   if (resOrphelins.length) push({
     aid: 'resorph_'+resOrphelins.length, prio: 45, icone: '🏷️',
@@ -38789,8 +39181,11 @@ function ckActions() {
   });
 
   /* R-BUDGET — Lignes en dépassement (urgent, un transfert peut régler ça
-     immédiatement) et validations budgétaires en attente (chaque jour
-     d'attente retarde un décaissement en aval, à la caisse). */
+     immédiatement), validations budgétaires en attente (chaque jour
+     d'attente retarde un décaissement en aval, à la caisse), transferts en
+     attente, et viabilité du budget prévisionnel de l'exercice en cours
+     (résultat déficitaire ou trésorerie cumulée qui passe dans le rouge en
+     cours d'année — cf. Compte d'exploitation prévisionnel). */
   try {
     var kBud = (typeof _budgetKpiGlobal === 'function') ? _budgetKpiGlobal() : null;
     if (kBud) {
@@ -38820,6 +39215,70 @@ function ckActions() {
           boutons: [ { lib:'✅ Aller valider', fn:"goTo('budget')" } ]
         });
       }
+      if (kBud.transfertsEnAttente > 0) {
+        push({
+          aid: 'budtransferts_attente', prio: 65, urgent: false, icone: '🔀',
+          titre: kBud.transfertsEnAttente + ' transfert(s) budgétaire(s) en attente de validation',
+          detail: 'Une ligne en dépassement attend peut-être ce transfert pour être régularisée.',
+          boutons: [ { lib:'✅ Aller valider', fn:"goTo('budget')" } ]
+        });
+      }
+    }
+  } catch(e){}
+
+  /* R-BUDGET-VIABILITE — Sur l'exercice en cours, un budget prévisionnel
+     validé mais déficitaire (ou dont la trésorerie cumulée passe dans le
+     rouge en cours d'année) doit être corrigé avant que le réel ne
+     confirme le problème — voir Compte d'exploitation prévisionnel. */
+  try {
+    if (typeof _cexpBudgetParRubrique === 'function' && typeof _diagnosticViabilite === 'function') {
+      var anneeCourante = new Date().getFullYear();
+      var perimetres = [{ id:'', nom:'Consolidé (toutes divisions)' }].concat(
+        (DATA.divisions||[]).map(function(d){ return { id:d.id, nom:d.nom }; })
+      );
+      perimetres.forEach(function(p){
+        var budget = _cexpBudgetParRubrique(p.id, anneeCourante);
+        var toutes = _toutesLesRubriques();
+        var moisProduits = Array(12).fill(0), moisCharges = Array(12).fill(0);
+        toutes.forEach(function(r){
+          for (var m=0;m<12;m++){ if (r.type==='produit') moisProduits[m]+=budget[r.cle][m]; else moisCharges[m]+=budget[r.cle][m]; }
+        });
+        var totBud = _cexpSomme12(moisProduits) + _cexpSomme12(moisCharges);
+        if (totBud <= 0) return;   /* pas de budget saisi pour ce périmètre — rien à signaler */
+        var diag = _diagnosticViabilite(moisProduits, moisCharges);
+        if (diag.niveau !== 'rouge' && diag.niveau !== 'orange') return;
+        push({
+          aid: 'budviab_' + (p.id||'consolide') + '_' + anneeCourante,
+          prio: diag.niveau === 'rouge' ? 85 : 70, urgent: diag.niveau === 'rouge', icone: diag.niveau === 'rouge' ? '🔴' : '🟠',
+          titre: (diag.niveau === 'rouge' ? 'Budget non viable' : 'Budget à risque') + ' — ' + p.nom + ' ' + anneeCourante,
+          detail: diag.texte,
+          boutons: [ { lib:'📈 Voir le compte d\'exploitation', fn:"goTo('budget')" } ]
+        });
+      });
+    }
+  } catch(e){}
+
+  /* R-LOGISTIQUE — Parc auto : réutilise paCalculerAlertes() (assurance,
+     visite technique, vidange par km/date) — source unique déjà partagée
+     avec le badge du module Parc Auto, pour ne pas faire dériver deux
+     logiques d'échéances en parallèle. */
+  try {
+    if (typeof paCalculerAlertes === 'function') {
+      var alertesVeh = paCalculerAlertes();
+      var parVehicule = {};
+      alertesVeh.forEach(function(a){ (parVehicule[a.vehicule_id] = parVehicule[a.vehicule_id] || []).push(a); });
+      Object.keys(parVehicule).forEach(function(vid){
+        var al = parVehicule[vid];
+        var rouge = al.some(function(a){ return a.niveau==='rouge'; });
+        var v = (DATA.vehicules||[]).find(function(x){ return x.id===vid; });
+        push({
+          aid: 'vehdoc_' + vid,
+          prio: rouge ? 92 : 55, urgent: rouge, icone: '🚗',
+          titre: (rouge ? 'Document véhicule expiré' : 'Échéance véhicule proche') + ' — ' + (v ? v.immatriculation : 'véhicule'),
+          detail: al.map(function(a){ return a.texte; }).join(' · '),
+          boutons: [ { lib:'🚗 Ouvrir le Parc Auto', fn:"goTo('parc-auto')" } ]
+        });
+      });
     }
   } catch(e){}
 
@@ -39057,7 +39516,7 @@ function ckSante() {
         incomplets ? incomplets+' dossier(s) incomplet(s) sur '+totD : 'Dossiers complets', 'clients');
   } else dom('Données','🧬',100,'Aucun dossier','clients');
 
-  /* Commercial : leads sans mouvement depuis 14 jours. */
+  /* Pipeline : leads sans mouvement depuis 14 jours. */
   var leads = (DATA.leads||[]).filter(function(l){ return l.stade!=='reservation' && l.stade!=='perdu'; });
   if (leads.length) {
     /* Les leads ne portent pas d'updated_at : les champs réellement alimentés
@@ -39074,6 +39533,33 @@ function ckSante() {
     dom('Pipeline','🎯', 100 - Math.round(froids/leads.length*100),
         froids ? froids+' lead(s) sans contact depuis 14 j sur '+leads.length : 'Pipeline animé', 'leads');
   } else dom('Pipeline','🎯',100,'Aucun lead actif','leads');
+
+  /* Budget prévisionnel : taux d'utilisation des lignes (0 dépassement =
+     100, chaque ligne en dépassement grignote le score) + viabilité du
+     compte d'exploitation prévisionnel consolidé de l'exercice en cours. */
+  try {
+    var kBud = (typeof _budgetKpiGlobal === 'function') ? _budgetKpiGlobal() : null;
+    if (kBud && kBud.nbLignesActives > 0) {
+      var scBud = 100 - Math.min(70, kBud.enDepassement.length * 20) - Math.min(20, kBud.procheEpuisement.length * 5);
+      var causeBud = kBud.enDepassement.length
+        ? kBud.enDepassement.length+' ligne(s) en dépassement (taux moyen '+kBud.tauxMoyen+'%)'
+        : (kBud.procheEpuisement.length ? kBud.procheEpuisement.length+' ligne(s) proche(s) de l\'épuisement' : 'Taux d\'utilisation moyen '+kBud.tauxMoyen+'%');
+      dom('Budget','📊', scBud, causeBud, 'budget');
+    }
+  } catch(e){}
+
+  /* Parc auto : documents (assurance, visite technique, vidange) — même
+     source que paCalculerAlertes(), déjà utilisée par le badge du module. */
+  try {
+    var vehsActifs = (DATA.vehicules||[]).filter(function(v){ return v.statut!=='vendu'; });
+    if (vehsActifs.length && typeof paCalculerAlertes === 'function') {
+      var alertesVehSc = paCalculerAlertes();
+      var nbRougeVehSc = alertesVehSc.filter(function(a){ return a.niveau==='rouge'; }).length;
+      var nbTotalVehSc = alertesVehSc.length;
+      dom('Parc auto','🚗', 100 - Math.min(70, nbRougeVehSc*20) - Math.min(20, (nbTotalVehSc-nbRougeVehSc)*5),
+          nbTotalVehSc ? nbTotalVehSc+' échéance(s) sur '+vehsActifs.length+' véhicule(s) ('+nbRougeVehSc+' expirée(s))' : 'Assurances, visites techniques et vidanges à jour', 'parc-auto');
+    }
+  } catch(e){}
 
   return doms.map(function(d){
     var col = d.score>=75 ? 'var(--vert)' : (d.score>=45 ? '#EF9F27' : 'var(--rouge)');
@@ -41772,7 +42258,7 @@ var SYSTEM_ROLES = {
   comptable:  { id:'comptable',  label:'Comptable',      icon:'💼', level:2, system:true,
     permissions: Object.fromEntries(ALL_MODULES.map(function(m){
       return [m, ['Tableau de bord','Accueil','DQE & Cout de revient','Souscripteurs','Paiements',
-                  'Relances','Comptabilite','Tresorerie','Caisse','Paie','Declarations & Teledeclaration','Journaliers & Temporaires','Messagerie',
+                  'Relances','Comptabilite','Tresorerie','Caisse','Budget','Paie','Declarations & Teledeclaration','Journaliers & Temporaires','Messagerie',
                   'Gestion Locative','Investisseurs Diaspora'].includes(m)]; })) },
   commercial: { id:'commercial', label:'Commercial',     icon:'🎯', level:1, system:true,
     permissions: Object.fromEntries(ALL_MODULES.map(function(m){
@@ -43582,6 +44068,7 @@ function updateLotsByProgramme(gardeSelection) {
   if (wrapDiag2) { wrapDiag2.style.display = 'none'; wrapDiag2.innerHTML = ''; }
   var fmt = function(l){
     return '<option value="' + l.id + '">Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '')
+      + (l.surface ? ' — ' + Math.round(l.surface) + ' m²' : '')
       + ' — ' + (l.type || '') + ' — ' + new Intl.NumberFormat('fr-FR').format(l.prix || 0) + ' FCFA</option>';
   };
   dispo.sort(function(a,b){ return String(a.numero).localeCompare(String(b.numero), undefined, {numeric:true}); });
@@ -43594,19 +44081,100 @@ function updateLotsByProgramme(gardeSelection) {
       + reservesAutrui.map(function(l){
           var propr = (DATA.clients||[]).find(function(c){ return c.id === l.client_id; });
           var nomPropr = propr ? ((propr.prenoms||'')+' '+(propr.nom||'')).trim() : '';
-          return '<option value="" disabled>Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + ' — réservé' + (nomPropr ? ' (' + nomPropr + ')' : '') + '</option>';
+          return '<option value="" disabled>Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + (l.surface ? ' — ' + Math.round(l.surface) + ' m²' : '') + ' — réservé' + (nomPropr ? ' (' + nomPropr + ')' : '') + '</option>';
         }).join('')
       + '</optgroup>';
   }
   if (vendus.length) {
     html += '<optgroup label="Déjà vendus (' + vendus.length + ', non sélectionnables)">'
-      + vendus.map(function(l){ return '<option value="" disabled>Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + ' — vendu</option>'; }).join('')
+      + vendus.map(function(l){ return '<option value="" disabled>Lot ' + l.numero + (l.ilot ? ' / Îlot ' + l.ilot : '') + (l.surface ? ' — ' + Math.round(l.surface) + ' m²' : '') + ' — vendu</option>'; }).join('')
       + '</optgroup>';
   }
   lotSelect.innerHTML = html;
   if (selectionPrecedente && dispo.some(function(l){ return l.id === selectionPrecedente; })) {
     lotSelect.value = selectionPrecedente;
   }
+  if (typeof updateLotsSupplementairesSelect === 'function') updateLotsSupplementairesSelect();
+}
+
+/* [multi-lot] Un souscripteur peut avoir plusieurs lots sur le MÊME programme,
+   avec un seul montant_total/échéancier combiné (cf. c.lot_id conservé comme
+   lot principal pour compatibilité, c.lot_ids = tous les lots). Ces 3
+   fonctions gèrent la liste éditable dans le formulaire client. */
+function updateLotsSupplementairesSelect() {
+  var sel = document.getElementById('c-lot-supplementaire');
+  if (!sel) return;
+  var progId = document.getElementById('c-programme').value;
+  var principalId = document.getElementById('c-lot').value;
+  var editingClientId = APP.editingId || null;
+  var deja = (APP._clientLotsSupplementaires || []).concat(principalId ? [principalId] : []);
+  if (!progId) { sel.innerHTML = '<option value="">— Choisissez d\'abord un programme —</option>'; return; }
+  var candidats = (DATA.lots||[]).filter(function(l) {
+    if (l.programme_id !== progId) return false;
+    if (deja.indexOf(l.id) !== -1) return false;
+    if (l.statut === 'vendu') return false;
+    if (l.statut === 'reserve' && l.client_id && l.client_id !== editingClientId) return false;
+    return true;
+  }).sort(function(a,b){ return String(a.numero).localeCompare(String(b.numero), undefined, {numeric:true}); });
+  sel.innerHTML = '<option value="">— Ajouter un autre lot (' + candidats.length + ' disponible(s) sur ce programme) —</option>'
+    + candidats.map(function(l){ return '<option value="'+l.id+'">Lot '+l.numero+(l.ilot?' / Îlot '+l.ilot:'')+(l.surface?' — '+Math.round(l.surface)+' m²':'')+' — '+(l.type||'')+' — '+new Intl.NumberFormat('fr-FR').format(l.prix||0)+' FCFA</option>'; }).join('');
+}
+function ajouterLotSupplementaireClient() {
+  var sel = document.getElementById('c-lot-supplementaire');
+  if (!sel || !sel.value) return;
+  var lot = (DATA.lots||[]).find(function(l){ return l.id===sel.value; });
+  APP._clientLotsSupplementaires = (APP._clientLotsSupplementaires || []).concat([sel.value]);
+  /* Pré-incrémente le montant total du prix du lot ajouté — point de départ
+     raisonnable pour l'échéancier combiné, librement ajustable ensuite. */
+  if (lot && lot.prix) {
+    var mtEl = document.getElementById('c-montant-total');
+    if (mtEl) mtEl.value = (parseFloat(mtEl.value)||0) + parseFloat(lot.prix);
+  }
+  if (lot && lot.surface) {
+    var svEl = document.getElementById('c-surface');
+    if (svEl) svEl.value = (parseFloat(svEl.value)||0) + parseFloat(lot.surface);
+  }
+  renderLotsSupplementairesListe();
+  updateLotsSupplementairesSelect();
+  if (typeof clientCompareSurface === 'function') clientCompareSurface();
+  toast('Lot ajouté — montant total et surface suggérés mis à jour (ajustez si besoin).', 'info', 2500);
+}
+/* Compare la surface saisie (souvent la surface contractuelle, potentiellement
+   arrondie/négociée) à la somme des surfaces réelles des lots rattachés —
+   simple indicateur, jamais bloquant : l'utilisateur reste libre de sa saisie. */
+function clientCompareSurface() {
+  var elEcart = document.getElementById('c-surface-ecart'); if (!elEcart) return;
+  var saisie = parseFloat(document.getElementById('c-surface').value) || 0;
+  var lotIds = [document.getElementById('c-lot').value].concat(APP._clientLotsSupplementaires||[]).filter(Boolean);
+  var reelle = lotIds.reduce(function(s,id){ var l=(DATA.lots||[]).find(function(x){return x.id===id;}); return s+(l&&l.surface?parseFloat(l.surface):0); }, 0);
+  if (!saisie || !reelle) { elEcart.style.display = 'none'; return; }
+  var ecart = saisie - reelle, ecartPct = (ecart/reelle)*100;
+  elEcart.style.display = '';
+  if (Math.abs(ecartPct) < 1) {
+    elEcart.style.color = 'var(--vert)';
+    elEcart.textContent = '✅ Conforme à la surface du/des lot(s) (' + reelle.toFixed(0) + ' m²).';
+  } else {
+    elEcart.style.color = Math.abs(ecartPct) >= 5 ? 'var(--rouge)' : '#E67E22';
+    elEcart.textContent = '⚠ Écart avec la surface du/des lot(s) au dossier (' + reelle.toFixed(0) + ' m²) : ' + (ecart>=0?'+':'') + ecart.toFixed(1) + ' m² (' + (ecartPct>=0?'+':'') + ecartPct.toFixed(1) + '%).';
+  }
+}
+function retirerLotSupplementaireClient(lotId) {
+  APP._clientLotsSupplementaires = (APP._clientLotsSupplementaires || []).filter(function(id){ return id !== lotId; });
+  renderLotsSupplementairesListe();
+  updateLotsSupplementairesSelect();
+  if (typeof clientCompareSurface === 'function') clientCompareSurface();
+}
+function renderLotsSupplementairesListe() {
+  var box = document.getElementById('c-lots-supplementaires-liste');
+  if (!box) return;
+  var ids = APP._clientLotsSupplementaires || [];
+  if (!ids.length) { box.innerHTML = '<span style="font-size:11px;color:var(--blanc-dim);">Aucun lot supplémentaire.</span>'; return; }
+  box.innerHTML = ids.map(function(id) {
+    var l = (DATA.lots||[]).find(function(x){ return x.id===id; });
+    var label = l ? ('Lot '+l.numero+(l.ilot?' / Îlot '+l.ilot:'')+(l.surface?' — '+Math.round(l.surface)+' m²':'')) : id;
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(184,115,51,0.12);border:1px solid var(--or);border-radius:20px;padding:3px 6px 3px 10px;font-size:11px;">'
+      + escHtml(label) + '<button type="button" onclick="retirerLotSupplementaireClient(\''+id+'\')" style="background:none;border:none;color:var(--rouge);cursor:pointer;font-weight:700;padding:0 4px;" title="Retirer ce lot">✕</button></span>';
+  }).join('');
 }
 
 /* La souscription se fait aussi bien pour des maisons (villas, appartements...)
@@ -43669,11 +44237,14 @@ function onClientLotChange() {
   }
   document.getElementById('c-montant-total').value = lot.prix || '';
   document.getElementById('c-type-logement').value = lot.type || '';
+  if (document.getElementById('c-surface')) document.getElementById('c-surface').value = lot.surface || '';
   var modeLiv = lot.mode_livraison || 'gros_oeuvre';
   var modeLivEl = document.getElementById('c-mode-livraison');
   if (modeLivEl) modeLivEl.value = modeLiv;
   if (lot.standing) { var st = document.getElementById('c-standing'); if (st) st.value = lot.standing; }
   updateNatureBienUI(lot);
+  if (typeof updateLotsSupplementairesSelect === 'function') updateLotsSupplementairesSelect();
+  if (typeof clientCompareSurface === 'function') clientCompareSurface();
   if (typeof calcEcheancier === 'function') calcEcheancier();
 }
 
@@ -46691,7 +47262,7 @@ function lancerAuditIntegrite(){
 
   /* ─── 5. INCOHÉRENCES MÉTIER ───────────────────────────────── */
   (DATA.lots||[]).forEach(function(l){
-    if(l.statut==='vendu' && !(DATA.clients||[]).some(function(c){return c.lot_id===l.id;})) A('mineur','Métier','Lot vendu sans souscripteur','Lot '+(l.numero||l.id)+' marqué « vendu » mais aucun client ne le référence.','lots',_fixAuto('Repasser en « disponible »',_auditFixSetField('lots',l.id,'statut','disponible')));
+    if(l.statut==='vendu' && !l.client_id) A('mineur','Métier','Lot vendu sans souscripteur','Lot '+(l.numero||l.id)+' marqué « vendu » mais aucun client ne le référence.','lots',_fixAuto('Repasser en « disponible »',_auditFixSetField('lots',l.id,'statut','disponible')));
   });
   /* CORRECTIF : détecte le cas critique inverse — un même lot référencé par
      PLUSIEURS souscripteurs (double réservation/vente). Aucune correction
@@ -62443,6 +63014,72 @@ var PA_USAGES = { fonction:'🧑‍💼 Véhicule de fonction (affecté)', servi
 var PA_ENTRETIEN_TYPES = { vidange:'Vidange', revision:'Révision', pneus:'Pneus', reparation:'Réparation', carrosserie:'Carrosserie', autre:'Autre' };
 var _paEditId = null;
 
+/* Bouton « Actualiser les données » — demande explicite : forcer une
+   tentative de synchro à la demande plutôt que d'attendre le cycle auto
+   (jusqu'à 60s) ou le disjoncteur réseau (jusqu'à 5 min avant nouvel essai).
+   Diagnostique aussi la cause probable si l'échec persiste : les erreurs
+   "CORS blocked" côté Supabase viennent presque toujours d'un projet en
+   pause (facturation/inactivité) ou d'une clé invalide — jamais d'un vrai
+   problème de CORS à corriger dans ce code, qui parle une API standard. */
+async function paForcerActualisation(){
+  var btn = document.getElementById('pa-btn-refresh');
+  var diag = document.getElementById('pa-diag-connexion');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 Actualisation…'; }
+  if (diag) diag.style.display = 'none';
+
+  /* Force une vraie tentative réseau, même si le disjoncteur était ouvert */
+  SB._breakerOpen = false;
+  getSBConfig();
+
+  var ok = false;
+  try {
+    if (!navigator.onLine) {
+      throw new Error('Le navigateur signale une absence de connexion internet.');
+    }
+    if (!SB.url || !SB.key) {
+      throw new Error('Aucune configuration Supabase (URL/clé) — voir Paramètres.');
+    }
+    if (typeof pullFromCloudSilent === 'function') await pullFromCloudSilent();
+    /* Le disjoncteur est réarmé (false) par sbFetch dès qu'une requête
+       aboutit — s'il est encore ouvert après la tentative, ça a échoué. */
+    ok = !SB._breakerOpen;
+  } catch(e) {
+    window._lastSupaError = e.message || String(e);
+    ok = false;
+  }
+
+  /* Rafraîchit l'affichage Parc Auto avec ce qui est disponible localement,
+     synchro réussie ou non — jamais d'écran vide sans raison expliquée. */
+  if (typeof paRenderVehicules === 'function') paRenderVehicules();
+  if (typeof paRenderKPIs === 'function') paRenderKPIs();
+  if (typeof paRenderAlertes === 'function') paRenderAlertes();
+  if (typeof paRenderCarburant === 'function') paRenderCarburant();
+  if (typeof paRenderEntretien === 'function') paRenderEntretien();
+  if (typeof paRenderAffectations === 'function') paRenderAffectations();
+  if (typeof paRenderCourses === 'function') paRenderCourses();
+
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Actualiser les données'; }
+
+  if (ok) {
+    toast('✅ Données synchronisées depuis le cloud.', 'success');
+    if (diag) diag.style.display = 'none';
+  } else {
+    toast('⚠️ Synchro toujours indisponible — voir le détail ci-dessous.', 'error');
+    if (diag) {
+      diag.style.display = '';
+      diag.innerHTML = '<div class="alert alert-error" style="font-size:12px;line-height:1.6;">'
+        + '<b>⚠️ Impossible de joindre le serveur cloud.</b><br>'
+        + 'Erreur technique : <code>' + escHtml(window._lastSupaError || 'inconnue') + '</code><br><br>'
+        + 'Un message « blocked by CORS policy » dans la console vient presque toujours de l\'une de ces causes (pas d\'un bug de cette application, qui utilise une API standard) :<br>'
+        + '<b>1.</b> Le projet Supabase est en pause (plan gratuit suspendu pour facturation ou inactivité) — se connecter sur supabase.com et vérifier l\'état du projet.<br>'
+        + '<b>2.</b> L\'URL ou la clé API Supabase configurée dans l\'app a changé ou expiré — voir Paramètres → Connexion cloud.<br>'
+        + '<b>3.</b> Coupure réseau locale ou pare-feu bloquant ce domaine.<br><br>'
+        + 'En attendant, l\'application continue de fonctionner avec les données déjà présentes sur cet appareil — rien n\'est perdu, la synchro reprendra automatiquement dès que l\'accès sera rétabli.'
+        + '</div>';
+    }
+  }
+}
+
 function paEnter(){
   paFillSelects();
   paRenderKPIs();
@@ -74602,15 +75239,7 @@ function chargerNomenclature() {
       + (nbSansOuvrage ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:4px;">⚠️ ' + nbSansOuvrage + ' poste(s) sans ouvrage — prix par correspondance texte (fragile). <button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 8px;margin-left:4px;" onclick="dqeUnifierTousLesPostes()">🔗 Unifier tous les postes</button></div>' : '')
       + '<div style="font-size:11px;color:var(--dim);margin-bottom:4px;"><button class="btn btn-secondary btn-sm" style="font-size:10px;padding:2px 8px;" onclick="dqeAppliquerPrixIndicatifs()" title="Applique un prix indicatif aux ressources à 0 FCFA dont le libellé correspond à un matériau connu">💡 Appliquer prix indicatifs aux ressources à 0</button></div>'
       + (!_progIdCourant ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Aucun programme sélectionné — terrain, VRD et coût de gestion non calculés (prix de construction seul).</div>'
-        /* [FIX] Un seul et même message s'affichait pour deux causes bien
-           différentes : « modèle introuvable pour ce type/programme » et
-           « modèle trouvé mais surface non renseignée ». La première fait
-           échouer silencieusement le bouton Reporter le prix de vente plus
-           bas (aucun modèle à reporter), la seconde n'empêche que le calcul
-           terrain/VRD/gestion — deux actions différentes à faire, deux
-           messages différents désormais. */
-        : (!_modeleCourant ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Aucun modèle de logement « ' + escHtml(type) + ' » enregistré pour ce programme — créez-le dans Montage du programme avant de pouvoir reporter ce prix de vente.</div>'
-        : (!_typeSurface ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Surface du modèle « ' + escHtml(type) + ' » non renseignée — terrain/VRD/gestion non répartis. Complétez la fiche modèle (Montage du programme).</div>' : '')))
+        : (!_typeSurface ? '<div style="font-size:11px;color:var(--rouge,#E05252);margin-bottom:6px;">⚠️ Surface du modèle « ' + escHtml(type) + ' » non renseignée — terrain/VRD/gestion non répartis. Complétez la fiche modèle (Montage du programme).</div>' : ''))
       + coefBar
       + '<div class="kpi-grid" style="margin-top:4px;">'
       + _c('Déboursé sec (coût direct)', fmtF(debourse)+' FCFA', 'var(--or,#B8732F)')
@@ -74632,18 +75261,7 @@ function chargerNomenclature() {
         + (Q.sourceGestion ? 'Gestion — ' + escHtml(Q.sourceGestion) + '.' : '')
         + ' Réparti au prorata de la surface (' + fmtF(_typeSurface) + ' m² / ' + fmtF(Q.surfaceProgramme) + ' m² du programme).</div>' : '')
       + '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
-      + (function(){
-          /* Le bouton ne doit être désactivé que si dqeReporterPrixVente()
-             bloquerait réellement — c'est-à-dire zéro modèle valide nulle
-             part (elle propose un choix manuel dès qu'il en existe au
-             moins un, même si aucun ne correspond automatiquement à ce
-             programme/type précis). Une désactivation plus stricte que la
-             fonction elle-même aurait empêché un report pourtant possible. */
-          var aucunModeleValide = !(DATA.modeles_logement||[]).some(function(m){ return m.nom && m.nom !== 'null' && m.nom !== 'undefined'; });
-          return aucunModeleValide
-            ? '<button class="btn btn-secondary btn-sm" disabled title="Aucun modèle de logement enregistré nulle part — créez-en un d\'abord dans Montage du programme"><span class="flux-step">⑤</span>📤 Reporter le prix de vente</button>'
-            : '<button class="btn btn-primary btn-sm" onclick="dqeReporterPrixVente()" title="Étape 5 — Valider : enregistre le prix calculé sur le modèle de logement correspondant"><span class="flux-step">⑤</span>📤 Reporter le prix de vente</button>';
-        })()
+      + '<button class="btn btn-primary btn-sm" onclick="dqeReporterPrixVente()" title="Étape 5 — Valider : enregistre le prix calculé sur le modèle de logement correspondant"><span class="flux-step">⑤</span>📤 Reporter le prix de vente</button>'
       + '<span style="font-size:11px;color:var(--blanc-dim);">Le montant calculé devient le prix catalogue du modèle ; l\'ancien prix est conservé en historique.</span>'
       + '</div>'
       + (isDefault ? '<div class="alert alert-info" style="margin-top:8px;font-size:12px;">ℹ️ Données par défaut — cliquez sur <strong>+ Ajouter poste</strong> pour personnaliser cette nomenclature.</div>' : '');
@@ -75131,17 +75749,8 @@ function buildEcartDQE() {
 function _typeKey(type) {
   if (!type) return 'F2';
   var raw = (type||'').trim();
-  /* [FIX] La comparaison était sensible à la casse et aux espaces — une
-     nomenclature créée pour "Villa T4" ne correspondait jamais à un lot
-     dont le type valait "villa t4" ou "Villa T4 " (espace en trop), qui
-     retombait alors silencieusement sur le gabarit F2 par défaut, sans
-     aucun signe que la nomenclature pourtant réalisée n'était pas prise en
-     compte. Comparaison normalisée (casse + espaces) en plus de l'exacte. */
-  var rawNorm = raw.toLowerCase().replace(/\s+/g, ' ');
-  var matchExact = (DATA.nomenclatures||[]).find(function(n){ return n.type_logement === raw; });
-  if (matchExact) return raw;
-  var matchNorm = (DATA.nomenclatures||[]).find(function(n){ return (n.type_logement||'').trim().toLowerCase().replace(/\s+/g,' ') === rawNorm; });
-  if (matchNorm) return matchNorm.type_logement;
+  /* Si une nomenclature (ou un type personnalisé) existe pour ce type exact, le respecter. */
+  if ((DATA.nomenclatures||[]).some(function(n){ return n.type_logement === raw; })) return raw;
   if (((DATA.params&&DATA.params.dqe_types_custom)||[]).indexOf(raw) >= 0) return raw;
   /* Sinon, repli sur le mapping classique des 4 modèles par défaut. */
   var t = raw.toUpperCase();
@@ -75179,16 +75788,6 @@ function _dqeRecapProgramme(programmeId) {
      uniquement pour les anciens programmes sans modèle déclaré. */
   var modeles = (DATA.modeles_logement || []).filter(function(m){ return m.programme_id === programmeId; });
   var lignes;
-  var lotsTousProg = DATA.lots.filter(function(l){ return !programmeId || l.programme_id === programmeId; });
-  /* [FIX] Un programme de lotissement (terrain nu) n'a par définition AUCUN
-     coût de construction — mais rien ici ne distinguait un lot terrain d'un
-     lot logement : _typeKey() sur un type absent/générique ("Lot") retombe
-     sur 'F2' par défaut, faisant hériter un terrain nu d'un coût DQE de
-     villa/appartement. Sur un programme 100% terrain (ex. lotissement pur),
-     ça aurait chiffré un DQE construction fictif sur chaque lot. Exclus
-     désormais de la costification DQE — leur coût de revient réel (foncier
-     + aménagement) se calcule ailleurs (Bilan de Promotion), pas ici. */
-  var lotsTerrainCount = lotsTousProg.filter(function(l){ return l.nature === 'terrain'; }).length;
   if (modeles.length) {
     lignes = modeles.map(function(m){
       var t = _typeKey(m.nom);
@@ -75196,29 +75795,23 @@ function _dqeRecapProgramme(programmeId) {
       return { type: t, nb: m.nb_unites || 0, coutUnitaire: cout, sousTotal: cout * (m.nb_unites || 0), isDefault: !(DATA.nomenclatures||[]).some(function(n){ return n.type_logement === t; }) };
     }).sort(function(a,b){ return a.type.localeCompare(b.type); });
   } else {
-    var lots = lotsTousProg.filter(function(l){ return l.nature !== 'terrain'; });
+    var lots = DATA.lots.filter(function(l){ return !programmeId || l.programme_id === programmeId; });
     var groupes = {};
     lots.forEach(function(l){
-      var raw = (l.type_logement || l.type || '').trim() || '(type non défini)';
-      var t = _typeKey(raw);
-      /* [FIX] Regroupe par le type RÉEL saisi sur le lot, pas par le
-         gabarit de repli — sinon deux types réels différents qui tombent
-         tous les deux sur le même repli (ex. "Villa Témoin" et "Lot" tombant
-         tous les deux sur F2) se retrouvaient fusionnés en une seule ligne
-         "F2" trompeuse, faisant disparaître le vrai libellé saisi. */
-      if (!groupes[raw]) groupes[raw] = { label: raw, typeKey: t, nb:0 };
-      groupes[raw].nb++;
+      var t = _typeKey(l.type_logement || l.type);
+      if (!groupes[t]) groupes[t] = { type:t, nb:0 };
+      groupes[t].nb++;
     });
-    lignes = Object.keys(groupes).map(function(key){
-      var g = groupes[key];
-      var isDefault = g.label !== g.typeKey;   /* le repli a changé le libellé → aucune nomenclature réelle trouvée pour ce type exact */
-      var cout = _coutTypeDansProgramme(g.typeKey, programmeId);
-      return { type: g.label, typeKey: g.typeKey, nb:g.nb, coutUnitaire:cout, sousTotal:cout*g.nb, isDefault:isDefault };
+    lignes = Object.keys(groupes).map(function(t){
+      var g = groupes[t];
+      var isDefault = !(DATA.nomenclatures||[]).some(function(n){ return n.type_logement === t; });
+      var cout = _coutTypeDansProgramme(t, programmeId);
+      return { type:t, nb:g.nb, coutUnitaire:cout, sousTotal:cout*g.nb, isDefault:isDefault };
     }).sort(function(a,b){ return a.type.localeCompare(b.type); });
   }
   var total = lignes.reduce(function(s,l){ return s+l.sousTotal; }, 0);
-  var nbLotsReels = lotsTousProg.length;
-  return { lignes:lignes, total:total, nbLots: modeles.length ? nbLotsReels : nbLotsReels, nbPrevu: modeles.length ? modeles.reduce(function(s,m){ return s+(m.nb_unites||0); },0) : nbLotsReels, source: modeles.length ? 'modeles' : 'lots', lotsTerrainCount: lotsTerrainCount };
+  var nbLotsReels = DATA.lots.filter(function(l){ return !programmeId || l.programme_id === programmeId; }).length;
+  return { lignes:lignes, total:total, nbLots: modeles.length ? nbLotsReels : nbLotsReels, nbPrevu: modeles.length ? modeles.reduce(function(s,m){ return s+(m.nb_unites||0); },0) : nbLotsReels, source: modeles.length ? 'modeles' : 'lots' };
 }
 
 async function genererDQEPourProgramme() {
@@ -75236,14 +75829,13 @@ async function genererDQEPourProgramme() {
   var prog = (DATA.programmes||[]).find(function(p){ return p.id === programmeId; });
   var nomEl = document.getElementById('dqe-revue-prog-nom');
   if (nomEl) nomEl.textContent = 'Programme : ' + (prog ? prog.nom : programmeId) + ' — '
-    + (R.source === 'modeles' ? (R.nbPrevu + ' unité(s) prévue(s), ' + R.nbLots + ' lot(s) déjà généré(s)') : (R.nbLots + ' lot(s)'))
-    + (R.lotsTerrainCount ? (' dont ' + R.lotsTerrainCount + ' terrain(s)') : '');
+    + (R.source === 'modeles' ? (R.nbPrevu + ' unité(s) prévue(s), ' + R.nbLots + ' lot(s) déjà généré(s)') : (R.nbLots + ' lot(s)'));
 
   var tbody = document.getElementById('dqe-revue-prog-tbody');
   if (tbody) {
     tbody.innerHTML = R.lignes.map(function(l){
       return '<tr>'
-        + '<td>' + escHtml(l.type) + (l.isDefault ? ' <span style="font-size:10px;color:var(--dim);">(gabarit ' + escHtml(l.typeKey) + ')</span>' : '') + '</td>'
+        + '<td>' + escHtml(l.type) + '</td>'
         + '<td style="text-align:right;">' + l.nb + '</td>'
         + '<td style="text-align:right;">' + fmtF(l.coutUnitaire) + '</td>'
         + '<td style="text-align:right;font-weight:600;">' + fmtF(l.sousTotal) + '</td>'
@@ -75256,14 +75848,9 @@ async function genererDQEPourProgramme() {
 
   var alerteEl = document.getElementById('dqe-revue-prog-alerte');
   var nbDefaut = R.lignes.filter(function(l){ return l.isDefault; }).length;
-  var alerteHtml = '';
-  if (R.lotsTerrainCount) {
-    alerteHtml += '<div style="margin-top:10px;padding:10px 12px;background:rgba(74,148,224,.09);border-left:3px solid #4A94E0;border-radius:6px;font-size:12px;">🗺️ ' + R.lotsTerrainCount + ' lot(s) terrain nu exclu(s) de ce tableau — un terrain n\'a pas de coût de construction DQE. Son coût de revient (foncier + aménagement) se suit dans le Bilan de Promotion.</div>';
-  }
-  if (nbDefaut) {
-    alerteHtml += '<div style="margin-top:10px;padding:10px 12px;background:rgba(224,82,82,.09);border-left:3px solid var(--rouge);border-radius:6px;font-size:12px;">⚠️ ' + nbDefaut + ' type(s) sans nomenclature chiffrée — coût estimé sur gabarit par défaut, à confirmer avant validation.</div>';
-  }
-  if (alerteEl) alerteEl.innerHTML = alerteHtml;
+  if (alerteEl) alerteEl.innerHTML = nbDefaut
+    ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(224,82,82,.09);border-left:3px solid var(--rouge);border-radius:6px;font-size:12px;">⚠️ ' + nbDefaut + ' type(s) sans nomenclature chiffrée — coût estimé sur gabarit par défaut, à confirmer avant validation.</div>'
+    : '';
 
   openModal('modal-dqe-revue-programme');
 }
@@ -75275,12 +75862,9 @@ async function dqeValiderProgramme() {
   var ctx = window._dqeRevueProgramme;
   if (!ctx) return;
   var lots = DATA.lots.filter(function(l){ return l.programme_id === ctx.programmeId; });
-  var maj = 0, ignoresTerrain = 0;
+  var maj = 0;
   for (var i = 0; i < lots.length; i++) {
     var lot = lots[i];
-    /* [FIX] Ne jamais écrire un coût de revient DQE construction sur un lot
-       terrain — voir _dqeRecapProgramme. */
-    if (lot.nature === 'terrain') { ignoresTerrain++; continue; }
     var typeKey = _typeKey(lot.type_logement || lot.type);
     var coutDQE = _coutTypeDansProgramme(typeKey, ctx.programmeId);
     if (!lot.cout_revient && coutDQE > 0) {
@@ -75293,7 +75877,7 @@ async function dqeValiderProgramme() {
     }
   }
   closeModal('modal-dqe-revue-programme');
-  toast('✅ DQE validé — ' + maj + ' lot(s) mis à jour.' + (ignoresTerrain ? ' (' + ignoresTerrain + ' lot(s) terrain ignoré(s), sans coût de construction)' : ''),'success');
+  toast('✅ DQE validé — ' + maj + ' lot(s) mis à jour.','success');
   buildEcartDQE();
 }
 
@@ -87763,7 +88347,6 @@ function edsRenderBib() {
         '<td style="text-align:right;">' + fmtF(d.st) + '</td>' +
         '<td style="text-align:right;font-weight:700;color:var(--vert,#1A6B3A);">' + fmtF(d.total) + '</td>' +
         '<td><button class="btn btn-secondary btn-sm" onclick="edsOpenOuvrage(\'' + o.id + '\')">✎</button> ' +
-        '<button class="btn btn-secondary btn-sm" onclick="genererBCDepuisOuvrage(\'' + o.id + '\')" title="Générer un bon de commande pour les matériaux de cet ouvrage">🛒</button> ' +
         '<button class="btn btn-secondary btn-sm" onclick="edsDeleteOuvrage(\'' + o.id + '\')">🗑</button></td>' +
         '</tr>';
     }).join('');
@@ -93434,6 +94017,7 @@ async function budgetPrevisionnelSauver(champs) {
   b.libelle = (champs.libelle||'').trim();
   b.ligne_compte = ligneC; b.compte = sousC; b.division_id = champs.division_id||''; b.exercice = parseInt(champs.exercice,10);
   b.montant = parseFloat(champs.montant); b.periode = 'annuel'; b.mois = '';
+  if (champs.repartition_mensuelle) b.repartition_mensuelle = champs.repartition_mensuelle;
   /* Remise à brouillon si on corrige un budget rejeté — sans ça, une fois
      rejeté, un enregistrement restait bloqué à vie sans moyen de le
      corriger et resoumettre, malgré l'intention claire de l'utilisateur. */
@@ -93758,6 +94342,7 @@ function budgetAppliquerFiltres() {
   budgetRenderPrevisionnel();
   budgetRenderFed();
   budgetRenderTransferts();
+  if (typeof renderCompteExploitationPrevisionnel === 'function' && document.getElementById('tab-budget-exploitation') && document.getElementById('tab-budget-exploitation').classList.contains('active')) renderCompteExploitationPrevisionnel();
 }
 function budgetInitFiltres() {
   var selDiv = document.getElementById('budget-filtre-division');
@@ -93884,9 +94469,68 @@ function budgetRenderKpiTransferts() {
   ].map(_kpiCard).join('');
 }
 
+/* [Tableau récapitulatif] Un business plan = un couple division × exercice
+   ayant au moins une ligne caisse_budgets — regroupe les lignes existantes
+   (créées via le masque simplifié OU la saisie comptable détaillée, les
+   deux alimentent le même store) et calcule produits/charges/résultat via
+   les mêmes rubriques que le Compte d'exploitation prévisionnel, pour une
+   lecture cohérente entre les deux écrans. */
+function renderBusinessPlansListe() {
+  var box = document.getElementById('business-plans-liste-box'); if (!box) return;
+  var groupes = {};
+  (DATA.caisse_budgets||[]).forEach(function(b) {
+    var cle = (b.division_id||'') + '|' + b.exercice;
+    if (!groupes[cle]) groupes[cle] = { division_id: b.division_id||'', exercice: b.exercice, lignes: [] };
+    groupes[cle].lignes.push(b);
+  });
+  var cles = Object.keys(groupes).sort(function(a,b){ return groupes[b].exercice - groupes[a].exercice; });
+  if (!cles.length) {
+    box.innerHTML = '<div class="alert alert-info" style="font-size:12px;">Aucun business plan créé pour l\'instant. Cliquez « 🧾 Masque simplifié » ci-dessous pour commencer.</div>';
+    return;
+  }
+  var html = '<table class="data-table" style="width:100%;font-size:12px;"><thead><tr>'
+    + '<th>Division</th><th>Exercice</th><th style="text-align:right;">Produits</th><th style="text-align:right;">Charges</th><th style="text-align:right;">Résultat</th><th>Statut</th><th>Actions</th></tr></thead><tbody>';
+  cles.forEach(function(cle) {
+    var g = groupes[cle];
+    var totProduits = 0, totCharges = 0;
+    var nbValide = 0, nbAutre = 0;
+    g.lignes.forEach(function(b) {
+      var r = _cexpRubriqueDuCompte(b.compte);
+      var rubrique = (_toutesLesRubriques()).find(function(x){ return x.cle===r; });
+      var m = parseFloat(b.montant)||0;
+      if (rubrique) { if (rubrique.type==='produit') totProduits += m; else totCharges += m; }
+      if (b.statut === 'valide') nbValide++; else nbAutre++;
+    });
+    var resultat = totProduits - totCharges;
+    var statutHtml = nbAutre === 0
+      ? '<span class="badge" style="background:rgba(16,163,74,0.15);color:var(--vert);">✅ Entièrement validé</span>'
+      : nbValide === 0
+      ? '<span class="badge" style="background:rgba(255,255,255,0.08);color:var(--blanc-dim);">📝 Brouillon / en attente</span>'
+      : '<span class="badge" style="background:rgba(230,126,34,0.15);color:#E67E22;">🟠 Partiellement validé (' + nbValide + '/' + g.lignes.length + ')</span>';
+    html += '<tr>'
+      + '<td>' + escHtml(g.division_id ? _nomDivision(g.division_id) : 'Consolidé (toutes divisions)') + '</td>'
+      + '<td>' + g.exercice + '</td>'
+      + '<td style="text-align:right;color:var(--vert);">' + fmtF(totProduits) + ' F</td>'
+      + '<td style="text-align:right;color:var(--rouge);">' + fmtF(totCharges) + ' F</td>'
+      + '<td style="text-align:right;font-weight:700;' + (resultat>=0?'color:var(--vert);':'color:var(--rouge);') + '">' + fmtF(resultat) + ' F</td>'
+      + '<td>' + statutHtml + '</td>'
+      + '<td><button class="btn btn-secondary btn-sm" onclick="ouvrirBusinessPlanExistant(\'' + g.division_id + '\', ' + g.exercice + ')">✏️ Ouvrir</button></td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  box.innerHTML = html;
+}
+/* Ouvre le masque pré-positionné sur un business plan déjà existant. */
+function ouvrirBusinessPlanExistant(divisionId, exercice) {
+  window._budgetFiltreDivision = divisionId || '';
+  window._budgetFiltreExercice = exercice;
+  ouvrirMasqueBusinessPlan();
+}
+
 function budgetRenderPrevisionnel() {
   budgetRenderDashboard();
   budgetRenderKpiPrevisionnel();
+  if (typeof renderBusinessPlansListe === 'function') renderBusinessPlansListe();
   var box = document.getElementById('budget-previsionnel-box'); if (!box) return;
   var lignes = (DATA.caisse_budgets||[]).filter(function(b){ return b.periode==='annuel' && _budgetPasseFiltre(b); });
   if (!lignes.length) { box.innerHTML = '<div class="alert alert-info" style="font-size:12px;">Aucun budget prévisionnel pour ce filtre. Cliquez « + Nouveau budget » pour en créer un.</div>'; return; }
@@ -93934,17 +94578,669 @@ function budgetRenderPrevisionnel() {
           else if (b.statut === 'rejete') actions = '<span style="font-size:11px;color:var(--blanc-dim);">'+escHtml(b.motif_rejet||'')+'</span> '
             + '<button class="btn btn-secondary btn-sm" onclick="budgetPrevisionnelOuvrir(\''+b.id+'\')">✏️ Modifier et resoumettre</button>';
           return '<tr>'
-            + '<td style="padding-left:24px;">↳ <b>'+escHtml(b.compte)+'</b>'+(b.libelle?' — '+escHtml(b.libelle):'')+'</td>'
+            + '<td style="padding-left:24px;">↳ <b>'+escHtml(b.compte)+'</b>'+(b.libelle?' — '+escHtml(b.libelle):'')+(b.repartition_mensuelle?' <span style="font-size:10px;color:var(--vert);" title="Ventilation mensuelle personnalisée">📅</span>':'')+'</td>'
             + '<td colspan="2" style="font-size:11px;color:var(--blanc-dim);"></td>'
             + '<td style="text-align:right;">'+fmtF(b.montant)+' F</td>'
             + '<td style="text-align:right;'+(dispo!==null && dispo<0 ? 'color:var(--rouge);font-weight:700;' : '')+'">'+(dispo!==null ? fmtF(dispo)+' F' : '—')+'</td>'
             + '<td>'+_budgetStatutBadge(b.statut)+'</td>'
-            + '<td style="white-space:nowrap;">'+actions+'</td>'
+            + '<td style="white-space:nowrap;">'+actions+' <button class="btn btn-secondary btn-sm" onclick="budgetOuvrirRepartitionMensuelle(\''+b.id+'\')" title="Répartir ce montant sur les 12 mois (par défaut : réparti également)">📅</button></td>'
             + '</tr>';
         }).join('');
         return enTete + sousLignesHtml;
       }).join('')
     + '</tbody></table></div>';
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RÉPARTITION MENSUELLE d'une ligne budgétaire (optionnelle) — permet de
+   passer d'un budget annuel plat à une vraie courbe mensuelle (saisonnalité).
+   Purement additive : une ligne sans répartition explicite continue de
+   fonctionner exactement comme avant (montant annuel, lissé également sur
+   12 mois pour les besoins du Compte d'exploitation prévisionnel).
+   ════════════════════════════════════════════════════════════════════ */
+var MOIS_LABELS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+/* Retourne un tableau de 12 montants pour une ligne budgétaire donnée :
+   sa répartition personnalisée si elle existe, sinon le montant annuel
+   lissé également (montant/12) — jamais de mois "manquant". */
+function _budgetRepartitionMois(ligne) {
+  if (ligne.repartition_mensuelle) {
+    var r = [];
+    for (var m = 1; m <= 12; m++) r.push(parseFloat(ligne.repartition_mensuelle[m]) || 0);
+    return r;
+  }
+  var mensuel = (parseFloat(ligne.montant) || 0) / 12;
+  return Array(12).fill(mensuel);
+}
+
+function budgetOuvrirRepartitionMensuelle(id) {
+  var b = (DATA.caisse_budgets||[]).find(function(x){ return x.id===id; }); if (!b) return;
+  document.getElementById('rm-id').value = id;
+  var c = (APP.planComptable||[]).find(function(x){return x.code===b.compte;});
+  document.getElementById('rm-compte-label').textContent = b.compte + (c ? ' — '+c.label : '') + (b.libelle ? ' ('+b.libelle+')' : '');
+  document.getElementById('rm-montant-annuel').textContent = fmtF(b.montant);
+  var rep = _budgetRepartitionMois(b);
+  document.getElementById('rm-grid').innerHTML = MOIS_LABELS.map(function(lbl, i) {
+    return '<div class="form-group"><label style="font-size:11px;">'+lbl+'</label>'
+      + '<input type="number" class="form-control rm-input" min="0" value="'+Math.round(rep[i])+'" oninput="rmMajTotal()"></div>';
+  }).join('');
+  rmMajTotal();
+  openModal('modal-repartition-mensuelle');
+}
+function rmMajTotal() {
+  var inputs = document.querySelectorAll('#rm-grid .rm-input');
+  var total = 0; inputs.forEach(function(el){ total += parseFloat(el.value)||0; });
+  document.getElementById('rm-total').textContent = fmtF(total);
+  var annuelTxt = document.getElementById('rm-montant-annuel').textContent.replace(/\D/g,'');
+  var annuel = parseFloat(annuelTxt)||0;
+  var ecartEl = document.getElementById('rm-ecart');
+  var ecart = total - annuel;
+  ecartEl.textContent = ecart === 0 ? '✅ Conforme au montant annuel' : ('⚠️ Écart de '+fmtF(Math.abs(ecart))+' F par rapport au montant annuel ('+(ecart>0?'excédent':'manque')+')');
+  ecartEl.style.color = ecart === 0 ? 'var(--vert)' : 'var(--rouge)';
+}
+function rmRepartirEgal() {
+  var annuelTxt = document.getElementById('rm-montant-annuel').textContent.replace(/\D/g,'');
+  var annuel = parseFloat(annuelTxt)||0;
+  var mensuel = Math.round(annuel/12);
+  document.querySelectorAll('#rm-grid .rm-input').forEach(function(el, i){ el.value = (i===11) ? (annuel - mensuel*11) : mensuel; });
+  rmMajTotal();
+}
+function rmReinitialiser() {
+  var id = document.getElementById('rm-id').value;
+  var b = (DATA.caisse_budgets||[]).find(function(x){ return x.id===id; }); if (!b) return;
+  delete b.repartition_mensuelle;
+  b._modifie = new Date().toISOString();
+  dbPut('caisse_budgets', b).then(function(){
+    if (typeof syncToSupabase === 'function') syncToSupabase('pi_caisse_budgets', b);
+    closeModal('modal-repartition-mensuelle');
+    toast('Répartition mensuelle retirée — retour au lissage automatique (montant/12).', 'info');
+    budgetRenderPrevisionnel();
+  });
+}
+async function rmSauver() {
+  var id = document.getElementById('rm-id').value;
+  var b = (DATA.caisse_budgets||[]).find(function(x){ return x.id===id; }); if (!b) return;
+  var inputs = document.querySelectorAll('#rm-grid .rm-input');
+  var rep = {};
+  inputs.forEach(function(el, i){ rep[i+1] = parseFloat(el.value)||0; });
+  b.repartition_mensuelle = rep;
+  b._modifie = new Date().toISOString();
+  await dbPut('caisse_budgets', b);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_caisse_budgets', b);
+  closeModal('modal-repartition-mensuelle');
+  toast('✅ Répartition mensuelle enregistrée.', 'success');
+  budgetRenderPrevisionnel();
+  if (typeof renderCompteExploitationPrevisionnel === 'function') renderCompteExploitationPrevisionnel();
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   COMPTE D'EXPLOITATION PRÉVISIONNEL — budget (produits classe 7 /
+   charges classe 6, lignes validées) confronté au réel comptable
+   (DATA.ecritures), mois par mois, sur l'exercice et la division
+   sélectionnés. Mêmes rubriques SYSCOHADA que _calcResultat() (compte de
+   résultat réel), pour une lecture cohérente entre les deux écrans.
+   ════════════════════════════════════════════════════════════════════ */
+var CEXP_RUBRIQUES = [
+  { cle:'ventes',      label:'Ventes',                          prefixes:['70'],       type:'produit' },
+  { cle:'prodStockee', label:'Production stockée',               prefixes:['71','72'],  type:'produit' },
+  { cle:'autresProd',  label:'Autres produits',                  prefixes:['73','74','75'], type:'produit' },
+  { cle:'prodFin',     label:'Produits financiers',              prefixes:['76'],       type:'produit' },
+  { cle:'prodHAO',     label:'Produits HAO',                     prefixes:['77'],       type:'produit' },
+  { cle:'reprises',    label:'Reprises',                         prefixes:['78'],       type:'produit' },
+  { cle:'achats',      label:'Achats',                           prefixes:['60'],       type:'charge' },
+  { cle:'transports',  label:'Transports (parc véhicules, missions)', prefixes:['61'],  type:'charge' },
+  { cle:'sousTraitance',      label:'Sous-traitance & prestataires (syndic externe, gestion déléguée)', prefixes:['621'], type:'charge' },
+  { cle:'locationsCharges',   label:'Loyers & charges des locaux (bureaux, agences)',                   prefixes:['622'], type:'charge' },
+  { cle:'entretienBiens',     label:'Entretien & réparations des biens immobiliers',                     prefixes:['623'], type:'charge' },
+  { cle:'assurances',         label:'Assurances (biens, responsabilité civile professionnelle)',         prefixes:['624'], type:'charge' },
+  { cle:'honorairesJuridiques', label:'Honoraires juridiques, notariés & comptables',                    prefixes:['625'], type:'charge' },
+  { cle:'publiciteMarketing', label:'Publicité & marketing immobilier',                                  prefixes:['626'], type:'charge' },
+  { cle:'telecomInformatique', label:'Télécommunications & informatique',                                prefixes:['627'], type:'charge' },
+  { cle:'gardiennageSecurite', label:'Gardiennage & sécurité',                                            prefixes:['628'], type:'charge' },
+  { cle:'autresServices',     label:'Fournitures de bureau & autres services extérieurs',                prefixes:['629'], type:'charge' },
+  { cle:'commissionsCourtage', label:'Commissions & courtage versés (agents, apporteurs d\'affaires)',   prefixes:['651'], type:'charge' },
+  { cle:'chargesCopropriete', label:'Charges de copropriété / syndic / cotisations',                     prefixes:['658'], type:'charge' },
+  { cle:'impots',      label:'Impôts et taxes (dont taxes foncières)', prefixes:['63'],       type:'charge' },
+  { cle:'personnel',   label:'Charges de personnel',             prefixes:['64'],       type:'charge' },
+  { cle:'chargesFin',  label:'Charges financières',              prefixes:['66'],       type:'charge' },
+  { cle:'chargesHAO',  label:'Charges HAO',                      prefixes:['67'],       type:'charge' },
+  { cle:'dotations',   label:'Dotations aux amortissements (immeubles, mobilier, véhicules)', prefixes:['68'], type:'charge' }
+];
+
+function _cexpRubriqueDuCompte(compte) {
+  compte = String(compte||'');
+  var toutes = _toutesLesRubriques();
+  for (var i = 0; i < toutes.length; i++) {
+    var r = toutes[i];
+    if (r.prefixes.some(function(p){ return compte.indexOf(p) === 0; })) return r.cle;
+  }
+  return null;
+}
+
+/* Budget : { rubriqueCle: [m1..m12] } à partir des lignes caisse_budgets validées */
+function _cexpBudgetParRubrique(divisionId, exercice) {
+  var out = {}; _toutesLesRubriques().forEach(function(r){ out[r.cle] = Array(12).fill(0); });
+  (DATA.caisse_budgets||[]).filter(function(b){
+    return b.statut === 'valide' && String(b.exercice) === String(exercice)
+      && (!divisionId || (b.division_id||'') === divisionId || !b.division_id);
+  }).forEach(function(b) {
+    var cle = _cexpRubriqueDuCompte(b.compte); if (!cle) return;
+    var mois = _budgetRepartitionMois(b);
+    for (var m = 0; m < 12; m++) out[cle][m] += mois[m];
+  });
+  return out;
+}
+
+/* Réel : { rubriqueCle: [m1..m12] } à partir des écritures comptables réelles,
+   même logique de sens (D pour charges, C pour produits) que _calcResultat(). */
+function _cexpReelParRubrique(divisionId, exercice) {
+  var toutes = _toutesLesRubriques();
+  var out = {}; toutes.forEach(function(r){ out[r.cle] = Array(12).fill(0); });
+  DATA.ecritures.filter(function(e){
+    return e.date && e.date.indexOf(String(exercice)) === 0 && (!divisionId || e.division === divisionId);
+  }).forEach(function(e) {
+    var mIdx = parseInt(e.date.substring(5,7), 10) - 1;
+    if (mIdx < 0 || mIdx > 11) return;
+    ecrLignes(e).forEach(function(l) {
+      var cle = _cexpRubriqueDuCompte(l.compte); if (!cle) return;
+      var r = toutes.find(function(x){ return x.cle===cle; });
+      var montant = parseFloat(l.montant)||0;
+      if (r.type === 'produit' && l.sens === 'C') out[cle][mIdx] += montant;
+      else if (r.type === 'produit' && l.sens === 'D') out[cle][mIdx] -= montant; /* ex: sortie de stock 71/72 */
+      else if (r.type === 'charge' && l.sens === 'D') out[cle][mIdx] += montant;
+    });
+  });
+  return out;
+}
+
+function _cexpSomme12(arr) { return arr.reduce(function(s,v){ return s+v; }, 0); }
+function _cexpCumul(arr) { var out=[], s=0; arr.forEach(function(v){ s+=v; out.push(s); }); return out; }
+
+/* ── Diagnostic de viabilité ────────────────────────────────────────────
+   Ne se limite pas au résultat annuel : un budget peut finir positif sur
+   l'année tout en creusant un trou de trésorerie profond en cours de
+   route (ex. grosses charges en début d'année, produits qui n'arrivent
+   qu'en fin d'année) — ce trou-là ferme une entreprise avant que le
+   résultat annuel n'ait le temps de se redresser. On regarde donc :
+   1) le résultat annuel et la marge, 2) le point de rentabilité cumulé
+   (premier mois où le cumul repasse positif), 3) le pire creux cumulé
+   de l'année (le risque de trésorerie réel). */
+function _diagnosticViabilite(moisProduits, moisCharges) {
+  var resultatMois = moisProduits.map(function(v,i){ return v - moisCharges[i]; });
+  var cumul = _cexpCumul(resultatMois);
+  var totProduits = _cexpSomme12(moisProduits), totCharges = _cexpSomme12(moisCharges);
+  var resultatAnnuel = totProduits - totCharges;
+  var marge = totProduits > 0 ? (resultatAnnuel / totProduits) * 100 : null;
+  var moisRentabilite = null;
+  for (var m = 0; m < 12; m++) { if (cumul[m] >= 0) { moisRentabilite = m; break; } }
+  var pireCreux = Math.min.apply(null, cumul);
+  var moisPireCreux = cumul.indexOf(pireCreux);
+  var niveau, icone, texte;
+  if (totProduits === 0 && totCharges === 0) {
+    niveau = 'neutre'; icone = 'ℹ️'; texte = "Aucun montant saisi pour l'instant.";
+  } else if (resultatAnnuel < 0) {
+    niveau = 'rouge'; icone = '🔴';
+    texte = 'BUDGET NON VIABLE — déficit prévisionnel de ' + fmtF(Math.round(Math.abs(resultatAnnuel))) + ' F sur l\'année'
+      + (marge!==null ? ' (marge ' + marge.toFixed(1) + '%)' : '') + '. Les charges dépassent les produits — revoir les charges à la baisse ou les objectifs de chiffre d\'affaires à la hausse avant de soumettre.';
+  } else if (pireCreux < 0) {
+    niveau = 'orange'; icone = '🟠';
+    texte = 'BUDGET À RISQUE — résultat annuel positif (' + fmtF(Math.round(resultatAnnuel)) + ' F, marge ' + (marge!==null?marge.toFixed(1):'—') + '%), mais trésorerie cumulée négative jusqu\'à ' + fmtF(Math.round(Math.abs(pireCreux))) + ' F en ' + MOIS_LABELS[moisPireCreux] + '. '
+      + (moisRentabilite!==null ? 'Le cumul ne redevient positif qu\'en ' + MOIS_LABELS[moisRentabilite] + '.' : 'Le cumul ne redevient jamais positif dans l\'année.')
+      + ' Prévoir un financement relais ou lisser les charges/produits sur l\'année.';
+  } else {
+    niveau = 'vert'; icone = '✅';
+    texte = 'BUDGET VIABLE — résultat prévisionnel de ' + fmtF(Math.round(resultatAnnuel)) + ' F sur l\'année (marge ' + (marge!==null?marge.toFixed(1):'—') + '%), trésorerie cumulée jamais négative.';
+  }
+  return { niveau:niveau, icone:icone, texte:texte, resultatAnnuel:resultatAnnuel, marge:marge, moisRentabilite:moisRentabilite, pireCreux:pireCreux, moisPireCreux:moisPireCreux };
+}
+function _appliquerVerdictDOM(elId, diag) {
+  var el = document.getElementById(elId); if (!el) return;
+  var couleurs = { vert:['rgba(46,160,67,0.15)','var(--vert)'], orange:['rgba(230,126,34,0.15)','#E67E22'], rouge:['rgba(220,53,69,0.15)','var(--rouge)'], neutre:['rgba(255,255,255,0.05)','var(--blanc-dim)'] };
+  var c = couleurs[diag.niveau];
+  el.style.background = c[0]; el.style.color = c[1]; el.style.border = '1px solid '+c[1];
+  el.innerHTML = diag.icone + ' ' + diag.texte;
+}
+
+function renderCompteExploitationPrevisionnel() {
+  var box = document.getElementById('cexp-box'); if (!box) return;
+  var divisionId = window._budgetFiltreDivision || '';
+  var exercice = window._budgetFiltreExercice || '';
+  if (!exercice) {
+    box.innerHTML = '<div class="alert alert-info" style="font-size:12px;">Sélectionnez un exercice précis dans le filtre en haut de page (« Tous exercices » n\'est pas exploitable ici — un compte d\'exploitation se lit sur une année donnée).</div>';
+    document.getElementById('cexp-kpi').innerHTML = '';
+    var vEl = document.getElementById('cexp-verdict'); if (vEl) vEl.innerHTML = '';
+    return;
+  }
+  var cumul = document.getElementById('cexp-cumul').checked;
+  var budget = _cexpBudgetParRubrique(divisionId, exercice);
+  var reel = _cexpReelParRubrique(divisionId, exercice);
+  var moisEnCours = (new Date().getFullYear() === parseInt(exercice,10)) ? new Date().getMonth() : 11;
+
+  function ligneHtml(rubrique, cls) {
+    var b = cumul ? _cexpCumul(budget[rubrique.cle]) : budget[rubrique.cle];
+    var r = cumul ? _cexpCumul(reel[rubrique.cle]) : reel[rubrique.cle];
+    var totB = _cexpSomme12(budget[rubrique.cle]), totR = _cexpSomme12(reel[rubrique.cle]);
+    var cells = '';
+    for (var m = 0; m < 12; m++) {
+      var futur = m > moisEnCours;
+      var favorable = rubrique.type === 'produit' ? (r[m] >= b[m]) : (r[m] <= b[m]);
+      cells += '<td style="text-align:right;white-space:nowrap;">'
+        + '<div style="font-size:10px;color:var(--blanc-dim);">'+fmtF(Math.round(b[m]))+'</div>'
+        + (futur ? '<div style="font-size:10px;color:var(--blanc-dim);">—</div>' : '<div style="font-weight:700;color:'+(favorable?'var(--vert)':'var(--rouge)')+';">'+fmtF(Math.round(r[m]))+'</div>')
+        + '</td>';
+    }
+    return '<tr class="'+(cls||'')+'"><td style="white-space:nowrap;">'+rubrique.label+'</td>' + cells
+      + '<td style="text-align:right;font-weight:700;white-space:nowrap;">'+fmtF(Math.round(totB))+'</td>'
+      + '<td style="text-align:right;font-weight:700;white-space:nowrap;color:'+((rubrique.type==='produit'?totR>=totB:totR<=totB)?'var(--vert)':'var(--rouge)')+';">'+fmtF(Math.round(totR))+'</td></tr>';
+  }
+
+  var produits = _toutesLesRubriques().filter(function(r){ return r.type==='produit'; });
+  var charges = _toutesLesRubriques().filter(function(r){ return r.type==='charge'; });
+  var totProdBudget = Array(12).fill(0), totProdReel = Array(12).fill(0), totChargeBudget = Array(12).fill(0), totChargeReel = Array(12).fill(0);
+  produits.forEach(function(r){ for (var m=0;m<12;m++){ totProdBudget[m]+=budget[r.cle][m]; totProdReel[m]+=reel[r.cle][m]; } });
+  charges.forEach(function(r){ for (var m=0;m<12;m++){ totChargeBudget[m]+=budget[r.cle][m]; totChargeReel[m]+=reel[r.cle][m]; } });
+  var resultatBudget = totProdBudget.map(function(v,i){ return v - totChargeBudget[i]; });
+  var resultatReel = totProdReel.map(function(v,i){ return v - totChargeReel[i]; });
+
+  function ligneTotalHtml(label, arrB, arrR, boldColor) {
+    var b = cumul ? _cexpCumul(arrB) : arrB, r = cumul ? _cexpCumul(arrR) : arrR;
+    var totB = _cexpSomme12(arrB), totR = _cexpSomme12(arrR);
+    var cells = '';
+    for (var m = 0; m < 12; m++) {
+      var futur = m > moisEnCours;
+      cells += '<td style="text-align:right;white-space:nowrap;">'
+        + '<div style="font-size:10px;color:var(--blanc-dim);">'+fmtF(Math.round(b[m]))+'</div>'
+        + (futur ? '<div style="font-size:10px;color:var(--blanc-dim);">—</div>' : '<div style="font-weight:800;">'+fmtF(Math.round(r[m]))+'</div>')
+        + '</td>';
+    }
+    return '<tr style="background:rgba(184,115,51,0.12);font-weight:800;"><td>'+label+'</td>' + cells
+      + '<td style="text-align:right;">'+fmtF(Math.round(totB))+'</td>'
+      + '<td style="text-align:right;'+(boldColor?'color:'+boldColor+';':'')+'">'+fmtF(Math.round(totR))+'</td></tr>';
+  }
+
+  var enteteMois = MOIS_LABELS.map(function(m){ return '<th style="text-align:right;font-size:10px;">'+m.substring(0,3)+'</th>'; }).join('');
+  var html = '<table class="data-table" style="width:100%;font-size:11px;"><thead><tr><th>Rubrique</th>'+enteteMois+'<th style="text-align:right;">Total budget</th><th style="text-align:right;">Total réel</th></tr>'
+    + '<tr><td colspan="15" style="font-size:9px;color:var(--blanc-dim);padding:2px 8px;">Chaque cellule : budget (petit, gris) au-dessus / réel (couleur) en dessous — vert si favorable, rouge sinon. « — » = mois futur, pas encore de réel.</td></tr></thead><tbody>'
+    + '<tr style="background:rgba(255,255,255,0.04);"><td colspan="15" style="font-weight:700;padding-top:8px;">PRODUITS</td></tr>'
+    + produits.map(function(r){ return ligneHtml(r); }).join('')
+    + ligneTotalHtml('Total produits', totProdBudget, totProdReel)
+    + '<tr style="background:rgba(255,255,255,0.04);"><td colspan="15" style="font-weight:700;padding-top:8px;">CHARGES</td></tr>'
+    + charges.map(function(r){ return ligneHtml(r); }).join('')
+    + ligneTotalHtml('Total charges', totChargeBudget, totChargeReel)
+    + ligneTotalHtml('RÉSULTAT PRÉVISIONNEL', resultatBudget, resultatReel, _cexpSomme12(resultatReel) >= _cexpSomme12(resultatBudget) ? 'var(--vert)' : 'var(--rouge)')
+    + '</tbody></table>';
+  box.innerHTML = html;
+
+  var kpiEl = document.getElementById('cexp-kpi');
+  var totBudgetProd = _cexpSomme12(totProdBudget), totReelProd = _cexpSomme12(totProdReel);
+  var totBudgetCharge = _cexpSomme12(totChargeBudget), totReelCharge = _cexpSomme12(totChargeReel);
+  var resB = totBudgetProd - totBudgetCharge, resR = totReelProd - totReelCharge;
+  kpiEl.innerHTML = [
+    { label:'Produits budgétés (année)', val: fmtF(Math.round(totBudgetProd))+' F', icon:'📈' },
+    { label:'Produits réels (à date)',   val: fmtF(Math.round(totReelProd))+' F',   icon:'✅', cls: totReelProd>=totBudgetProd*((moisEnCours+1)/12) ? 'kpi-green' : 'kpi-red' },
+    { label:'Charges budgétées (année)', val: fmtF(Math.round(totBudgetCharge))+' F', icon:'📉' },
+    { label:'Charges réelles (à date)',  val: fmtF(Math.round(totReelCharge))+' F',   icon:'⚠️', cls: totReelCharge<=totBudgetCharge*((moisEnCours+1)/12) ? 'kpi-green' : 'kpi-red' },
+    { label:'Résultat prévisionnel (année)', val: fmtF(Math.round(resB))+' F', icon:'🎯' },
+    { label:'Résultat réel (à date)',    val: fmtF(Math.round(resR))+' F', icon:'💰', cls: resR>=0 ? 'kpi-green' : 'kpi-red' }
+  ].map(_kpiCard).join('');
+
+  var verdictEl = document.getElementById('cexp-verdict');
+  if (verdictEl) _appliquerVerdictDOM('cexp-verdict', _diagnosticViabilite(totProdBudget, totChargeBudget));
+}
+
+function imprimerCompteExploitationPrevisionnel() {
+  var divisionId = window._budgetFiltreDivision || '';
+  var exercice = window._budgetFiltreExercice || '';
+  if (!exercice) { toast('Sélectionnez un exercice précis avant d\'imprimer.', 'error'); return; }
+  var divLabel = divisionId ? _nomDivision(divisionId) : 'Toutes divisions (consolidé)';
+  var contenu = document.getElementById('cexp-box').innerHTML;
+  var kpiContenu = document.getElementById('cexp-kpi').innerHTML;
+  var w = window.open('', '_blank');
+  w.document.write('<html><head><title>Compte d\'exploitation prévisionnel '+exercice+'</title>'
+    + '<style>body{font-family:Arial,sans-serif;padding:24px;color:#111;} table{border-collapse:collapse;width:100%;font-size:10px;} td,th{border:1px solid #ccc;padding:4px 6px;} .kpi-grid{display:none;} h1{font-size:16px;} h2{font-size:12px;color:#555;font-weight:400;}</style>'
+    + '</head><body>'
+    + '<h1>Compte d\'exploitation prévisionnel — Exercice '+exercice+'</h1>'
+    + '<h2>Division : '+escHtml(divLabel)+' — édité le '+dateShort(today())+'</h2>'
+    + contenu + '</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MASQUE SIMPLIFIÉ — BUSINESS PLAN PRÉVISIONNEL (sans code comptable)
+   Un utilisateur métier remplit son CA et ses charges prévisionnels par
+   catégorie claire (Ventes, Personnel, Achats…), mois par mois — comme un
+   business plan. Derrière, chaque catégorie est mappée à un compte
+   représentatif (configurable) et sauvegardée via le même moteur que la
+   saisie comptable détaillée (budgetPrevisionnelSauver) : mêmes garde-fous
+   (verrouillage si déjà validé, cohérence ligne/sous-compte), même
+   workflow d'approbation. Le masque n'est qu'une façade plus accessible.
+   ════════════════════════════════════════════════════════════════════ */
+/* Compte représentatif par défaut pour chaque rubrique — cohérent avec les
+   préfixes déjà utilisés par _cexpRubriqueDuCompte/_calcResultat. Un
+   utilisateur avancé peut toujours affiner via « Ligne comptable détaillée »
+   puis 📅, le masque ne fait qu'initialiser une ligne raisonnable. */
+var BP_COMPTE_DEFAUT = {
+  ventes:'701', prodStockee:'713', autresProd:'758', prodFin:'761', prodHAO:'775', reprises:'798',
+  achats:'601', transports:'614',
+  sousTraitance:'6211', locationsCharges:'6221', entretienBiens:'6231', assurances:'6241',
+  honorairesJuridiques:'6251', publiciteMarketing:'6261', telecomInformatique:'6271',
+  gardiennageSecurite:'6281', autresServices:'6291', commissionsCourtage:'6511', chargesCopropriete:'6581',
+  impots:'631', personnel:'641', chargesFin:'661', chargesHAO:'671', dotations:'681'
+};
+
+/* ── Lignes budgétaires personnalisées ─────────────────────────────────
+   Les 24 rubriques de CEXP_RUBRIQUES forment le socle standard (toujours
+   visible). L'utilisateur peut en ajouter d'autres, propres à son métier
+   — persistées dans DATA.params (comme les autres réglages de
+   l'application), donc synchronisées et partagées entre postes. */
+function _rubriquesCustom() { DATA.params = DATA.params || {}; return DATA.params.rubriques_budget_custom || []; }
+function _toutesLesRubriques() { return CEXP_RUBRIQUES.concat(_rubriquesCustom()); }
+async function _sauverRubriquesCustom(liste) {
+  DATA.params = DATA.params || {};
+  DATA.params.rubriques_budget_custom = liste;
+  await dbPut('params', DATA.params);
+  if (typeof syncToSupabase === 'function') syncToSupabase('pi_params', DATA.params);
+}
+/* Récupère l'état actuellement saisi dans la grille avant reconstruction
+   (ajout/suppression d'une ligne régénère le HTML — sans ça, tout ce que
+   l'utilisateur avait déjà tapé serait perdu). */
+function _bpSauverEtatGrille() {
+  var etat = {};
+  document.querySelectorAll('.bp-input').forEach(function(el){ etat[el.dataset.rubrique+'|'+el.dataset.mois] = el.value; });
+  return etat;
+}
+function _bpRestaurerEtatGrille(etat) {
+  document.querySelectorAll('.bp-input').forEach(function(el){
+    var v = etat[el.dataset.rubrique+'|'+el.dataset.mois];
+    if (v !== undefined) el.value = v;
+  });
+  bpMajTotaux();
+}
+/* ── Proposition de charge basée sur l'historique ────────────────────────
+   Compare, pour une rubrique de charge donnée, le réel comptabilisé
+   (DATA.ecritures, via _cexpReelParRubrique déjà utilisée par le Compte
+   d'exploitation prévisionnel) ET les budgets déjà validés, sur les 2-3
+   derniers exercices ANTÉRIEURS disponibles (ceux qui ont effectivement
+   une donnée non nulle) — moyenne mensuelle de chacun, côte à côte,
+   jamais imposée : l'utilisateur choisit quoi appliquer, ou rien du tout. */
+function _historiqueMoyenRubrique(divisionId, exerciceCourant, rubriqueCle, nbAnsMax) {
+  nbAnsMax = nbAnsMax || 3;
+  var sommeReel = Array(12).fill(0), sommeBudget = Array(12).fill(0);
+  var nbReel = 0, nbBudget = 0, exercicesUtilises = [];
+  for (var i = 1; i <= nbAnsMax; i++) {
+    var ex = parseInt(exerciceCourant, 10) - i;
+    var reel = (_cexpReelParRubrique(divisionId, ex)[rubriqueCle]) || Array(12).fill(0);
+    var budget = (_cexpBudgetParRubrique(divisionId, ex)[rubriqueCle]) || Array(12).fill(0);
+    var totReel = _cexpSomme12(reel), totBudget = _cexpSomme12(budget);
+    if (totReel > 0) { for (var m=0; m<12; m++) sommeReel[m] += reel[m]; nbReel++; }
+    if (totBudget > 0) { for (var m2=0; m2<12; m2++) sommeBudget[m2] += budget[m2]; nbBudget++; }
+    if (totReel > 0 || totBudget > 0) exercicesUtilises.push(ex);
+  }
+  return {
+    moyReel: nbReel ? sommeReel.map(function(v){ return v/nbReel; }) : Array(12).fill(0),
+    moyBudget: nbBudget ? sommeBudget.map(function(v){ return v/nbBudget; }) : Array(12).fill(0),
+    nbReel: nbReel, nbBudget: nbBudget,
+    exercices: exercicesUtilises.sort(function(a,b){ return b-a; })
+  };
+}
+function bpOuvrirSuggestion(cle) {
+  var divisionId = document.getElementById('bp-division').value;
+  var exercice = document.getElementById('bp-exercice').value;
+  if (!exercice) { toast('Renseignez d\'abord l\'exercice.', 'error'); return; }
+  var r = _toutesLesRubriques().find(function(x){ return x.cle===cle; }); if (!r) return;
+  document.getElementById('sh-rubrique-label').textContent = r.label;
+  var h = _historiqueMoyenRubrique(divisionId, exercice, cle, 3);
+  var contenu = document.getElementById('sh-contenu');
+  if (!h.nbReel && !h.nbBudget) {
+    contenu.innerHTML = '<div class="alert alert-info" style="font-size:12px;">Aucun historique disponible pour cette rubrique sur les 3 exercices précédents (' + (parseInt(exercice,10)-3) + '-' + (parseInt(exercice,10)-1) + ') — ni réel comptabilisé, ni budget validé. Saisissez le montant manuellement.</div>';
+    openModal('modal-suggestion-historique');
+    return;
+  }
+  var totReel = _cexpSomme12(h.moyReel), totBudget = _cexpSomme12(h.moyBudget);
+  var html = '<div style="font-size:12px;color:var(--blanc-dim);margin-bottom:10px;">Moyenne sur ' + h.exercices.length + ' exercice(s) antérieur(s) disponible(s) : <b>' + h.exercices.join(', ') + '</b>. La courbe mensuelle (saisonnalité) est reprise telle quelle.</div>';
+  html += '<table class="data-table" style="width:100%;font-size:11px;"><thead><tr><th></th>'
+    + MOIS_LABELS.map(function(m){ return '<th style="text-align:right;">'+m.substring(0,3)+'</th>'; }).join('')
+    + '<th style="text-align:right;">Total</th></tr></thead><tbody>'
+    + '<tr><td>Réel moyen</td>' + h.moyReel.map(function(v){ return '<td style="text-align:right;">'+fmtF(Math.round(v))+'</td>'; }).join('') + '<td style="text-align:right;font-weight:700;color:var(--vert);">'+fmtF(Math.round(totReel))+'</td></tr>'
+    + '<tr><td>Budget validé moyen</td>' + h.moyBudget.map(function(v){ return '<td style="text-align:right;">'+fmtF(Math.round(v))+'</td>'; }).join('') + '<td style="text-align:right;font-weight:700;">'+fmtF(Math.round(totBudget))+'</td></tr>'
+    + '</tbody></table>';
+  html += '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'
+    + (h.nbReel ? '<button class="btn btn-primary btn-sm" onclick="bpAppliquerSuggestion(\''+cle+'\',\'reel\')">📊 Utiliser le réel moyen</button>' : '')
+    + (h.nbBudget ? '<button class="btn btn-secondary btn-sm" onclick="bpAppliquerSuggestion(\''+cle+'\',\'budget\')">📋 Utiliser le budget moyen</button>' : '')
+    + ((h.nbReel && h.nbBudget) ? '<button class="btn btn-secondary btn-sm" onclick="bpAppliquerSuggestion(\''+cle+'\',\'moyenne\')">⚖️ Moyenne des deux</button>' : '')
+    + '</div>';
+  contenu.innerHTML = html;
+  contenu.dataset.historique = JSON.stringify(h);
+  openModal('modal-suggestion-historique');
+}
+function bpAppliquerSuggestion(cle, choix) {
+  var h = JSON.parse(document.getElementById('sh-contenu').dataset.historique);
+  var valeurs;
+  if (choix === 'reel') valeurs = h.moyReel;
+  else if (choix === 'budget') valeurs = h.moyBudget;
+  else valeurs = h.moyReel.map(function(v,i){ return (v + h.moyBudget[i]) / 2; });
+  for (var m = 1; m <= 12; m++) {
+    var input = document.querySelector('.bp-input[data-rubrique="'+cle+'"][data-mois="'+m+'"]');
+    if (input) input.value = Math.round(valeurs[m-1]);
+  }
+  bpMajTotaux();
+  closeModal('modal-suggestion-historique');
+  toast('✅ Proposition appliquée — ajustez si besoin avant d\'enregistrer.', 'success');
+}
+
+function bpOuvrirAjoutLigne() {
+  var type = prompt('Type de ligne : tapez "produit" (chiffre d\'affaires) ou "charge" (dépense)', 'charge');
+  if (!type) return;
+  type = type.trim().toLowerCase();
+  if (type !== 'produit' && type !== 'charge') { toast('Type invalide — tapez exactement "produit" ou "charge".', 'error'); return; }
+  var libelle = prompt('Libellé de la nouvelle ligne budgétaire (ex : "Frais de gardiennage weekend") :');
+  if (!libelle || !libelle.trim()) return;
+  var compte = prompt('Sous-compte comptable (3 chiffres minimum, ex : 6295) — sert uniquement au rattachement automatique à la comptabilité, en arrière-plan :', type==='produit' ? '709' : '629');
+  if (!compte || !compte.trim()) return;
+  compte = compte.trim();
+  if (!/^\d{3,}$/.test(compte)) { toast('Le sous-compte doit être numérique (3 chiffres minimum — ex : 6295).', 'error'); return; }
+  var cle = 'custom_' + uid();
+  if (_toutesLesRubriques().some(function(r){ return r.prefixes.some(function(p){ return compte.indexOf(p)===0 || p.indexOf(compte)===0; }); })) {
+    if (!confirm('Ce compte chevauche une rubrique déjà existante — les montants pourraient se mélanger dans le rapport. Continuer quand même ?')) return;
+  }
+  var liste = _rubriquesCustom();
+  liste.push({ cle:cle, label:libelle.trim(), prefixes:[compte], type:type, custom:true });
+  var etat = _bpSauverEtatGrille();
+  _sauverRubriquesCustom(liste).then(function() {
+    document.getElementById('bpm-grid').innerHTML = bpChampsGrid();
+    _bpRestaurerEtatGrille(etat);
+    toast('✅ Ligne « '+libelle.trim()+' » ajoutée.', 'success');
+  });
+}
+async function bpSupprimerLigneCustom(cle) {
+  if (!confirm('Supprimer cette ligne budgétaire personnalisée ? Les montants déjà saisis pour toutes les divisions/exercices seront perdus (les budgets déjà validés restent, eux, protégés — un message l\'indiquera si c\'est le cas).')) return;
+  var divisionId = document.getElementById('bpm-division').value;
+  var exercice = document.getElementById('bpm-exercice').value;
+  var enregistrementsProteges = 0;
+  (DATA.caisse_budgets||[]).filter(function(b){ return _cexpRubriqueDuCompte(b.compte)===cle; }).forEach(function(b){
+    if (b.statut === 'valide') { enregistrementsProteges++; return; }
+    DATA.caisse_budgets = DATA.caisse_budgets.filter(function(x){ return x.id !== b.id; });
+    if (typeof deleteRecord === 'function') deleteRecord('caisse_budgets', b.id);
+  });
+  var liste = _rubriquesCustom().filter(function(r){ return r.cle !== cle; });
+  var etat = _bpSauverEtatGrille();
+  await _sauverRubriquesCustom(liste);
+  document.getElementById('bpm-grid').innerHTML = bpChampsGrid();
+  _bpRestaurerEtatGrille(etat);
+  budgetRenderPrevisionnel();
+  toast('Ligne supprimée.' + (enregistrementsProteges ? ' ⚠️ '+enregistrementsProteges+' budget(s) déjà validé(s) sur cette ligne conservé(s) — utilisez un transfert pour les solder.' : ''), enregistrementsProteges ? 'info' : 'success');
+}
+
+function bpChampsGrid() {
+  var html = '<table class="data-table" style="width:100%;"><thead><tr><th style="min-width:160px;">Catégorie</th>'
+    + MOIS_LABELS.map(function(m){ return '<th style="text-align:right;">'+m.substring(0,3)+'</th>'; }).join('')
+    + '<th style="text-align:right;min-width:80px;">Total</th></tr></thead><tbody>';
+  html += '<tr style="background:rgba(255,255,255,0.04);"><td colspan="14" style="font-weight:700;">📈 CHIFFRE D\'AFFAIRES / PRODUITS</td></tr>';
+  _toutesLesRubriques().filter(function(r){ return r.type==='produit'; }).forEach(function(r){ html += bpLigneHtml(r); });
+  html += bpLigneTotalMoisHtml('produits', 'TOTAL PRODUITS', 'var(--vert)');
+  html += '<tr style="background:rgba(255,255,255,0.04);"><td colspan="14" style="font-weight:700;">📉 CHARGES</td></tr>';
+  _toutesLesRubriques().filter(function(r){ return r.type==='charge'; }).forEach(function(r){ html += bpLigneHtml(r); });
+  html += bpLigneTotalMoisHtml('charges', 'TOTAL CHARGES', 'var(--rouge)');
+  html += bpLigneTotalMoisHtml('resultat', 'RÉSULTAT PRÉVISIONNEL', null);
+  html += '</tbody></table>';
+  return html;
+}
+function bpLigneHtml(r) {
+  var cells = '';
+  for (var m = 1; m <= 12; m++) cells += '<td><input type="number" class="form-control bp-input" min="0" data-rubrique="'+r.cle+'" data-mois="'+m+'" value="0" oninput="bpMajTotaux()"></td>';
+  var suppr = r.custom ? ' <button class="btn btn-danger btn-sm btn-icon" onclick="bpSupprimerLigneCustom(\''+r.cle+'\')" title="Supprimer cette ligne personnalisée">🗑️</button>' : '';
+  var suggest = (r.type === 'charge') ? ' <button type="button" class="btn btn-secondary btn-sm" onclick="bpOuvrirSuggestion(\''+r.cle+'\')" title="Proposer un montant à partir de l\'historique (réel comptabilisé + budgets validés des exercices antérieurs)">💡 Suggérer</button>' : '';
+  return '<tr><td style="white-space:nowrap;">'+r.label+suppr+suggest+'</td>' + cells
+    + '<td><input type="number" class="form-control bp-total-input" min="0" data-rubrique="'+r.cle+'" value="0" onchange="bpVentilerDepuisTotal(\''+r.cle+'\')" title="Modifier ce total répartit automatiquement le montant sur les 12 mois, proportionnellement à la répartition déjà saisie."></td></tr>';
+}
+function bpLigneTotalMoisHtml(cle, label, couleur) {
+  var cells = '';
+  for (var m = 1; m <= 12; m++) cells += '<td style="text-align:right;font-weight:800;'+(couleur?'color:'+couleur+';':'')+'" id="bp-totmois-'+cle+'-'+m+'">0</td>';
+  return '<tr style="background:rgba(184,115,51,0.10);"><td style="font-weight:800;">'+label+'</td>' + cells
+    + '<td style="text-align:right;font-weight:800;'+(couleur?'color:'+couleur+';':'')+'" id="bp-totmois-'+cle+'-total">0</td></tr>';
+}
+function ouvrirMasqueBusinessPlan() {
+  var selDiv = document.getElementById('bpm-division');
+  selDiv.innerHTML = '<option value="">— Toutes divisions (consolidé) —</option>' + (DATA.divisions||[]).map(function(d){ return '<option value="'+d.id+'">'+escHtml(d.nom)+'</option>'; }).join('');
+  selDiv.value = window._budgetFiltreDivision || '';
+  document.getElementById('bpm-exercice').value = window._budgetFiltreExercice || new Date().getFullYear();
+  document.getElementById('bpm-grid').innerHTML = bpChampsGrid();
+  bpChargerExistant();
+  openModal('modal-business-plan');
+}
+/* Pré-remplit la grille avec les lignes budgétaires déjà existantes (créées
+   depuis le masque OU depuis la saisie comptable détaillée) pour cette
+   division/exercice — le masque devient alors aussi un écran de modification. */
+function bpChargerExistant() {
+  var divisionId = document.getElementById('bpm-division').value;
+  var exercice = document.getElementById('bpm-exercice').value;
+  document.querySelectorAll('.bp-input').forEach(function(el){ el.value = 0; });
+  if (!exercice) { bpMajTotaux(); return; }
+  _toutesLesRubriques().forEach(function(r) {
+    var ligne = (DATA.caisse_budgets||[]).find(function(b){
+      var cle = _cexpRubriqueDuCompte(b.compte);
+      return cle === r.cle && (b.division_id||'') === (divisionId||'') && String(b.exercice) === String(exercice);
+    });
+    if (!ligne) return;
+    var rep = _budgetRepartitionMois(ligne);
+    for (var m = 1; m <= 12; m++) {
+      var input = document.querySelector('.bp-input[data-rubrique="'+r.cle+'"][data-mois="'+m+'"]');
+      if (input) input.value = Math.round(rep[m-1]);
+    }
+  });
+  bpMajTotaux();
+}
+function bpMajTotaux() {
+  var totProduits = 0, totCharges = 0;
+  var totMoisProduits = Array(12).fill(0), totMoisCharges = Array(12).fill(0);
+  _toutesLesRubriques().forEach(function(r) {
+    var tot = 0;
+    document.querySelectorAll('.bp-input[data-rubrique="'+r.cle+'"]').forEach(function(el){
+      var v = parseFloat(el.value)||0;
+      var m = parseInt(el.dataset.mois,10)-1;
+      tot += v;
+      if (r.type === 'produit') totMoisProduits[m] += v; else totMoisCharges[m] += v;
+    });
+    var totInput = document.querySelector('.bp-total-input[data-rubrique="'+r.cle+'"]');
+    if (totInput && document.activeElement !== totInput) totInput.value = Math.round(tot);
+    if (r.type === 'produit') totProduits += tot; else totCharges += tot;
+  });
+  document.getElementById('bpm-total-produits').textContent = fmtF(totProduits);
+  document.getElementById('bpm-total-charges').textContent = fmtF(totCharges);
+  var resultat = totProduits - totCharges;
+  var resEl = document.getElementById('bpm-resultat');
+  resEl.textContent = fmtF(resultat);
+  resEl.style.color = resultat >= 0 ? 'var(--vert)' : 'var(--rouge)';
+  var margeEl = document.getElementById('bpm-marge');
+  var marge = totProduits > 0 ? (resultat/totProduits)*100 : 0;
+  margeEl.textContent = marge.toFixed(1)+'%';
+  margeEl.style.color = marge >= 0 ? 'var(--vert)' : 'var(--rouge)';
+  _appliquerVerdictDOM('bpm-verdict', _diagnosticViabilite(totMoisProduits, totMoisCharges));
+  /* Lignes de total par mois, dans le tableau lui-même */
+  for (var m = 1; m <= 12; m++) {
+    var elP = document.getElementById('bp-totmois-produits-'+m); if (elP) elP.textContent = fmtF(totMoisProduits[m-1]);
+    var elC = document.getElementById('bp-totmois-charges-'+m); if (elC) elC.textContent = fmtF(totMoisCharges[m-1]);
+    var elR = document.getElementById('bp-totmois-resultat-'+m); if (elR) {
+      var res = totMoisProduits[m-1] - totMoisCharges[m-1];
+      elR.textContent = fmtF(res); elR.style.color = res >= 0 ? 'var(--vert)' : 'var(--rouge)';
+    }
+  }
+  var totP = document.getElementById('bp-totmois-produits-total'); if (totP) totP.textContent = fmtF(totProduits);
+  var totC = document.getElementById('bp-totmois-charges-total'); if (totC) totC.textContent = fmtF(totCharges);
+  var totR = document.getElementById('bp-totmois-resultat-total'); if (totR) { totR.textContent = fmtF(resultat); totR.style.color = resultat >= 0 ? 'var(--vert)' : 'var(--rouge)'; }
+}
+/* Si l'utilisateur saisit directement le total annuel d'une catégorie, on
+   ventile automatiquement sur les 12 mois — proportionnellement à la
+   répartition déjà en place si elle existe (préserve la saisonnalité
+   déjà indiquée), sinon également (montant/12). */
+function bpVentilerDepuisTotal(cle) {
+  var totalInput = document.querySelector('.bp-total-input[data-rubrique="'+cle+'"]');
+  var nouveauTotal = Math.round(parseFloat(totalInput.value) || 0);
+  var moisInputs = document.querySelectorAll('.bp-input[data-rubrique="'+cle+'"]');
+  var sommeActuelle = 0;
+  moisInputs.forEach(function(el){ sommeActuelle += parseFloat(el.value)||0; });
+  var cumule = 0;
+  if (sommeActuelle > 0) {
+    var ratio = nouveauTotal / sommeActuelle;
+    moisInputs.forEach(function(el, i){
+      var val = (i === moisInputs.length-1) ? (nouveauTotal - cumule) : Math.round((parseFloat(el.value)||0) * ratio);
+      if (i < moisInputs.length-1) cumule += val;
+      el.value = val;
+    });
+  } else {
+    var mensuel = Math.round(nouveauTotal/12);
+    moisInputs.forEach(function(el, i){
+      var val = (i === moisInputs.length-1) ? (nouveauTotal - cumule) : mensuel;
+      if (i < moisInputs.length-1) cumule += val;
+      el.value = val;
+    });
+  }
+  bpMajTotaux();
+}
+async function bpSauver(soumettre) {
+  var divisionId = document.getElementById('bpm-division').value;
+  var exercice = document.getElementById('bpm-exercice').value;
+  if (!exercice) { toast('L\'exercice est obligatoire.', 'error'); return; }
+  var reussies = 0, echecs = 0, ignorees = 0, idsAffectes = [];
+  for (var i = 0; i < _toutesLesRubriques().length; i++) {
+    var r = _toutesLesRubriques()[i];
+    var rep = {}; var total = 0;
+    for (var m = 1; m <= 12; m++) {
+      var input = document.querySelector('.bp-input[data-rubrique="'+r.cle+'"][data-mois="'+m+'"]');
+      var val = input ? (parseFloat(input.value)||0) : 0;
+      rep[m] = val; total += val;
+    }
+    if (total <= 0) continue; /* catégorie non renseignée — on ne crée pas de ligne vide */
+    var existant = (DATA.caisse_budgets||[]).find(function(b){
+      return _cexpRubriqueDuCompte(b.compte) === r.cle && (b.division_id||'') === (divisionId||'') && String(b.exercice) === String(exercice);
+    });
+    if (existant && existant.statut === 'valide') { ignorees++; continue; } /* déjà validé — protégé, cf. budgetPrevisionnelSauver */
+    var compte = existant ? existant.compte : (BP_COMPTE_DEFAUT[r.cle] || r.prefixes[0]);
+    var ligneCompte = compte.substring(0,2);
+    var res = await budgetPrevisionnelSauver({
+      id: existant ? existant.id : null,
+      ligne_compte: ligneCompte, compte: compte,
+      division_id: divisionId, exercice: exercice,
+      montant: total, libelle: r.label,
+      repartition_mensuelle: rep
+    });
+    if (res) { reussies++; idsAffectes.push(res.id); } else echecs++;
+  }
+  if (soumettre) {
+    for (var j = 0; j < idsAffectes.length; j++) await budgetPrevisionnelSoumettre(idsAffectes[j]);
+  }
+  if (reussies || ignorees) {
+    closeModal('modal-business-plan');
+    budgetRenderPrevisionnel();
+    if (typeof renderCompteExploitationPrevisionnel === 'function') renderCompteExploitationPrevisionnel();
+    var msg = '✅ Business plan enregistré (' + reussies + ' catégorie(s))' + (soumettre ? ', soumis pour validation' : ' en brouillon');
+    if (ignorees) msg += ' · ' + ignorees + ' catégorie(s) déjà validée(s) non modifiée(s) — utilisez un transfert pour les ajuster';
+    if (echecs) msg += ' · ' + echecs + ' erreur(s), voir messages ci-dessus';
+    toast(msg + '.', ignorees || echecs ? 'info' : 'success');
+  } else {
+    toast('Aucune catégorie renseignée.', 'error');
+  }
 }
 
 function budgetRenderFed() {
@@ -94447,118 +95743,6 @@ function bcLineSet(i,field,val){
 }
 function bcAddLine(){ bcLines.push({res_id:'',designation:'',unite:'',qte:1,pu:0}); bcRenderLines(); }
 function bcRemoveLine(i){ bcLines.splice(i,1); bcRenderLines(); }
-/* Utilise le délai de livraison habituel du fournisseur (nouveau champ) pour
-   préremplir la date souhaitée — n'écrase jamais une date déjà choisie
-   manuellement, seulement si le champ est encore vide. */
-function bcPrefillDelai(){
-  var fid = (document.getElementById('bc-fournisseur')||{}).value;
-  var elDelai = document.getElementById('bc-delai');
-  if (!fid || !elDelai || elDelai.value) return;
-  var f = (DATA.fournisseurs||[]).find(function(x){ return x.id===fid; });
-  if (f && f.delai_livraison) {
-    var d = new Date(); d.setDate(d.getDate() + f.delai_livraison);
-    elDelai.value = d.toISOString().slice(0,10);
-  }
-}
-
-/* ── Générer un bon de commande depuis le DQE ────────────────────────────
-   Parcourt toutes les lignes de nomenclature du type sélectionné, et pour
-   chacune : si elle est liée à un ouvrage (Déboursé Sec), déplie ses
-   composants matériau et cumule les quantités par ressource ; sinon,
-   tente de rattacher directement le libellé « Matériau / Prestation » à une
-   ressource du catalogue (même correspondance normalisée que _typeKey) ;
-   à défaut, garde une ligne libre. Les quantités sont multipliées par le
-   nombre d'unités à commander (1 logement par défaut, ajustable). Un même
-   matériau utilisé dans plusieurs postes/ouvrages n'apparaît qu'une seule
-   fois, quantité totale — c'est tout l'intérêt face à un DQE ligne par
-   ligne, pas exploitable tel quel pour passer commande. */
-function genererBCDepuisDQE() {
-  var type = (document.getElementById('dqe-type-logement') || {}).value || 'F2';
-  var nomens = dqeNomenclaturesPourType(type).nomens;
-  if (!nomens.length) { toast('Aucun poste chiffré pour ce type — rien à commander.', 'error'); return; }
-  var nb = parseInt(prompt('Générer le bon de commande pour combien d\'unités de "' + type + '" ?', '1'), 10);
-  if (!nb || nb < 1) return;
-
-  var parRessource = {};   // res_id -> quantité cumulée
-  var lignesLibres = [];   // sans ressource identifiable
-  function ajouterRessource(resId, qte) {
-    parRessource[resId] = (parRessource[resId] || 0) + qte;
-  }
-  function trouverRessourceParLibelle(lib) {
-    var norm = (lib || '').trim().toLowerCase();
-    if (!norm) return null;
-    return (DATA.eds_ressources || []).find(function(r) { return (r.libelle || '').trim().toLowerCase() === norm; }) || null;
-  }
-
-  nomens.forEach(function(n) {
-    var qteLigne = (parseFloat(n.quantite) || 0) * nb;
-    if (n.ouvrage_id) {
-      var ouvrage = (DATA.eds_ouvrages || []).find(function(o) { return o.id === n.ouvrage_id; });
-      if (ouvrage) {
-        (ouvrage.composants || []).filter(function(c) { return c.type === 'materiau'; }).forEach(function(c) {
-          var qteComposant = (parseFloat(c.qte) || 0) * qteLigne;
-          if (c.res_id) ajouterRessource(c.res_id, qteComposant);
-          else {
-            var rTrouve = trouverRessourceParLibelle(c.designation || c.libelle);
-            if (rTrouve) ajouterRessource(rTrouve.id, qteComposant);
-            else lignesLibres.push({ designation: c.designation || c.libelle || 'Composant', unite: c.unite || '', qte: qteComposant, pu: (typeof edsResPU === 'function' ? edsResPU(c) : (parseFloat(c.pu) || 0)) });
-          }
-        });
-        return;
-      }
-    }
-    /* Ligne directe (pas d'ouvrage) : tenter le rattachement au catalogue. */
-    var rDirect = trouverRessourceParLibelle(n.materiau);
-    if (rDirect) ajouterRessource(rDirect.id, qteLigne);
-    else lignesLibres.push({ designation: n.materiau || '(sans désignation)', unite: n.unite || '', qte: qteLigne, pu: n.quantite ? Math.round((n.prix_forfait || 0) / n.quantite) : 0 });
-  });
-
-  var lignesGenerees = Object.keys(parRessource).map(function(resId) {
-    var r = (DATA.eds_ressources || []).find(function(x) { return x.id === resId; });
-    return { res_id: resId, designation: '', unite: r ? r.unite : '', qte: Math.round(parRessource[resId] * 100) / 100, pu: r ? (r.pu || 0) : 0 };
-  }).concat(lignesLibres.map(function(l) {
-    return { res_id: '__libre__', designation: l.designation, unite: l.unite, qte: Math.round(l.qte * 100) / 100, pu: Math.round(l.pu) };
-  }));
-
-  if (!lignesGenerees.length) { toast('Aucun matériau exploitable dans ce DQE (uniquement main-d\'œuvre/forfaits ?).', 'error'); return; }
-
-  openBC(null);
-  bcLines = lignesGenerees;
-  bcRenderLines();
-  var notesEl = document.getElementById('bc-notes');
-  if (notesEl) notesEl.value = 'Généré depuis DQE — type ' + type + ' × ' + nb + ' unité(s)';
-  toast('🛒 ' + lignesGenerees.length + ' ligne(s) générée(s) depuis le DQE — vérifiez fournisseur et prix avant d\'enregistrer.', 'success');
-}
-
-/* ── Générer un bon de commande depuis un ouvrage du Déboursé Sec ────────
-   Version allégée pour un usage direct depuis Déboursé Sec, sans passer
-   par un type de logement complet : un seul ouvrage, ses composants
-   matériau, la quantité d'ouvrages à réaliser. */
-function genererBCDepuisOuvrage(ouvrageId) {
-  var o = (DATA.eds_ouvrages || []).find(function(x) { return x.id === ouvrageId; });
-  if (!o) { toast('Ouvrage introuvable.', 'error'); return; }
-  var mats = (o.composants || []).filter(function(c) { return c.type === 'materiau'; });
-  if (!mats.length) { toast('Cet ouvrage n\'a aucun composant matériau — rien à commander.', 'error'); return; }
-  var qteOuvrages = parseFloat(prompt('Quantité de "' + (o.designation || o.code) + '" (' + (o.unite || '') + ') à réaliser ?', '1'));
-  if (!qteOuvrages || qteOuvrages <= 0) return;
-
-  var lignesGenerees = mats.map(function(c) {
-    var qte = Math.round((parseFloat(c.qte) || 0) * qteOuvrages * 100) / 100;
-    if (c.res_id) {
-      var r = (DATA.eds_ressources || []).find(function(x) { return x.id === c.res_id; });
-      return { res_id: c.res_id, designation: '', unite: r ? r.unite : (c.unite || ''), qte: qte, pu: r ? (r.pu || 0) : (parseFloat(c.pu) || 0) };
-    }
-    return { res_id: '__libre__', designation: c.designation || c.libelle || 'Composant', unite: c.unite || '', qte: qte, pu: Math.round(parseFloat(c.pu) || 0) };
-  });
-
-  openBC(null);
-  bcLines = lignesGenerees;
-  bcRenderLines();
-  var notesEl = document.getElementById('bc-notes');
-  if (notesEl) notesEl.value = 'Généré depuis Déboursé Sec — ' + (o.designation || o.code) + ' × ' + qteOuvrages + ' ' + (o.unite || '');
-  toast('🛒 ' + lignesGenerees.length + ' ligne(s) générée(s) depuis l\'ouvrage — vérifiez fournisseur et prix avant d\'enregistrer.', 'success');
-}
-
 function openBC(id){
   stockEnsureDepots();
   document.getElementById('bc-fournisseur').innerHTML=fournisseurOptions('');
@@ -95344,89 +96528,38 @@ function renderFournisseursPageListe() {
       + '<td style="font-size:12px;">' + escHtml(fr.contact || '—') + '</td>'
       + '<td style="font-size:12px;">' + escHtml(fr.compte || '—') + '</td>'
       + '<td>' + (fr.airsi ? '<span class="badge badge-or" style="font-size:9px;">AIRSI</span>' : '—') + '</td>'
-      + '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="editFournisseur(\'' + fr.id + '\',\'fpg\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\'' + fr.id + '\')">🗑</button></td>'
+      + '<td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\'' + fr.id + '\')">🗑</button></td>'
       + '</tr>';
   }).join('');
 }
 
-/* [FIX doublon] La page et la modale « Nouveau fournisseur » dupliquaient
-   intégralement la même logique de sauvegarde sous deux noms de fonction
-   différents (saveFournisseur / saveFournisseurPage) — un correctif ou un
-   nouveau champ ajouté dans l'un n'était jamais répercuté dans l'autre.
-   Une seule fonction commune, paramétrée par le préfixe des champs (« fo »
-   pour la modale, « fpg » pour la page). */
-/* [FIX] Aucun bouton Modifier n'existait sur la liste des fournisseurs — la
-   fiche n'était éditable qu'en la supprimant et en la recréant, perdant
-   son id (donc son lien avec les BC/mouvements de stock déjà rattachés).
-   État d'édition partagé entre les deux formulaires (page + modale), pas
-   de risque de collision avec APP.editingId utilisé ailleurs. */
-var _fournisseurEnEdition = { id: null, pfx: null };
-function editFournisseur(id, pfx) {
-  var fr = (DATA.fournisseurs || []).find(function(x) { return x.id === id; });
-  if (!fr) return;
-  _fournisseurEnEdition = { id: id, pfx: pfx };
-  var set = function(field, val) { var e = document.getElementById(pfx + '-' + field); if (e) e.value = val || ''; };
-  var typeEl = document.getElementById(pfx + '-typetiers'); if (typeEl) typeEl.value = fr.type_tiers || 'entreprise';
-  fournisseurTypeToggle();
-  set('nom', fr.nom); set('rccm', fr.rccm); set('ncc', fr.ncc); set('cni', fr.cni);
-  set('contact', fr.contact); set('email', fr.email); set('adresse', fr.adresse);
-  set('compte', fr.compte); set('delai', fr.delai_livraison);
-  var airEl = document.getElementById(pfx + '-airsi'); if (airEl) airEl.checked = !!fr.airsi;
-  var btn = document.getElementById(pfx + '-btn-save');
-  if (btn) btn.textContent = '💾 Enregistrer les modifications';
-  if (pfx === 'fo') { openFournisseurs(); document.getElementById('fo-nom').focus(); }
-  else document.getElementById('fpg-nom').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-function _annulerEditionFournisseur(pfx) {
-  _fournisseurEnEdition = { id: null, pfx: null };
-  var btn = document.getElementById(pfx + '-btn-save');
-  if (btn) btn.textContent = pfx === 'fpg' ? '💾 Enregistrer' : 'Ajouter le fournisseur';
-}
-
-async function _saveFournisseurCommun(pfx) {
-  var g = function(id) { var e = document.getElementById(pfx + '-' + id); return e ? e.value.trim() : ''; };
-  var typeTiers = document.getElementById(pfx + '-typetiers').value;
+async function saveFournisseurPage() {
+  var typeTiers = document.getElementById('fpg-typetiers').value;
   var phys = (typeTiers === 'physique');
-  var nom = g('nom');
-  if (!nom) { toast(phys ? 'Nom et prénoms requis.' : 'Raison sociale requise.', 'error'); return null; }
-  var enEdition = _fournisseurEnEdition.id && _fournisseurEnEdition.pfx === pfx;
-  var fr = enEdition
-    ? (DATA.fournisseurs || []).find(function(x) { return x.id === _fournisseurEnEdition.id; })
-    : null;
-  if (enEdition && !fr) { enEdition = false; } // fiche supprimée entre-temps : repli sur création
-  if (!fr) { fr = { id: uid(), created_at: today() }; }
-  fr.type_tiers = typeTiers;
-  fr.nom = nom;
-  fr.rccm = phys ? '' : g('rccm');
-  fr.ncc = phys ? '' : g('ncc');
-  fr.cni = phys ? g('cni') : '';
-  fr.contact = g('contact');
-  fr.email = g('email');
-  fr.adresse = g('adresse');
-  fr.delai_livraison = (function(){ var v = parseInt(g('delai'), 10); return isNaN(v) ? null : v; })();
-  fr.compte = (g('compte') || requireCompteDefaut('fournisseur'));
-  fr.airsi = (document.getElementById(pfx + '-airsi') || {}).checked || false;
+  var nom = document.getElementById('fpg-nom').value.trim();
+  if (!nom) { toast(phys ? 'Nom et prénoms requis.' : 'Raison sociale requise.', 'error'); return; }
+  var fr = {
+    id: uid(), type_tiers: typeTiers, nom: nom,
+    rccm: phys ? '' : document.getElementById('fpg-rccm').value.trim(),
+    ncc: phys ? '' : document.getElementById('fpg-ncc').value.trim(),
+    cni: phys ? document.getElementById('fpg-cni').value.trim() : '',
+    contact: document.getElementById('fpg-contact').value.trim(),
+    compte: (document.getElementById('fpg-compte').value.trim() || requireCompteDefaut('fournisseur')),
+    airsi: (document.getElementById('fpg-airsi') || {}).checked || false, created_at: today()
+  };
   if (!DATA.fournisseurs) DATA.fournisseurs = [];
-  if (!enEdition) DATA.fournisseurs.push(fr);
+  DATA.fournisseurs.push(fr);
   await dbPut('fournisseurs', fr);
   if (typeof syncToSupabase === 'function') syncToSupabase('pi_fournisseurs', fr);
-  ['nom', 'rccm', 'ncc', 'cni', 'contact', 'email', 'adresse', 'delai', 'compte'].forEach(function(id) {
-    var e = document.getElementById(pfx + '-' + id); if (e) e.value = '';
-  });
-  var airEl = document.getElementById(pfx + '-airsi'); if (airEl) airEl.checked = false;
-  var typeEl = document.getElementById(pfx + '-typetiers'); if (typeEl) typeEl.value = 'entreprise';
+  ['fpg-nom', 'fpg-rccm', 'fpg-ncc', 'fpg-cni', 'fpg-contact', 'fpg-compte'].forEach(function(id) { document.getElementById(id).value = ''; });
+  var _fa = document.getElementById('fpg-airsi'); if (_fa) _fa.checked = false;
+  document.getElementById('fpg-typetiers').value = 'entreprise';
   fournisseurTypeToggle();
-  _annulerEditionFournisseur(pfx);
-  renderFournisseursListe();
   renderFournisseursPageListe();
   renderDlFournisseurs();
   var selF = document.getElementById('se-fournisseur'); if (selF) selF.innerHTML = fournisseurOptions(fr.id);
-  var selBC = document.getElementById('bc-fournisseur'); if (selBC) selBC.innerHTML = fournisseurOptions(fr.id);
-  toast(enEdition ? 'Fournisseur mis à jour.' : 'Fournisseur enregistré.', 'success');
-  return fr;
+  toast('Fournisseur enregistré.', 'success');
 }
-async function saveFournisseurPage() { return _saveFournisseurCommun('fpg'); }
-async function saveFournisseur() { return _saveFournisseurCommun('fo'); }
 
 function openFournisseurs(){
   ['fo-nom','fo-rccm','fo-ncc','fo-contact','fo-cni'].forEach(function(id){document.getElementById(id).value='';});
@@ -95442,7 +96575,27 @@ function renderFournisseursListe(){
   var z=document.getElementById('fo-liste'); if(!z) return;
   var l=DATA.fournisseurs||[];
   if(!l.length){ z.innerHTML='<div style="font-size:11px;color:var(--blanc-dim);">Aucun fournisseur.</div>'; return; }
-  z.innerHTML=l.map(function(fr){ var phys=fr.type_tiers==='physique'; return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;border-bottom:1px solid var(--bord);padding:5px 0;"><span>'+(phys?'👤':'🏢')+' <strong>'+fr.nom+'</strong>'+(phys?(fr.cni?(' · '+fr.cni):''):(fr.ncc?(' · NCC '+fr.ncc):''))+(fr.compte?(' · '+fr.compte):'')+(fr.airsi?' <span class="badge badge-or" style="font-size:9px;">AIRSI</span>':'')+'</span><span><button class="btn btn-secondary btn-sm btn-icon" onclick="editFournisseur(\''+fr.id+'\',\'fo\')" title="Modifier">✏️</button> <button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\''+fr.id+'\')">🗑</button></span></div>'; }).join('');
+  z.innerHTML=l.map(function(fr){ var phys=fr.type_tiers==='physique'; return '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;border-bottom:1px solid var(--bord);padding:5px 0;"><span>'+(phys?'👤':'🏢')+' <strong>'+fr.nom+'</strong>'+(phys?(fr.cni?(' · '+fr.cni):''):(fr.ncc?(' · NCC '+fr.ncc):''))+(fr.compte?(' · '+fr.compte):'')+(fr.airsi?' <span class="badge badge-or" style="font-size:9px;">AIRSI</span>':'')+'</span><button class="btn btn-danger btn-sm btn-icon" onclick="deleteFournisseur(\''+fr.id+'\')">🗑</button></div>'; }).join('');
+}
+async function saveFournisseur(){
+  var typeTiers=document.getElementById('fo-typetiers').value;
+  var phys=(typeTiers==='physique');
+  var nom=document.getElementById('fo-nom').value.trim();
+  if(!nom){ toast(phys?'Nom et prénoms requis.':'Raison sociale requise.','error'); return; }
+  var fr={ id:uid(), type_tiers:typeTiers, nom:nom,
+    rccm: phys?'':document.getElementById('fo-rccm').value.trim(),
+    ncc: phys?'':document.getElementById('fo-ncc').value.trim(),
+    cni: phys?document.getElementById('fo-cni').value.trim():'',
+    contact:document.getElementById('fo-contact').value.trim(),
+    compte:(document.getElementById('fo-compte').value.trim()||requireCompteDefaut('fournisseur')),
+    airsi:(document.getElementById('fo-airsi')||{}).checked||false, created_at:today() };
+  if(!DATA.fournisseurs) DATA.fournisseurs=[];
+  DATA.fournisseurs.push(fr); await dbPut('fournisseurs',fr); if(typeof syncToSupabase==='function')syncToSupabase('pi_fournisseurs',fr);
+  ['fo-nom','fo-rccm','fo-ncc','fo-contact','fo-cni'].forEach(function(id){document.getElementById(id).value='';}); document.getElementById('fo-compte').value=''; var _fa2=document.getElementById('fo-airsi'); if(_fa2)_fa2.checked=false;
+  renderFournisseursListe();
+  renderDlFournisseurs();
+  var selF=document.getElementById('se-fournisseur'); if(selF) selF.innerHTML=fournisseurOptions(fr.id);
+  toast('Fournisseur ajouté.','success');
 }
 async function deleteFournisseur(id){
   if(!confirm('Supprimer ce fournisseur ?')) return;
@@ -112033,6 +113186,148 @@ function _caisseBucketAge(joursRetard) {
   return 'plus90';
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   AUDIT DE CAISSE — réservé aux administrateurs (hasRole('admin'), voir
+   caisseEnter). Automatise les 3 contrôles menés manuellement lors de
+   l'audit de la Caisse Principale (session du 01/09) :
+   1) Rupture de chaîne entre sessions (fond_ouverture ≠ solde réel de
+      clôture de la session précédente).
+   2) Solde théorique négatif (physiquement impossible, signe d'un
+      mouvement erroné/dupliqué).
+   3) Cycle « réserve / retour en caisse » jamais soldé — une réserve
+      (sortie) sans retour (entrée) correspondant, y compris quand
+      plusieurs réserves sont soldées ensemble par un retour groupé.
+   ════════════════════════════════════════════════════════════════════ */
+
+function _caisseAuditChaineSessions(caisseId) {
+  var sessions = (DATA.caisse_sessions||[]).filter(function(s){ return s.caisse_id===caisseId; })
+    .slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||'') || String(a.id).localeCompare(String(b.id)); });
+  var ruptures = [];
+  for (var i = 1; i < sessions.length; i++) {
+    var prec = sessions[i-1], cur = sessions[i];
+    if (prec.statut !== 'cloturee' || prec.fond_cloture_reel === null || prec.fond_cloture_reel === undefined) continue;
+    var attendu = parseFloat(prec.fond_cloture_reel) || 0;
+    var reel = parseFloat(cur.fond_ouverture) || 0;
+    if (Math.abs(attendu - reel) > 1) {
+      ruptures.push({ session: cur, precedente: prec, attendu: attendu, obtenu: reel, ecart: reel - attendu });
+    }
+  }
+  return ruptures;
+}
+
+function _caisseAuditTheoriqueImpossible(caisseId) {
+  return (DATA.caisse_sessions||[]).filter(function(s){
+    return s.caisse_id===caisseId && s.fond_cloture_theorique !== null && s.fond_cloture_theorique !== undefined
+      && parseFloat(s.fond_cloture_theorique) < 0;
+  });
+}
+
+/* Apparie chaque sortie « RESERVE... » avec son retour (entrée « RETOUR »
+   ou « ANNULATION » de motif proche) — en 3 passes, de la plus simple à la
+   plus permissive, pour ne garder en anomalie que ce qui résiste aux trois :
+   1) montant strictement identique ; 2) retour groupé (somme de plusieurs
+   réserves = un seul retour, ou l'inverse) sur une fenêtre de ±45 jours ;
+   3) ce qui reste est remonté comme non soldé. */
+function _caisseAuditReserveRetour(caisseId) {
+  var mvts = (DATA.caisse_mouvements||[]).filter(function(m){ return m.caisse_id===caisseId; });
+  var estReserve = function(m){ return m.type==='sortie' && /RESERVE|RÉSERVE/i.test(m.motif||''); };
+  var estRetour = function(m){ return m.type==='entree' && /RETOUR|ANNULATION/i.test(m.motif||''); };
+  var reserves = mvts.filter(estReserve).map(function(m){ return {m:m, soldee:false}; });
+  var retours = mvts.filter(estRetour).map(function(m){ return {m:m, utilisee:false}; });
+
+  /* Passe 1 — montant identique, la plus ancienne réserve non soldée d'abord */
+  reserves.sort(function(a,b){ return (a.m.date||'').localeCompare(b.m.date||''); });
+  reserves.forEach(function(r){
+    var candidat = retours.find(function(e){ return !e.utilisee && Math.round(parseFloat(e.m.montant)) === Math.round(parseFloat(r.m.montant)); });
+    if (candidat) { candidat.utilisee = true; r.soldee = true; }
+  });
+
+  /* Passe 2 — regroupement par fenêtre glissante de 45 jours : si la somme
+     des réserves non soldées de la fenêtre == somme des retours non
+     utilisés de la même fenêtre, tout le groupe est considéré soldé
+     (cas des retours groupés couvrant plusieurs réserves à la fois). */
+  var joursEntre = function(d1,d2){ return Math.abs((new Date(d2)) - (new Date(d1))) / 86400000; };
+  reserves.filter(function(r){ return !r.soldee; }).forEach(function(r0){
+    if (r0.soldee) return;
+    var fenReserves = reserves.filter(function(r){ return !r.soldee && joursEntre(r0.m.date, r.m.date) <= 45; });
+    var fenRetours = retours.filter(function(e){ return !e.utilisee && joursEntre(r0.m.date, e.m.date) <= 45; });
+    var totR = fenReserves.reduce(function(s,r){ return s+(parseFloat(r.m.montant)||0); }, 0);
+    var totE = fenRetours.reduce(function(s,e){ return s+(parseFloat(e.m.montant)||0); }, 0);
+    if (fenReserves.length && Math.abs(totR - totE) < 1) {
+      fenReserves.forEach(function(r){ r.soldee = true; });
+      fenRetours.forEach(function(e){ e.utilisee = true; });
+    }
+  });
+
+  return reserves.filter(function(r){ return !r.soldee; }).map(function(r){ return r.m; });
+}
+
+function renderCaisseAudit() {
+  if (!hasRole('admin')) { var b=document.getElementById('caisse-audit-box'); if (b) b.innerHTML = '<div class="alert alert-error">Réservé aux administrateurs.</div>'; return; }
+  var selCaisse = document.getElementById('caisse-audit-caisse-id');
+  if (selCaisse && !selCaisse.dataset.rempli) {
+    selCaisse.innerHTML = (DATA.caisses||[]).map(function(c){ return '<option value="'+c.id+'">'+escHtml(c.nom)+'</option>'; }).join('');
+    selCaisse.dataset.rempli = '1';
+  }
+  var caisseId = selCaisse ? selCaisse.value : ((DATA.caisses||[])[0]||{}).id;
+  if (!caisseId) { document.getElementById('caisse-audit-box').innerHTML = '<div class="alert alert-info">Aucune caisse.</div>'; return; }
+
+  var ruptures = _caisseAuditChaineSessions(caisseId);
+  var theoImpossible = _caisseAuditTheoriqueImpossible(caisseId);
+  var reservesNonSoldees = _caisseAuditReserveRetour(caisseId);
+  var montantEnJeu = reservesNonSoldees.reduce(function(s,m){ return s+(parseFloat(m.montant)||0); }, 0);
+
+  document.getElementById('caisse-audit-kpi').innerHTML = [
+    { label:'Ruptures de chaîne', val: ruptures.length, icon:'⛓️‍💥', cls: ruptures.length?'kpi-red':'kpi-green' },
+    { label:'Soldes théoriques impossibles', val: theoImpossible.length, icon:'🔴', cls: theoImpossible.length?'kpi-red':'kpi-green' },
+    { label:'Réserves jamais soldées', val: reservesNonSoldees.length, icon:'📦', cls: reservesNonSoldees.length?'kpi-red':'kpi-green' },
+    { label:'Montant en jeu', val: fmtF(montantEnJeu)+' F', icon:'💰', cls: montantEnJeu?'kpi-red':'kpi-green' }
+  ].map(_kpiCard).join('');
+
+  var html = '';
+  if (!ruptures.length && !theoImpossible.length && !reservesNonSoldees.length) {
+    html = '<div class="alert alert-info" style="text-align:center;padding:24px;">✅ Aucune anomalie détectée sur cette caisse.</div>';
+  } else {
+    if (ruptures.length) {
+      html += '<div class="card" style="margin-bottom:14px;"><div class="card-title">⛓️‍💥 Ruptures de chaîne entre sessions</div>'
+        + '<table class="data-table" style="width:100%;font-size:12px;"><thead><tr><th>Session</th><th>Devrait ouvrir sur</th><th>Ouvre réellement sur</th><th>Écart</th></tr></thead><tbody>'
+        + ruptures.map(function(r){ return '<tr><td>'+dateShort(r.session.date)+'</td><td style="text-align:right;">'+fmtF(r.attendu)+' F</td><td style="text-align:right;">'+fmtF(r.obtenu)+' F</td><td style="text-align:right;font-weight:700;color:var(--rouge);">'+(r.ecart>=0?'+':'')+fmtF(r.ecart)+' F</td></tr>'; }).join('')
+        + '</tbody></table></div>';
+    }
+    if (theoImpossible.length) {
+      html += '<div class="card" style="margin-bottom:14px;"><div class="card-title">🔴 Soldes théoriques négatifs (impossibles)</div>'
+        + '<table class="data-table" style="width:100%;font-size:12px;"><thead><tr><th>Session</th><th>Solde théorique</th><th>Solde réel compté</th><th>Écart</th></tr></thead><tbody>'
+        + theoImpossible.map(function(s){ var e=(parseFloat(s.fond_cloture_reel)||0)-(parseFloat(s.fond_cloture_theorique)||0); return '<tr><td>'+dateShort(s.date)+'</td><td style="text-align:right;color:var(--rouge);font-weight:700;">'+fmtF(s.fond_cloture_theorique)+' F</td><td style="text-align:right;">'+fmtF(s.fond_cloture_reel)+' F</td><td style="text-align:right;font-weight:700;">'+(e>=0?'+':'')+fmtF(e)+' F</td></tr>'; }).join('')
+        + '</tbody></table></div>';
+    }
+    if (reservesNonSoldees.length) {
+      html += '<div class="card"><div class="card-title">📦 Réserves jamais soldées par un retour en caisse</div>'
+        + '<div style="font-size:11px;color:var(--dim);margin-bottom:8px;">Une sortie « RESERVE... » sans retour correspondant (même montant, ou en groupe avec d\'autres réserves de la période) — à vérifier auprès de la personne ayant enregistré la ligne avant toute correction.</div>'
+        + '<table class="data-table" style="width:100%;font-size:12px;"><thead><tr><th>Date</th><th>Montant</th><th>Libellé</th><th>Saisi par</th></tr></thead><tbody>'
+        + reservesNonSoldees.map(function(m){ return '<tr><td>'+dateShort(m.date)+'</td><td style="text-align:right;font-weight:700;">'+fmtF(m.montant)+' F</td><td>'+escHtml(m.motif||'')+'</td><td style="font-size:11px;color:var(--dim);">'+escHtml((m.created_by||'').replace(' (import CSV)',''))+'</td></tr>'; }).join('')
+        + '</tbody></table></div>';
+    }
+  }
+  document.getElementById('caisse-audit-box').innerHTML = html;
+}
+
+function imprimerRapportAuditCaisse() {
+  if (!hasRole('admin')) { toast('Réservé aux administrateurs.', 'error'); return; }
+  var caisseId = document.getElementById('caisse-audit-caisse-id').value;
+  var c = (DATA.caisses||[]).find(function(x){ return x.id===caisseId; });
+  var kpiHtml = document.getElementById('caisse-audit-kpi').innerHTML;
+  var boxHtml = document.getElementById('caisse-audit-box').innerHTML;
+  var w = window.open('', '_blank');
+  w.document.write('<html><head><title>Rapport d\'audit — '+escHtml(c?c.nom:'')+'</title>'
+    + '<style>body{font-family:Arial,sans-serif;padding:24px;color:#111;} table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:10px;} td,th{border:1px solid #ccc;padding:4px 6px;} .kpi-grid{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;} .card{margin-bottom:16px;} .card-title{font-weight:700;margin-bottom:6px;} h1{font-size:16px;} h2{font-size:12px;color:#555;font-weight:400;}</style>'
+    + '</head><body>'
+    + '<h1>🔍 Rapport d\'audit — '+escHtml(c?c.nom:'')+'</h1>'
+    + '<h2>Édité le '+dateShort(today())+' par '+escHtml((APP.currentUser&&APP.currentUser.nom)||'')+' — document réservé, usage interne</h2>'
+    + kpiHtml + boxHtml + '</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); }, 300);
+}
+
 function caisseRenderBalanceAgee() {
   var thead = document.getElementById('caisse-tiers-thead');
   var tbody = document.getElementById('caisse-tiers-tbody');
@@ -112113,6 +113408,13 @@ async function caisseEnter() {
 
   var btnNew = document.getElementById('btn-caisse-nouvelle');
   if (btnNew) btnNew.style.display = caisseRoleAdminLike() ? '' : 'none';
+  /* [Audit] Onglet strictement réservé aux administrateurs — demande explicite,
+     plus restrictif que caisseRoleAdminLike() (qui inclut aussi manager et
+     comptable) : les écarts remontés ici peuvent révéler des soupçons sur
+     une personne précise avant toute vérification, donc accès volontairement
+     le plus étroit possible. */
+  var btnAudit = document.getElementById('caisse-tab-btn-audit');
+  if (btnAudit) btnAudit.style.display = hasRole('admin') ? '' : 'none';
   caisseRenderDashboard();
   caisseRenderListe();
   document.getElementById('caisse-brouillard-box').innerHTML = '';
