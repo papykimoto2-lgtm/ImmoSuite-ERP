@@ -114079,27 +114079,24 @@ async function caisseSaveBon() {
     mvt.modifie_par = (APP.currentUser && APP.currentUser.nom) || '—';
     mvt.modifie_le = new Date().toISOString();
 
-    /* Une modification qui fait franchir (ou repasser sous) le plafond de
-       l'auteur de la modification réévalue le besoin de validation — sur la
-       base du plafond de la personne qui modifie, pas de celle qui a créé le
-       bon à l'origine. Un bon déjà validé le reste (on ne redemande pas une
-       approbation déjà obtenue si le nouveau montant reste dans les clous du
-       validateur d'origine) ; s'il redevient au-delà du plafond du modificateur
-       et n'avait jamais été validé, il repasse en attente. */
+    /* [FIX validation systématique] Tout bon modifié et pas encore validé
+       repasse en attente de validation, quel que soit le plafond du rôle de
+       la personne qui modifie — y compris si ce plafond n'est pas configuré
+       (par défaut Infinity, voir userPlafond()). Auparavant, un plafond non
+       configuré (cas de TOUS les rôles tant qu'un admin ne l'a pas réglé
+       manuellement dans Rôles & Accès) désactivait silencieusement la
+       validation : le bon ne réapparaissait alors nulle part dans les files
+       d'attente. La règle métier « tout mouvement doit être validé » ne doit
+       plus dépendre d'un paramétrage annexe. */
     if ((type === 'sortie' || type === 'entree') && !mvt.valide) {
       var _plafondMod = (typeof userPlafond === 'function') ? userPlafond() : Infinity;
       var _etaitDejaEnAttente = !!mvt.requiert_validation;
-      if (isFinite(_plafondMod)) {
-        mvt.requiert_validation = true; mvt.valide = false; mvt.rejete = false;
-        mvt.plafond_demandeur = _plafondMod;
-        mvt.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
-        mvt.demande_role = (APP.currentUser && APP.currentUser.role) || '';
-        mvt.demande_le = new Date().toISOString();
-        var _nouvelleDemande = !_etaitDejaEnAttente;
-      } else {
-        mvt.requiert_validation = false;
-        mvt.rejete = false; /* un bon corrigé par un auteur au plafond illimité n'est plus "rejeté" : l'icône ✖ ne doit pas rester collée */
-      }
+      mvt.requiert_validation = true; mvt.valide = false; mvt.rejete = false;
+      mvt.plafond_demandeur = isFinite(_plafondMod) ? _plafondMod : null;
+      mvt.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
+      mvt.demande_role = (APP.currentUser && APP.currentUser.role) || '';
+      mvt.demande_le = new Date().toISOString();
+      var _nouvelleDemande = !_etaitDejaEnAttente;
     }
 
     if (etaitVentile && compteV) {
@@ -114188,25 +114185,26 @@ async function caisseSaveBon() {
   /* ── HABILITATION DE VALIDATION DES MOUVEMENTS DE CAISSE ───────────────
      [ÉVOLUTION] Sur demande explicite du DG : tout mouvement (entrée ET
      sortie), quel que soit le montant, doit être validé avant de compter
-     dans le solde — plus de seuil (l'ancien système ne concernait que les
-     sorties dépassant le plafond de l'auteur). Le plafond du rôle continue
-     de déterminer QUI peut valider (délégation : un remplaçant désigné,
-     ex. Manager, avec un plafond élevé mais fini, peut valider en
-     l'absence du DG — cf. Rôles & Accès). Seul un auteur au plafond
-     illimité (le DG lui-même, ou tout rôle sans plafond défini) déclenche
-     encore aucune validation : lui demander de s'auto-valider n'aurait
-     aucune valeur de contrôle. */
+     dans le solde — sans exception et sans dépendre d'un paramétrage de
+     rôle. [FIX] La version précédente conditionnait la mise en attente à
+     isFinite(userPlafond()) : un plafond non configuré (cas de TOUS les
+     rôles système par défaut, y compris « Caissière », tant qu'un admin ne
+     l'a pas réglé manuellement dans Rôles & Accès) revenait à Infinity et
+     désactivait silencieusement la validation. Les bons de caisse saisis
+     directement n'apparaissaient alors jamais dans Pilotage → Validations
+     ni dans Caisse → Validations. Le plafond du rôle continue de déterminer
+     QUI peut valider un montant donné (cf. _pilotageRenderValidCaisse /
+     caisseRenderValidations et exigerPlafond dans caisseValiderDecaissement),
+     mais plus SI une validation est requise : elle l'est désormais toujours. */
   if (type === 'sortie' || type === 'entree') {
     var _plafondAuteur = (typeof userPlafond === 'function') ? userPlafond() : Infinity;
-    if (isFinite(_plafondAuteur)) {
-      nouveau.requiert_validation = true;
-      nouveau.valide = false;
-      nouveau.rejete = false;
-      nouveau.plafond_demandeur = _plafondAuteur;
-      nouveau.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
-      nouveau.demande_role = (APP.currentUser && APP.currentUser.role) || '';
-      nouveau.demande_le = new Date().toISOString();
-    }
+    nouveau.requiert_validation = true;
+    nouveau.valide = false;
+    nouveau.rejete = false;
+    nouveau.plafond_demandeur = isFinite(_plafondAuteur) ? _plafondAuteur : null;
+    nouveau.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
+    nouveau.demande_role = (APP.currentUser && APP.currentUser.role) || '';
+    nouveau.demande_le = new Date().toISOString();
   }
   DATA.caisse_mouvements.push(nouveau);
   await dbPut('caisse_mouvements', nouveau);
@@ -114240,7 +114238,7 @@ async function caisseSaveBon() {
   await cbCommitDocs(nouveau.id);
   closeModal('modal-caisse-bon');
   if (nouveau.requiert_validation) {
-    toast('🔐 Bon ' + numero + ' enregistré — décaissement de ' + fmtF(montant) + ' FCFA au-delà de votre plafond de validation (' + fmtF(nouveau.plafond_demandeur||0) + ' FCFA). En attente de l\'approbation d\'un responsable habilité.', 'info');
+    toast('🔐 Bon ' + numero + ' enregistré — ' + (type==='entree'?'entrée':'décaissement') + ' de ' + fmtF(montant) + ' FCFA en attente de l\'approbation d\'un responsable habilité avant de compter dans le solde.', 'info');
   } else {
     toast('✅ ' + (type === 'entree' ? 'Bon d\'entrée' : 'Bon de sortie') + ' ' + numero + ' enregistré.', 'success');
   }
@@ -116485,7 +116483,7 @@ function caisseRenderValidations() {
       + '<td>' + escHtml(m.motif||'') + '</td>'
       + '<td>' + escHtml(m.beneficiaire||'') + '</td>'
       + '<td style="text-align:right;color:' + (estSortie?'var(--rouge)':'var(--vert)') + ';font-weight:700;">' + fmtF(montant) + '</td>'
-      + '<td style="font-size:11px;">' + escHtml(m.demande_par||'—') + '<br><span style="color:var(--blanc-dim);">plafond ' + fmtF(m.plafond_demandeur||0) + ' F</span></td>'
+      + '<td style="font-size:11px;">' + escHtml(m.demande_par||'—') + '<br><span style="color:var(--blanc-dim);">plafond ' + (m.plafond_demandeur ? fmtF(m.plafond_demandeur) + ' F' : 'illimité') + '</span></td>'
       + '<td style="white-space:nowrap;">'
       + (habiliteMontant
           ? '<button class="btn btn-primary btn-sm" onclick="caisseValiderDecaissement(\'' + m.id + '\')">✅ Valider</button> '
@@ -116699,7 +116697,7 @@ async function caisseNotifierValidation(mvt, evenement) {
     if (evenement === 'demande') {
       texte = '🔐 Demande de validation — bon ' + (mvt.numero||'') + ' (' + montant + ')\n'
         + 'Motif : ' + (mvt.motif||'—') + (mvt.beneficiaire ? ' — ' + mvt.beneficiaire : '') + '\n'
-        + 'Demandé par ' + (mvt.demande_par||'—') + ' — dépasse son plafond de validation (' + fmtF(mvt.plafond_demandeur||0) + ' FCFA).\n'
+        + 'Demandé par ' + (mvt.demande_par||'—') + '.\n'
         + 'Un responsable dont le plafond couvre ce montant doit approuver ou rejeter ce bon dans le module Caisse.';
     } else if (evenement === 'validee') {
       texte = '✅ Décaissement validé — bon ' + (mvt.numero||'') + ' (' + montant + ') approuvé par ' + (mvt.valide_par||'—') + '.';
