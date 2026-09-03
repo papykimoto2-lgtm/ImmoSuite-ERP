@@ -115044,8 +115044,8 @@ function caisseRenderBrouillardSession(sessionId) {
       + (caisseDocCount(m.id) ? ' <button class="btn btn-primary btn-sm" title="Pièces justificatives" onclick="caisseViewDocs(\'' + m.id + '\')">📎 ' + caisseDocCount(m.id) + '</button>' : '')
       + (caisseRoleAdminLike() ? ' <button class="btn btn-danger btn-sm btn-icon" title="Supprimer le mouvement" onclick="caisseSupprimerMouvement(\'' + m.id + '\')">🗑️</button>' : '')
       + (m.statut === 'ventile' ? '<span title="Ventilé" style="margin-left:4px;color:var(--vert);">✓</span>' : '<span title="En attente de ventilation" style="margin-left:4px;color:var(--dim);">⏳</span>')
-      + (m.type==='sortie' && m.requiert_validation && !m.valide && !m.rejete ? '<span title="En attente de validation (plafond dépassé)" style="margin-left:4px;color:var(--or);">🔐</span>' : '')
-      + (m.type==='sortie' && m.rejete ? '<span title="Décaissement rejeté" style="margin-left:4px;color:var(--rouge);">✖</span>' : '')
+      + (m.requiert_validation && !m.valide && !m.rejete ? '<span title="En attente de validation" style="margin-left:4px;color:var(--or);">🔐</span>' : '')
+      + (m.rejete ? '<span title="Mouvement rejeté" style="margin-left:4px;color:var(--rouge);">✖</span>' : '')
       + (_caissePending(m.id) ? '<span title="Non synchronisé au cloud — écriture locale seulement" style="margin-left:4px;color:var(--rouge,#dc2626);font-weight:700;">☁✗</span>' : '')
       + (m.modifie_le ? '<span title="Modifié le ' + (m.modifie_le||'').slice(0,16).replace('T',' ') + ' par ' + escHtml(m.modifie_par||'') + '" style="margin-left:4px;color:var(--or,#B87333);">✎</span>' : '')
       + '</td>'
