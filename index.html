@@ -114096,27 +114096,18 @@ async function caisseSaveBon() {
     mvt.modifie_par = (APP.currentUser && APP.currentUser.nom) || '—';
     mvt.modifie_le = new Date().toISOString();
 
-    /* Une modification qui fait franchir (ou repasser sous) le plafond de
-       l'auteur de la modification réévalue le besoin de validation — sur la
-       base du plafond de la personne qui modifie, pas de celle qui a créé le
-       bon à l'origine. Un bon déjà validé le reste (on ne redemande pas une
-       approbation déjà obtenue si le nouveau montant reste dans les clous du
-       validateur d'origine) ; s'il redevient au-delà du plafond du modificateur
-       et n'avait jamais été validé, il repasse en attente. */
+    /* [ÉVOLUTION] Toute modification d'un bon pas encore validé repasse (ou
+       reste) en attente de validation, quel que soit le plafond de la
+       personne qui modifie — plus d'exception pour un plafond illimité. */
     if ((type === 'sortie' || type === 'entree') && !mvt.valide) {
       var _plafondMod = (typeof userPlafond === 'function') ? userPlafond() : Infinity;
       var _etaitDejaEnAttente = !!mvt.requiert_validation;
-      if (isFinite(_plafondMod)) {
-        mvt.requiert_validation = true; mvt.valide = false; mvt.rejete = false;
-        mvt.plafond_demandeur = _plafondMod;
-        mvt.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
-        mvt.demande_role = (APP.currentUser && APP.currentUser.role) || '';
-        mvt.demande_le = new Date().toISOString();
-        var _nouvelleDemande = !_etaitDejaEnAttente;
-      } else {
-        mvt.requiert_validation = false;
-        mvt.rejete = false; /* un bon corrigé par un auteur au plafond illimité n'est plus "rejeté" : l'icône ✖ ne doit pas rester collée */
-      }
+      mvt.requiert_validation = true; mvt.valide = false; mvt.rejete = false;
+      mvt.plafond_demandeur = _plafondMod;
+      mvt.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
+      mvt.demande_role = (APP.currentUser && APP.currentUser.role) || '';
+      mvt.demande_le = new Date().toISOString();
+      var _nouvelleDemande = !_etaitDejaEnAttente;
     }
 
     if (etaitVentile && compteV) {
@@ -114204,26 +114195,25 @@ async function caisseSaveBon() {
   };
   /* ── HABILITATION DE VALIDATION DES MOUVEMENTS DE CAISSE ───────────────
      [ÉVOLUTION] Sur demande explicite du DG : tout mouvement (entrée ET
-     sortie), quel que soit le montant, doit être validé avant de compter
-     dans le solde — plus de seuil (l'ancien système ne concernait que les
-     sorties dépassant le plafond de l'auteur). Le plafond du rôle continue
-     de déterminer QUI peut valider (délégation : un remplaçant désigné,
-     ex. Manager, avec un plafond élevé mais fini, peut valider en
-     l'absence du DG — cf. Rôles & Accès). Seul un auteur au plafond
-     illimité (le DG lui-même, ou tout rôle sans plafond défini) déclenche
-     encore aucune validation : lui demander de s'auto-valider n'aurait
-     aucune valeur de contrôle. */
+     sortie), quel que soit le montant ET quel que soit le plafond de
+     l'auteur, doit être validé avant de compter dans le solde — y compris
+     les propres écritures du DG. Plus aucune exception : l'ancienne
+     dispense pour un auteur au plafond illimité est supprimée. Le plafond
+     du rôle du VALIDATEUR (pas de l'auteur) continue de déterminer qui
+     peut approuver quoi (délégation : un remplaçant désigné, ex. Manager,
+     peut valider en l'absence du DG — cf. Rôles & Accès) ; un auteur au
+     plafond illimité peut toujours s'auto-approuver depuis l'écran de
+     validation (aucun autre validateur "au-dessus" n'existe pour lui),
+     mais cette étape reste désormais obligatoire pour lui aussi. */
   if (type === 'sortie' || type === 'entree') {
     var _plafondAuteur = (typeof userPlafond === 'function') ? userPlafond() : Infinity;
-    if (isFinite(_plafondAuteur)) {
-      nouveau.requiert_validation = true;
-      nouveau.valide = false;
-      nouveau.rejete = false;
-      nouveau.plafond_demandeur = _plafondAuteur;
-      nouveau.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
-      nouveau.demande_role = (APP.currentUser && APP.currentUser.role) || '';
-      nouveau.demande_le = new Date().toISOString();
-    }
+    nouveau.requiert_validation = true;
+    nouveau.valide = false;
+    nouveau.rejete = false;
+    nouveau.plafond_demandeur = _plafondAuteur;
+    nouveau.demande_par = (APP.currentUser && APP.currentUser.nom) || '—';
+    nouveau.demande_role = (APP.currentUser && APP.currentUser.role) || '';
+    nouveau.demande_le = new Date().toISOString();
   }
   DATA.caisse_mouvements.push(nouveau);
   await dbPut('caisse_mouvements', nouveau);
