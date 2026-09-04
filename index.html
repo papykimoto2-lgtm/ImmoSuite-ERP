@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var el = document.getElementById(id);
     if (el && t.nom) el.textContent = t.nom;
   });
+  if (t.nom) {
+    document.querySelectorAll('.tenant-nom').forEach(function (el) { el.textContent = t.nom; });
+  }
   var cfgUrl = document.getElementById('cfg-url');
   var cfgKey = document.getElementById('cfg-key');
   if (cfgUrl && t.supabase_url) cfgUrl.value = t.supabase_url;
@@ -21310,7 +21313,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
     <div class="modal-header" style="background:linear-gradient(135deg,#1C1C2E,#252540);border-radius:14px 14px 0 0;">
       <div>
         <h3 style="color:#fff;">🔑 Espace Souscripteur</h3>
-        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;">ImmoSuite ERP — Portail client sécurisé</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;"><span class="tenant-nom">ImmoSuite ERP</span> — Portail client sécurisé</div>
       </div>
       <button class="btn btn-icon" style="color:#fff;background:rgba(255,255,255,0.15);" onclick="closeModal('modal-login-souscripteur')">✕</button>
     </div>
@@ -21361,7 +21364,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       </div>
 
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E8EBF0;text-align:center;font-size:11px;color:#888;">
-        🔒 Vos données sont chiffrées et sécurisées — ImmoSuite ERP
+        🔒 Vos données sont chiffrées et sécurisées — <span class="tenant-nom">ImmoSuite ERP</span>
       </div>
     </div>
   </div>
@@ -21390,7 +21393,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <div id="af-login-error" style="color:#dc2626;font-size:12px;display:none;margin-bottom:10px;padding:10px 12px;background:#FEE2E2;border-radius:8px;border-left:4px solid #dc2626;"></div>
       <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;background:#1a6b3a;" onclick="authentifierAcquereurFoncier()">Se connecter →</button>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E8EBF0;text-align:center;font-size:11px;color:#888;">
-        🔒 Espace réservé aux acquéreurs de cessions foncières · ImmoSuite ERP
+        🔒 Espace réservé aux acquéreurs de cessions foncières · <span class="tenant-nom">ImmoSuite ERP</span>
       </div>
     </div>
   </div>
@@ -21419,7 +21422,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <div id="finp-login-error" style="color:#dc2626;font-size:12px;display:none;margin-bottom:10px;padding:10px 12px;background:#FEE2E2;border-radius:8px;border-left:4px solid #dc2626;"></div>
       <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;background:#1a6b3a;" onclick="authentifierFinancier()">Se connecter →</button>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E8EBF0;text-align:center;font-size:11px;color:#888;">
-        🔒 Espace réservé aux partenaires financiers · ImmoSuite ERP
+        🔒 Espace réservé aux partenaires financiers · <span class="tenant-nom">ImmoSuite ERP</span>
       </div>
     </div>
   </div>
@@ -21448,7 +21451,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <div id="pl-login-error" style="color:#dc2626;font-size:12px;display:none;margin-bottom:10px;padding:10px 12px;background:#FEE2E2;border-radius:8px;border-left:4px solid #dc2626;"></div>
       <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;background:#1a6b3a;" onclick="authentifierPartenaireLot()">Se connecter →</button>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E8EBF0;text-align:center;font-size:11px;color:#888;">
-        🔒 Espace réservé aux partenaires fonciers · ImmoSuite ERP
+        🔒 Espace réservé aux partenaires fonciers · <span class="tenant-nom">ImmoSuite ERP</span>
       </div>
     </div>
   </div>
@@ -21477,7 +21480,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <div id="pf-login-error" style="color:#dc2626;font-size:12px;display:none;margin-bottom:10px;padding:10px 12px;background:#FEE2E2;border-radius:8px;border-left:4px solid #dc2626;"></div>
       <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;background:#1a6b3a;" onclick="authentifierProprietaireFoncier()">Se connecter →</button>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E8EBF0;text-align:center;font-size:11px;color:#888;">
-        🔒 Espace réservé aux propriétaires de parcelles · ImmoSuite ERP
+        🔒 Espace réservé aux propriétaires de parcelles · <span class="tenant-nom">ImmoSuite ERP</span>
       </div>
     </div>
   </div>
@@ -21506,7 +21509,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <div id="mand-login-error" style="color:#dc2626;font-size:12px;display:none;margin-bottom:10px;padding:10px 12px;background:#FEE2E2;border-radius:8px;border-left:4px solid #dc2626;"></div>
       <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;background:#B8860B;" onclick="authentifierMandant()">Se connecter →</button>
       <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E8EBF0;text-align:center;font-size:11px;color:#888;">
-        🔒 Espace réservé aux propriétaires mandants · ImmoSuite ERP
+        🔒 Espace réservé aux propriétaires mandants · <span class="tenant-nom">ImmoSuite ERP</span>
       </div>
     </div>
   </div>
@@ -21731,7 +21734,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
     <div class="modal-header" style="background:linear-gradient(135deg,#1C2E1C,#1a6b2a);border-radius:14px 14px 0 0;">
       <div>
         <h3 style="color:#fff;">🤝 Espace Apporteur</h3>
-        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;">ImmoSuite ERP — Portail partenaire</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px;"><span class="tenant-nom">ImmoSuite ERP</span> — Portail partenaire</div>
       </div>
       <button class="btn btn-icon" style="color:#fff;background:rgba(255,255,255,0.15);" onclick="closeModal('modal-login-apporteur')">✕</button>
     </div>

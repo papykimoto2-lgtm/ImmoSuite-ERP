@@ -328,7 +328,7 @@
 <!-- Login -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="logo"><div class="logo-icon">🤝</div><h1>Espace Apporteur</h1><p style="font-size:13px;margin-top:8px;color:#64748B;">ImmoSuite ERP</p></div>
+    <div class="logo"><div class="logo-icon">🤝</div><h1>Espace Apporteur</h1><p style="font-size:13px;margin-top:8px;color:#64748B;" class="tenant-nom">ImmoSuite ERP</p></div>
     <div id="login-error" class="error-msg" style="display:none;"></div>
     <div class="login-field"><label>Email / Téléphone</label><input type="text" id="login-identifier" placeholder="Ex: apporteur@exemple.com" autocomplete="username"></div>
     <div class="login-field"><label>Code d'accès</label><input type="password" id="login-code" placeholder="Code à 8 chiffres" autocomplete="current-password"></div>
@@ -398,9 +398,22 @@
 </div>
 
 <script>
-  // ======================= CONFIGURATION SUPABASE =======================
-  const SUPABASE_URL = 'https://izgpvhwhbrgeagjfhfli.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y';
+  // ======================= CONFIGURATION TENANT =======================
+  // Point d'entrée unique pour déployer ce portail chez un nouveau client
+  // SaaS (base ImmoSuite) : ne dupliquer nom/URL/clé nulle part ailleurs.
+  var TENANT_CONFIG = {
+    nom: 'ImmoSuite ERP',
+    supabase_url: 'https://izgpvhwhbrgeagjfhfli.supabase.co',
+    supabase_anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y'
+  };
+  const SUPABASE_URL = TENANT_CONFIG.supabase_url;
+  const SUPABASE_ANON_KEY = TENANT_CONFIG.supabase_anon_key;
+  document.addEventListener('DOMContentLoaded', function () {
+    if (TENANT_CONFIG.nom) {
+      document.title = 'Espace Apporteur – ' + TENANT_CONFIG.nom;
+      document.querySelectorAll('.tenant-nom').forEach(function (el) { el.textContent = TENANT_CONFIG.nom; });
+    }
+  });
 
   // ======================= INDEXEDDB & DATA =======================
   const DB_NAME = 'ImmoSuiteDB';
