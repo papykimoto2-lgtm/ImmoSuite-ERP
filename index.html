@@ -23262,21 +23262,12 @@ async function iaaAppelBoucle(messages) {
   var rounds = 0;
   while (rounds < 5) {
     rounds++;
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': IA.key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1200,
-        system: IAA_SYSTEM_PROMPT(),
-        tools: IAA_TOOLS,
-        messages: messages
-      })
+    var resp = await iaClaudeCall({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1200,
+      system: IAA_SYSTEM_PROMPT(),
+      tools: IAA_TOOLS,
+      messages: messages
     });
     if (!resp.ok) throw new Error('API error ' + resp.status);
     var data = await resp.json();
@@ -23469,11 +23460,7 @@ async function iaComptaSynthese() {
     var resume = anomalies.map(function (a) { return '[' + a.niveau + '] ' + a.categorie + ' (' + a.ref + ') : ' + a.texte; }).join('\n') || 'Aucune anomalie détectée.';
     var prompt = "Tu es un expert-comptable SYSCOHADA/OHADA. Voici les anomalies détectées automatiquement dans le journal comptable d'une entreprise ivoirienne :\n\n" + resume
       + "\n\nRédige une synthèse courte (6-10 lignes max) en français : priorise les 3 actions les plus urgentes, explique brièvement le risque de chaque catégorie, et propose une correction concrète pour chacune. Sois direct et opérationnel.";
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': IA.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
-    });
+    var resp = await iaClaudeCall({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) throw new Error('API error ' + resp.status);
     var data = await resp.json();
     var texte = (data.content || []).map(function (b) { return b.type === 'text' ? b.text : ''; }).join('');
@@ -23500,11 +23487,7 @@ async function iaComptaGenererEcriture() {
       + "Utilise UNIQUEMENT des codes du plan comptable fourni. Si le montant n'est pas explicite dans le texte, estime-le au mieux ou mets 0 sur chaque ligne et signale-le dans l'explication.\n\n"
       + "Réponds UNIQUEMENT en JSON valide, sans texte autour :\n"
       + '{ "lignes": [ {"compte":"<code>","sens":"D|C","montant":<number>,"libelle":"<string>"}, ... ], "journal_suggere":"<achats|ventes|banque|caisse|od|général>", "explication":"<string 1-2 phrases>" }';
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': IA.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-    });
+    var resp = await iaClaudeCall({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] });
     if (!resp.ok) throw new Error('API error ' + resp.status);
     var data = await resp.json();
     var rawText = (data.content || []).map(function (b) { return b.type === 'text' ? b.text : ''; }).join('');
@@ -23564,6 +23547,22 @@ function iaComptaPrevisionTexte() {
 function getIAConfig() {
   var k = (localStorage.getItem('ia_anthropic_key') || '').trim();
   IA.key = k;
+}
+/* Relais serveur — jamais d'appel direct navigateur → api.anthropic.com.
+   La clé (si saisie côté client) est transmise via x-ia-key à l'Edge
+   Function `ia-proxy`, qui l'utilise ou retombe sur son propre secret
+   serveur ANTHROPIC_API_KEY. */
+async function iaClaudeCall(payload) {
+  return fetch(SB.url.replace(/\/+$/, '') + '/functions/v1/ia-proxy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB.key,
+      'Authorization': 'Bearer ' + sbAuth(),
+      'x-ia-key': IA.key || ''
+    },
+    body: JSON.stringify(payload)
+  });
 }
 function saveIAConfig() {
   var k = (document.getElementById('param-ia-key') || {}).value;
@@ -73412,19 +73411,10 @@ async function lancerAnalyseIA(force) {
     if (!IA.key) {
       throw new Error('Clé API Anthropic non configurée. Allez dans Paramètres → Intelligence Artificielle pour saisir votre clé sk-ant-...');
     }
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': IA.key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role:'user', content: prompt }]
-      })
+    var resp = await iaClaudeCall({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{ role:'user', content: prompt }]
     });
     clearInterval(msgInterval);
     if (!resp.ok) { throw new Error('API error '+resp.status); }
@@ -90409,22 +90399,13 @@ async function _scanImageIA(fl, isPdfImage) {
     + 'Renvoie UNIQUEMENT un JSON : {"bornes":[{"nom":"B1","x":123456.78,"y":234567.89,"z":0}]}. '
     + 'X = Est/Easting/Abscisse, Y = Nord/Northing/Ordonnée, Z = altitude si présente sinon 0. '
     + 'Coordonnées UTM en mètres. Aucun texte hors JSON.';
-  var resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': IA.key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      messages: [{ role:'user', content: [
-        { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
-        { type: 'text', text: prompt }
-      ]}]
-    })
+  var resp = await iaClaudeCall({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2000,
+    messages: [{ role:'user', content: [
+      { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
+      { type: 'text', text: prompt }
+    ]}]
   });
   if (!resp.ok) throw new Error('API vision ' + resp.status);
   var data = await resp.json();
@@ -90491,16 +90472,12 @@ async function mrcScanPlanMasse() {
       + 'usage ∈ residentiel|commercial|voirie|espace_vert|equipement. '
       + 'type réserve ∈ voirie|espace_vert|equipement|servitude. '
       + 'Superficies en m². Si une info manque, mets 0 ou "". Aucun texte hors JSON.';
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'x-api-key':IA.key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 4000,
-        messages: [{ role:'user', content: [
-          { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
-          { type: 'text', text: prompt }
-        ]}]
-      })
+    var resp = await iaClaudeCall({
+      model: 'claude-sonnet-4-20250514', max_tokens: 4000,
+      messages: [{ role:'user', content: [
+        { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
+        { type: 'text', text: prompt }
+      ]}]
     });
     if (!resp.ok) throw new Error('API vision ' + resp.status);
     var rd = await resp.json();
@@ -90876,16 +90853,12 @@ async function dqeScanPlanAnalyser() {
       + '"murs":[{"type":"porteur","x1":5,"y1":10,"x2":60,"y2":10,"epaisseur":0.20},{"type":"cloison","x1":35,"y1":15,"x2":35,"y2":40,"epaisseur":0.10}], '
       + '"surface_totale_habitable":0, "nb_chambres":0}. '
       + 'Longueur/largeur/épaisseur en mètres, surface en m², bbox et x1/y1/x2/y2 en pourcentage (0-100) de l\'image — jamais en mètres ni en pixels. N\'inclus PAS les portes, fenêtres — uniquement les pièces et les murs.';
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'x-api-key':IA.key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', max_tokens: 4000,
-        messages: [{ role:'user', content: [
-          { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
-          { type: 'text', text: prompt }
-        ]}]
-      })
+    var resp = await iaClaudeCall({
+      model: 'claude-sonnet-4-20250514', max_tokens: 4000,
+      messages: [{ role:'user', content: [
+        { type: srcType, source: { type:'base64', media_type: media, data: b64 } },
+        { type: 'text', text: prompt }
+      ]}]
     });
     if (!resp.ok) throw new Error('API vision ' + resp.status);
     var data = await resp.json();
