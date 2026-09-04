@@ -8,6 +8,34 @@
 <meta http-equiv="Expires" content="0">
 <title>ERP — Logiciel de Gestion Immobilière</title>
 <script>
+/* ═══════════════════════════════════════════════════════════════
+   CONFIGURATION TENANT — seul bloc à éditer pour déployer un
+   nouveau client SaaS à partir de ce code (base ImmoSuite). Ne pas
+   coder de nom de société / URL Supabase en dur ailleurs : passer
+   par window.TENANT_CONFIG et la relève ci-dessous.
+   ═══════════════════════════════════════════════════════════════ */
+window.TENANT_CONFIG = {
+  nom: 'ImmoSuite ERP',
+  slogan: 'Logiciel de Gestion Immobilière',
+  supabase_url: 'https://izgpvhwhbrgeagjfhfli.supabase.co',
+  supabase_anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y'
+};
+document.addEventListener('DOMContentLoaded', function () {
+  var t = window.TENANT_CONFIG || {};
+  if (t.nom) document.title = t.nom + (t.slogan ? ' — ' + t.slogan : '');
+  ['login-brand-nom', 'topbar-brand-nom', 'sidebar-brand-nom', 'sidebar-brand-sub'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el && t.nom) el.textContent = t.nom;
+  });
+  var cfgUrl = document.getElementById('cfg-url');
+  var cfgKey = document.getElementById('cfg-key');
+  if (cfgUrl && t.supabase_url) cfgUrl.value = t.supabase_url;
+  if (cfgKey && t.supabase_anon_key) cfgKey.value = t.supabase_anon_key;
+  var soc = document.getElementById('param-societe');
+  if (soc && t.nom) soc.value = t.nom;
+});
+</script>
+<script>
 /* ── Auto-mise à jour : supprime tout service worker / cache laissé par une ancienne
    version (ImmoSuite n'utilise pas de PWA). Garantit qu'on charge toujours la dernière
    version déployée sur Vercel, sur PC comme sur mobile. ── */
@@ -2291,11 +2319,11 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
     <p>Entrez les informations de connexion à votre projet Supabase pour démarrer ImmoSuite ERP.</p>
     <div class="form-group" style="margin-bottom:14px;">
       <label>URL du projet Supabase</label>
-      <input type="text" id="cfg-url" class="form-control" placeholder="https://xxx.supabase.co" value="https://izgpvhwhbrgeagjfhfli.supabase.co">
+      <input type="text" id="cfg-url" class="form-control" placeholder="https://xxx.supabase.co" value="">
     </div>
     <div class="form-group" style="margin-bottom:20px;">
       <label>Clé anonyme (anon key)</label>
-      <input type="text" id="cfg-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Z3B2aHdoYnJnZWFnamZoZmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMDQxNjcsImV4cCI6MjA5NTg4MDE2N30.dVSEbxa09gEMM1OJYISBmfsdTYzjeMEnVzaD4evXI-Y">
+      <input type="text" id="cfg-key" class="form-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." value="">
     </div>
     <button class="btn btn-primary" onclick="saveConfig()" style="width:100%;">Enregistrer et continuer</button>
     <div style="display:flex;align-items:center;gap:10px;margin:16px 0 12px;">
@@ -2317,7 +2345,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
   <div class="login-box">
     <div class="login-logo">
       <div class="logo-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="url(#grad1)"/><defs><linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40"><stop offset="0%" stop-color="#2563EB"/><stop offset="100%" stop-color="#1D4ED8"/></linearGradient></defs><path d="M8 28 L14 18 L20 22 L26 12 L32 16" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 12 L32 16 L28 15" fill="#2563EB"/><rect x="8" y="20" width="5" height="8" rx="1" fill="white" opacity="0.9"/><rect x="16" y="23" width="5" height="5" rx="1" fill="white" opacity="0.7"/><text x="20" y="38" text-anchor="middle" font-size="5" fill="#FFFFFF" font-weight="bold">ERP</text></svg></div>
-      <h1>ImmoSuite ERP</h1>
+      <h1 id="login-brand-nom">ImmoSuite ERP</h1>
       <p>Logiciel de Gestion Immobilière</p>
     </div>
     <div id="login-form">
@@ -2387,7 +2415,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
   <!-- Topbar mobile -->
   <div class="topbar">
     <button class="topbar-menu-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
-    <div class="topbar-brand">ImmoSuite <span>ERP</span></div>
+    <div class="topbar-brand" id="topbar-brand-nom">ImmoSuite <span>ERP</span></div>
     <div class="topbar-spacer"></div>
     <div id="rt-badge" title="Realtime multi-utilisateurs" style="font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(255,255,255,0.07);color:#94a3b8;margin-right:6px;cursor:default;letter-spacing:.5px;transition:all .4s;">⬤ RT</div>
     <div id="staff-session-badge" title="Session personnel dégradée — cliquer pour réessayer" style="display:none;font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(234,88,12,0.18);color:#EA580C;margin-right:6px;cursor:pointer;letter-spacing:.5px;flex-shrink:0;white-space:nowrap;" onclick="staffLoginRetryManuel()">⚠ Session</div>
@@ -2408,8 +2436,8 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
       <div class="sidebar-logo">
         <div class="sidebar-logo-icon"><svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="10" fill="url(#grad1)"/><defs><linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40"><stop offset="0%" stop-color="#2563EB"/><stop offset="100%" stop-color="#1D4ED8"/></linearGradient></defs><path d="M8 28 L14 18 L20 22 L26 12 L32 16" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 12 L32 16 L28 15" fill="#2563EB"/><rect x="8" y="20" width="5" height="8" rx="1" fill="white" opacity="0.9"/><rect x="16" y="23" width="5" height="5" rx="1" fill="white" opacity="0.7"/><text x="20" y="38" text-anchor="middle" font-size="5" fill="#FFFFFF" font-weight="bold">ERP</text></svg></div>
         <div>
-          <div class="sidebar-logo-text">ImmoSuite ERP</div>
-          <div class="sidebar-logo-sub">ImmoSuite ERP</div>
+          <div class="sidebar-logo-text" id="sidebar-brand-nom">ImmoSuite ERP</div>
+          <div class="sidebar-logo-sub" id="sidebar-brand-sub">ImmoSuite ERP</div>
         </div>
       </div>
 
@@ -5712,7 +5740,7 @@ body.no-delete [onclick*="Supprimer"]{display:none !important;}
               <div class="form-grid" style="margin-top:10px;">
                 <div class="form-group span-2">
                   <label>Raison sociale *</label>
-                  <input type="text" id="param-societe" class="form-control" value="ImmoSuite ERP">
+                  <input type="text" id="param-societe" class="form-control" value="">
                 </div>
                 <div class="form-group">
                   <label>RCCM</label>
