@@ -35797,6 +35797,20 @@ function clearEcritureForm() {}
    aussi le champ ValidDate du FEC.
 ════════════════════════════════════════════════════════════════════════ */
 function ecrEstValidee(e) { return !!(e && e.valide_le); }
+/* Écriture comptée dans les états officiels (Balance, Bilan, Compte de résultat, Grand livre, Clôture, FEC) :
+   toute écriture générée par un événement de gestion (vente, achat, commission, paie, régularisation de fin
+   d'exercice…), plus une écriture manuelle (saisie libre au Journal, via saveEcriture) une fois visée. Une
+   écriture manuelle encore en brouillard n'entre dans aucun état tant qu'elle n'a pas été validée depuis
+   Comptabilité → Validation — le Visa devient ainsi réellement protecteur pour la saisie manuelle, seule
+   origine où une erreur de frappe peut se glisser avant relecture. */
+function ecrDefinitive(e) { return !!(e) && (!e.origine_manuelle || ecrEstValidee(e)); }
+/* Bandeau rappelant que des saisies manuelles non visées n'entrent pas dans l'état affiché */
+function ecrBrouillonsAlerteHtml() {
+  var n = (DATA.ecritures || []).filter(function(e){ return e.origine_manuelle && !ecrEstValidee(e); }).length;
+  if (!n) return '';
+  return '<div style="font-size:12px;background:rgba(184,115,51,0.12);border:1px solid rgba(184,115,51,0.4);border-radius:6px;padding:8px 12px;margin-bottom:12px;color:var(--or);">⏳ '
+    + n + ' écriture(s) manuelle(s) en brouillard (non visée' + (n>1?'s':'') + ') — non comptée' + (n>1?'s':'') + ' ici tant qu\'elle' + (n>1?'s ne sont':' n\'est') + ' pas validée' + (n>1?'s':'') + ' dans <b>Comptabilité → Validation</b>.</div>';
+}
 function ecrStatutLabel(e) {
   return ecrEstValidee(e)
     ? '<span class="badge badge-vert" title="Visée le ' + dateShort(e.valide_le) + (e.valide_par ? ' par ' + escHtml(e.valide_par) : '') + '">✔ Validée</span>'
@@ -36499,6 +36513,9 @@ async function saveEcriture() {
     date: date,
     piece: document.getElementById('e-piece').value.trim(),
     type: typeAuto,
+    /* Saisie manuelle au Journal : n'entre dans les états officiels (Balance, Bilan, Compte de résultat,
+       Grand livre, Clôture, FEC — voir ecrDefinitive) qu'une fois visée. */
+    origine_manuelle: true,
     libelle: libelle,
     lignes: lignesValides.map(function(l){ return { compte:l.compte, sens:l.sens, montant:parseFloat(l.montant), libelle:l.libelle||'' }; }),
     /* Champs legacy dérivés — 1ère ligne D/C — pour compatibilité affichage/print/lettrage secondaires */
@@ -36797,6 +36814,7 @@ function buildBalance() {
   if (d1 && d2 && d1 > d2) { var tmp = d1; d1 = d2; d2 = tmp; }
   var divF = _comptaDivisionFilter();
   var matchPeriode = function(e) {
+    if (!ecrDefinitive(e)) return false;
     if (divF && e.division !== divF) return false;
     if (d1 || d2) return (!d1 || (e.date && e.date >= d1)) && (!d2 || (e.date && e.date <= d2));
     return !year || (e.date && e.date.startsWith(year));
@@ -36846,7 +36864,7 @@ function buildBalance() {
     }).join('');
     var perLbl = (d1 || d2) ? ('Période du ' + (d1?dateShort(d1):'…') + ' au ' + (d2?dateShort(d2):'…')) : ('Exercice ' + year);
     perLbl += divF ? (' — Division : ' + _nomDivision(divF)) : '';
-    box.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Balance de synthèse — comptes à ' + n + ' chiffres — ' + perLbl + ' — ' + codes.length + ' regroupement(s)</div>'
+    box.innerHTML = ecrBrouillonsAlerteHtml() + '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Balance de synthèse — comptes à ' + n + ' chiffres — ' + perLbl + ' — ' + codes.length + ' regroupement(s)</div>'
       + '<div class="table-wrap"><table><thead><tr>'
       + '<th>N° Compte</th><th>Intitulé</th><th>Classe</th>'
       + '<th style="text-align:right;color:var(--rouge);">Mvts Débit</th>'
@@ -36938,7 +36956,7 @@ function buildBalance() {
 
   var periodeLabel = (d1 || d2) ? ('Période du ' + (d1?dateShort(d1):'…') + ' au ' + (d2?dateShort(d2):'…')) : ('Exercice ' + year);
   periodeLabel += divF ? (' — Division : ' + _nomDivision(divF)) : '';
-  box.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Balance générale des comptes — ' + periodeLabel + ' — ' + filteredPlan.length + ' compte(s)</div>'
+  box.innerHTML = ecrBrouillonsAlerteHtml() + '<div style="margin-bottom:12px;font-size:12px;color:var(--blanc-dim);">Balance générale des comptes — ' + periodeLabel + ' — ' + filteredPlan.length + ' compte(s)</div>'
     + '<div class="table-wrap"><table><thead><tr>'
     + '<th>N° Compte</th><th>Intitulé</th><th>Classe</th>'
     + '<th style="text-align:right;color:var(--rouge);">Mvts Débit</th>'
@@ -38266,7 +38284,7 @@ function buildBilan() {
 
   var soldes = {};
   var divFBilan = _comptaDivisionFilter();
-  DATA.ecritures.filter(function(e){ return e.date && e.date < (year+1+'-01-01') && (!divFBilan || e.division === divFBilan); }).forEach(function(e) {
+  DATA.ecritures.filter(function(e){ return ecrDefinitive(e) && e.date && e.date < (year+1+'-01-01') && (!divFBilan || e.division === divFBilan); }).forEach(function(e) {
     ecrLignes(e).forEach(function(l){
       if (!l.compte) return;
       if (!soldes[l.compte]) soldes[l.compte] = 0;
@@ -38330,7 +38348,7 @@ function buildBilan() {
       + '<td style="text-align:right;font-weight:600;color:' + (color||'var(--blanc)') + ';">' + fmtF(Math.abs(val)) + '</td></tr>';
   }
 
-  box.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">'
+  box.innerHTML = ecrBrouillonsAlerteHtml() + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">'
     // ACTIF
     + '<div><div class="form-section-title" style="color:var(--bleu);">ACTIF</div>'
     + '<table style="width:100%;font-size:13px;">'
@@ -40258,7 +40276,7 @@ function dashFinanceCore(pmin) {
 
 function _calcResultat(year) {
   var divFCR = _comptaDivisionFilter();
-  var ec = DATA.ecritures.filter(function(e){ return e.date && e.date.startsWith(year) && (!divFCR || e.division === divFCR); });
+  var ec = DATA.ecritures.filter(function(e){ return ecrDefinitive(e) && e.date && e.date.startsWith(year) && (!divFCR || e.division === divFCR); });
   function deb(pfx){ var t=0; ec.forEach(function(e){ ecrLignes(e).forEach(function(l){ if (l.sens==='D' && pfx.some(function(p){ return (l.compte||'').indexOf(p)===0; })) t += (parseFloat(l.montant)||0); }); }); return t; }
   function cre(pfx){ var t=0; ec.forEach(function(e){ ecrLignes(e).forEach(function(l){ if (l.sens==='C' && pfx.some(function(p){ return (l.compte||'').indexOf(p)===0; })) t += (parseFloat(l.montant)||0); }); }); return t; }
   // Produits (crédits classe 7) — buckets exclusifs
@@ -40314,7 +40332,7 @@ function _calcResultat(year) {
 function _crMvtMap(year){
   var mD = {}, mC = {};
   var divFMvt = _comptaDivisionFilter();
-  DATA.ecritures.filter(function(e){ return e.date && e.date.startsWith(year) && (!divFMvt || e.division === divFMvt); }).forEach(function(e){
+  DATA.ecritures.filter(function(e){ return ecrDefinitive(e) && e.date && e.date.startsWith(year) && (!divFMvt || e.division === divFMvt); }).forEach(function(e){
     ecrLignes(e).forEach(function(l){
       if (!l.compte) return;
       if (l.sens === 'D') mD[l.compte] = (mD[l.compte]||0) + (parseFloat(l.montant)||0);
@@ -40358,7 +40376,7 @@ function buildCompteResultat() {
       + (val !== 0 ? (val > 0 ? '' : '\u2212') + fmtF(Math.abs(val)) : '\u2014') + '</td></tr>';
   }
 
-  box.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">'
+  box.innerHTML = ecrBrouillonsAlerteHtml() + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">'
     + '<div><div class="form-section-title" style="color:var(--rouge);">CHARGES \u2014 Classe 6</div>'
     + '<table style="width:100%;font-size:13px;"><tbody>'
     + crRow('Achats (60)', R.achats, false, 'var(--rouge)', _rubriqueDetailHTML(['60'], M.D))
@@ -40422,7 +40440,7 @@ function buildGrandLivre() {
   /* Solde d'ouverture = tous les mouvements antérieurs à la date de début (report à-nouveau implicite) */
   var soldeOuverture = 0;
   if (periodeActive && d1) {
-    DATA.ecritures.filter(function(e){ return e.date && e.date < d1 && (!divF || e.division === divF); }).forEach(function(e){
+    DATA.ecritures.filter(function(e){ return ecrDefinitive(e) && e.date && e.date < d1 && (!divF || e.division === divF); }).forEach(function(e){
       ecrLignes(e).filter(matchCpt).forEach(function(l){
         soldeOuverture += (l.sens === 'D' ? 1 : -1) * (parseFloat(l.montant)||0);
       });
@@ -40431,6 +40449,7 @@ function buildGrandLivre() {
 
   var mvts = [];
   DATA.ecritures.filter(function(e){
+    if (!ecrDefinitive(e)) return false;
     if (divF && e.division !== divF) return false;
     if (periodeActive) return (!d1 || (e.date && e.date >= d1)) && (!d2 || (e.date && e.date <= d2));
     return !year || (e.date && e.date.startsWith(year));
@@ -59732,6 +59751,7 @@ function renderClotureFEC() {
 function exporterFEC(annee, divisionId) {
   divisionId = divisionId || '';
   var ecr = (DATA.ecritures||[]).filter(function(e){
+      if (!ecrDefinitive(e)) return false;
       if (!(e.date||'').startsWith(String(annee))) return false;
       if (divisionId && (e.division||'') !== divisionId) return false;
       return true;
@@ -59968,6 +59988,7 @@ async function cloturerExercice(annee, divisionId) {
      de cette entité juridique ; sinon comportement historique (tout confondu,
      y compris les écritures sans division renseignée — clôture consolidée). */
   var ecr = (DATA.ecritures||[]).filter(function(e){
+    if (!ecrDefinitive(e)) return false;
     if (!(e.date||'').startsWith(String(annee))) return false;
     if (!divisionId) return true;
     return (e.division||'') === divisionId;
@@ -79223,6 +79244,7 @@ function etatBalance() {
   if (d1 && d2 && d1 > d2) { var tmp = d1; d1 = d2; d2 = tmp; }
   var comptesMvt = {};
   DATA.ecritures.filter(function(e){
+    if (!ecrDefinitive(e)) return false;
     if (d1 || d2) return (!d1 || (e.date && e.date >= d1)) && (!d2 || (e.date && e.date <= d2));
     return !year || (e.date && e.date.startsWith(year));
   }).forEach(function(e){
@@ -79265,7 +79287,7 @@ function etatBalance() {
 function etatBilan() {
   var year = _comptaYear();
   var soldes = {};
-  DATA.ecritures.filter(function(e){ return e.date && e.date < ((+year + 1) + '-01-01'); }).forEach(function(e){
+  DATA.ecritures.filter(function(e){ return ecrDefinitive(e) && e.date && e.date < ((+year + 1) + '-01-01'); }).forEach(function(e){
     var cd = e.compte_debit || e.compte, cc = e.compte_credit;
     if (!soldes[cd]) soldes[cd] = 0; soldes[cd] += e.montant;
     if (cc) { if (!soldes[cc]) soldes[cc] = 0; soldes[cc] -= e.montant; }
@@ -79457,6 +79479,7 @@ function _glCollecteUn(compte, inclSous, ctx) {
   var match = function(l){ return l.compte === compte || (inclSous && String(l.compte || '').indexOf(compte) === 0); };
   var ouv = 0, mvts = [];
   (DATA.ecritures || []).forEach(function(e){
+    if (!ecrDefinitive(e)) return;
     if (ctx.divF && e.division !== ctx.divF) return;
     var dt = e.date || '';
     var avant  = ctx.periodeActive && ctx.d1 && dt && dt < ctx.d1;
@@ -79483,6 +79506,7 @@ function _glBuckets(itv, ctx) {
   var buckets = {};
   function B(code){ if (!buckets[code]) buckets[code] = { ouv: 0, mvts: [] }; return buckets[code]; }
   (DATA.ecritures || []).forEach(function(e){
+    if (!ecrDefinitive(e)) return;
     if (ctx.divF && e.division !== ctx.divF) return;
     var dt = e.date || '';
     var avant  = ctx.periodeActive && ctx.d1 && dt && dt < ctx.d1;
@@ -95058,7 +95082,7 @@ function _cexpReelParRubrique(divisionId, exercice) {
   var toutes = _toutesLesRubriques();
   var out = {}; toutes.forEach(function(r){ out[r.cle] = Array(12).fill(0); });
   DATA.ecritures.filter(function(e){
-    return e.date && e.date.indexOf(String(exercice)) === 0 && (!divisionId || e.division === divisionId);
+    return ecrDefinitive(e) && e.date && e.date.indexOf(String(exercice)) === 0 && (!divisionId || e.division === divisionId);
   }).forEach(function(e) {
     var mIdx = parseInt(e.date.substring(5,7), 10) - 1;
     if (mIdx < 0 || mIdx > 11) return;
