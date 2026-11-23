@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Essai gratuit 1 mois — ImmoSuite ERP</title>
+<style>
+:root{--bg:#0f1424;--card:#1a2036;--card2:#262e48;--line:rgba(255,255,255,.12);--txt:#f3f4f8;--sub:#aeb6cc;--acc:#6366f1;--yel:#fbbf24;--red:#f87171}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--txt);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+main{max-width:560px;margin:0 auto;padding:22px 16px 48px}
+h1{font-size:22px}h2{font-size:17px;margin-bottom:6px}
+.sub{color:var(--sub);font-size:13px;margin:4px 0 18px}
+.pan{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
+ul{padding-left:20px;color:var(--sub);font-size:14px;margin:8px 0}
+li{margin:3px 0}
+label{display:block;font-size:13px;color:var(--sub);margin:12px 0 4px}
+input{width:100%;min-height:48px;background:var(--card2);border:1px solid var(--line);border-radius:10px;color:var(--txt);font:16px inherit;padding:0 12px}
+input:focus{outline:2px solid var(--acc);outline-offset:1px}
+button{width:100%;min-height:52px;border:0;border-radius:11px;font:600 16px inherit;cursor:pointer;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);margin-top:16px}
+button:disabled{opacity:.6;cursor:wait}
+.note{font-size:12.5px;color:var(--sub);margin-top:10px}
+#msg{color:var(--yel)}#msg.err{color:var(--red)}
+.big{font-size:30px;font-weight:700;color:var(--acc)}
+footer{text-align:center;color:var(--sub);font-size:12px;margin-top:26px}
+footer b{color:var(--txt)}
+</style>
+</head>
+<body>
+<main>
+  <h1>🏢 Immo<span style="color:var(--acc)">Suite</span> ERP — Essai gratuit</h1>
+  <p class="sub">Testez le logiciel complet avec <b>les données de votre société</b>, pendant 1 mois.</p>
+
+  <div class="pan" id="running" hidden>
+    <h2>Votre essai est en cours</h2>
+    <p class="big" id="left"></p>
+    <p class="note" id="until"></p>
+    <button id="open" type="button">▶ Ouvrir ImmoSuite</button>
+  </div>
+
+  <div class="pan" id="form">
+    <h2>Activer mon essai de 30 jours</h2>
+    <ul>
+      <li>Toutes les fonctions pour promoteurs et gestionnaires immobiliers : programmes, lots et unités, ventes, souscripteurs, échéanciers, comptabilité SYSCOHADA…</li>
+      <li>Aucune donnée d'exemple : vous saisissez <b>vos</b> programmes, vos lots et vos clients</li>
+      <li>À l'ouverture, vous créez votre compte administrateur (identifiant et mot de passe de votre choix)</li>
+      <li>Les données restent <b>sur cet appareil</b> (aucune synchronisation avec le cloud SANIX pendant l'essai) : utilisez toujours le même appareil et le même navigateur</li>
+    </ul>
+    <form id="f" autocomplete="off" novalidate>
+      <label for="societe">Nom de votre société</label>
+      <input id="societe" maxlength="80" required placeholder="Ex. Prestige Immobilier">
+      <label for="nom">Votre nom</label>
+      <input id="nom" maxlength="60" required placeholder="Ex. Kouassi Yao">
+      <button id="go" type="submit">🚀 Démarrer mon essai gratuit</button>
+      <p class="note" id="msg" role="status"></p>
+    </form>
+    <p class="note">À la fin des 30 jours l'accès se verrouille ; vous pourrez <b>exporter vos données</b> et nous contacter pour continuer sans rien perdre.</p>
+  </div>
+
+  <footer>Développé par <b>SANIX AFRICA</b> · Division Technologies<br>📞 +225 07 79 18 10 75 · ✉️ sanixafrica699@gmail.com</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var DAYS = 30;
+  var DAY_MS = 86400000;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function read(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  function say(t, err) { var m = $('msg'); m.textContent = t; m.className = err ? 'err' : ''; }
+
+  /* Un compte utilisateur existe déjà dans la base locale de l'application ? (vraies données : on n'écrase rien) */
+  function hasAccounts() {
+    return new Promise(function (resolve) {
+      try {
+        var req = indexedDB.open('ImmoSuiteDB');
+        req.onerror = function () { resolve(false); };
+        req.onsuccess = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains('users')) { db.close(); resolve(false); return; }
+          var c = db.transaction('users', 'readonly').objectStore('users').count();
+          c.onsuccess = function () { var n = c.result; db.close(); resolve(n > 0); };
+          c.onerror = function () { db.close(); resolve(false); };
+        };
+      } catch (e) { resolve(false); }
+    });
+  }
+
+  function showRunning(t) {
+    var left = Math.max(0, Math.ceil((t.end - Math.max(Date.now(), t.last || 0)) / DAY_MS));
+    $('form').hidden = true; $('running').hidden = false;
+    $('left').textContent = left > 0 ? left + ' jour' + (left > 1 ? 's' : '') + ' restant' + (left > 1 ? 's' : '') : 'Essai terminé';
+    $('until').textContent = 'Société : ' + t.societe + ' · jusqu\'au ' + new Date(t.end).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function start(e) {
+    e.preventDefault();
+    var societe = $('societe').value.trim(), nom = $('nom').value.trim();
+    if (!societe || !nom) { say('Merci de remplir tous les champs.', true); return; }
+    var btn = $('go'); btn.disabled = true; say('Préparation de votre espace…');
+    hasAccounts().then(function (used) {
+      if (used) { say('Cet appareil contient déjà des données ImmoSuite : pour ne rien écraser, ouvrez cette page sur un autre appareil, un autre navigateur ou en navigation privée.', true); btn.disabled = false; return; }
+      try {
+        localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key');        /* aucune connexion au cloud pendant l'essai */
+        var now = Date.now();
+        localStorage.setItem('immo_trial', JSON.stringify({ v: 1, societe: societe, nom: nom, start: now, end: now + DAYS * DAY_MS, last: now }));
+        say('Ouverture de l\'application…');
+        location.href = 'index.html';
+      } catch (x) {
+        say('Impossible d\'enregistrer les données sur cet appareil (stockage plein ou bloqué).', true);
+        btn.disabled = false;
+      }
+    });
+  }
+
+  var t = read('immo_trial');
+  if (t && t.end) showRunning(t);        /* l'essai ne peut être démarré qu'une seule fois par appareil */
+  $('open').addEventListener('click', function () { location.href = 'index.html'; });
+  $('f').addEventListener('submit', start);
+})();
+</script>
+</body>
+</html>
